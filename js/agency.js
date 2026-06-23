@@ -15,6 +15,7 @@ const Agency = {
             facilities: { items: [], physios: 0, trainers: 0 }
         };
     },
+    //hhh
     data() { return GameState.agency; },
     clients() { return GameState.players.filter(p => p.agentId === 'me'); },
     isClient(p) { return p && p.agentId === 'me'; },
