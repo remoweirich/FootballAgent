@@ -17,6 +17,15 @@ const GameState = {
     // ---- season phase ----
     isTransferWindowOpen(w = this.week) { return (w >= 1 && w <= 6) || (w >= 21 && w <= 25); },
     absWeek() { return this.seasonStartYear * 52 + this.week; },
+    // record a money flow by category for the Finance tab (positive = income, negative = expense)
+    addFinance(cat, amount) {
+        if (!amount) return;
+        const a = this.agency; if (!a) return;
+        if (!a.ledger) a.ledger = {};
+        if (!a.ledgerAll) a.ledgerAll = {};
+        a.ledger[cat] = (a.ledger[cat] || 0) + amount;
+        a.ledgerAll[cat] = (a.ledgerAll[cat] || 0) + amount;
+    },
     transferWindowKey(w = this.week) {
         if (w >= 1 && w <= 6) return this.seasonStartYear + ':S';
         if (w >= 21 && w <= 25) return this.seasonStartYear + ':W';
@@ -58,6 +67,7 @@ const GameState = {
     addMail(mail) {
         mail.id = mail.id || ('m_' + Math.random().toString(36).slice(2, 9));
         mail.week = this.week;
+        mail.abs = this.absWeek();
         mail.season = this.seasonLabel();
         mail.read = false;
         this.inbox.unshift(mail);
