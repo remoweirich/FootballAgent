@@ -129,7 +129,7 @@ const Agency = {
     // ---------- loans: interested clubs come to you ----------
     requestLoan(p) {
         if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (p.onLoanAt) return { ok: false, message: `${p.name} is already away.` };
+        if (p.onLoanAt && !isU21Loan(p)) return { ok: false, message: `${p.name} is already away.` };
         const cands = Clubs.allClubs.filter(c => {
             if (c.id === p.clubId) return false;
             const role = this.maxRoleAt(p, c);
@@ -178,6 +178,7 @@ const Agency = {
     sendToU21(p) {
         if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
         if (p.onLoanAt) return { ok: false, message: `${p.name} is already away.` };
+        if (p.age > 21) return { ok: false, message: `${p.name} is ${p.age} — only players aged 21 or under can drop to a youth/U21 side.` };
         if (isReserveClub(p.clubId)) return { ok: false, message: `${p.name} already plays for a reserve side (${Clubs.getClubById(p.clubId)?.name}); he can't be sent down further. You can request a promotion to the senior team instead.` };
         const seniorName = Clubs.getClubById(p.clubId)?.name || '';
         // the club has to agree to drop him to the youth/reserve setup
@@ -222,7 +223,9 @@ const Agency = {
         const w = GameState.week;
         if (w >= 1 && w <= 6) return [{ code: '0.5', label: 'Half season' }, { code: '1', label: '1 season' }, { code: '1.5', label: '1.5 seasons' }, { code: '2', label: '2 seasons' }];
         if (w >= 21 && w <= 25) return [{ code: '0.5', label: 'Rest of season' }, { code: '1.5', label: '1.5 seasons' }];
-        return [];
+        // loans can be arranged any time of year — offer sensible defaults outside the main windows
+        if (w >= 48) return [{ code: '1', label: 'Next season' }, { code: '2', label: '2 seasons' }];
+        return [{ code: '0.5', label: 'Rest of season' }, { code: '1.5', label: 'Through next season' }];
     },
     // returns { until, mid } describing when the loan ends
     computeLoanEnd(code) {

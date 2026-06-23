@@ -124,6 +124,17 @@ const League = {
             grp.md++;
         });
     },
+    clubPosition(clubId) {
+        const club = Clubs.getClubById(clubId);
+        if (!club || !GameState.league || !GameState.league.tables) return null;
+        const div = club.division;
+        const T = GameState.league.tables[div];
+        if (!T || !T.length) return null;
+        const sorted = [...T].sort((a, b) => b.Pts - a.Pts || (b.GF - b.GA) - (a.GF - a.GA) || b.GF - a.GF);
+        const idx = sorted.findIndex(r => r.clubId === clubId);
+        if (idx < 0) return null;
+        return { pos: idx + 1, total: sorted.length, div, divName: (COMPETITIONS[div] || {}).name || div, pts: sorted[idx].Pts, played: sorted[idx].P };
+    },
     _kSort(table) {
         return [...table].sort((a, b) => b.Pts - a.Pts || (b.GF - b.GA) - (a.GF - a.GA) || b.GF - a.GF || a.GA - b.GA || a.cards - b.cards || (Math.random() - 0.5));
     },
@@ -206,8 +217,15 @@ const League = {
         const ere = ord('ERE'), eed = ord('EED'), twd = ord('TWD'), drd = ord('DRD');
         const ereDown = ere.slice(-3), eedDown = eed.slice(-3), twdDown = twd.slice(-3);
         const sEED = this.promoStructure('EED'), sTWD = this.promoStructure('TWD'), sDRD = this.promoStructure('DRD');
-        const promoted = (s, pw) => { const out = [...s.green]; const w = (pw && s.blue.includes(pw)) ? pw : s.blue[0]; if (w) out.push(w); return out.slice(0, 3); };
-        const eedUp = promoted(sEED, poW('EED')), twdUp = promoted(sTWD, poW('TWD')), drdUp = promoted(sDRD, poW('DRD'));
+        // always promote exactly 3 (auto + play-off winner, topped up by league order) so promotions match relegations and sizes never drift
+        const promoted = (s, pw, ordered) => {
+            const out = [...s.green];
+            const w = (pw && s.blue.includes(pw)) ? pw : s.blue[0];
+            if (w && !out.includes(w)) out.push(w);
+            for (const id of ordered) { if (out.length >= 3) break; if (!out.includes(id)) out.push(id); }
+            return out.slice(0, 3);
+        };
+        const eedUp = promoted(sEED, poW('EED'), eed), twdUp = promoted(sTWD, poW('TWD'), twd), drdUp = promoted(sDRD, poW('DRD'), drd);
         const notes = [...sEED.denied.map(id => ({ div: 'EED', clubId: id })), ...sTWD.denied.map(id => ({ div: 'TWD', clubId: id })), ...sDRD.denied.map(id => ({ div: 'DRD', clubId: id }))];
         return {
             year: GameState.seasonStartYear, ere, eed, twd, drd, ereDown, eedDown, twdDown, eedUp, twdUp, drdUp,
@@ -238,10 +256,14 @@ const League = {
         const L = GameState.league; if (!L) return;
         const week = GameState.week;
 
-        DIV_ORDER.forEach(div => {
-            const s = L.schedule[div], idx = L.mdIndex[div];
-            if (idx < s.length) { s[idx].forEach(([h, a]) => this.playLeagueMatch(div, h, a)); L.mdIndex[div] = idx + 1; }
-        });
+        // no league matches in the opening fortnight or during international breaks (cups still run)
+        const NO_LEAGUE = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
+        if (!NO_LEAGUE.has(week)) {
+            DIV_ORDER.forEach(div => {
+                const s = L.schedule[div], idx = L.mdIndex[div];
+                if (idx < s.length) { s[idx].forEach(([h, a]) => this.playLeagueMatch(div, h, a)); L.mdIndex[div] = idx + 1; }
+            });
+        }
 
         if ([4, 7, 15, 26, 32, 38, 47].includes(week)) this.bekerStep(week);
 
@@ -305,11 +327,23 @@ const League = {
         if (bestGK) starters.push(bestGK);
         guaranteed.forEach(p => { if (starters.length < 11) starters.push(p); });
         for (const p of outfield) { if (starters.length >= 11) break; starters.push(p); }
-        const subs = maybeLoan.concat(outfield.filter(p => !starters.includes(p))).slice(0, 5);
 
+        // squad role decides how often a player actually features: a star plays nearly every game, a fringe player seldom
+        const ATTEND = { key: 0.95, starter: 0.86, rotation: 0.60, fringe: 0.33, youth: 0.15 };
+        const willPlay = pl => Math.random() < (ATTEND[pl.squadRole] ?? 0.6);
+        const benchPool = outfield.filter(p => !starters.includes(p));   // remaining outfielders, best-first
+        const finalStarters = [];
+        starters.forEach(pl => {
+            if (pl === bestGK) { finalStarters.push(pl); return; }     // the No.1 keeper plays
+            if (willPlay(pl)) { finalStarters.push(pl); return; }
+            const rep = benchPool.shift();                            // rested -> a squad player deputises
+            if (rep) finalStarters.push(rep);
+        });
+
+        const subs = maybeLoan.concat(benchPool).slice(0, 5);
         const appear = [];
-        starters.forEach(p => appear.push({ p, full: true, g: 0, a: 0 }));
-        subs.forEach(p => { if (Math.random() < 0.5) appear.push({ p, full: false, g: 0, a: 0 }); });
+        finalStarters.forEach(p => appear.push({ p, full: true, g: 0, a: 0 }));
+        subs.forEach(p => { if (Math.random() < (ATTEND[p.squadRole] ?? 0.5) * 0.7) appear.push({ p, full: false, g: 0, a: 0 }); });
         if (!appear.length) return;
 
         const posW = { ST: 1.0, LW: 0.8, RW: 0.8, CAM: 0.7, CM: 0.4, CDM: 0.2, LB: 0.15, RB: 0.15, CB: 0.12, GK: 0.0 };

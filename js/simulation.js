@@ -187,7 +187,7 @@ const Sim = {
         const aw = GameState.absWeek();
         Agency.clients().forEach(p => {
             if (p._pendingLoan && aw >= p._pendingLoan.from) {
-                if (!p.onLoanAt) {
+                if (!p.onLoanAt || isU21Loan(p)) {
                     let n = 0;
                     p._pendingLoan.picks.forEach(cid => {
                         const c = Clubs.getClubById(cid); if (!c) return;

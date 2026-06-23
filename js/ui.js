@@ -24,15 +24,24 @@ const UI = {
     abilityClass(a) { return a >= 80 ? 'ability-elite' : a >= 65 ? 'ability-great' : a >= 50 ? 'ability-good' : a >= 35 ? 'ability-average' : 'ability-low'; },
     relClass(r) { return r >= 65 ? 'rel-good' : r >= 45 ? 'rel-ok' : 'rel-bad'; },
     moraleColor(v) { return v >= 66 ? '#10b981' : v >= 40 ? '#f59e0b' : '#ef4444'; },
+    clubPosLine(clubId) {
+        const r = (typeof League !== 'undefined' && League.clubPosition) ? League.clubPosition(clubId) : null;
+        if (!r) return '';
+        const ord = n => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+        return ` <span class="pos-tag" title="${r.divName} table">${ord(r.pos)}/${r.total}${r.played ? ` · ${r.pts}pts` : ''}</span>`;
+    },
     moraleAvg(p) { const m = p.morale || {}; return Math.round(((m.club || 0) + (m.time || 0) + (m.wage || 0) + (m.agent || 0)) / 4); },
-    moraleSmiley(p, withLabel) {
+    moraleSmiley(p) {
         const v = this.moraleAvg(p);
-        let face, color, label;
-        if (v < 30) { face = '☹'; color = '#ef4444'; label = 'Unhappy'; }
-        else if (v <= 55) { face = '😐'; color = '#f59e0b'; label = 'Restless'; }
-        else if (v <= 75) { face = '🙂'; color = '#4ade80'; label = 'Content'; }
-        else { face = '😄'; color = '#15803d'; label = 'Delighted'; }
-        return `<span class="morale-smiley" title="Morale ${v}/100 — ${label}" style="color:${color}">${face}${withLabel ? ` <span class="ms-val">${v}</span>` : ''}</span>`;
+        let color, mouth, label;
+        if (v < 30) { color = '#ef4444'; mouth = 'M6 13 Q10 10 14 13'; label = 'Unhappy'; }            // frown
+        else if (v <= 55) { color = '#f59e0b'; mouth = 'M6 12.5 L14 12.5'; label = 'Restless'; }        // neutral
+        else if (v <= 75) { color = '#4ade80'; mouth = 'M6 11.5 Q10 14.5 14 11.5'; label = 'Content'; }  // smile
+        else { color = '#15803d'; mouth = 'M5.5 11 Q10 15.5 14.5 11'; label = 'Delighted'; }             // big smile
+        return `<span class="morale-smiley" title="Morale: ${label}"><svg viewBox="0 0 20 20" width="22" height="22" aria-label="${label}">
+            <circle cx="10" cy="10" r="9" fill="${color}"/>
+            <circle cx="7" cy="8" r="1.3" fill="#fff"/><circle cx="13" cy="8" r="1.3" fill="#fff"/>
+            <path d="${mouth}" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></span>`;
     },
     contractText(p) { return p.contractUntilSeason ? 'until end of ' + GameState.seasonLabelFor(p.contractUntilSeason) : '—'; },
     ratingClass(v) { if (!v) return ''; return v < 6 ? 'rating-red' : v < 7 ? 'rating-yellow' : v < 8 ? 'rating-lgreen' : v < 9 ? 'rating-dgreen' : 'rating-blue'; },
@@ -190,7 +199,7 @@ const UI = {
         return `<div class="card" data-player="${p.id}">
             <div class="card-head"><div><div class="card-title">${p.name}</div>
                 <div class="card-sub">${p.nationalityFlag} ${p.position} · ${p.age}y · ${club ? club.name : 'Free agent'}</div></div>
-                <div class="card-head-right">${mine ? `<div class="card-morale">${this.moraleSmiley(p, true)}</div>` : ''}<div class="ovr ${this.abilityClass(p.ability)}">${p.ability}</div></div></div>
+                <div class="card-head-right">${mine ? `<div class="card-morale">${this.moraleSmiley(p)}</div>` : ''}<div class="ovr ${this.abilityClass(p.ability)}">${p.ability}</div></div></div>
             <div class="card-rows">
                 <div><span class="k">Role</span><span class="v">${roleLabel(p.squadRole, p.age)}</span></div>
                 <div><span class="k">Contract</span><span class="v">${this.contractCell(p)}</span></div>
@@ -373,8 +382,8 @@ const UI = {
             <p class="greet">“${Agency.greetingFor(to.id)}”</p>
             <div class="callout neg-facts">
                 <div><span class="k">Player's current wage</span><span class="v">€${this.money(p.wage)}/wk</span></div>
-                <div><span class="k">Current club</span><span class="v">${fromLeague}</span></div>
-                <div><span class="k">Bidding club</span><span class="v">${to.name}, ${to.divisionName}</span></div>
+                <div><span class="k">Current club</span><span class="v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
+                <div><span class="k">Bidding club</span><span class="v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
             </div>
             <p class="muted">${p.ability} OVR · ${p.age}y · ${feeLine}${o.initiatedByAgent ? ' · you pitched this' : ''}</p>
             <p>Put your whole proposal on the table — wage, role, length and signing bonus together. They'll answer with one improved counter, or tell you it's almost there. (A shorter contract can free up more wage.)</p>
@@ -486,7 +495,7 @@ const UI = {
         const acceptBtn = inWindow ? `<button class="btn-primary" onclick="UI.doAcceptLoan('${m.id}')">Accept loan</button>` : '';
         this.openModal(`<h2>🔁 Loan — ${p.name}</h2>
             <p class="greet">“${Agency.greetingFor(to.id)}”</p>
-            <p class="muted">${to.name} (${to.divisionName}) · they propose: <strong>${ROLE_LABEL[offered]}</strong></p>
+            <p class="muted">${to.name} (${to.divisionName})${this.clubPosLine(to.id)}${p.clubId ? ` · from ${Clubs.getClubById(p.clubId)?.name || ''}${this.clubPosLine(p.clubId)}` : ''} · they propose: <strong>${ROLE_LABEL[offered]}</strong></p>
             <p>Push for more game time — they may dig in, or give in if you persist and they trust you.</p>
             <div class="slider-block"><label>Ask for role: <strong id="lrAgreed">${ROLE_LABEL[offered]}</strong> agreed</label>
                 <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === offered ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select>
@@ -1221,6 +1230,6 @@ const UI = {
 
     // ---------- modal helpers ----------
     openModal(html) { document.getElementById('modalBody').innerHTML = html; document.getElementById('modal').classList.add('active'); },
-    closeModal() { document.getElementById('modal').classList.remove('active'); },
+    closeModal() { document.getElementById('modal').classList.remove('active'); if (this.view === 'clients' && document.getElementById('clientsView')) this.renderClients(); },
     result(msg, kind) { const el = document.getElementById('modalResult'); if (el) el.innerHTML = `<div class="result ${kind}">${msg}</div>`; }
 };

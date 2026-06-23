@@ -180,18 +180,18 @@ const PlayerDev = {
             const games = Math.min(appsThisWeek, 2);
             const drive = games > 0 ? games * this.challengeFactor(p) : 0.35; // more meaningful training when not playing
             // points get much harder to come by near the top of the scale
-            const highEnd = Math.max(0.10, 1 - Math.pow(Math.max(0, p.ability - 45) / 55, 1.3));
-            let pts = drive * this.youthBoost(p.age) * (gap / 50) * 0.22 * highEnd * ((typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1);
+            const highEnd = Math.max(0.14, 1 - Math.pow(Math.max(0, p.ability - 45) / 55, 1.3));
+            let pts = drive * this.youthBoost(p.age) * (gap / 50) * 1.1 * highEnd * ((typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1);
             // playing well accelerates development: a strong recent average rating gives a real boost
             const st = (typeof seasonTotals === 'function') ? seasonTotals(p, GameState.seasonStartYear) : null;
             if (st && st.apps >= 4) {
                 const form = Math.max(0.75, Math.min(1.9, 1 + (st.avg - 6.9) * 0.5));
                 pts *= form;
             }
-            pts = Math.min(pts, 0.42);   // a touch higher ceiling so a hot streak can really tell
+            pts = Math.min(pts, 0.55);
             p._dev = (p._dev || 0) + pts;
-            // cap growth at ~9 ability points per season (a young low-rated talent can jump ~20->28; elite players inch up)
-            while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 9) { p.ability += 1; p._dev -= 1; p._devGained = (p._devGained || 0) + 1; delta += 1; }
+            // regular game time can close a big gap within a couple of seasons; sporadic players gain far less
+            while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 12) { p.ability += 1; p._dev -= 1; p._devGained = (p._devGained || 0) + 1; delta += 1; }
         } else if (p.age > p.peakAge) {
             const perYear = p.position === 'GK' ? 0.7 : (MID_POS.includes(p.position) || p.position === 'CB' ? 1.4 : 1.8);
             const accel = 1 + (p.age - p.peakAge) * 0.12;
