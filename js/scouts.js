@@ -64,7 +64,7 @@ const Scouts = {
         ag.scouts.push({
             id: offer.id, name: offer.name, title: offer.title,
             quality: offer.quality, weeklyCost: offer.weeklyCost,
-            region: null, weeksUntilFind: this.nextFindDelay()
+            region: null, weeksUntilFind: this.nextFindDelay(offer.quality)
         });
         GameState.addLog(`Hired ${offer.name} (${offer.title}, quality ${offer.quality}) for €${offer.weeklyCost}/wk.`, 'scout');
         return { ok: true, message: `${offer.name} hired. Assign him to a region so he can start scouting.` };
@@ -76,7 +76,7 @@ const Scouts = {
         if (!s) return { ok: false, message: 'Unknown scout.' };
         if (s.region === regionId) return { ok: false, message: `${s.name} already covers ${regionName(regionId)}.` };
         s.region = regionId;
-        s.weeksUntilFind = this.nextFindDelay();
+        s.weeksUntilFind = this.nextFindDelay(s.quality);
         GameState.addLog(`${s.name} assigned to ${regionName(regionId)} (€${this.regionReportCost(regionId)}/report).`, 'scout');
         return { ok: true, message: `${s.name} now scouts ${regionName(regionId)} (€${this.regionReportCost(regionId)} per report). First report in ~${s.weeksUntilFind} weeks.` };
     },
@@ -88,13 +88,36 @@ const Scouts = {
     },
 
     // reports arrive every 6-7 weeks
-    nextFindDelay() { return 6 + Math.floor(Math.random() * 2); },
+    nextFindDelay(quality = 50) { return 6 + Math.floor(Math.random() * 2) + (quality < 30 ? 3 : quality < 50 ? 1 : 0); },
 
-    // found ability tracks scout quality, with the odd dud and the odd gem
-    rolledAbility(quality) {
-        let a = PlayerGen.gauss(quality, 7);
-        if (Math.random() < 0.18) a -= 8 + Math.random() * 8;   // occasional weaker find
-        return this._clamp(Math.round(a), 3, 80);
+    // scout quality -> the calibre of talent he can unearth: [minAbility, maxAbility, centrePotential, potentialCap]
+    tierRanges(q) {
+        if (q < 20) return [5, 20, 38, 60];
+        if (q < 30) return [10, 25, 44, 65];
+        if (q < 40) return [15, 30, 52, 70];
+        if (q < 50) return [20, 35, 58, 75];
+        if (q < 60) return [25, 45, 65, 85];
+        if (q < 70) return [30, 55, 72, 95];
+        if (q < 80) return [40, 65, 80, 99];
+        if (q < 90) return [45, 70, 83, 99];
+        return [50, 80, 85, 99];
+    },
+    // roll a talent's TRUE current ability + potential for a scout of quality q, given the prospect's age.
+    rolledTalent(q, age) {
+        const [loA, hiA, centre, cap] = this.tierRanges(q);
+        let potential = Math.round(PlayerGen.gauss(centre, 8.5));
+        potential = Math.max(Math.max(20, loA), Math.min(cap, potential));
+        // spread current ability ACROSS the tier band [loA..hiA], driven by age + potential + genuine noise
+        const ageN = Math.max(0, Math.min(1, (age - 15) / 7));                 // 15y→0 .. 22y→1
+        const potN = Math.max(0, Math.min(1, (potential - loA) / Math.max(1, cap - loA)));
+        let frac = 0.22 + ageN * 0.42 + potN * 0.22 + (Math.random() - 0.5) * 0.42;
+        frac = Math.max(0, Math.min(1, frac));
+        let ability = Math.round(loA + frac * (hiA - loA));
+        ability = Math.min(ability, potential);                                // never above his ceiling
+        // very rare precocious teenager (only the best scouts ever see these, <0.5%)
+        if (q >= 95 && age <= 18 && Math.random() < 0.004) ability = Math.min(potential, hiA, ability + 8 + Math.floor(Math.random() * 6));
+        potential = Math.max(potential, ability);
+        return { ability, potential };
     },
 
     // place a found talent at a club IN the scout's region:
@@ -119,11 +142,10 @@ const Scouts = {
                 // an idle scout on the payroll still keeps his ear to the ground: 1-2 finds a season, anywhere in the country
                 if (Math.random() < 0.03) {
                     const club = Clubs.allClubs[Math.floor(Math.random() * Clubs.allClubs.length)];
-                    const ability = this.rolledAbility(s.quality);
-                    const opts = { ability, age: this._prospectAge(s.maxTalentAge) };
-                    if (Math.random() < 0.02 + s.quality / 3000) opts.potential = Math.min(88, ability + 40 + Math.floor(Math.random() * 16));
-                    const pr = PlayerGen.makeProspect(club, opts);
-                    pr.knownToAgent = true; pr.discoveredVia = 'scout:' + s.name; pr.scoutQuality = s.quality;
+                    const age = this._prospectAge(s.maxTalentAge);
+                    const { ability, potential } = this.rolledTalent(s.quality, age);
+                    const pr = PlayerGen.makeProspect(club, { ability, potential, age });
+                    pr.knownToAgent = true; pr.discoveredVia = 'scout:' + s.name; pr.discoveredWeek = GameState.absWeek(); pr.scoutQuality = s.quality;
                     Scouting.generateReport(pr, s.quality);
                     GameState.players.push(pr);
                     found.push({ scout: s.name, region: null, players: [pr], cost: 0, idle: true });
@@ -132,21 +154,27 @@ const Scouts = {
             }
             s.weeksUntilFind -= 1;
             if (s.weeksUntilFind > 0) return;
-            s.weeksUntilFind = this.nextFindDelay();
+            s.weeksUntilFind = this.nextFindDelay(s.quality);
 
             const regionClubs = Clubs.getClubsByRegion(s.region);
             if (!regionClubs.length) return;
-            const n = 2 + (Math.random() < 0.5 ? 1 : 0);   // 2-3 talents
+            const span = Math.max(0, Math.min(7, (s.maxTalentAge || 22) - 15));   // wider age window -> more to find
+            const spanF = span / 7;                                              // 0 (only 15yo) .. 1 (15-22)
+            let n = s.quality < 30 ? Math.floor(Math.random() * 2)               // 0-1 (sometimes empty-handed)
+                : s.quality < 50 ? 1 + Math.floor(Math.random() * 2)            // 1-2
+                    : 2 + (Math.random() < 0.5 ? 1 : 0);                        // 2-3
+            if (n === 0 && Math.random() < 0.25 + spanF * 0.5) n = 1;            // a broad search still tends to turn something up
+            if (Math.random() < spanF * 0.25) n += 1;                            // and occasionally one extra
             const batch = [];
             for (let i = 0; i < n; i++) {
-                const ability = this.rolledAbility(s.quality);
+                const age = this._prospectAge(s.maxTalentAge);
+                const { ability, potential } = this.rolledTalent(s.quality, age);
                 const club = this.pickRegionalClub(regionClubs, ability);
                 if (!club) continue;
-                const opts = { ability, age: this._prospectAge(s.maxTalentAge) };
-                if (Math.random() < 0.02 + s.quality / 3000) opts.potential = Math.min(88, ability + 40 + Math.floor(Math.random() * 16));
-                const prospect = PlayerGen.makeProspect(club, opts);
+                const prospect = PlayerGen.makeProspect(club, { ability, potential, age });
                 prospect.knownToAgent = true;
                 prospect.discoveredVia = 'scout:' + s.name;
+                prospect.discoveredWeek = GameState.absWeek();
                 prospect.scoutQuality = s.quality;
                 Scouting.generateReport(prospect, s.quality);
                 GameState.players.push(prospect);
@@ -154,8 +182,10 @@ const Scouts = {
             }
             if (batch.length) {
                 const cost = this.regionReportCost(s.region);
-                GameState.agency.balance -= cost;
+                GameState.agency.balance -= cost; GameState.addFinance('Scout reports', -cost);
                 found.push({ scout: s.name, region: s.region, players: batch, cost });
+            } else {
+                found.push({ scout: s.name, region: s.region, players: [], cost: 0, none: true });   // report a blank trip
             }
         });
         return found;

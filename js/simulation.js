@@ -25,7 +25,7 @@ const Sim = {
         }
         const week = GameState.week;
         // individual birthdays (week 1 = 1 July): a player ages on his birth week
-        GameState.players.forEach(p => { if ((p.birthWeek || 0) === week) p.age += 1; });
+        GameState.players.forEach(p => { if (!p.archived && (p.birthWeek || 0) === week) p.age += 1; });
 
         // ---- mid-season loan returns (summer half/1.5-season loans end at the winter window) ----
         if (week >= 21 && week <= 25) {
@@ -57,6 +57,7 @@ const Sim = {
             if (week <= 45) this._simU21();
             const notes = [];
             GameState.players.forEach(p => {
+                if (p.archived) return;
                 const d = PlayerDev.weeklyTick(p, p._weekApps || 0);
                 if (d > 0 && p.agentId === 'me') {
                     notes.push(`${p.name} improved to ${p.ability} OVR (+${d}).`);
@@ -66,12 +67,18 @@ const Sim = {
             notes.slice(0, 5).forEach(n => { GameState.addLog(n, 'dev'); events.push({ type: 'dev', text: n }); });
             if (notes.length) GameState.addMail({ kind: 'news', cat: 'dev', subject: 'Development update', body: notes.join('<br>'), ttl: 3 });
             this._injuries(events);
-            this._morale();
+            this._morale(events);
         }
 
         // ---- scouts ----
         const finds = Scouts.tick();
         finds.forEach(f => {
+            if (f.none) {
+                const t = `${f.scout} scouted ${regionName(f.region)} but didn't turn up anyone worth a report this time.`;
+                GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: `Scout report — ${regionName(f.region)} (nothing found)`, body: t + ' Widening his age range can help him find more.', ttl: 3 });
+                return;
+            }
             const names = f.players.map(pl => `${pl.name} (${pl.position}, ${pl.ability} OVR — ${Clubs.getClubById(pl.clubId)?.name})`).join('; ');
             const t = `${f.scout} (${regionName(f.region)}) reports ${f.players.length} talent(s)${f.cost ? ' (cost €' + UI.money(f.cost) + ')' : ''}: ${names}.`;
             GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
@@ -79,13 +86,21 @@ const Sim = {
         });
 
         // ---- finances ----
-        const income = Agency.weeklyIncome(), expenses = Agency.weeklyExpenses();
+        const bd = Agency.weeklyBreakdown();
+        const income = bd.wageComm + bd.sponsorComm;
+        const expenses = bd.scoutWages + bd.office + bd.facilities;
+        GameState.addFinance('Wage commission', bd.wageComm);
+        GameState.addFinance('Sponsoring', bd.sponsorComm);
+        GameState.addFinance('Scout wages', -bd.scoutWages);
+        GameState.addFinance('Office', -bd.office);
+        GameState.addFinance('Facilities & staff', -bd.facilities);
         GameState.agency.balance += income - expenses;
         if (income || expenses) events.push({ type: 'money', text: `+€${UI.money(income)} commissions, −€${UI.money(expenses)} running costs (office + scouts). Balance €${UI.money(GameState.agency.balance)}.` });
         if (GameState.agency.balance < 0) { const t = `Agency in the red (€${UI.money(GameState.agency.balance)}).`; GameState.addLog(t, 'warn'); events.push({ type: 'warn', text: t }); }
 
         // ---- inbox: new offers during window, sponsors anytime, expiry/persistence ----
-        if (GameState.isTransferWindowOpen(week)) this._generateOffers(events);
+        this._deliverPending(events);
+        if (GameState.isTransferWindowOpen(week) || week >= 48) this._generateOffers(events);
         this._sponsorOffers(events);
         this._expireMail(events);
 
@@ -135,7 +150,7 @@ const Sim = {
         });
     },
 
-    _morale() {
+    _morale(events) {
         const year = GameState.seasonStartYear, week = GameState.week;
         Agency.clients().forEach(p => {
             const club = Clubs.getClubById(p.clubId);
@@ -151,13 +166,50 @@ const Sim = {
             p.morale.time += (timeTarget - p.morale.time) * 0.1;
             p.morale.wage += (wageTarget - p.morale.wage) * 0.1;
             p.morale.agent = Math.max(0, p.morale.agent - 0.2); // decays; raise via gifts/deals
+            // when he's genuinely unhappy, he gets in touch — about whatever bothers him most
+            const avg = ((p.morale.club || 0) + (p.morale.time || 0) + (p.morale.wage || 0) + (p.morale.agent || 0)) / 4;
+            const aw = GameState.absWeek();
+            if (avg < 30 && (!p._moaned || aw - p._moaned >= 8)) {
+                p._moaned = aw;
+                const dims = [['club', p.morale.club, 'the club', `He doesn't feel ${club ? club.name : 'his club'} is the right place for him.`],
+                    ['time', p.morale.time, 'his playing time', `He's frustrated by his lack of minutes and wants to play more.`],
+                    ['wage', p.morale.wage, 'his wages', `He feels underpaid for what he brings and wants his pay looked at.`],
+                    ['agent', p.morale.agent, 'your representation', `He's unsure you're doing enough for him lately and wants more attention.`]];
+                dims.sort((a, b) => a[1] - b[1]);
+                const worst = dims[0];
+                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} is unhappy — ${worst[2]}`, body: `${p.name} has been in touch. ${worst[3]} (Overall morale is low.)`, ttl: 5 });
+                events.push({ type: 'morale', text: `${p.name} is unhappy about ${worst[2]}.` });
+            }
+        });
+    },
+
+    _deliverPending(events) {
+        const aw = GameState.absWeek();
+        Agency.clients().forEach(p => {
+            if (p._pendingLoan && aw >= p._pendingLoan.from) {
+                if (!p.onLoanAt) {
+                    let n = 0;
+                    p._pendingLoan.picks.forEach(cid => {
+                        const c = Clubs.getClubById(cid); if (!c) return;
+                        if (Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id)) return;
+                        if (GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id && m.offer.toClubId === c.id)) return;
+                        const role = Agency.maxRoleAt(p, c);
+                        GameState.addMail({ kind: 'loan', subject: `${c.name} want ${p.name} on loan`, offer: { playerId: p.id, fromClubId: p.clubId, toClubId: c.id, role }, persistence: 0, ttl: 4 });
+                        n++;
+                    });
+                    if (n) events.push({ type: 'offer', text: `${n} club(s) have come in for ${p.name} on loan.` });
+                }
+                delete p._pendingLoan;
+            }
         });
     },
 
     _generateOffers(events) {
+        const winKey = GameState.transferWindowKey ? GameState.transferWindowKey() : null;
         Agency.clients().forEach(p => {
             if (p.injury) return;
             if (p.onLoanAt) return;   // out on loan / with reserves -> no transfer interest until he's back
+            if (winKey && p._txWindow === winKey) return;   // just changed clubs this window -> no fresh approaches until next window
             // free agents: clubs approach with contract offers (no transfer fee)
             if (Agency.isFreeAgent(p)) {
                 const pending = GameState.inbox.filter(m => m.kind === 'transfer' && m.offer.playerId === p.id).length;
@@ -183,7 +235,7 @@ const Sim = {
                 GameState.addMail({ kind: 'news', subject: `${homeClub.name} list ${p.name}`, body: `${homeClub.name} no longer count on ${p.name} and have placed him on the transfer list to recoup a fee.`, ttl: 4 });
                 events.push({ type: 'offer', text: `${homeClub.name} have transfer-listed ${p.name}.` });
             }
-            if (pending < 2) {
+            if (pending < 2 && !(p._txOffersFrom && GameState.absWeek() < p._txOffersFrom)) {
                 const tot = seasonTotals(p, GameState.seasonStartYear);
                 const attract = p.ability + Math.min(20, tot.apps) * 0.4 + (p.transferListed ? 20 : 0);
                 const chance = Math.min(0.30, 0.02 + attract / 400);
@@ -202,13 +254,13 @@ const Sim = {
                     }
                 }
             }
-            // loan offers if loan-listed
-            if (p.loanListed && !p.onLoanAt && !GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id)) {
+            // loan offers if loan-listed (offers wait until the week after listing)
+            if (p.loanListed && !p.onLoanAt && !(p._loanOffersFrom && GameState.absWeek() < p._loanOffersFrom) && !GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id)) {
                 if (Math.random() < 0.4) {
                     const club = Clubs.getClubById(p.clubId);
                     const dest = Agency._findLoanClub(p, club || Clubs.allClubs[0]);
                     if (dest && !Agency.clubHasMyPlayerAtPos(dest.id, p.position, p.id)) {
-                        GameState.addMail({ kind: 'loan', subject: `${dest.name} want ${p.name} on loan`, offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, role: Agency.maxRoleAt(p, dest) === 'key' ? 'starter' : Agency.maxRoleAt(p, dest) }, persistence: 0, ttl: 2 });
+                        GameState.addMail({ kind: 'loan', subject: `${dest.name} want ${p.name} on loan`, offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, role: Agency.maxRoleAt(p, dest) }, persistence: 0, ttl: 3 });
                         events.push({ type: 'offer', text: `${dest.name} want ${p.name} on loan.` });
                     }
                 }
@@ -216,36 +268,80 @@ const Sim = {
         });
     },
 
+    _seasonLeagueApps(p, year) {
+        let n = 0;
+        seasonStints(p, year).forEach(st => {
+            if (st.youth) return;
+            Object.entries(st.comps).forEach(([cid, c]) => { const comp = COMPETITIONS[cid]; if (comp && comp.type === 'league') n += (c.apps || 0); });
+        });
+        return n;
+    },
+    // which sponsor tier a player can attract, from his division, game time and quality
+    _sponsorLevelFor(p) {
+        const club = Clubs.getClubById(p.clubId);
+        const div = club ? club.division : null;       // 'ERE'|'EED'|'TWD'|'DRD'
+        const apps = this._seasonLeagueApps(p, GameState.seasonStartYear);
+        const talent = p.potential >= 78 && p.age <= 21;   // promising youngsters punch above their weight
+        if (p.ability >= 90) return 'worldwide';
+        if (div === 'ERE' && p.ability >= 80) return 'international';
+        if (div === 'ERE') return 'national';
+        if (div === 'EED' && apps > 25) return 'national';
+        if (talent) return 'national';
+        if (div === 'EED' && apps > 5) return 'regional';
+        if (div === 'TWD' && apps > 25) return 'regional';
+        if (div === 'DRD' && apps > 25) return 'local';
+        return null;
+    },
     _sponsorOffers(events) {
-        if (GameState.week !== 49) return;                          // sponsors come calling once a year, in the off-season
-        const level = Upgrades.sponsorLevel();
-        const mult = { local: 1, regional: 1.6, national: 2.6, international: 4.5, worldwide: 8 }[level] || 1;
+        const wkBase = { local: 50, regional: 200, national: 1000, international: 10000, worldwide: 50000 };
         Agency.clients().forEach(p => {
-            if (p._sponsorSeason === GameState.seasonStartYear) return;
+            if (p.injury || p.onLoanAt) return;
+            if (p._sponsorSeason === GameState.seasonStartYear) return;                 // one approach per season
             if (GameState.inbox.find(m => m.kind === 'sponsor' && m.offer.playerId === p.id)) return;
-            const tot = seasonTotals(p, GameState.seasonStartYear);
-            const profile = p.ability + tot.goals * 2 + (tot.avg > 7 ? 10 : 0);
-            if (profile < 42) return;
+            const level = this._sponsorLevelFor(p);
+            if (!level) return;
+            if (Math.random() > 0.06) return;                                           // spread the approach across the season
             p._sponsorSeason = GameState.seasonStartYear;
-            const wBase = Math.round(Math.pow(Math.max(1, p.ability - 38), 1.5) * mult / 10) * 10 + 20;
-            const aBase = wBase * 30;
+
+            const tot = seasonTotals(p, GameState.seasonStartYear);
+            const tenure = this._seasonsAtClub(p);
+            const loyal = p.age >= 28 && tenure >= 6;
+            const hot = tot.apps >= 6 && tot.avg > 7.5;
+            // base weekly for the tier, with a little noise; loyalty/form can push an outlier higher
+            let base = wkBase[level] * (0.85 + Math.random() * 0.3);
+            if (loyal || hot) base *= 1.4 + Math.random() * 1.1;                        // standout deal
+            const annualEquiv = base * 60;                                              // ~€3k/yr at local 50/wk
+
             const pool = []; const used = new Set();
             while (pool.length < 3) { const c = Upgrades.pickSponsor(level); if (!used.has(c)) { used.add(c); pool.push(c); } if (used.size > 30) break; }
+            // shorter deals usually pay more per week, but occasionally the long deal is the sweetest
+            const rk = () => 0.9 + Math.random() * 0.3;
+            let m1 = 1.0 * rk(), m2 = 0.8 * rk(), m3 = 0.62 * rk();                      // 1yr, 2yr, 3yr weekly multipliers
+            if (Math.random() < 0.18) { const b = m3; m3 = m1 * 1.05; m1 = b; }          // sometimes the 3-year is best
+            const round = v => Math.max(10, Math.round(v / 10) * 10);
+            const ra = v => Math.round(v / 100) * 100;
             const opts = [
-                { company: pool[0], weekly: Math.round(wBase * 1.2 / 10) * 10, annual: Math.round(aBase * 0.4 / 100) * 100, termSeasons: 3 },
-                { company: pool[1] || pool[0], weekly: wBase, annual: Math.round(aBase / 100) * 100, termSeasons: 2 },
-                { company: pool[2] || pool[0], weekly: Math.round(wBase * 0.6 / 10) * 10, annual: Math.round(aBase * 2.2 / 100) * 100, termSeasons: 1 },
+                { company: pool[0], weekly: round(base * m1), annual: ra(annualEquiv * 0.5 * m1), termSeasons: 1 },
+                { company: pool[1] || pool[0], weekly: round(base * m2), annual: ra(annualEquiv * 0.9 * m2), termSeasons: 2 },
+                { company: pool[2] || pool[0], weekly: round(base * m3), annual: ra(annualEquiv * 1.6 * m3), termSeasons: 3 },
             ];
-            const offer = { playerId: p.id, level, options: opts };
-            GameState.addMail({ kind: 'sponsor', subject: `Sponsorship offers for ${p.name}`, offer, persistence: 0, ttl: 5 });
-            events.push({ type: 'offer', text: `${SPONSOR_LABEL[level]} sponsors are interested in ${p.name} — three offers to weigh up.` });
+            const offer = { playerId: p.id, level, options: opts, legend: loyal, hot };
+            GameState.addMail({ kind: 'sponsor', subject: `Sponsorship offers for ${p.name}`, offer, persistence: 0, ttl: 6 });
+            events.push({ type: 'offer', text: `${SPONSOR_LABEL[level]} sponsors are interested in ${p.name}${loyal ? ' (loyal servant!)' : hot ? ' (in red-hot form!)' : ''} — three offers to weigh up.` });
         });
+    },
+    _seasonsAtClub(p) {
+        if (!p.clubId) return 0;
+        let n = 0;
+        Object.keys(p.stats || {}).forEach(y => { if (Object.values(p.stats[y]).some(st => st.clubId === p.clubId && !st.loan)) n++; });
+        return n;
     },
 
     _expireMail(events) {
         const keep = [];
         GameState.inbox.forEach(m => {
             if (m.ttl == null) { keep.push(m); return; }
+            if (m.abs != null && m.abs >= GameState.absWeek()) { keep.push(m); return; }   // never expire a mail the same week it arrived
             m.ttl -= 1;
             if (m.ttl > 0) { keep.push(m); return; }
             // expiring
@@ -263,9 +359,35 @@ const Sim = {
         GameState.inbox = keep;
     },
 
+    _seasonsActive(p) {
+        let n = 0;
+        Object.keys(p.stats || {}).forEach(y => { if (seasonTotals(p, +y, true).apps > 0) n++; });
+        return n;
+    },
     _endOfSeason(events) {
         const awarded = League.finishSeason();
         const year = GameState.seasonStartYear;
+        // resolve retirements: a strong, well-used season (>15 games) buys one more year (max 3 stays)
+        GameState.players.forEach(p => {
+            if (p.archived || !p.retiringThisSeason || !p.everClient) return;
+            const apps = seasonTotals(p, year).apps;
+            if (apps > 15 && p.retireDelays < 3) {
+                p.retireDelays += 1; p.retireAge = p.age + 1; p.retiringThisSeason = false;
+                if (p.agentId === 'me') {
+                    GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} plays on`, body: `After ${apps} appearances this season, ${p.name} still feels good — he's decided to go one more year after all.`, ttl: 6 });
+                    GameState.addLog(`${p.name} extends his career by another season.`, 'contract');
+                }
+            } else {
+                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} retires`, body: `${p.name} has played his final match and is hanging up his boots after a ${this._seasonsActive(p)}-season career. You can revisit his career any time under Competitions → Client History.`, ttl: 6 });
+                GameState.addLog(`${p.name} has retired.`, 'contract');
+                p.archived = true; p.retired = true; p.agentId = null; p.clubId = null; p.onLoanAt = null; p.transferListed = false;
+            }
+        });
+        // unsigned scouted talents who age out of the youth window quietly drop off the radar
+        // (keeps memory bounded; NO new youth is generated to replace them)
+        GameState.players = GameState.players.filter(p =>
+            !(typeof p.discoveredVia === 'string' && p.discoveredVia.indexOf('scout') === 0
+                && p.age > 23 && p.agentId == null && !p.everClient && !p.archived));
         // record each club's finishing position + trophies (persists across seasons)
         if (!GameState.clubHistory) GameState.clubHistory = {};
         ['ERE', 'EED', 'TWD', 'DRD'].forEach(div => {
@@ -324,8 +446,28 @@ const Sim = {
 
     _rollNewSeason(events) {
         const year = GameState.seasonStartYear;
+        // archive this season's finance ledger and start a fresh one
+        GameState.agency.ledgerLast = GameState.agency.ledger || {};
+        GameState.agency.ledger = {};
+        GameState.agency.ledgerSeason = year + 1;
         // promotion/relegation from the finished season (moves clubs between divisions)
         const prorel = League.applyPromotionRelegation();
+        if (prorel) {
+            const promoSet = new Set([...(prorel.eedUp || []), ...(prorel.twdUp || []), ...(prorel.drdUp || [])]);
+            const relSet = new Set([...(prorel.ereDown || []), ...(prorel.eedDown || []), ...(prorel.twdDown || [])]);
+            GameState.players.forEach(p => {
+                if (!p.everClient) return;
+                const stints = seasonStints(p, year).filter(st => !st.youth);
+                const end = stints[stints.length - 1]; if (!end) return;
+                let divId = null;
+                Object.entries(end.comps).forEach(([cid, c]) => { const comp = COMPETITIONS[cid]; if (comp && comp.type === 'league' && (c.apps || 0) > 0) divId = cid; });
+                if (!divId) return;
+                const wonTitle = (p.trophies || []).some(t => t.year === year && t.compId === divId);
+                if (!p.movements) p.movements = [];
+                if (promoSet.has(end.clubId) && !wonTitle) p.movements.push({ year, type: 'promo', division: divId });
+                else if (relSet.has(end.clubId)) p.movements.push({ year, type: 'releg', division: divId });
+            });
+        }
         if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorel = prorel;
         if (prorel) {
             const nm = id => Clubs.getClubById(id)?.name || id;
@@ -346,6 +488,18 @@ const Sim = {
             }
         });
         GameState.seasonStartYear += 1;
+        // players nearing the end announce their final season to their agent
+        const RETIRE_REASONS = ['my body is telling me it is time', 'I want to spend more time with my family', 'I feel I have given the game everything', 'a persistent injury has made the decision for me', 'I want to go out on my own terms', 'the passion is no longer what it was'];
+        GameState.players.forEach(p => {
+            if (p.archived || p.retiringThisSeason || !p.everClient) return;   // only your (ever-)clients retire & get archived
+            if (p.age >= p.retireAge - 1) {
+                p.retiringThisSeason = true;
+                if (p.agentId === 'me') {
+                    GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} plans to retire`, body: `Dear agent — thank you for everything over the years. I've decided that this will be my final season, because ${RETIRE_REASONS[Math.floor(Math.random() * RETIRE_REASONS.length)]}. Let's make it a good one.`, ttl: 6 });
+                    GameState.addLog(`${p.name} announced this will be his final season.`, 'contract');
+                }
+            }
+        });
         // contracts that have run out -> the player becomes a free agent (no club, free transfer, unsettled)
         GameState.players.forEach(p => {
             if (p.agentId === 'me' && !p.freeAgent && p.clubId && p.contractUntilSeason != null && p.contractUntilSeason < GameState.seasonStartYear) {
@@ -363,7 +517,7 @@ const Sim = {
             p.sponsorDeals.forEach(d => {
                 if (d.untilSeason >= GameState.seasonStartYear) {
                     const cut = Math.round((d.annual || 0) * p.sponsorCommission / 100);
-                    if (cut) GameState.agency.balance += cut;
+                    if (cut) GameState.agency.balance += cut; GameState.addFinance('Sponsoring', cut);
                     keep.push(d);
                 } else {
                     p.sponsorIncome = Math.max(0, p.sponsorIncome - d.weekly);   // deal lapses

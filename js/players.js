@@ -3,6 +3,11 @@
 // ============================================================
 const ROLE_PLAYTIME = { youth: 0.15, fringe: 0.40, rotation: 0.65, starter: 1.0, key: 1.0 };
 const ROLE_LABEL = { youth: 'Youth', fringe: 'Hot Prospect', rotation: 'Rotation', starter: 'Starter', key: 'Star Player' };
+// "Hot Prospect" only applies to players under 23; the same tier reads "Fringe" for older players
+function roleLabel(role, age) {
+    if (role === 'fringe') return (age != null && age >= 23) ? 'Fringe' : 'Hot Prospect';
+    return ROLE_LABEL[role] || role;
+}
 const ROLE_ORDER = ['youth', 'fringe', 'rotation', 'starter', 'key'];
 const POS_LIST = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const ATTACK_POS = ['CAM', 'LW', 'RW', 'ST'];
@@ -59,6 +64,8 @@ const PlayerGen = {
             transferListed: false, loanListed: false,
             injury: null, injuryHistory: [],
             birthWeek: 1 + Math.floor(Math.random() * 52),
+            retireAge: Math.max(34, Math.min(41, Math.round(PlayerGen.gauss(37, 1.553)))),
+            retireDelays: 0, retiringThisSeason: false, archived: false, everClient: false,
             styleRole: (typeof Scouting !== 'undefined') ? Scouting.assignRole({ position }) : null,
             report: null, scoutQuality: null,
             morale: this.freshMorale(),
@@ -99,15 +106,29 @@ const PlayerGen = {
         return players;
     },
 
+    // turn a retired NPC back into a fresh youngster at the same club (keeps the world populated)
+    rejuvenate(p) {
+        const club = Clubs.getClubById(p.clubId) || { reputation: 45, country: 'Netherlands' };
+        const fresh = this.makeProspect(club, { position: p.position });
+        ['name', 'nationality', 'nationalityFlag', 'age', 'ability', 'potential', 'birthWeek', 'retireAge',
+            'styleRole', 'report', 'scoutQuality'].forEach(k => { p[k] = fresh[k]; });
+        p.stats = {}; p.injury = null; p.injuryHistory = []; p.history = { ability: [], wage: [], fees: [] };
+        p.retireDelays = 0; p.retiringThisSeason = false; p.squadRole = 'rotation'; p.morale = fresh.morale;
+        p.wage = fresh.wage; p.sponsorIncome = 0; p.contractUntilSeason = GameState.seasonStartYear + 2 + Math.floor(Math.random() * 3);
+    },
+    // how far a talent has typically progressed toward his ceiling at a given age
+    ageFracFor(age) {
+        const t = { 15: 0.72, 16: 0.76, 17: 0.81, 18: 0.86, 19: 0.90, 20: 0.93, 21: 0.96, 22: 0.98 };
+        return t[age] != null ? t[age] : (age < 15 ? 0.68 : 0.99);
+    },
     makeProspect(club, opts = {}) {
         const age = opts.age != null ? opts.age : 15 + Math.floor(Math.random() * 4);
         const ability = opts.ability != null ? opts.ability : 3 + Math.floor(Math.random() * 14);
         const p = this.makePlayer(club, { ability, age, position: opts.position });
         let pot;
         if (opts.potential != null) pot = opts.potential;
-        else if (Math.random() < 0.04) pot = Math.min(85, ability + 40 + Math.floor(Math.random() * 16));
-        else pot = Math.min(70, ability + 12 + Math.floor(Math.random() * 28));
-        p.potential = pot;
+        else pot = ability + 3 + Math.floor(Math.abs(this.gauss(0, 13)));
+        p.potential = Math.max(ability, Math.min(99, pot));   // potential never below current ability
         p.squadRole = 'youth';
         p.sponsorIncome = 0;
         if (opts.name) p.name = opts.name;
@@ -135,7 +156,7 @@ const PlayerGen = {
 //  Development — playing time × challenge, age vs peak
 // ============================================================
 const PlayerDev = {
-    youthBoost(age) { return age <= 18 ? 1.7 : age <= 21 ? 1.4 : age <= 24 ? 1.1 : 0.75; },
+    youthBoost(age) { return age < 18 ? 1.85 : age < 21 ? 1.5 : age < 24 ? 1.25 : age < 26 ? 1.1 : 1.0; },
 
     // level of the environment the player currently competes in
     envLevelFor(p) {
@@ -158,11 +179,19 @@ const PlayerDev = {
             if (p._devSeason !== GameState.seasonStartYear) { p._devSeason = GameState.seasonStartYear; p._devGained = 0; }
             const games = Math.min(appsThisWeek, 2);
             const drive = games > 0 ? games * this.challengeFactor(p) : 0.35; // more meaningful training when not playing
-            let pts = drive * this.youthBoost(p.age) * (gap / 50) * 0.22 * ((typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1);
-            pts = Math.min(pts, 0.30);   // spread growth across the season (no early burst)
+            // points get much harder to come by near the top of the scale
+            const highEnd = Math.max(0.10, 1 - Math.pow(Math.max(0, p.ability - 45) / 55, 1.3));
+            let pts = drive * this.youthBoost(p.age) * (gap / 50) * 0.22 * highEnd * ((typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1);
+            // playing well accelerates development: a strong recent average rating gives a real boost
+            const st = (typeof seasonTotals === 'function') ? seasonTotals(p, GameState.seasonStartYear) : null;
+            if (st && st.apps >= 4) {
+                const form = Math.max(0.75, Math.min(1.9, 1 + (st.avg - 6.9) * 0.5));
+                pts *= form;
+            }
+            pts = Math.min(pts, 0.42);   // a touch higher ceiling so a hot streak can really tell
             p._dev = (p._dev || 0) + pts;
-            // cap growth at ~11 ability points per season so nobody rockets to their ceiling overnight
-            while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 11) { p.ability += 1; p._dev -= 1; p._devGained = (p._devGained || 0) + 1; delta += 1; }
+            // cap growth at ~9 ability points per season (a young low-rated talent can jump ~20->28; elite players inch up)
+            while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 9) { p.ability += 1; p._dev -= 1; p._devGained = (p._devGained || 0) + 1; delta += 1; }
         } else if (p.age > p.peakAge) {
             const perYear = p.position === 'GK' ? 0.7 : (MID_POS.includes(p.position) || p.position === 'CB' ? 1.4 : 1.8);
             const accel = 1 + (p.age - p.peakAge) * 0.12;
@@ -185,15 +214,17 @@ function u21ParentId(idOrPlayer) { const v = typeof idOrPlayer === 'string' ? id
 function careerAge(p) { return Math.round((p.age + (GameState.week) / 52) * 100) / 100; }
 function recordAbilityPoint(p) {
     if (!p.history) p.history = { ability: [], wage: [], fees: [] };
-    const a = careerAge(p), arr = p.history.ability;
-    if (arr.length && arr[arr.length - 1].age === a) arr[arr.length - 1].value = p.ability;
-    else arr.push({ age: a, value: p.ability });
+    const t = GameState.absWeek(), arr = p.history.ability;
+    if (arr.length && arr[arr.length - 1].t === t) arr[arr.length - 1].value = p.ability;
+    else arr.push({ t, age: careerAge(p), value: p.ability });
     if (arr.length > 600) arr.shift();
 }
 function recordWagePoint(p) {
     if (!p.history) p.history = { ability: [], wage: [], fees: [] };
-    p.history.wage.push({ age: careerAge(p), value: p.wage });
-    if (p.history.wage.length > 200) p.history.wage.shift();
+    const t = GameState.absWeek(), arr = p.history.wage;
+    if (arr.length && arr[arr.length - 1].t === t) arr[arr.length - 1].value = p.wage;
+    else arr.push({ t, age: careerAge(p), value: p.wage });
+    if (arr.length > 200) arr.shift();
 }
 
 // ---- stat structure helpers ----
@@ -256,6 +287,28 @@ function careerByComp(p) {
     }));
     Object.values(map).forEach(m => m.agg.avg = m.agg.apps ? m.agg.ratingSum / m.agg.apps : 0);
     return Object.values(map);
+}
+// senior LEAGUE-only aggregation (excludes cups and youth) — used for Client History
+function _isLeagueComp(cid) { return typeof COMPETITIONS !== 'undefined' && (COMPETITIONS[cid] || COMPETITIONS[(cid + '').toUpperCase()]) && (COMPETITIONS[cid] || COMPETITIONS[(cid + '').toUpperCase()]).type === 'league'; }
+function careerLeagueTotal(p) {
+    const t = blankComp();
+    Object.keys(p.stats || {}).forEach(y => {
+        seasonStints(p, +y).forEach(st => {
+            if (st.youth) return;
+            Object.entries(st.comps).forEach(([cid, c]) => { if (_isLeagueComp(cid)) addComp(t, c); });
+        });
+    });
+    t.avg = t.apps ? t.ratingSum / t.apps : 0;
+    return t;
+}
+function seasonsActiveLeague(p) {
+    let n = 0;
+    Object.keys(p.stats || {}).forEach(y => {
+        let has = false;
+        seasonStints(p, +y).forEach(st => { if (st.youth) return; Object.entries(st.comps).forEach(([cid, c]) => { if (_isLeagueComp(cid) && (c.apps || 0) > 0) has = true; }); });
+        if (has) n++;
+    });
+    return n;
 }
 function careerTotal(p, includeYouth = false) {
     const t = blankComp();

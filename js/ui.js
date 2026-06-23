@@ -24,6 +24,16 @@ const UI = {
     abilityClass(a) { return a >= 80 ? 'ability-elite' : a >= 65 ? 'ability-great' : a >= 50 ? 'ability-good' : a >= 35 ? 'ability-average' : 'ability-low'; },
     relClass(r) { return r >= 65 ? 'rel-good' : r >= 45 ? 'rel-ok' : 'rel-bad'; },
     moraleColor(v) { return v >= 66 ? '#10b981' : v >= 40 ? '#f59e0b' : '#ef4444'; },
+    moraleAvg(p) { const m = p.morale || {}; return Math.round(((m.club || 0) + (m.time || 0) + (m.wage || 0) + (m.agent || 0)) / 4); },
+    moraleSmiley(p, withLabel) {
+        const v = this.moraleAvg(p);
+        let face, color, label;
+        if (v < 30) { face = '☹'; color = '#ef4444'; label = 'Unhappy'; }
+        else if (v <= 55) { face = '😐'; color = '#f59e0b'; label = 'Restless'; }
+        else if (v <= 75) { face = '🙂'; color = '#4ade80'; label = 'Content'; }
+        else { face = '😄'; color = '#15803d'; label = 'Delighted'; }
+        return `<span class="morale-smiley" title="Morale ${v}/100 — ${label}" style="color:${color}">${face}${withLabel ? ` <span class="ms-val">${v}</span>` : ''}</span>`;
+    },
     contractText(p) { return p.contractUntilSeason ? 'until end of ' + GameState.seasonLabelFor(p.contractUntilSeason) : '—'; },
     ratingClass(v) { if (!v) return ''; return v < 6 ? 'rating-red' : v < 7 ? 'rating-yellow' : v < 8 ? 'rating-lgreen' : v < 9 ? 'rating-dgreen' : 'rating-blue'; },
     rating(v) { return v ? `<span class="rating ${this.ratingClass(v)}">${v.toFixed(2)}</span>` : '<span class="muted">—</span>'; },
@@ -72,7 +82,8 @@ const UI = {
     },
     renderActive() {
         ({ dashboard: () => this.renderDashboard(), clients: () => this.renderClients(), talent: () => this.renderTalent(),
-           scouts: () => this.renderScouts(), agency: () => this.renderAgency(), inbox: () => this.renderInbox(), leagues: () => this.renderLeagues() }[this.view] || (() => {}))();
+           scouts: () => this.renderScouts(), agency: () => this.renderAgency(), inbox: () => this.renderInbox(), leagues: () => this.renderLeagues(),
+           clienthist: () => this.renderClientHistory(), finance: () => this.renderFinance() }[this.view] || (() => {}))();
     },
 
     advanceWeek() {
@@ -127,25 +138,45 @@ const UI = {
             return;
         }
         const sort = this._clientSort || 'ability';
+        const dir = this._clientDir || 'desc';
+        const filter = this._clientFilter || 'all';
         const tot = p => seasonTotals(p, GameState.seasonStartYear);
-        const sorters = {
-            ability: (a, b) => b.ability - a.ability,
-            age: (a, b) => a.age - b.age,
-            rating: (a, b) => tot(b).avg - tot(a).avg,
-            apps: (a, b) => tot(b).apps - tot(a).apps,
-            contract: (a, b) => Agency.contractSeasonsLeft(a) - Agency.contractSeasonsLeft(b),
-            wage: (a, b) => b.wage - a.wage,
+        // attention helpers
+        const hasOffer = p => GameState.inbox.some(m => (m.kind === 'transfer' || m.kind === 'loan' || m.kind === 'renewal') && m.offer && m.offer.playerId === p.id);
+        const hasSponsor = p => GameState.inbox.some(m => m.kind === 'sponsor' && m.offer && m.offer.playerId === p.id);
+        const isInjured = p => !!p.injury;
+        const filters = { all: () => true, offers: hasOffer, sponsor: hasSponsor, injured: isInjured };
+        // sort VALUES (higher = "more"); direction applied afterwards
+        const vals = {
+            ability: p => p.ability,
+            age: p => p.age,
+            rating: p => tot(p).avg,
+            apps: p => tot(p).apps,
+            contract: p => Agency.contractSeasonsLeft(p),
+            wage: p => p.wage,
+            morale: p => this.moraleAvg(p),
         };
-        const sorted = clients.slice().sort(sorters[sort] || sorters.ability);
+        const vf = vals[sort] || vals.ability;
+        const shown = clients.filter(filters[filter] || filters.all);
+        const sorted = shown.slice().sort((a, b) => dir === 'desc' ? vf(b) - vf(a) : vf(a) - vf(b));
+
         const opt = (k, l) => `<option value="${k}" ${sort === k ? 'selected' : ''}>${l}</option>`;
+        const chip = (k, l) => {
+            const counts = { offers: clients.filter(hasOffer).length, sponsor: clients.filter(hasSponsor).length, injured: clients.filter(isInjured).length };
+            const n = k === 'all' ? clients.length : counts[k];
+            return `<button class="chip-toggle ${filter === k ? 'on' : ''}" onclick="UI.setClientFilter('${k}')">${l}${n ? ` <span class="chip-count">${n}</span>` : ''}</button>`;
+        };
         body.innerHTML = `<div class="view-header"><div><h2>My clients</h2><p class="muted">${clients.length}/${Agency.capacity()} represented</p></div>
             <div class="sort-bar">Sort: <select class="filter-select" onchange="UI.setClientSort(this.value)">
-                ${opt('ability', 'Ability')}${opt('age', 'Age')}${opt('rating', 'Avg rating')}${opt('apps', 'Appearances')}${opt('contract', 'Contract left')}${opt('wage', 'Wage')}
-            </select></div></div>
-            <div class="cards-grid">${sorted.map(p => this.playerCard(p, true)).join('')}</div>`;
+                ${opt('ability', 'Ability')}${opt('age', 'Age')}${opt('rating', 'Avg rating')}${opt('apps', 'Appearances')}${opt('contract', 'Contract left')}${opt('wage', 'Wage')}${opt('morale', 'Happiness')}
+            </select><button class="btn-secondary sm dir-toggle" title="Reverse order" onclick="UI.toggleClientDir()">${dir === 'desc' ? '▼ High→Low' : '▲ Low→High'}</button></div></div>
+            <div class="filter-chips">Show: ${chip('all', 'All')}${chip('offers', 'Transfer / loan / contract')}${chip('sponsor', 'Sponsor offers')}${chip('injured', 'Injuries')}</div>
+            ${sorted.length ? `<div class="cards-grid">${sorted.map(p => this.playerCard(p, true)).join('')}</div>` : '<div class="empty"><p class="muted">No clients match this filter right now.</p></div>'}`;
         body.querySelectorAll('[data-player]').forEach(el => el.addEventListener('click', () => this.openPlayer(el.dataset.player)));
     },
-    setClientSort(v) { this._clientSort = v; this.renderClients(); },
+    setClientSort(v) { if (this._clientSort === v) { this.toggleClientDir(); return; } this._clientSort = v; this._clientDir = (v === 'age' || v === 'contract') ? 'asc' : 'desc'; this.renderClients(); },
+    toggleClientDir() { this._clientDir = (this._clientDir || 'desc') === 'desc' ? 'asc' : 'desc'; this.renderClients(); },
+    setClientFilter(f) { this._clientFilter = f; this.renderClients(); },
 
     playerCard(p, mine) {
         const club = Clubs.getClubById(p.clubId);
@@ -159,9 +190,9 @@ const UI = {
         return `<div class="card" data-player="${p.id}">
             <div class="card-head"><div><div class="card-title">${p.name}</div>
                 <div class="card-sub">${p.nationalityFlag} ${p.position} · ${p.age}y · ${club ? club.name : 'Free agent'}</div></div>
-                <div class="ovr ${this.abilityClass(p.ability)}">${p.ability}</div></div>
+                <div class="card-head-right">${mine ? `<div class="card-morale">${this.moraleSmiley(p, true)}</div>` : ''}<div class="ovr ${this.abilityClass(p.ability)}">${p.ability}</div></div></div>
             <div class="card-rows">
-                <div><span class="k">Role</span><span class="v">${ROLE_LABEL[p.squadRole] || p.squadRole}</span></div>
+                <div><span class="k">Role</span><span class="v">${roleLabel(p.squadRole, p.age)}</span></div>
                 <div><span class="k">Contract</span><span class="v">${this.contractCell(p)}</span></div>
                 ${mine ? `<div><span class="k">Income</span><span class="v">€${this.money(inc)}/wk</span></div>` : `<div><span class="k">Wage</span><span class="v">€${this.money(p.wage)}/wk</span></div>`}
                 <div><span class="k">${p.position === 'GK' ? 'Apps · CS · Ast' : 'Apps · Gls · Ast'}</span><span class="v">${tot.apps} · ${p.position === 'GK' ? (tot.cs || 0) : tot.goals} · ${tot.assists}</span></div>
@@ -177,10 +208,10 @@ const UI = {
 
     // ---------- Talent (known prospects) ----------
     renderTalent() {
-        const list = GameState.players.filter(p => p.knownToAgent && p.agentId == null && !p.dismissedTalent && p.age <= 22).sort((a, b) => b.ability - a.ability);
+        const list = GameState.players.filter(p => p.knownToAgent && p.agentId == null && !p.dismissedTalent && !p.archived && p.age <= 22).sort((a, b) => b.ability - a.ability);
         const body = document.getElementById('talentView');
         body.innerHTML = `<div class="view-header"><h2>Talent</h2><p class="muted">Young players you've come to know. Tap one to view him, or use ✕ to clear ones you're not chasing.</p></div>
-            <div class="cards-grid">${list.length ? list.map(p => `<div class="talent-wrap">${this.playerCard(p, false)}<button class="talent-remove" title="Remove from list" onclick="event.stopPropagation();UI.removeTalent('${p.id}')">✕</button></div>`).join('') : '<div class="empty"><p>No known players yet.</p><p class="muted">Hire a scout to start finding talent.</p></div>'}</div>`;
+            <div class="cards-grid">${list.length ? list.map(p => { const isNew = p.discoveredWeek != null && (GameState.absWeek() - p.discoveredWeek) < 3; return `<div class="talent-wrap">${this.playerCard(p, false)}${isNew ? '<span class="new-badge" title="Recently found">NEW</span>' : ''}<button class="talent-remove" title="Remove from list" onclick="event.stopPropagation();UI.removeTalent('${p.id}')">✕</button></div>`; }).join('') : '<div class="empty"><p>No known players yet.</p><p class="muted">Hire a scout to start finding talent.</p></div>'}</div>`;
         body.querySelectorAll('[data-player]').forEach(el => el.addEventListener('click', () => this.openPlayer(el.dataset.player)));
     },
     removeTalent(id) {
@@ -332,7 +363,7 @@ const UI = {
     mailTransfer(m) {
         const o = m.offer, p = GameState.getPlayer(o.playerId), to = Clubs.getClubById(o.toClubId), from = Clubs.getClubById(o.fromClubId);
         if (!p || !to) { this.dismissMail(m.id); return; }
-        this._ctx = { mailId: m.id, agreedWage: o.proposedWage, wageRound: 1 };
+        this._ctx = { mailId: m.id, pkgRound: 1, agreed: null };
         const bonusMax = Agency.maxSigningBonus(p, o.proposedWage);
         const cut = w => Math.round(w * p.wageCommission / 100);
         const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
@@ -346,37 +377,56 @@ const UI = {
                 <div><span class="k">Bidding club</span><span class="v">${to.name}, ${to.divisionName}</span></div>
             </div>
             <p class="muted">${p.ability} OVR · ${p.age}y · ${feeLine}${o.initiatedByAgent ? ' · you pitched this' : ''}</p>
-            <p>Demand whatever wage you like — the club will push back if it's too much.</p>
-            <div class="slider-block"><label>Wage at ${to.name}: <strong id="wgVal">€${this.money(o.proposedWage)}/wk</strong> <span class="cap">(your cut: €<span id="wgCut">${this.money(cut(o.proposedWage))}</span>/wk (${p.wageCommission}%))</span></label>
-                <input type="range" id="wgSlider" min="${o.proposedWage}" max="${wageMax}" step="10" value="${o.proposedWage}">
-                <button class="btn-secondary sm" onclick="UI.negWage('${to.id}')">Put it to the club</button> <span id="wgMsg" class="inline-msg"></span></div>
-            <div class="slider-block"><label>Squad role at ${to.name} <span class="cap">(more minutes = faster development)</span></label>
+            <p>Put your whole proposal on the table — wage, role, length and signing bonus together. They'll answer with one improved counter, or tell you it's almost there. (A shorter contract can free up more wage.)</p>
+            <div class="slider-block"><label>Wage at ${to.name}: <strong id="wgVal">€${this.money(o.proposedWage)}/wk</strong> <span class="cap">(your cut: €<span id="wgCut">${this.money(cut(o.proposedWage))}</span>/wk)</span></label>
+                <input type="range" id="wgSlider" min="${o.proposedWage}" max="${wageMax}" step="10" value="${o.proposedWage}"></div>
+            <div class="slider-block"><label>Squad role <span class="cap">(more minutes = faster development)</span></label>
                 <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === (o.role || 'rotation') ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
             <div class="slider-block"><label>Contract length: <strong id="tmVal">3</strong> season(s)</label><input type="range" id="tmSlider" min="1" max="6" value="3"></div>
             <div class="slider-block"><label>Your signing bonus (Handgeld): €<strong id="sbVal">0</strong></label><input type="range" id="sbSlider" min="0" max="${bonusMax}" step="${Math.max(10, Math.round(bonusMax / 50))}" value="0"></div>
             ${(() => { const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id); return others.length ? `<div class="callout">Competing bids: ${others.map(x => `<a href="#" onclick="UI.openMail('${x.id}');return false;">${Clubs.getClubById(x.offer.toClubId)?.name} · ${ROLE_LABEL[x.offer.role || 'rotation']}</a>`).join(' · ')}</div>` : ''; })()}
-            <div class="modal-actions"><button class="btn-ghost danger" onclick="UI.rejectMail('${m.id}')">Reject</button><button class="btn-primary" onclick="UI.doAcceptTransfer('${m.id}')">Accept & complete</button></div>
+            <div class="modal-actions"><button class="btn-ghost danger" onclick="UI.rejectMail('${m.id}')">Reject</button><button class="btn-secondary" onclick="UI.proposePackage('${to.id}')">Propose package</button></div>
             <div id="modalResult"></div>`);
         document.getElementById('tmSlider').addEventListener('input', e => document.getElementById('tmVal').textContent = e.target.value);
         document.getElementById('sbSlider').addEventListener('input', e => document.getElementById('sbVal').textContent = this.money(+e.target.value));
         document.getElementById('wgSlider').addEventListener('input', e => { const w = +e.target.value; document.getElementById('wgVal').textContent = '€' + this.money(w) + '/wk'; document.getElementById('wgCut').textContent = this.money(cut(w)); });
     },
-    negWage(clubId) {
-        const club = Clubs.getClubById(clubId), p = GameState.getPlayer(GameState.inbox.find(m => m.id === this._ctx.mailId).offer.playerId);
-        const req = +document.getElementById('wgSlider').value;
-        const r = Agency.negotiateWage(p, club, req, this._ctx.wageRound++);
-        const msg = document.getElementById('wgMsg');
-        const setWage = w => { document.getElementById('wgSlider').value = w; document.getElementById('wgVal').textContent = '€' + this.money(w) + '/wk'; document.getElementById('wgCut').textContent = this.money(Math.round(w * p.wageCommission / 100)); };
-        if (r.status === 'accept') { this._ctx.agreedWage = req; msg.innerHTML = `<span class="ok-text">“${r.message}”</span>`; }
-        else if (r.status === 'counter') { this._ctx.agreedWage = r.counter; setWage(r.counter); msg.innerHTML = `<span class="bad-text">“${r.message}”</span>`; }
-        else { msg.innerHTML = `<span class="bad-text">“${r.message}”</span>`; }
+    _readPkg() {
+        return {
+            wage: +document.getElementById('wgSlider').value,
+            role: document.getElementById('roleSel').value,
+            term: +document.getElementById('tmSlider').value,
+            bonus: +document.getElementById('sbSlider').value
+        };
     },
-    doAcceptTransfer(mailId) {
+    proposePackage(clubId) {
+        const club = Clubs.getClubById(clubId), m = GameState.inbox.find(x => x.id === this._ctx.mailId), p = GameState.getPlayer(m.offer.playerId);
+        const pkg = this._readPkg();
+        const r = Agency.evaluateTransfer(p, club, pkg, this._ctx.pkgRound++);
+        const res = document.getElementById('modalResult');
+        const c = r.counter;
+        const pkgLine = `€${this.money(c.wage)}/wk · ${ROLE_LABEL[c.role]} · ${c.term}yr · €${this.money(c.bonus)} bonus`;
+        if (r.status === 'accept') {
+            const ar = Agency.acceptTransfer(m, c.wage, c.role, c.term, c.bonus); GameState.save(); this.refreshTopbar();
+            res.innerHTML = `<div class="result ok">${r.message}<br><span class="muted">${ar.message}</span></div><div class="modal-actions"><button class="btn-primary" onclick="UI.closeModal();UI.switchView('clients')">Done</button></div>`;
+        } else {
+            const label = r.status === 'final' ? 'Accept final package' : (r.status === 'close' ? 'Accept their package' : 'Accept their package');
+            res.innerHTML = `<div class="result ${r.status === 'close' ? 'info' : 'bad'}">${r.message}<br><span class="muted">Their package: ${pkgLine}</span></div>
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="UI.acceptPackage('${clubId}',${c.wage},'${c.role}',${c.term},${c.bonus})">${label}</button>
+                    <span class="cap">…or adjust the sliders and propose again.</span>
+                </div>`;
+        }
+    },
+    acceptPackage(clubId, wage, role, term, bonus) {
+        const m = GameState.inbox.find(x => x.id === this._ctx.mailId); if (!m) return this.closeModal();
+        const r = Agency.acceptTransfer(m, wage, role, term, bonus); GameState.save(); this.refreshTopbar();
+        document.getElementById('modalResult').innerHTML = `<div class="result ${r.ok ? 'ok' : 'bad'}">${r.message}</div>${r.ok ? '<div class="modal-actions"><button class="btn-primary" onclick="UI.closeModal();UI.switchView(\'clients\')">Done</button></div>' : ''}`;
+    },
+    doAcceptTransfer(mailId) {   // kept for any legacy callers
         const m = GameState.inbox.find(x => x.id === mailId); if (!m) return this.closeModal();
-        const role = document.getElementById('roleSel') ? document.getElementById('roleSel').value : null;
-        const term = +document.getElementById('tmSlider').value;
-        const bonus = +document.getElementById('sbSlider').value;
-        const r = Agency.acceptTransfer(m, this._ctx.agreedWage, role, term, bonus);
+        const pkg = this._readPkg();
+        const r = Agency.acceptTransfer(m, pkg.wage, pkg.role, pkg.term, pkg.bonus);
         GameState.save(); this.refreshTopbar();
         document.getElementById('modalResult').innerHTML = `<div class="result ${r.ok ? 'ok' : 'bad'}">${r.message}</div>${r.ok ? '<div class="modal-actions"><button class="btn-primary" onclick="UI.closeModal();UI.switchView(\'clients\')">Done</button></div>' : ''}`;
     },
@@ -392,7 +442,7 @@ const UI = {
             <div class="callout neg-facts">
                 <div><span class="k">Current wage</span><span class="v">€${this.money(p.wage)}/wk</span></div>
                 <div><span class="k">Club</span><span class="v">${club.name}, ${club.divisionName}</span></div>
-                <div><span class="k">Role · until</span><span class="v">${ROLE_LABEL[p.squadRole] || p.squadRole} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
+                <div><span class="k">Role · until</span><span class="v">${roleLabel(p.squadRole, p.age)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
             </div>
             <p>Push for whatever wage you like — the club will say if it's too much.</p>
             <div class="slider-block"><label>Wage: <strong id="wgVal">€${this.money(o.proposedWage)}/wk</strong> <span class="cap">(your cut: €<span id="wgCut">${this.money(cut(o.proposedWage))}</span>/wk (${p.wageCommission}%))</span></label>
@@ -491,11 +541,14 @@ const UI = {
     //  Player detail (tabbed)
     // ============================================================
     openPlayer(id) { this._ctx = { playerId: id, tab: 'overview', expanded: {} }; this.renderPlayer(); },
+    openHistoryPlayer(id) { this._ctx = { playerId: id, tab: 'history', expanded: {}, histView: true }; this.renderPlayer(); },
     setTab(tab) { this._ctx.tab = tab; this.renderPlayer(); },
     renderPlayer() {
         const p = GameState.getPlayer(this._ctx.playerId); if (!p) return;
         const mine = p.agentId === 'me';
-        const tabs = mine ? ['overview', 'potential', 'morale', 'injuries', 'contract', 'development', 'history'] : ['overview', 'potential', 'development', 'history'];
+        const histView = !!this._ctx.histView;
+        const tabs = histView ? ['history', 'injuries', 'development', 'potential']
+            : (mine ? ['overview', 'potential', 'morale', 'injuries', 'contract', 'development', 'history'] : ['overview', 'potential', 'development', 'history']);
         const labels = { overview: 'Overview', potential: 'Potential', morale: 'Morale', injuries: 'Injuries', contract: 'Contract', development: 'Development', history: 'History' };
         const tabBar = tabs.map(t => `<button class="tab ${this._ctx.tab === t ? 'active' : ''}" onclick="UI.setTab('${t}')">${labels[t]}</button>`).join('');
         let bodyHtml = '';
@@ -542,7 +595,7 @@ const UI = {
         return `${status}
             <div class="detail-grid">
                 <div class="detail-stat"><div class="ds-label">Wage</div><div class="ds-value">€${this.money(p.wage)}<span class="sc-unit">/wk</span></div></div>
-                <div class="detail-stat"><div class="ds-label">Role</div><div class="ds-value sm">${ROLE_LABEL[p.squadRole] || p.squadRole}</div></div>
+                <div class="detail-stat"><div class="ds-label">Role</div><div class="ds-value sm">${roleLabel(p.squadRole, p.age)}</div></div>
                 <div class="detail-stat"><div class="ds-label">Contract</div><div class="ds-value sm">${this.contractText(p)}</div></div>
                 <div class="detail-stat"><div class="ds-label">Status</div><div class="ds-value sm">${p.injury ? '🩹 Injured' : p.onLoanAt ? 'On loan' : 'Available'}</div></div>
             </div>
@@ -570,7 +623,8 @@ const UI = {
                 <div class="cf-row"><span class="cf-k">Floor</span><span class="cf-v cf-floor">${r.floor}</span></div>
             </div>
             <p class="hint">Estimates are relative to ${r.country}'s pyramid and only as good as the scout — weaker scouts are wider of the mark.</p>
-            ${reveal}`;
+            ${reveal}
+            ${typeof Debug !== 'undefined' ? Debug.controlsHTML() : ''}`;
     },
     revealPot(id) { this._ctx.revealPot = id; this.renderPlayer(); },
     tabMorale(p) {
@@ -611,6 +665,10 @@ const UI = {
         const club = Clubs.getClubById(p.clubId);
         const sponsors = GameState.inbox.filter(m => m.kind === 'sponsor' && m.offer.playerId === p.id);
         const sponsorHtml = sponsors.length ? `<h3>Sponsorship offers</h3>${sponsors.map(m => `<div class="offer-mini"><span>💰 ${(SPONSOR_LABEL[m.offer.level] || 'Sponsor')} interest — ${(m.offer.options ? m.offer.options.length : 1)} option(s)</span><button class="btn-secondary sm" onclick="UI.openMail('${m.id}')">Review</button></div>`).join('')}` : '';
+        const deals = (p.sponsorDeals || []).filter(d => d.untilSeason >= GameState.seasonStartYear);
+        const activeSponsorHtml = deals.length
+            ? `<h3>Active sponsor deals</h3><table class="fin-table"><thead><tr><th>Sponsor</th><th>Per week</th><th>Annual</th><th>Until</th></tr></thead><tbody>${deals.map(d => `<tr><td>${d.company}</td><td>€${this.money(d.weekly)}</td><td>€${this.money(d.annual || 0)}</td><td>end of ${GameState.seasonLabelFor(d.untilSeason)}</td></tr>`).join('')}</tbody></table>`
+            : '<h3>Active sponsor deals</h3><p class="muted">No sponsor deals signed yet.</p>';
         const listBtn = p.transferListed
             ? `<span class="pill pill-list">Transfer-listed</span>`
             : `<button class="btn-secondary" onclick="UI.reqTransferList('${p.id}')">Ask ${club ? club.name : 'club'} to transfer-list ${p.name}</button>`;
@@ -618,7 +676,7 @@ const UI = {
         return `<div class="detail-grid">
                 <div class="detail-stat"><div class="ds-label">Wage</div><div class="ds-value">€${this.money(p.wage)}<span class="sc-unit">/wk</span></div></div>
                 <div class="detail-stat"><div class="ds-label">Until</div><div class="ds-value sm">${this.contractText(p)}</div></div>
-                <div class="detail-stat"><div class="ds-label">Role</div><div class="ds-value sm">${ROLE_LABEL[p.squadRole]}</div></div>
+                <div class="detail-stat"><div class="ds-label">Role</div><div class="ds-value sm">${roleLabel(p.squadRole, p.age)}</div></div>
                 <div class="detail-stat"><div class="ds-label">Sponsor</div><div class="ds-value">€${this.money(p.sponsorIncome)}<span class="sc-unit">/wk</span></div></div>
             </div>
             <h3>Your representation</h3>
@@ -630,6 +688,7 @@ const UI = {
             </div>
             <div class="action-row"><button class="btn-secondary" onclick="UI.reqRenewal('${p.id}')">Request renewal with ${club ? club.name : 'club'}</button></div>
             <div class="action-row">${listBtn}</div>
+            ${activeSponsorHtml}
             ${sponsorHtml}
             <h3>Gifts <span class="muted">(boost agent morale)</span></h3>
             <div class="action-row">
@@ -643,23 +702,100 @@ const UI = {
     },
 
     tabDevelopment(p) {
+        const now = GameState.absWeek();
+        const tOf = h => (h.t != null ? h.t : Math.round((h.age != null ? h.age : p.age) * 52)); // back-compat
+        const ageAt = t => p.age - (now - t) / 52;
+
         const abil = (p.history.ability || []).slice();
-        if (!abil.length || abil[abil.length - 1].value !== p.ability) abil.push({ age: careerAge(p), value: p.ability });
+        if (!abil.length || abil[abil.length - 1].value !== p.ability) abil.push({ t: now, value: p.ability });
         const wage = (p.history.wage || []).slice();
-        if (!wage.length || wage[wage.length - 1].value !== p.wage) wage.push({ age: careerAge(p), value: p.wage });
-        const fees = (p.history.fees || []).map(h => ({ x: h.age, y: h.value }));
-        const careerEnd = Math.ceil(p.age) + 1;
-        const ax = abil.map(h => ({ x: h.age, y: h.value }));
-        const wx = wage.map(h => ({ x: h.age, y: h.value }));
-        return `<h3>Ability <span class="muted">(over career)</span></h3>${this.xyChart(ax, '#2563eb', { fmtY: v => Math.round(v), fmtX: v => Math.round(v) + 'y', minYSpan: 40, yClampLo: 1, yClampHi: 99, xMin: Math.floor(ax[0].x), xMax: careerEnd, smooth: true, yTickStep: 5 })}
-            <h3>Wage <span class="muted">(€/wk) — now €${this.money(p.wage)}</span></h3>${this.xyChart(wx, '#10b981', { fmtY: v => '€' + this.money(v), fmtX: v => Math.round(v) + 'y', xMin: Math.floor(wx[0].x), xMax: careerEnd })}
-            <h3>Transfer fees achieved</h3>${fees.length ? this.xyChart(fees, '#8b5cf6', { fmtY: v => '€' + this.money(v), fmtX: v => Math.round(v) + 'y', xMin: Math.floor(fees[0].x), xMax: careerEnd }) : '<p class="muted">No transfers yet.</p>'}
-            <p class="hint">The x-axis grows as he ages; the wage line is straight (not smoothed) so contract jumps stay visible.</p>`;
+        if (!wage.length || wage[wage.length - 1].value !== p.wage) wage.push({ t: now, value: p.wage });
+        const fees = (p.history.fees || []).map(h => ({ x: tOf(h), y: h.value }));
+
+        const ax = abil.map(h => ({ x: tOf(h), y: h.value }));
+        const wx = wage.map(h => ({ x: tOf(h), y: h.value }));
+        const xMin = Math.min(ax[0].x, wx[0].x, fees.length ? fees[0].x : ax[0].x);
+        const xMax = now + 4;                                   // a little breathing room on the right
+        // vertical gridline + label at each integer age year within range
+        const yearTicks = [];
+        for (let a = Math.floor(ageAt(xMin)); a <= Math.ceil(ageAt(xMax)); a++) {
+            const t = now - (p.age - a) * 52;
+            if (t >= xMin - 1 && t <= xMax + 1) yearTicks.push({ v: t, label: a + 'y' });
+        }
+
+        // --- Ability: ~20-point window that grows if he's improved more ---
+        const aLo = Math.min(...ax.map(d => d.y)), aHi = Math.max(...ax.map(d => d.y));
+        const span = Math.max(20, Math.ceil((aHi - aLo + 4) / 5) * 5);
+        let yLo = Math.max(1, Math.floor((aLo - 2) / 5) * 5);
+        let yHi = Math.min(99, yLo + span);
+        if (yHi - yLo < span) yLo = Math.max(1, yHi - span);
+
+        // --- Wage: grid step by level, with headroom below the lowest wage ---
+        const wHi0 = Math.max(...wx.map(d => d.y)), wLo0 = Math.min(...wx.map(d => d.y));
+        const wStep = wHi0 < 5000 ? 500 : wHi0 < 15000 ? 1000 : 5000;
+        const wLo = Math.max(0, Math.floor(wLo0 / wStep) * wStep - wStep);   // space under the first wage
+        const wHi = Math.ceil((wHi0 + wStep * 0.4) / wStep) * wStep;
+
+        const abilityChart = this.xyChart(ax, '#2563eb', {
+            xMin, xMax, xTicks: yearTicks, yMin: yLo, yMax: yHi, yStep: 5,
+            fmtY: v => Math.round(v)
+        });
+        const wageChart = this.xyChart(wx, '#10b981', {
+            xMin, xMax, xTicks: yearTicks, yMin: wLo, yMax: wHi, yStep: wStep,
+            fmtY: v => '€' + this.money(v)
+        });
+        let feeChart = '<p class="muted">No transfers yet.</p>';
+        if (fees.length) {
+            const fHi0 = Math.max(...fees.map(d => d.y));
+            const fStep = this._niceStep(fHi0);
+            feeChart = this.xyChart(fees, '#8b5cf6', {
+                xMin, xMax, xTicks: yearTicks, yMin: 0, yMax: Math.ceil((fHi0 + fStep * 0.4) / fStep) * fStep, yStep: fStep,
+                fmtY: v => '€' + this.money(v), dotsOnly: fees.length < 2
+            });
+        }
+        return `<h3>Ability <span class="muted">(over career)</span></h3>${abilityChart}
+            <h3>Wage <span class="muted">(€/wk) — now €${this.money(p.wage)}</span></h3>${wageChart}
+            <h3>Transfer fees achieved</h3>${feeChart}
+            <p class="hint">A faint line marks each age year. The ability window spans ~20 points and widens if he develops further.</p>`;
+    },
+    _niceStep(hi) {
+        const targets = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000];
+        for (const t of targets) if (hi / t <= 5) return t;
+        return 5000000;
     },
 
+    _seasonLeagueName(st) {
+        if (!st || !st.comps) return '';
+        for (const k of Object.keys(st.comps)) {
+            const c = COMPETITIONS[k] || COMPETITIONS[(k + '').toUpperCase()];
+            if (c && c.type === 'league' && (st.comps[k].apps || 0) > 0) return c.name;
+        }
+        // fall back to any league comp present even with 0 apps
+        for (const k of Object.keys(st.comps)) {
+            const c = COMPETITIONS[k] || COMPETITIONS[(k + '').toUpperCase()];
+            if (c && c.type === 'league') return c.name;
+        }
+        return '';
+    },
+    honoursLine(p) {
+        const parts = [];
+        const tr = {};
+        (p.trophies || []).forEach(t => { tr[t.compId] = (tr[t.compId] || 0) + 1; });
+        Object.keys(tr).forEach(cid => parts.push(`🏆 ${compName(cid)}${tr[cid] > 1 ? ' ×' + tr[cid] : ''}`));
+        const mv = {};
+        (p.movements || []).forEach(m => { const k = m.type + ':' + m.division; mv[k] = (mv[k] || 0) + 1; });
+        Object.keys(mv).forEach(k => {
+            const [type, div] = k.split(':');
+            const arrow = type === 'promo' ? '<span class="promo">▲</span>' : '<span class="releg">▼</span>';
+            parts.push(`${arrow} ${compName(div)}${mv[k] > 1 ? ' ×' + mv[k] : ''}`);
+        });
+        return parts.length ? `<div class="honours">${parts.join(' &nbsp; ')}</div>` : '';
+    },
     tabHistory(p) {
         const years = Object.keys(p.stats || {}).map(Number).sort((a, b) => b - a);
         if (!years.length) return '<p class="muted">No matches played yet.</p>';
+        const gkP = p.position === 'GK';
+        const gOrCsP = o => gkP ? `${o.cs || 0} cs` : `${o.goals} g`;
         const seasonBlocks = years.map(y => {
             const stints = seasonStints(p, y), t = seasonTotals(p, y), open = this._ctx.expanded[y];
             const troph = (p.trophies || []).filter(tr => tr.year === y);
@@ -668,7 +804,8 @@ const UI = {
             const totLine = `${t.apps} apps · ${gOrCs(t)} · ${t.assists} a · ${t.yellow}🟨 ${t.red}🟥 · ${this.rating(t.avg)}`;
             const endStint = stints[stints.length - 1];
             const endClub = endStint ? Clubs.getClubById(endStint.clubId) : null;
-            const endLabel = endStint ? `${this.clubName(endStint.clubId)}${endClub ? ', ' + endClub.divisionName : ''}` : '';
+            const seasonLeague = this._seasonLeagueName(endStint);
+            const endLabel = endStint ? `${this.clubName(endStint.clubId)}${seasonLeague ? ', ' + seasonLeague : (endClub ? ', ' + endClub.divisionName : '')}` : '';
             let inner = '';
             if (open) {
                 inner = '<div class="comp-break">' + stints.slice().reverse().map(st => {
@@ -681,7 +818,7 @@ const UI = {
                 }).join('') + (troph.length ? `<div class="comp-row troph">🏆 ${troph.map(tr => compName(tr.compId)).join(', ')}</div>` : '') + '</div>';
             }
             return `<div class="season-block"><div class="season-master" onclick="UI.toggleSeason(${y})">
-                <span class="season-name">${GameState.seasonLabelFor(y)} ${troph.length ? '🏆' : ''}<span class="season-end-club">${endLabel}</span></span>
+                <span class="season-name"><span class="season-yr">${GameState.seasonLabelFor(y)} ${troph.length ? '🏆' : ''}</span>${endLabel ? `<span class="season-club">${endLabel}</span>` : ''}</span>
                 <span class="season-tot">${totLine}</span><span class="caret">${open ? '▾' : '▸'}</span></div>${inner}</div>`;
         }).join('');
 
@@ -693,19 +830,19 @@ const UI = {
             if (mode === 'club') {
                 rows = careerByClub(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => {
                     const click = Clubs.getClubById(m.clubId) ? `onclick="UI.openClub('${m.clubId}')" style="cursor:pointer"` : '';
-                    return `<div class="comp-row" ${click}><span class="comp-name">${this.clubLabel(m.clubId, m.loanEver, m.youth)}</span><span>${m.agg.apps} apps · ${m.agg.goals} g · ${m.agg.assists} a · ${this.rating(m.agg.avg)}</span></div>`;
+                    return `<div class="comp-row" ${click}><span class="comp-name">${this.clubLabel(m.clubId, m.loanEver, m.youth)}</span><span>${m.agg.apps} apps · ${gOrCsP(m.agg)} · ${m.agg.assists} a · ${this.rating(m.agg.avg)}</span></div>`;
                 }).join('');
             } else {
                 rows = careerByComp(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m =>
-                    `<div class="comp-row"><span class="comp-name">${compName(m.compId)}${m.youth ? ' <span class="loan-tag">youth</span>' : ''}</span><span>${m.agg.apps} apps · ${m.agg.goals} g · ${m.agg.assists} a · ${this.rating(m.agg.avg)}</span></div>`).join('');
+                    `<div class="comp-row"><span class="comp-name">${compName(m.compId)}${m.youth ? ' <span class="loan-tag">youth</span>' : ''}</span><span>${m.agg.apps} apps · ${gOrCsP(m.agg)} · ${m.agg.assists} a · ${this.rating(m.agg.avg)}</span></div>`).join('');
             }
             careerInner = `<div class="comp-break">${toggle}${rows}</div>`;
         }
         const careerBlock = `<div class="season-block career"><div class="season-master" onclick="UI.toggleCareer()">
             <span class="season-name">Career total <span class="muted">(senior)</span></span>
-            <span class="season-tot">${ct.apps} apps · ${ct.goals} g · ${ct.assists} a · ${this.rating(ct.avg)}</span>
+            <span class="season-tot">${ct.apps} apps · ${gOrCsP(ct)} · ${ct.assists} a · ${this.rating(ct.avg)}</span>
             <span class="caret">${careerOpen ? '▾' : '▸'}</span></div>${careerInner}</div>`;
-        return seasonBlocks + careerBlock + '<p class="hint">Youth (U21) games are shown but excluded from senior totals.</p>';
+        return this.honoursLine(p) + seasonBlocks + careerBlock + '<p class="hint">Youth (U21) games are shown but excluded from senior totals.</p>';
     },
     toggleSeason(y) { this._ctx.expanded[y] = !this._ctx.expanded[y]; this.renderPlayer(); },
     toggleCareer() { this._ctx.careerOpen = !this._ctx.careerOpen; this.renderPlayer(); },
@@ -776,18 +913,21 @@ const UI = {
         const w = +document.getElementById('wSl').value, s = +document.getElementById('sSl').value, t = +document.getElementById('tSl').value;
         const r = Agency.negotiateSign(p, w, s, t, this._ctx.signRound++);
         const res = document.getElementById('modalResult');
-        if (r.status === 'accept') { Agency.signPlayer(p, w, s, t); GameState.save(); this.refreshTopbar();
-            res.innerHTML = `<div class="result ok">${p.name} agreed! ${w}% wage / ${s}% sponsor for ${t} season(s).</div><div class="modal-actions"><button class="btn-primary" onclick="UI.closeModal();UI.switchView('clients')">View clients</button></div>`;
+        if (r.status === 'accept') {
+            Agency.signPlayer(p, w, s, t); GameState.save(); this.refreshTopbar();
+            res.innerHTML = `<div class="result ok">${r.message}<br><span class="muted">${p.name} signed — ${w}% wage / ${s}% sponsor for ${t} season(s).</span></div><div class="modal-actions"><button class="btn-primary" onclick="UI.closeModal();UI.switchView('clients')">View clients</button></div>`;
+        } else if (r.status === 'cold') {
+            res.innerHTML = `<div class="result bad">${r.message}</div>`;
         } else if (r.status === 'walk') {
-            res.innerHTML = `<div class="result bad">${p.name} feels you're not negotiating in good faith and walks away for now.</div>`;
+            res.innerHTML = `<div class="result bad">${r.message}<br><span class="muted">${p.name} won't talk terms for about ${r.weeks} weeks.</span></div><div class="modal-actions"><button class="btn-secondary" onclick="UI.closeModal()">Leave it</button></div>`;
         } else {
             const c = r.counter;
             const sugg = c.suggestTerm && c.suggestTerm > c.term
-                ? `<br>💡 Offer <strong>${c.suggestTerm} seasons</strong> and he'll accept up to <strong>${c.suggestWage}%</strong> wage / <strong>${c.suggestSponsor}%</strong> sponsor.` : '';
-            res.innerHTML = `<div class="result bad">At ${c.term} season(s) he'll accept at most <strong>${c.wage}%</strong> wage / <strong>${c.sponsor}%</strong> sponsor.${sugg}</div>
+                ? `<br>💡 At <strong>${c.suggestTerm} seasons</strong> he'd take up to <strong>${c.suggestWage}%</strong> wage / <strong>${c.suggestSponsor}%</strong> sponsor.` : '';
+            res.innerHTML = `<div class="result bad">${r.message}<br><span class="muted">At ${c.term} season(s) he'll accept at most <strong>${c.wage}%</strong> wage / <strong>${c.sponsor}%</strong> sponsor.</span>${sugg}</div>
                 <div class="modal-actions">
                     ${c.suggestTerm && c.suggestTerm > c.term ? `<button class="btn-secondary" onclick="UI.bumpTerm(${c.suggestTerm})">Offer ${c.suggestTerm} seasons</button>` : ''}
-                    <button class="btn-primary" onclick="UI.acceptSignCounter('${p.id}',${c.wage},${c.sponsor},${c.term})">Accept ${c.wage}%/${c.sponsor}% · ${c.term}y</button>
+                    <button class="btn-primary" onclick="UI.acceptSignCounter('${p.id}',${c.wage},${c.sponsor},${c.term})">Meet him at ${c.wage}%/${c.sponsor}% · ${c.term}y</button>
                 </div>`;
         }
     },
@@ -822,6 +962,72 @@ const UI = {
         if (tab === 'tables') document.getElementById('lgDivision').addEventListener('change', e => { this.filters.division = e.target.value; document.getElementById('standings').innerHTML = this.standingsTable(this.filters.division); });
     },
     setLeagueTab(t) { this.filters.leagueTab = t; this.renderLeagues(); },
+    setClientHistSort(key) {
+        const f = this.filters; if (f.chSort === key) f.chDir = (f.chDir === 'asc' ? 'desc' : 'asc'); else { f.chSort = key; f.chDir = (key === 'name' || key === 'position' ? 'asc' : 'desc'); }
+        this.renderClientHistory();
+    },
+    setClientHistPos(p) { this.filters.chPos = p; this.renderClientHistory(); },
+    renderFinance() {
+        const a = GameState.agency;
+        const led = a.ledger || {};
+        const order = ['Wage commission', 'Sponsoring', 'Transfer & loan bonuses', 'Scout wages', 'Scout reports', 'Office', 'Facilities & staff', 'Physio treatments', 'Specialists', 'Gifts & relationships', 'Release pay-outs', 'Upgrades'];
+        const cats = order.filter(c => led[c] != null).concat(Object.keys(led).filter(c => !order.includes(c)));
+        const income = cats.filter(c => led[c] > 0), expense = cats.filter(c => led[c] < 0);
+        const sumIn = income.reduce((s, c) => s + led[c], 0), sumOut = expense.reduce((s, c) => s + led[c], 0);
+        const wkly = Agency.weeklyBreakdown();
+        const rows = (list, sign) => list.length ? list.map(c => `<tr><td>${c}</td><td class="num ${sign > 0 ? 'pos' : 'neg'}">${sign > 0 ? '+' : '−'}€${this.money(Math.abs(led[c]))}</td></tr>`).join('') : `<tr><td class="muted" colspan="2">None yet this season</td></tr>`;
+        document.getElementById('financeView').innerHTML = `
+            <div class="view-header"><h2>Finance</h2><p class="muted">Income & spending this season (${GameState.seasonLabel()}), by source. Balance: <strong>€${this.money(a.balance)}</strong></p></div>
+            <div class="fin-grid">
+                <div class="panel"><h3 class="pos">Income</h3><table class="fin-table"><tbody>${rows(income, 1)}</tbody><tfoot><tr><td>Total income</td><td class="num pos">+€${this.money(sumIn)}</td></tr></tfoot></table></div>
+                <div class="panel"><h3 class="neg">Expenses</h3><table class="fin-table"><tbody>${rows(expense, -1)}</tbody><tfoot><tr><td>Total expenses</td><td class="num neg">−€${this.money(Math.abs(sumOut))}</td></tr></tfoot></table></div>
+            </div>
+            <div class="panel"><h3>Net this season</h3><p class="${sumIn + sumOut >= 0 ? 'pos' : 'neg'}" style="font-size:1.3rem;font-weight:700">${sumIn + sumOut >= 0 ? '+' : '−'}€${this.money(Math.abs(sumIn + sumOut))}</p>
+            <p class="muted">Current weekly run-rate: +€${this.money(wkly.wageComm + wkly.sponsorComm)} commissions, −€${this.money(wkly.scoutWages + wkly.office + wkly.facilities)} running costs (scouts €${this.money(wkly.scoutWages)} · office €${this.money(wkly.office)} · facilities/staff €${this.money(wkly.facilities)}).</p></div>
+            ${(() => {
+                const all = a.ledgerAll || {};
+                const cAll = order.filter(c => all[c] != null).concat(Object.keys(all).filter(c => !order.includes(c)));
+                const inAll = cAll.filter(c => all[c] > 0), exAll = cAll.filter(c => all[c] < 0);
+                const tIn = inAll.reduce((s, c) => s + all[c], 0), tOut = exAll.reduce((s, c) => s + all[c], 0);
+                const rowsAll = (list, sign) => list.length ? list.map(c => `<tr><td>${c}</td><td class="num ${sign > 0 ? 'pos' : 'neg'}">${sign > 0 ? '+' : '−'}€${this.money(Math.abs(all[c]))}</td></tr>`).join('') : `<tr><td class="muted" colspan="2">None</td></tr>`;
+                return `<div class="view-header" style="margin-top:18px"><h3>All-time</h3></div>
+                <div class="fin-grid">
+                    <div class="panel"><h3 class="pos">Total income</h3><table class="fin-table"><tbody>${rowsAll(inAll, 1)}</tbody><tfoot><tr><td>All-time income</td><td class="num pos">+€${this.money(tIn)}</td></tr></tfoot></table></div>
+                    <div class="panel"><h3 class="neg">Total expenses</h3><table class="fin-table"><tbody>${rowsAll(exAll, -1)}</tbody><tfoot><tr><td>All-time expenses</td><td class="num neg">−€${this.money(Math.abs(tOut))}</td></tr></tfoot></table></div>
+                </div>
+                <div class="panel"><h3>All-time net</h3><p class="${tIn + tOut >= 0 ? 'pos' : 'neg'}" style="font-size:1.3rem;font-weight:700">${tIn + tOut >= 0 ? '+' : '−'}€${this.money(Math.abs(tIn + tOut))}</p></div>`;
+            })()}
+            ${typeof Debug !== 'undefined' ? Debug.financeControlsHTML() : ''}`;
+    },
+    renderClientHistory() {
+        document.getElementById('clienthistView').innerHTML =
+            `<div class="view-header"><h2>Client History</h2><p class="muted">Every player who has been your client — current, released or retired. Updated each season.</p></div>${this.clientHistoryView()}`;
+    },
+    clientHistoryView() {
+        const POSGROUP = { GK: 'GK', CB: 'DEF', LB: 'DEF', RB: 'DEF', CDM: 'MID', CM: 'MID', CAM: 'MID', LW: 'ATT', RW: 'ATT', ST: 'ATT' };
+        const posFilter = this.filters.chPos || 'all';
+        const rows = GameState.players.filter(p => p.everClient).map(p => {
+            const c = careerLeagueTotal(p);
+            return { p, name: p.name, nat: p.nationality, flag: p.nationalityFlag, position: p.position, grp: POSGROUP[p.position] || 'MID',
+                apps: c.apps, goals: c.goals, cs: c.cs || 0, assists: c.assists, yellow: c.yellow, red: c.red, avg: c.avg,
+                seasons: seasonsActiveLeague(p), status: p.archived ? (p.retired ? 'Retired' : 'Archived') : (p.agentId === 'me' ? 'Active' : 'Ex-client') };
+        }).filter(r => posFilter === 'all' || r.grp === posFilter);
+        if (!rows.length) return '<p class="muted">No clients yet — sign players and their careers will be recorded here.</p>';
+        const key = this.filters.chSort || 'apps', dir = this.filters.chDir || 'desc';
+        rows.sort((a, b) => { let x = a[key], y = b[key]; if (typeof x === 'string') { x = x.toLowerCase(); y = y.toLowerCase(); return dir === 'asc' ? (x < y ? -1 : x > y ? 1 : 0) : (x > y ? -1 : x < y ? 1 : 0); } return dir === 'asc' ? x - y : y - x; });
+        const arrow = k => this.filters.chSort === k ? (dir === 'asc' ? ' ▲' : ' ▼') : '';
+        const th = (k, l) => `<th onclick="UI.setClientHistSort('${k}')" style="cursor:pointer">${l}${arrow(k)}</th>`;
+        const posBtns = [['all', 'All'], ['GK', 'Goalkeepers'], ['DEF', 'Defenders'], ['MID', 'Midfielders'], ['ATT', 'Attackers']]
+            .map(([k, l]) => `<button class="chip-toggle ${posFilter === k ? 'on' : ''}" onclick="UI.setClientHistPos('${k}')">${l}</button>`).join('');
+        const body = rows.map(r => `<tr onclick="UI.openHistoryPlayer('${r.p.id}')" style="cursor:pointer">
+            <td class="club">${r.flag} ${r.name}</td><td>${r.position}</td><td>${r.nat}</td>
+            <td>${r.apps}</td><td>${r.p.position === 'GK' ? r.cs : r.goals}</td><td>${r.assists}</td>
+            <td class="yellow">${r.yellow}</td><td>${r.red}</td><td class="pts">${r.avg ? r.avg.toFixed(2) : '—'}</td><td>${r.seasons}</td>
+            <td><span class="pill">${r.status}</span></td></tr>`).join('');
+        return `<div class="controls">${posBtns}</div>
+            <table class="standings"><thead><tr>${th('name', 'Player')}${th('position', 'Pos')}${th('nat', 'Nat')}${th('apps', 'Apps')}<th onclick="UI.setClientHistSort('goals')" style="cursor:pointer">Gls/CS${arrow('goals')}</th>${th('assists', 'Ast')}${th('yellow', 'Y')}${th('red', 'R')}${th('avg', 'Avg')}${th('seasons', 'Seasons')}<th>Status</th></tr></thead><tbody>${body}</tbody></table>
+            <p class="hint">Tap a player to revisit his career. Updated each season; includes your current clients too.</p>`;
+    },
 
     standingsTable(div) {
         if (!GameState.league || !GameState.league.tables[div]) return '<p class="muted">No table yet.</p>';
@@ -957,48 +1163,47 @@ const UI = {
     xyChart(points, color, opts = {}) {
         if (!points || !points.length) return '<p class="muted">No data yet.</p>';
         points = points.slice().sort((a, b) => a.x - b.x);
-        const W = 320, H = 122, padL = 44, padR = 12, padT = 12, padB = 24;
+        const W = 320, H = 132, padL = 52, padR = 12, padT = 12, padB = 24;
         const xMin = opts.xMin != null ? opts.xMin : points[0].x;
         const xMax = opts.xMax != null ? opts.xMax : (points[points.length - 1].x || xMin + 1);
         const xSpan = xMax > xMin ? (xMax - xMin) : 1;
-        let ys = points.map(p => p.y), lo = Math.min(...ys), hi = Math.max(...ys);
-        if (opts.minYSpan && (hi - lo) < opts.minYSpan) { const mid = (hi + lo) / 2; lo = mid - opts.minYSpan / 2; hi = mid + opts.minYSpan / 2; }
-        if (lo === hi) { lo -= 1; hi += 1; }
-        if (opts.yClampLo != null) lo = Math.max(opts.yClampLo, lo);
-        if (opts.yClampHi != null) hi = Math.min(opts.yClampHi, hi);
-        if (lo >= hi) hi = lo + (opts.minYSpan || 10);
-        const X = v => padL + (W - padL - padR) * Math.max(0, Math.min(1, (v - xMin) / xSpan));
-        const Y = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
-        const fmtY = opts.fmtY || (v => v), fmtX = opts.fmtX || (v => v);
-        const dots = points.map(p => `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="2.6" fill="${color}"/>`).join('');
-        let path = '';
-        if (points.length >= 2) {
-            if (opts.step) {
-                let d = `M ${X(points[0].x).toFixed(1)} ${Y(points[0].y).toFixed(1)}`;
-                for (let i = 1; i < points.length; i++) d += ` L ${X(points[i].x).toFixed(1)} ${Y(points[i - 1].y).toFixed(1)} L ${X(points[i].x).toFixed(1)} ${Y(points[i].y).toFixed(1)}`;
-                d += ` L ${X(xMax).toFixed(1)} ${Y(points[points.length - 1].y).toFixed(1)}`;
-                path = `<path d="${d}" fill="none" stroke="${color}" stroke-width="2"/>`;
-            } else if (opts.smooth) {
-                path = `<path d="${this._smoothPath(points.map(p => ({ x: X(p.x), y: Y(p.y) })))}" fill="none" stroke="${color}" stroke-width="2"/>`;
-            } else {
-                path = `<polyline fill="none" stroke="${color}" stroke-width="2" points="${points.map(p => `${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ')}"/>`;
-            }
+        let lo = opts.yMin, hi = opts.yMax;
+        if (lo == null || hi == null) {
+            const ys = points.map(p => p.y); lo = lo != null ? lo : Math.min(...ys); hi = hi != null ? hi : Math.max(...ys);
+            if (lo === hi) { lo -= 1; hi += 1; }
         }
-        const ticks = [xMin, (xMin + xMax) / 2, xMax];
-        const xlabels = ticks.map(t => `<text x="${X(t).toFixed(1)}" y="${H - 7}" class="cx-lbl" text-anchor="middle">${fmtX(t)}</text>`).join('');
-        let grid = '', ylabels = '';
-        if (opts.yTickStep) {
-            const step = opts.yTickStep, start = Math.ceil(lo / step) * step;
-            for (let v = start; v <= hi + 1e-9; v += step) {
+        if (lo >= hi) hi = lo + (opts.yStep || 10);
+        const X = v => padL + (W - padL - padR) * Math.max(0, Math.min(1, (v - xMin) / xSpan));
+        const Y = v => padT + (H - padT - padB) * (1 - Math.max(0, Math.min(1, (v - lo) / (hi - lo))));
+        const fmtY = opts.fmtY || (v => v);
+
+        let grid = '', ylabels = '', xgrid = '', xlabels = '';
+        // y gridlines + labels
+        if (opts.yStep) {
+            const start = Math.ceil(lo / opts.yStep) * opts.yStep;
+            for (let v = start; v <= hi + 1e-6; v += opts.yStep) {
                 const yy = Y(v);
                 grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W - padR}" y2="${yy.toFixed(1)}" class="grid"/>`;
-                ylabels += `<text x="4" y="${(yy + 3).toFixed(1)}" class="cy-lbl">${fmtY(v)}</text>`;
+                ylabels += `<text x="${padL - 6}" y="${(yy + 3).toFixed(1)}" class="cy-lbl" text-anchor="end">${fmtY(v)}</text>`;
             }
         } else {
-            ylabels = `<text x="4" y="${(Y(hi) + 4).toFixed(1)}" class="cy-lbl">${fmtY(hi)}</text><text x="4" y="${Y(lo).toFixed(1)}" class="cy-lbl">${fmtY(lo)}</text>`;
+            ylabels = `<text x="${padL - 6}" y="${(Y(hi) + 4).toFixed(1)}" class="cy-lbl" text-anchor="end">${fmtY(hi)}</text><text x="${padL - 6}" y="${Y(lo).toFixed(1)}" class="cy-lbl" text-anchor="end">${fmtY(lo)}</text>`;
+        }
+        // x gridlines (faint, per year) + labels
+        const xticks = opts.xTicks || [{ v: xMin, label: '' }, { v: (xMin + xMax) / 2, label: '' }, { v: xMax, label: '' }];
+        xticks.forEach(tk => {
+            const xx = X(tk.v);
+            xgrid += `<line x1="${xx.toFixed(1)}" y1="${padT}" x2="${xx.toFixed(1)}" y2="${H - padB}" class="grid"/>`;
+            if (tk.label) xlabels += `<text x="${xx.toFixed(1)}" y="${H - 7}" class="cx-lbl" text-anchor="middle">${tk.label}</text>`;
+        });
+
+        const dots = points.map(p => `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="2.6" fill="${color}"/>`).join('');
+        let path = '';
+        if (points.length >= 2 && !opts.dotsOnly) {
+            path = `<polyline fill="none" stroke="${color}" stroke-width="2" points="${points.map(p => `${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ')}"/>`;
         }
         return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-            ${grid}<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}" class="axis"/>
+            ${grid}${xgrid}<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}" class="axis"/>
             <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" class="axis"/>
             ${path}${dots}${xlabels}${ylabels}</svg>`;
     },

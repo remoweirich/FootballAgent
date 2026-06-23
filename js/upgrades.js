@@ -98,14 +98,14 @@ const Upgrades = {
     buyVehicle() {
         const v = this.nextVehicle(); if (!v) return { ok: false, message: 'You already own the Private Jet — top of the range.' };
         if (GameState.agency.balance < v.price) return { ok: false, message: `Not enough cash for the ${v.name} (€${UI.money(v.price)}).` };
-        GameState.agency.balance -= v.price; this.state().vehicleIndex++;
+        GameState.agency.balance -= v.price; GameState.addFinance('Upgrades', -v.price); this.state().vehicleIndex++;
         GameState.addLog(`Bought a ${v.name} (€${UI.money(v.price)}).`, 'money');
         return { ok: true, message: `${v.name} acquired. Rep limit +${v.repLimit}, client limit +${v.players}, scouting −${Math.round(v.scoutDiscount * 100)}%.` };
     },
     buyProperty() {
         const p = this.nextProperty(); if (!p) return { ok: false, message: 'You already own the Skyscraper — nothing bigger to buy.' };
         if (GameState.agency.balance < p.price) return { ok: false, message: `Not enough cash for the ${p.name} (€${UI.money(p.price)}).` };
-        GameState.agency.balance -= p.price; this.state().propertyIndex++;
+        GameState.agency.balance -= p.price; GameState.addFinance('Upgrades', -p.price); this.state().propertyIndex++;
         GameState.addLog(`Bought a ${p.name} (€${UI.money(p.price)}).`, 'money');
         return { ok: true, message: `${p.name} acquired. Rep limit +${p.repLimit}, client limit +${p.players}.` };
     },
@@ -114,7 +114,7 @@ const Upgrades = {
         // a fit-out costs four weeks of the new running cost up front
         const fitOut = o.weekly * 4;
         if (GameState.agency.balance < fitOut) return { ok: false, message: `Moving in costs €${UI.money(fitOut)} (4 weeks' rent up front) — you can't cover it yet.` };
-        GameState.agency.balance -= fitOut; this.state().officeIndex++;
+        GameState.agency.balance -= fitOut; GameState.addFinance('Upgrades', -fitOut); this.state().officeIndex++;
         GameState.addLog(`Moved to ${o.name} (fit-out €${UI.money(fitOut)}, €${UI.money(o.weekly)}/wk).`, 'money');
         return { ok: true, message: `Welcome to your ${o.name}. Rep limit ${this.repLimit()}, up to ${o.maxScouts} scout(s), ${SPONSOR_LABEL[o.sponsor]} sponsors, +1 client limit. Running cost €${UI.money(o.weekly)}/wk.` };
     },
@@ -213,7 +213,7 @@ Object.assign(Upgrades, {
         const e = this.equipById(id); if (!e) return { ok: false, message: 'Unknown item.' };
         if (this.ownsEquip(id)) return { ok: false, message: `You already have ${e.name}.` };
         if (GameState.agency.balance < e.price) return { ok: false, message: `Not enough cash for ${e.name} (€${UI.money(e.price)}).` };
-        GameState.agency.balance -= e.price;
+        GameState.agency.balance -= e.price; GameState.addFinance('Upgrades', -e.price);
         this.facState().items.push({ id, expiresSeason: e.expires ? GameState.seasonStartYear + e.expires : null });
         GameState.addLog(`Bought ${e.name} (€${UI.money(e.price)}).`, 'money');
         const eff = [e.dev ? `+${e.dev}% development` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% injury risk` : '', e.rep ? `+${e.rep} rep limit` : '', e.expires ? `expires in ${e.expires} year` : ''].filter(Boolean).join(', ');
