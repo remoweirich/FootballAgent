@@ -1,3 +1,73 @@
+## v19 changes
+- Adopted the updated role set in scouting.js (new play-style roles and additional country league ladders).
+- Added a per-role card bias to the match engine: more aggressive roles pick up bookings faster. Biases — physical_defender 1.8, destroyer 1.7, relentless_runner 1.3, attacking_fb 1.3, pressing_forward 1.2, pace_winger 1.2, defensive_fb 0.8, dribbler 0.7; every other role is neutral (1.0).
+- Suspensions: reaching 5 yellow cards in a season earns a one-match ban (and again at 10, 15, …), and a red card is an immediate one-match ban. A banned player sits the next match out and picks up no appearance for it. Booking counts reset each season.
+
+## v18 changes
+1. The client morale indicator is now a properly coloured smiley (red frown / amber neutral / light-green smile / dark-green grin) drawn as an icon, with no number shown.
+2. Loans can now be accepted at any time of year, not just during a transfer window (the accept button and durations are always available).
+3. Squad role now genuinely drives playing time: a Star Player features in nearly every game, a Starter most games, a Rotation player around half, and a Hot Prospect / Fringe player only occasionally.
+4. When you accept or reject an offer, the My Clients list (e.g. filtered by offers) refreshes immediately, so a handled player drops out of the filter.
+5. Development reworked so regular game time at a good level actually pays off: players who play often now usually reach their potential, while those who rarely play or are frequently injured may fall short.
+6. Fixed drifting league sizes — promotions now always match relegations (exactly three each), so the Eredivisie stays at its set size and lower divisions don't balloon.
+7. The league calendar has breaks: no matches in the opening two weeks, and international breaks (no league games) in weeks 10–12, 17–18 and 27–28. Cup rounds still run.
+8. Only players aged 21 or under can be dropped to a youth/U21 side; real reserve (Jong) teams can still field older players, and you can now request loans for a player who is currently in your U21.
+9. Transfer and loan negotiations now show the current league table position of both the player's club and the interested club.
+
+## v17 changes
+1. My Clients has attention filters: All, Transfer/loan/contract offers, Sponsor offers, and Injuries — each chip shows a count, so you can jump straight to who needs you.
+2. The Career total (senior) listing now shows clean sheets for goalkeepers instead of goals (in the total line and the by-club / by-competition breakdowns).
+3. The "Hot Prospect" role label now only applies to players under 23; the same role tier reads "Fringe" for older players.
+4. Cup appearances are included in a player's all-time History (career total); only youth (U21) games are excluded there.
+5. Scouts now find players with abilities that genuinely vary across the given range — driven by age, potential and chance — instead of clustering at a fixed value.
+6. Each client card now shows a colour-coded morale smiley (red frown under 30, orange neutral 31–55, light-green smile 56–75, dark-green grin above 75) without opening the player. You can sort clients by Happiness, and every sort option can now be reversed (high→low or low→high). When a client's overall morale drops below 30 he gets in touch, unhappy about whatever bothers him most (club, wage, playing time or your representation).
+7. In a player's History, the season header now shows the club and league larger and clearly, with the season label beside it at the same size.
+
+## v16 changes
+1. Finance tab now also shows all-time totals (income, expenses and net across every season), below the current-season breakdown.
+2. Development graphs fixed and reworked: the line no longer zig-zags (career time is now a single monotonic axis). The ability view shows a ~20-point window that widens if a player improves more; the wage chart has headroom below the lowest wage and a grid stepped by level (€500 under €5k, €1,000 from €5–15k, €5,000 above); the transfer-fee chart has a full grid; and every age year is marked with a faint vertical line.
+3. You can now negotiate transfers and loans in weeks 48–52; the move is treated as a next-season deal, so the two-club-per-season limit doesn't block it.
+4. Client History now counts only senior league appearances (the four pro leagues) — U21 and cup games are excluded from those totals (you still see everything in the player's detail view).
+5. The player History tab and Client History now show an honours line like the clubs do: 🏆 trophies with counts, a green ▲ for promotions and a red ▼ for relegations (e.g. 🏆 KNVB Beker ×3 · 🏆 Eerste Divisie ×2 · ▲ Tweede Divisie · ▼ Eredivisie).
+6. Loans can be arranged at any point in the season, not only during transfer windows.
+7. Sponsorship deals rescaled to be realistic and tied to level: local ~€50/wk (Derde regulars, >25 league games), regional ~€200/wk (Tweede >25, Eerste >5), national ~€1,000/wk (Eerste regulars, all Eredivisie, and strong young talents), international ~€10,000/wk (Eredivisie players rated 80+), worldwide ~€50,000/wk (90+). Shorter deals usually pay more per week, but occasionally the longest is the most lucrative — and loyal servants or players in red-hot form (avg > 7.5) can land outsized offers.
+8. Good performances now help development more: a strong recent average rating gives a real boost, so a hot streak (≈8.0 over ~10 games) adds noticeable ability.
+
+## v15 changes
+1. In History, the league shown beside each season's club is now the league the club played in THAT season (e.g. Derde Divisie), not its current division.
+2. If a scout's report comes due but he finds no one, you now get a message saying so. A wider max-age range makes finds more likely (and a touch more plentiful).
+3. Fixed "phantom" offers: a freshly-arrived offer can no longer expire in the same week it appeared, so the week-summary line always matches a real inbox item.
+4. Sending a player to the U21/reserves now needs the club's consent — they reply "We agree…" or "We disagree…" (they resist dropping players they rate).
+5. You can now actually haggle the wage upward in transfer and contract talks — clubs will pay clearly above their opening offer (relationship helps), not just hold firm or go lower.
+6. After requesting a loan you only get the club's answer right away; the interested clubs' offers arrive the following week (loan-listing works the same way).
+7. Loan offers no longer all come as "rotation" — weaker clubs offer a bigger role (up to key) when the player is good enough, and the clubs that come in are more varied.
+8. The age-based development slowdown is flatter: ×1.85 under 18, ×1.5 under 21, ×1.25 under 24, ×1.1 under 26, ×1.0 at 26+ (the high-ability slowdown still applies on top).
+
+## v14 changes — negotiations overhaul
+- Representation talks are now a back-and-forth where the player answers in his own words, e.g. "I don't want to give you that much of my wages for only four years of guaranteed representation." You can respond with more years or a smaller cut. Stronger players (relative to your agency's reputation) hold out for better terms. If you can't agree after four offers he loses interest for 5–10 weeks — approach him in that time and you'll just hear "I don't want to talk with you right now."
+- Fixed players being re-approached right after a transfer: once a player has changed clubs in a window, no further transfer offers come for him until the next window.
+- Transfer & contract talks are now a single package — you propose wage, role, length and signing bonus together and the club replies with one improved counter (or tells you it's almost there), instead of haggling each item separately. A shorter contract can free the club to offer a higher wage.
+- Clubs speak up more. When you request a loan, the parent club first tells you (by inbox message) whether it will sanction the move; if so, interested clubs' offers arrive the following week rather than instantly. Likewise, asking a club to transfer-list a player gives you their answer first, with offers following a week later — a bit more true to life.
+
+## v13 changes
+- Client History is now its own top-level tab in the main navigation (no longer tucked inside Leagues).
+- The player Contract tab now lists active sponsor deals (sponsor, weekly amount, annual amount and the season the deal runs until), so you keep an overview of sponsorship commitments.
+- In the Talent tab, players found within the last 3 weeks carry a small "NEW" badge so fresh finds are easy to spot.
+- New Finance tab in the main navigation: income and expenses broken down by source (wage commission, sponsoring, transfer & loan bonuses, scout wages, scout reports, office, facilities & staff, physio treatments, specialists, gifts, release pay-outs, upgrades), with season totals, net, and the current weekly run-rate. The debug money/reputation controls live here too — and they no longer snap back while you're typing (the panel won't overwrite a field you're editing).
+
+## v12 changes
+- New youth players now enter the world ONLY through your scouts. Retiring NPCs are no longer replaced by an auto-generated youngster, and NPCs no longer retire at all — only your (ever-)clients retire, so the Client History stays meaningful.
+- Fixed talents being stuck at potential 70 (and even below their own current ability). Potential is now always at least the player's current ability and scales properly above 70.
+- Scout quality now governs the calibre of talent found, by tier: e.g. a sub-20 scout finds ~5–20 ability / up to 60 potential; a ~65 scout finds ~30–55 ability / up to 95 potential; only 90+ scouts can unearth 50–80 ability / up to 99 potential. Mega-talents come with some regularity for elite scouts but are never guaranteed; weaker scouts find less often, judge more poorly, and sometimes return with a single player or empty-handed.
+- The best Dutch talents now average ~65 ability at 15–16, ~70 at 17, ~75 at 18, with very rare outliers (a ~80-rated 17-year-old appears in well under 1% of a top scout's reports).
+- Development is slower again and gets much slower toward the top of the scale: a young talent can climb ~20→28 in a season, but a 90-rated player only inches upward — the gaps between ability points widen near the ceiling.
+
+## v11 changes
+- DEBUG (temporary): a floating panel (bottom-left) and a block inside each player's Potential tab let you set Money and Reputation directly. To remove later: delete js/debug.js and its <script> tag in index.html.
+- Players retire between 34 and 41. The retirement season is drawn from a normal distribution (mean 37, sd 1.553) and shaped by playing time: a player who makes more than 15 appearances in his intended final season carries on one more year (up to 3 times). At the start of his final season he writes to thank you and explain why he's stopping; if he plays on, he tells you again at season's end.
+- Retired players (and clients you release) no longer appear as players or talents but are never forgotten: a new "Client History" tab under Competitions lists every player who has been your client — past and present — with name, nationality, position and full career stats (apps, goals/clean sheets, assists, yellows, reds, average rating, seasons active). It's sortable on every column (A–Z and Z–A) and filterable by Goalkeepers / Defenders / Midfielders / Attackers. Click a player to open his card showing History, Injuries, Development and Potential.
+- Sponsors now approach at any point in the season (not just the off-season). Higher-potential players attract interest earlier, better players get better deals, and a long-serving club legend (30+, 6+ seasons at one club) lands noticeably stronger local/regional deals.
+
 ## v9 changes
 1. A club's all-time list only tags a player "(Loan)" if he was *only ever* loaned there; once permanently signed the tag is gone.
 2. In History, each season header shows the club + league where the player ended that season; expanding still lists every club and competition.

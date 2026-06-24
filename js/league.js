@@ -313,11 +313,20 @@ const League = {
         const squad = GameState.players.filter(p => effectiveClubId(p) === clubId && !p.injury);
         if (!squad.length) return;
 
-        const loanedIn = squad.filter(p => p.onLoanAt === clubId);
+        // serve suspensions: a banned player sits this one out (no appearance) and his ban ticks down
+        const available = [];
+        squad.forEach(p => {
+            if (p._cardSeason !== year) { p._cardSeason = year; p._yellowsSeason = 0; p._suspended = 0; }
+            if (p._suspended > 0) { p._suspended -= 1; return; }
+            available.push(p);
+        });
+        if (!available.length) return;
+
+        const loanedIn = available.filter(p => p.onLoanAt === clubId);
         const guaranteed = [], maybeLoan = [];
         loanedIn.forEach(p => { if (p.loanRole === 'rotation' && Math.random() > 0.65) maybeLoan.push(p); else guaranteed.push(p); });
         guaranteed.splice(5);
-        const rest = squad.filter(p => !guaranteed.includes(p) && !maybeLoan.includes(p));
+        const rest = available.filter(p => !guaranteed.includes(p) && !maybeLoan.includes(p));
         const bestGK = rest.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability)[0];
         const outfield = rest.filter(p => p !== bestGK)
             .map(p => ({ p, w: (ROLE_PLAYTIME[p.squadRole] ?? 0.4) * 3 + p.ability / 80 + Math.random() * 0.8 }))
@@ -376,9 +385,16 @@ const League = {
             c.apps += 1; c.goals += a.g; c.assists += a.a;
             if (p.position === 'GK' && conceded === 0) c.cs = (c.cs || 0) + 1;   // clean sheet
             p._weekApps = (p._weekApps || 0) + (a.full ? 1 : 0.5);
-            const yRate = yellowRate[p.position] ?? 0.10, rRate = yRate * 0.06;
+            const yRate = (yellowRate[p.position] ?? 0.10) * (sBias(p).card || 1), rRate = yRate * 0.06;
             const rr = Math.random();
-            if (rr < rRate) c.red += 1; else if (rr < yRate) c.yellow += 1;
+            if (rr < rRate) {
+                c.red += 1;
+                p._suspended = (p._suspended || 0) + 1;                 // straight red -> one-match ban
+            } else if (rr < yRate) {
+                c.yellow += 1;
+                p._yellowsSeason = (p._yellowsSeason || 0) + 1;
+                if (p._yellowsSeason % 5 === 0) p._suspended = (p._suspended || 0) + 1;  // 5th, 10th, 15th... yellow -> ban
+            }
             // base ratings sit higher; goals/assists swing them up sharply
             let rating = 6.7 + (p.ability - 50) * 0.018 + resultBonus + a.g * 1.0 + a.a * 0.55;
             if (conceded === 0 && (p.position === 'GK' || p.position === 'CB' || p.position === 'LB' || p.position === 'RB')) rating += 0.6;
