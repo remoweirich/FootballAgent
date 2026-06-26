@@ -1,7 +1,7 @@
 // ============================================================
 //  Player model, generation, development curve & stat helpers
 // ============================================================
-const ROLE_PLAYTIME = { youth: 0.15, fringe: 0.40, rotation: 0.65, starter: 1.0, key: 1.0 };
+const ROLE_PLAYTIME = { youth: 0.12, fringe: 0.30, rotation: 0.45, starter: 1.0, key: 1.0 };
 const ROLE_LABEL = { youth: 'Youth', fringe: 'Hot Prospect', rotation: 'Rotation', starter: 'Starter', key: 'Star Player' };
 // "Hot Prospect" only applies to players under 23; the same tier reads "Fringe" for older players
 function roleLabel(role, age) {
@@ -12,6 +12,11 @@ const ROLE_ORDER = ['youth', 'fringe', 'rotation', 'starter', 'key'];
 const POS_LIST = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const ATTACK_POS = ['CAM', 'LW', 'RW', 'ST'];
 const MID_POS = ['CDM', 'CM', 'CAM'];
+// English football pays more than Dutch (applied to every player's wage)
+const COUNTRY_WAGE_MULT = { Netherlands: 1.0, England: 1.25 };
+// development pacing: deliberately slow — a top young regular gains roughly a handful of points a
+// season on his own, and agency development upgrades give a meaningful, noticeable boost on top
+const DEV_BASE = 0.08;
 
 const PlayerGen = {
     _id() { return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); },
@@ -48,7 +53,7 @@ const PlayerGen = {
         const isYouth = age <= 22;
         const peakAge = this.peakAgeFor(position);
         const potential = isYouth ? this.youthPotential(age, ability) : Math.max(ability, ability + (age < peakAge ? 3 : 0));
-        const wage = this.wageFor(ability, club.tier);
+        const wage = Math.round(this.wageFor(ability, club.tier) * (COUNTRY_WAGE_MULT[club.country] || 1) / 10) * 10;
         return {
             id: this._id(),
             name: generateName(nat), nationality: nat, nationalityFlag: getNationalityFlag(nat),
@@ -135,13 +140,14 @@ const PlayerGen = {
         return p;
     },
 
-    lowerClubs() { return Clubs.allClubs.filter(c => c.tier >= 3); },
+    lowerClubs() { const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands'; const ls = Clubs.allClubs.filter(c => c.tier >= 3 && c.country === hc); return ls.length ? ls : Clubs.allClubs.filter(c => c.tier >= 3); },
 
     seedKnownProspects() {
+        const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
         const lower = this.lowerClubs();
         const pick = () => lower[Math.floor(Math.random() * lower.length)];
-        const tec = Clubs.getClubById('tec') || pick();
-        const kees = this.makeProspect(tec, { name: 'Kees Peters', age: 16, ability: 7, potential: 50, position: 'CAM' });
+        const tec = (hc === 'Netherlands' && Clubs.getClubById('tec')) || pick();
+        const kees = this.makeProspect(tec, { name: hc === 'Netherlands' ? 'Kees Peters' : undefined, age: 16, ability: 7, potential: 50, position: 'CAM' });
         kees.knownToAgent = true; kees.discoveredVia = 'contact';
         GameState.players.push(kees);
         for (let i = 0; i < 5; i++) {
@@ -173,25 +179,32 @@ const PlayerDev = {
     // appsThisWeek: number of matches played this week (0..~2)
     weeklyTick(p, appsThisWeek) {
         if (p.injury) return 0;
+        const year = GameState.seasonStartYear;
+        if (p._devSeason !== year) { p._devSeason = year; p._devGained = 0; }
         const gap = p.potential - p.ability;
         let delta = 0;
         if (p.age < p.peakAge && gap > 0) {
-            if (p._devSeason !== GameState.seasonStartYear) { p._devSeason = GameState.seasonStartYear; p._devGained = 0; }
-            const games = Math.min(appsThisWeek, 2);
-            const drive = games > 0 ? games * this.challengeFactor(p) : 0.35; // more meaningful training when not playing
-            // points get much harder to come by near the top of the scale
-            const highEnd = Math.max(0.14, 1 - Math.pow(Math.max(0, p.ability - 45) / 55, 1.3));
-            let pts = drive * this.youthBoost(p.age) * (gap / 50) * 1.1 * highEnd * ((typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1);
-            // playing well accelerates development: a strong recent average rating gives a real boost
-            const st = (typeof seasonTotals === 'function') ? seasonTotals(p, GameState.seasonStartYear) : null;
-            if (st && st.apps >= 4) {
-                const form = Math.max(0.75, Math.min(1.9, 1 + (st.avg - 6.9) * 0.5));
-                pts *= form;
-            }
-            pts = Math.min(pts, 0.55);
+            if ((p._devGained || 0) >= 11) return 0;            // season cap: at most ~11 points in a single season
+            // playing time is the dominant driver; sitting out yields only light training gains
+            const games = Math.min(appsThisWeek || 0, 2);
+            const play = games > 0 ? games : 0.18;
+            // room to grow: a big gap develops faster, tapering gently so the ceiling stays reachable
+            const gapF = Math.max(0.15, Math.min(1.25, gap / 15));
+            // each point gets harder near the top of the scale
+            const highEnd = Math.max(0.30, 1 - Math.pow(Math.max(0, p.ability - 50) / 50, 1.4));
+            // form: a strong recent rating accelerates development, a poor run slows it
+            let form = 1;
+            const st = (typeof seasonTotals === 'function') ? seasonTotals(p, year) : null;
+            if (st && st.apps >= 4) form = Math.max(0.7, Math.min(1.6, 1 + (st.avg - 6.9) * 0.45));
+            // organic week-to-week randomness
+            const rnd = 0.7 + Math.random() * 0.6;
+            const up = (typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1;
+            let pts = DEV_BASE * play * this.youthBoost(p.age) * gapF * highEnd * form * rnd * up;
+            pts = Math.min(pts, 0.40);                          // weekly ceiling: no single week causes a visible jump
             p._dev = (p._dev || 0) + pts;
-            // regular game time can close a big gap within a couple of seasons; sporadic players gain far less
-            while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 12) { p.ability += 1; p._dev -= 1; p._devGained = (p._devGained || 0) + 1; delta += 1; }
+            while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 11) {
+                p.ability += 1; p._dev -= 1; p._devGained = (p._devGained || 0) + 1; delta += 1;
+            }
         } else if (p.age > p.peakAge) {
             const perYear = p.position === 'GK' ? 0.7 : (MID_POS.includes(p.position) || p.position === 'CB' ? 1.4 : 1.8);
             const accel = 1 + (p.age - p.peakAge) * 0.12;

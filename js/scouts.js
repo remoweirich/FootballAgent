@@ -6,11 +6,20 @@
 // ============================================================
 const FIRST_NAMES_SCOUT = ['Hans', 'Piet', 'Wim', 'Cor', 'Jan', 'Ruud', 'Theo', 'Frank', 'Gerard', 'Sjaak', 'Henk', 'Bas', 'Marcel', 'Ronald'];
 const LAST_NAMES_SCOUT = ['Visser', 'Bakker', 'de Wit', 'Janssen', 'Smit', 'Vermeer', 'Kuiper', 'Blom', 'Dekker', 'Hofman', 'Mulder', 'Kok'];
+const SCOUT_NAMES = {
+    Netherlands: { first: FIRST_NAMES_SCOUT, last: LAST_NAMES_SCOUT },
+    England: {
+        first: ['James', 'Jack', 'Harry', 'George', 'Oliver', 'Thomas', 'William', 'Charlie', 'Daniel', 'Joseph', 'Samuel', 'Lewis', 'Ryan', 'Liam', 'Nathan', 'Scott', 'Wayne', 'Gary', 'Paul', 'Steve', 'Mark', 'Lee', 'Ian', 'Phil', 'Dean', 'Craig', 'Darren', 'Neil', 'Alan', 'Terry'],
+        last: ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright', 'Thompson', 'Evans', 'Walker', 'White', 'Roberts', 'Green', 'Hall', 'Wood', 'Harris', 'Clarke', 'Jackson', 'Turner', 'Hill', 'Cooper', 'Ward', 'Morris', 'Moore', 'King', 'Baker', 'Morgan']
+    }
+};
 
 const Scouts = {
     scoutName() {
-        return FIRST_NAMES_SCOUT[Math.floor(Math.random() * FIRST_NAMES_SCOUT.length)] + ' ' +
-            LAST_NAMES_SCOUT[Math.floor(Math.random() * LAST_NAMES_SCOUT.length)];
+        const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
+        const set = SCOUT_NAMES[hc] || SCOUT_NAMES.Netherlands;
+        return set.first[Math.floor(Math.random() * set.first.length)] + ' ' +
+            set.last[Math.floor(Math.random() * set.last.length)];
     },
     _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); },
 
@@ -44,10 +53,11 @@ const Scouts = {
         return s ? s.maxTalentAge : null;
     },
 
-    // cost charged PER report, scaled by region prestige: cheapest €600, dearest €2600
+    // cost charged PER report, scaled by region prestige (within the home country): cheapest €600, dearest €2600
     regionReportCost(regionId) {
         const avg = id => { const cs = Clubs.getClubsByRegion(id); return cs.length ? cs.reduce((s, c) => s + c.reputation, 0) / cs.length : 40; };
-        const vals = REGIONS.map(r => avg(r.id));
+        const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
+        const vals = regionsForCountry(hc).map(r => avg(r.id));
         const lo = Math.min(...vals), hi = Math.max(...vals);
         const me = avg(regionId);
         const t = hi > lo ? (me - lo) / (hi - lo) : 0;
@@ -55,7 +65,48 @@ const Scouts = {
         const disc = (typeof Upgrades !== 'undefined') ? Upgrades.scoutDiscount() : 0;
         return Math.round((base * (1 - disc)) / 50) * 50;
     },
+    // the dearest home region sets the baseline for international travel costs
+    homeRegionMaxCost() {
+        const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
+        return Math.max(...regionsForCountry(hc).map(r => this.regionReportCost(r.id)));
+    },
+    // per-report cost of scouting a foreign league, as a multiple of the dearest home region (travel + prestige)
+    intlLeagueMult(div) {
+        const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5 };
+        return m[div] || 2.5;
+    },
+    intlLeagueCost(div) {
+        const disc = (typeof Upgrades !== 'undefined') ? Upgrades.scoutDiscount() : 0;
+        return Math.round((this.homeRegionMaxCost() * this.intlLeagueMult(div)) * (1 - disc) / 50) * 50;
+    },
+    // a stronger league (higher average reputation/Elo) lets the SAME scout unearth better talents more often
+    leagueQualityBonus(div) {
+        const cs = Clubs.getClubsByDivision(div); if (!cs.length) return 0;
+        const avg = cs.reduce((s, c) => s + c.reputation, 0) / cs.length;
+        return Math.max(0, Math.round((avg - 40) * 0.45));
+    },
+    // a scout must be good enough to work a given foreign league: by tier 65/60/50/40/30
+    minScoutQualityFor(division) {
+        const tier = ((Clubs.getClubsByDivision(division)[0] || {}).tier) || 3;
+        return ({ 1: 65, 2: 60, 3: 50, 4: 40, 5: 30 })[tier] || 50;
+    },
+    // foreign countries you may scout in (everything except your home country)
+    intlCountries() {
+        const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
+        return Object.keys(REGIONS_BY_COUNTRY).filter(c => c !== hc);
+    },
 
+    // the hiring market refreshes only every 2 weeks (not on every visit); a hired scout's
+    // slot stays empty until the next refresh
+    market() {
+        const ag = GameState.agency;
+        const now = GameState.absWeek();
+        if (!ag.scoutMarket || ag.scoutMarketWeek == null || (now - ag.scoutMarketWeek) >= 2) {
+            ag.scoutMarket = this.catalogue();
+            ag.scoutMarketWeek = now;
+        }
+        return ag.scoutMarket;
+    },
     hire(offer) {
         const ag = GameState.agency;
         if (ag.scouts.find(s => s.id === offer.id)) return { ok: false, message: 'That scout is already on your books.' };
@@ -66,6 +117,8 @@ const Scouts = {
             quality: offer.quality, weeklyCost: offer.weeklyCost,
             region: null, weeksUntilFind: this.nextFindDelay(offer.quality)
         });
+        // remove him from the market; the freed slot refills at the next 2-week refresh
+        if (ag.scoutMarket) ag.scoutMarket = ag.scoutMarket.filter(o => o.id !== offer.id);
         GameState.addLog(`Hired ${offer.name} (${offer.title}, quality ${offer.quality}) for €${offer.weeklyCost}/wk.`, 'scout');
         return { ok: true, message: `${offer.name} hired. Assign him to a region so he can start scouting.` };
     },
@@ -74,11 +127,29 @@ const Scouts = {
         const ag = GameState.agency;
         const s = ag.scouts.find(x => x.id === scoutId);
         if (!s) return { ok: false, message: 'Unknown scout.' };
-        if (s.region === regionId) return { ok: false, message: `${s.name} already covers ${regionName(regionId)}.` };
-        s.region = regionId;
+        if (s.region === regionId && !s.league) return { ok: false, message: `${s.name} already covers ${regionName(regionId)}.` };
+        s.region = regionId; s.league = null; s.country = null;
         s.weeksUntilFind = this.nextFindDelay(s.quality);
         GameState.addLog(`${s.name} assigned to ${regionName(regionId)} (€${this.regionReportCost(regionId)}/report).`, 'scout');
         return { ok: true, message: `${s.name} now scouts ${regionName(regionId)} (€${this.regionReportCost(regionId)} per report). First report in ~${s.weeksUntilFind} weeks.` };
+    },
+    assignLeague(scoutId, country, division) {
+        const ag = GameState.agency;
+        const s = ag.scouts.find(x => x.id === scoutId);
+        if (!s) return { ok: false, message: 'Unknown scout.' };
+        if (typeof Agency !== 'undefined' && !Agency.hasIntlLicence()) return { ok: false, message: 'You need a valid International Scouting Licence (buy it in the Agency tab).' };
+        if (!this.intlCountries().includes(country)) return { ok: false, message: 'You can only scout abroad.' };
+        if (!(COUNTRY_DIVS[country] || []).includes(division)) return { ok: false, message: 'That league is not in the chosen country.' };
+        const minQ = this.minScoutQualityFor(division);
+        if (s.quality < minQ) {
+            const nm0 = (COMPETITIONS[division] || {}).name || division;
+            return { ok: false, message: `${s.name} (quality ${s.quality}) isn't good enough to scout ${nm0} — that league needs a scout of at least ${minQ}.` };
+        }
+        s.league = division; s.country = country; s.region = null;
+        s.weeksUntilFind = this.nextFindDelay(s.quality);
+        const nm = (COMPETITIONS[division] || {}).name || division;
+        GameState.addLog(`${s.name} sent abroad to scout ${nm} (${country}) — €${this.intlLeagueCost(division)}/report.`, 'scout');
+        return { ok: true, message: `${s.name} now scouts ${nm} in ${country} (€${this.intlLeagueCost(division)} per report). First report in ~${s.weeksUntilFind} weeks.` };
     },
 
     release(scoutId) {
@@ -138,10 +209,12 @@ const Scouts = {
         const ag = GameState.agency;
         const found = [];
         ag.scouts.forEach(s => {
-            if (!s.region) {
-                // an idle scout on the payroll still keeps his ear to the ground: 1-2 finds a season, anywhere in the country
+            if (!s.region && !s.league) {
+                // an idle scout on the payroll still keeps his ear to the ground: 1-2 finds a season, anywhere in the home country
                 if (Math.random() < 0.03) {
-                    const club = Clubs.allClubs[Math.floor(Math.random() * Clubs.allClubs.length)];
+                    const hc = GameState.homeCountry || 'Netherlands';
+                    const homeClubs = Clubs.allClubs.filter(c => c.country === hc);
+                    const club = homeClubs[Math.floor(Math.random() * homeClubs.length)] || Clubs.allClubs[Math.floor(Math.random() * Clubs.allClubs.length)];
                     const age = this._prospectAge(s.maxTalentAge);
                     const { ability, potential } = this.rolledTalent(s.quality, age);
                     const pr = PlayerGen.makeProspect(club, { ability, potential, age });
@@ -156,8 +229,11 @@ const Scouts = {
             if (s.weeksUntilFind > 0) return;
             s.weeksUntilFind = this.nextFindDelay(s.quality);
 
-            const regionClubs = Clubs.getClubsByRegion(s.region);
-            if (!regionClubs.length) return;
+            // domestic = region pool at scout quality; international = league pool, with a quality boost for stronger leagues
+            const intl = !!s.league;
+            const pool = intl ? Clubs.getClubsByDivision(s.league) : Clubs.getClubsByRegion(s.region);
+            if (!pool.length) return;
+            const effQ = intl ? Math.min(99, s.quality + this.leagueQualityBonus(s.league)) : s.quality;
             const span = Math.max(0, Math.min(7, (s.maxTalentAge || 22) - 15));   // wider age window -> more to find
             const spanF = span / 7;                                              // 0 (only 15yo) .. 1 (15-22)
             let n = s.quality < 30 ? Math.floor(Math.random() * 2)               // 0-1 (sometimes empty-handed)
@@ -168,8 +244,8 @@ const Scouts = {
             const batch = [];
             for (let i = 0; i < n; i++) {
                 const age = this._prospectAge(s.maxTalentAge);
-                const { ability, potential } = this.rolledTalent(s.quality, age);
-                const club = this.pickRegionalClub(regionClubs, ability);
+                const { ability, potential } = this.rolledTalent(effQ, age);
+                const club = this.pickRegionalClub(pool, ability);
                 if (!club) continue;
                 const prospect = PlayerGen.makeProspect(club, { ability, potential, age });
                 prospect.knownToAgent = true;
@@ -181,11 +257,11 @@ const Scouts = {
                 batch.push(prospect);
             }
             if (batch.length) {
-                const cost = this.regionReportCost(s.region);
+                const cost = intl ? this.intlLeagueCost(s.league) : this.regionReportCost(s.region);
                 GameState.agency.balance -= cost; GameState.addFinance('Scout reports', -cost);
-                found.push({ scout: s.name, region: s.region, players: batch, cost });
+                found.push({ scout: s.name, region: s.region || null, league: s.league || null, country: s.country || null, players: batch, cost });
             } else {
-                found.push({ scout: s.name, region: s.region, players: [], cost: 0, none: true });   // report a blank trip
+                found.push({ scout: s.name, region: s.region || null, league: s.league || null, country: s.country || null, players: [], cost: 0, none: true });   // report a blank trip
             }
         });
         return found;

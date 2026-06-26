@@ -3,10 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('⚽ Football Agent Manager — booting…');
 
     Clubs.init();          // build club list from league data
-    GameState.init();      // load save, or generate world + agency + competitions
-    UI.init();             // render
 
-    // dev helpers
+    // dev helpers (available regardless of setup state)
     window.GameState = GameState;
     window.Clubs = Clubs;
     window.Agency = Agency;
@@ -16,6 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.COMPETITIONS = COMPETITIONS;
     window.UI = UI;
 
-    console.log(`Ready. ${GameState.players.length} players, ${Clubs.allClubs.length} clubs.`);
+    if (!GameState.hasSave()) {
+        UI.showSetup();    // first run: choose home country + agency name, then generate + render
+    } else {
+        GameState.init();  // load existing save
+        UI.init();         // render
+    }
+
+    console.log(`Ready.`);
     console.log('Tips: Agency.clients() · GameState.inbox · League.sortedTable("ERE") · Sim.advanceWeek()');
 });

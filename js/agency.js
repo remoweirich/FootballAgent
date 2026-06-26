@@ -10,11 +10,28 @@ const Agency = {
         });
         GameState.agency = {
             name: 'Your Agency', reputation: 12, balance: 3000,
+            homeCountry: GameState.homeCountry || 'Netherlands',
             scouts: [], relationships,
+            intlLicenceUntil: null,   // absWeek until which an International Scouting Licence is valid
             upgrades: { officeIndex: 0, vehicleIndex: -1, propertyIndex: -1 },
             facilities: { items: [], physios: 0, trainers: 0 },
             ledger: {}, ledgerLast: {}, ledgerAll: {}, ledgerSeason: GameState.seasonStartYear
         };
+    },
+    INTL_LICENCE_COST: 20000,
+    INTL_LICENCE_WEEKS: 156,
+    hasIntlLicence() { const a = GameState.agency; return !!(a && a.intlLicenceUntil != null && GameState.absWeek() < a.intlLicenceUntil); },
+    intlLicenceWeeksLeft() { const a = GameState.agency; return (a && a.intlLicenceUntil != null) ? Math.max(0, a.intlLicenceUntil - GameState.absWeek()) : 0; },
+    buyIntlLicence() {
+        const a = GameState.agency;
+        if (a.balance < this.INTL_LICENCE_COST) return { ok: false, message: `An International Scouting Licence costs €${UI.money(this.INTL_LICENCE_COST)}, but you can't afford it.` };
+        GameState.addFinance('International licence', -this.INTL_LICENCE_COST);
+        a.balance -= this.INTL_LICENCE_COST;
+        // extend from now, or from the current expiry if still valid
+        const from = this.hasIntlLicence() ? a.intlLicenceUntil : GameState.absWeek();
+        a.intlLicenceUntil = from + this.INTL_LICENCE_WEEKS;
+        GameState.addLog(`Bought an International Scouting Licence (−€${UI.money(this.INTL_LICENCE_COST)}, valid 3 seasons).`, 'scout');
+        return { ok: true, message: `International Scouting Licence active for 3 seasons. You can now send unassigned scouts abroad from the Scouts tab.` };
     },
     data() { return GameState.agency; },
     clients() { return GameState.players.filter(p => p.agentId === 'me' && !p.archived); },
@@ -200,7 +217,7 @@ const Agency = {
             return { ok: true, message: `${p.name} joined ${reserve.name}; he'll feature in their league games. He returns to the senior side at the end of the season.` };
         }
         p.onLoanAt = 'u21:' + p.clubId; p.loanUntilSeason = GameState.seasonStartYear; p.loanMid = false; p.loanRole = 'starter';
-        const jong = 'Jong ' + seniorName;
+        const jong = youthTeamName(p.clubId);
         GameState.addLog(`${p.name} sent to ${jong}.`, 'loan');
         this._u21ClubReaction(p, seniorName, jong);
         return { ok: true, message: `${p.name} joined ${jong}. He'll play youth-league games to develop — they appear in his history but don't count toward senior appearances.` };
@@ -292,6 +309,20 @@ const Agency = {
     },
     contractSeasonsLeft(p) { return (p.contractUntilSeason != null ? p.contractUntilSeason : GameState.seasonStartYear) - GameState.seasonStartYear; },
     isFreeAgent(p) { return !!p.freeAgent || p.clubId == null; },
+    // pick a bidding club, strongly preferring the player's own country; cross-border bids are
+    // rare and rarer the lower the player's level (Urk bids for a TEC player far sooner than Carlisle)
+    pickBuyer(cands, p) {
+        if (!cands || !cands.length) return null;
+        const home = (Clubs.getClubById(p.clubId) || {}).country || p._lastCountry || null;
+        if (!home) return cands[Math.floor(Math.random() * cands.length)];
+        const same = cands.filter(c => c.country === home);
+        const cross = cands.filter(c => c.country !== home);
+        const crossProb = Math.max(0.02, Math.min(0.35, ((p.ability || 50) - 45) / 120));
+        let pool;
+        if (same.length && cross.length) pool = (Math.random() < crossProb) ? cross : same;
+        else pool = same.length ? same : cross;
+        return pool[Math.floor(Math.random() * pool.length)];
+    },
 
     // greeting reflects how the club feels about you
     greetingFor(clubId) {
@@ -449,6 +480,13 @@ const Agency = {
         p.clubId = toClub.id; p.onLoanAt = null; p.loanUntilSeason = null; p.loanRole = null; p.freeAgent = false;
         if (winKey) p._txWindow = winKey;
         p.wage = agreedWage; p.contractUntilSeason = GameState.seasonStartYear + term;
+        if (preSeason) {
+            // signed in the off-season: he only actually joins next season, and no new approaches arrive
+            // until the next transfer window (week 21 of the new season — the summer window is skipped)
+            p.joiningClubId = toClub.id;
+            p._joinSeason = GameState.seasonStartYear + 1;
+            p._txOffersFrom = (GameState.seasonStartYear + 1) * 52 + 21;
+        }
         p.transferListed = false; p.loanListed = false;
         p.squadRole = (role && ROLE_ORDER.includes(role)) ? role : this.maxRoleAt(p, toClub);
         recordWagePoint(p);
@@ -461,6 +499,7 @@ const Agency = {
         GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'transfer' && m.offer.playerId === p.id));
         GameState.addLog(`${p.name} → ${toClub.name} for €${UI.money(fee)} (signing bonus €${UI.money(bonus)}).`, 'transfer');
         const myCut = Math.round(agreedWage * p.wageCommission / 100);
+        if (preSeason) return { ok: true, message: `${p.name} will join ${toClub.name} next season as ${ROLE_LABEL[p.squadRole]} (until ${GameState.seasonLabelFor(p.contractUntilSeason)}). ${wasFree ? 'Free transfer. ' : ''}Signing bonus €${UI.money(bonus)}; your cut €${UI.money(myCut)}/wk. No new approaches until the winter window (week 21).`, bonus };
         return { ok: true, message: `${p.name} joins ${toClub.name} as ${ROLE_LABEL[p.squadRole]} until ${GameState.seasonLabelFor(p.contractUntilSeason)}. ${wasFree ? 'Free transfer. ' : ''}Signing bonus €${UI.money(bonus)}; your cut €${UI.money(myCut)}/wk.`, bonus };
     },
 
@@ -557,16 +596,29 @@ const Agency = {
     _wk(w) { return (Math.round(w * 2) / 2) + ' week(s)'; },
 
     // ---------- gifts / release / listing ----------
-    giftCost(tier) { return ({ small: 200, medium: 800, large: 2500 })[tier] || 200; },
-    giftBoost(tier) { return ({ small: 5, medium: 12, large: 25 })[tier] || 5; },
+    // gift cost scales with the player's wage — better-paid players have pricier tastes
+    giftCost(tier, p) {
+        const wage = p ? (p.wage || 0) : 1000;
+        const mult = ({ small: 0.6, medium: 2.2, large: 6 })[tier] || 0.6;
+        const floor = ({ small: 200, medium: 800, large: 2500 })[tier] || 200;
+        return Math.max(floor, Math.round(wage * mult / 50) * 50);
+    },
+    giftBoost(tier) { return ({ small: 6, medium: 14, large: 28 })[tier] || 6; },
     giveGift(p, tier) {
-        const cost = this.giftCost(tier);
-        if (GameState.agency.balance < cost) return { ok: false, message: 'Not enough money for that gift.' };
+        const cost = this.giftCost(tier, p);
+        if (GameState.agency.balance < cost) return { ok: false, message: `Not enough money for that gift (€${UI.money(cost)}).` };
         GameState.addFinance('Gifts & relationships', -cost);
         GameState.agency.balance -= cost;
         p.morale.agent = Math.min(100, p.morale.agent + this.giftBoost(tier));
-        GameState.addLog(`Gave ${p.name} a gift (−€${UI.money(cost)}). Agent morale up.`, 'info');
-        return { ok: true, message: `${p.name} appreciated the gesture. Agent satisfaction is now ${Math.round(p.morale.agent)}/100.` };
+        const lines = {
+            small: ['“Cheers — appreciate the thought.”', '“Nice of you, thanks.”', '“A little something, eh? Ta.”'],
+            medium: ['“Now that’s a proper gift — thank you!”', '“Really generous of you, cheers.”', '“You’ve got good taste, I’ll give you that.”'],
+            large: ['“Wow — you didn’t have to! I won’t forget this.”', '“This is incredible, thank you so much!”', '“Now we’re talking — you look after me and I’ll repay it on the pitch.”']
+        };
+        const arr = lines[tier] || lines.small;
+        const quote = arr[Math.floor(Math.random() * arr.length)];
+        GameState.addLog(`Gave ${p.name} a ${tier} gift (−€${UI.money(cost)}). Agent morale up.`, 'info');
+        return { ok: true, quote, message: `${p.name}: ${quote}`, cost };
     },
 
     repRemainingWeeks(p) {
@@ -616,7 +668,7 @@ const Agency = {
     weeklyBreakdown() {
         const cl = this.clients();
         return {
-            wageComm: cl.reduce((s, p) => s + Math.round(p.wage * p.wageCommission / 100), 0),
+            wageComm: cl.reduce((s, p) => s + (this.isFreeAgent(p) ? 0 : Math.round(p.wage * p.wageCommission / 100)), 0),
             sponsorComm: cl.reduce((s, p) => s + Math.round(p.sponsorIncome * p.sponsorCommission / 100), 0),
             scoutWages: GameState.agency.scouts.reduce((s, sc) => s + sc.weeklyCost, 0),
             office: Upgrades.weeklyOfficeCost(),

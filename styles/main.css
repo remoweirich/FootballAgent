@@ -67,6 +67,8 @@ a { color: var(--primary); }
 .view { display: none; }
 .view.active { display: block; }
 .view-header { margin-bottom: 1.25rem; }
+.vh-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.vh-row .filter-select { max-width: 220px; }
 .view-header h2 { font-size: 1.6rem; }
 .muted { color: var(--muted); font-size: .9rem; }
 .hint { color: var(--muted); font-size: .85rem; margin: .5rem 0; }
@@ -279,7 +281,9 @@ a { color: var(--primary); }
 .season-block { border: 1px solid var(--line); border-radius: 8px; margin-bottom: .5rem; overflow: hidden; }
 .season-master { display: grid; grid-template-columns: auto 1fr auto; gap: .6rem; align-items: center; padding: .6rem .8rem; cursor: pointer; background: var(--panel-2); }
 .season-master:hover { background: #eef2ff; }
-.season-name { font-weight: 700; }
+.season-name { font-weight: 700; display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+.season-yr { font-size: .95rem; font-weight: 600; color: var(--muted, #94a3b8); }
+.season-club { font-size: .98rem; font-weight: 700; color: var(--text, #e8edf6); }
 .season-tot { font-size: .82rem; color: var(--muted); text-align: right; }
 .caret { color: var(--primary); font-weight: 700; }
 .comp-break { padding: .3rem .8rem .6rem; }
@@ -418,4 +422,71 @@ svg.chart .grid { stroke: var(--line, #e5e7eb); stroke-width: 1; opacity: .55; }
 .cf-floor { color: #fbbf24; }
 
 /* v9 history season-end club label */
-.season-end-club { display: block; font-size: .76rem; color: var(--muted, #94a3b8); font-weight: 500; margin-top: 1px; }
+.season-end-club { font-size: .98rem; font-weight: 700; }
+
+/* DEBUG tools (temporary) */
+.debug-box { border: 1px dashed #f59e0b88; }
+.debug-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.debug-row label { width: 84px; color: var(--muted, #94a3b8); font-size: .82rem; }
+.debug-row input { width: 130px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border, #2c3a4f); background: var(--panel-2, #1b2433); color: inherit; }
+#dbgPanel { position: fixed; bottom: 12px; left: 12px; z-index: 9999; background: rgba(15,22,34,.96); border: 1px dashed #f59e0b88; border-radius: 10px; padding: 8px 10px; font-size: .8rem; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+#dbgPanel .dbg-title { font-weight: 700; color: #f59e0b; display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 4px; }
+#dbgPanel.collapsed .debug-row { display: none; }
+#dbgPanel #dbgClose { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1rem; }
+#dbgPanel input { width: 92px; }
+
+/* v13: talent NEW badge + finance tab */
+.talent-wrap { position: relative; }
+.new-badge { position: absolute; top: 6px; left: 6px; z-index: 3; background: #16a34a; color: #fff; font-size: .62rem; font-weight: 800; letter-spacing: .04em; padding: 2px 6px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+@media (max-width: 720px) { .fin-grid { grid-template-columns: 1fr; } }
+.fin-table { width: 100%; border-collapse: collapse; }
+.fin-table th, .fin-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border, #2c3a4f); font-size: .88rem; }
+.fin-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.fin-table tfoot td { font-weight: 700; border-top: 2px solid var(--border, #2c3a4f); border-bottom: none; }
+.pos { color: #4ade80; }
+.neg { color: #f87171; }
+
+/* v16: honours line + chart tweaks */
+.honours { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 8px 10px; margin-bottom: 10px; background: var(--panel-2, #1b2433); border-radius: 8px; font-size: .9rem; }
+.honours .promo { color: #22c55e; font-weight: 700; }
+.honours .releg { color: #ef4444; font-weight: 700; }
+
+/* v17: morale smiley + client filters */
+.card-head-right { display: flex; align-items: center; gap: .5rem; }
+.card-morale { display: flex; align-items: center; }
+.morale-smiley { font-size: 1.25rem; line-height: 1; display: inline-flex; align-items: center; gap: 3px; }
+.morale-smiley .ms-val { font-size: .8rem; font-weight: 700; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 12px; font-size: .85rem; color: var(--muted, #94a3b8); }
+.chip-count { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 8px; background: rgba(255,255,255,.14); font-size: .72rem; font-weight: 700; }
+.dir-toggle { margin-left: 6px; }
+
+/* ---- first-run setup screen ---- */
+.setup-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: radial-gradient(1200px 600px at 50% -10%, #1f2a44, #0b1020 70%); padding: 1.5rem; }
+.setup-card { width: 100%; max-width: 440px; background: #121a2e; border: 1px solid #243049; border-radius: 16px; padding: 2rem 1.75rem; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.setup-card h1 { font-size: 1.55rem; margin: 0 0 .25rem; }
+.setup-card .field-label { display: block; margin: 1rem 0 .35rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: #93a0bd; }
+.setup-input { width: 100%; padding: .7rem .85rem; border-radius: 9px; border: 1px solid #2c3a58; background: #0d1424; color: #e9eefb; font-size: 1rem; }
+.setup-card .filter-select.wide { width: 100%; }
+.setup-card .btn-primary.lg { width: 100%; margin-top: 1.4rem; padding: .8rem; font-size: 1.02rem; }
+.assign-row.intl { margin-top: .5rem; }
+.assign-row.intl .cap { color: #93a0bd; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+
+/* clickable player names inside emails */
+.pl-link { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+.pl-link:hover { color: #6ea8fe; }
+
+/* ---- setup how-to slideshow ---- */
+.howto { margin: 1rem 0 1.25rem; padding: 1rem; border: 1px solid #243049; border-radius: 12px; background: #0d1424; }
+.howto-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: #6ea8fe; margin-bottom: .5rem; }
+.howto-slide { min-height: 150px; text-align: center; }
+.howto-icon { font-size: 2.4rem; line-height: 1; margin-bottom: .4rem; }
+.howto-slide h3 { margin: .2rem 0 .45rem; font-size: 1.12rem; }
+.howto-slide p { margin: 0; color: #b9c2d8; font-size: .92rem; line-height: 1.5; }
+.howto-nav { display: flex; align-items: center; justify-content: space-between; margin-top: .75rem; }
+.howto-btn { background: #1b2640; color: #e9eefb; border: 1px solid #2c3a58; border-radius: 8px; width: 38px; height: 32px; cursor: pointer; font-size: .9rem; }
+.howto-btn:hover { background: #243049; }
+.howto-btn:disabled { opacity: .35; cursor: default; }
+.howto-dots { display: flex; gap: 7px; }
+.ht-dot { width: 8px; height: 8px; border-radius: 50%; background: #2c3a58; cursor: pointer; transition: background .15s; }
+.ht-dot.on { background: #6ea8fe; }

@@ -96,7 +96,21 @@ const Sim = {
         GameState.addFinance('Facilities & staff', -bd.facilities);
         GameState.agency.balance += income - expenses;
         if (income || expenses) events.push({ type: 'money', text: `+€${UI.money(income)} commissions, −€${UI.money(expenses)} running costs (office + scouts). Balance €${UI.money(GameState.agency.balance)}.` });
-        if (GameState.agency.balance < 0) { const t = `Agency in the red (€${UI.money(GameState.agency.balance)}).`; GameState.addLog(t, 'warn'); events.push({ type: 'warn', text: t }); }
+        if (GameState.agency.balance < 0) {
+            const t = `Agency in the red (€${UI.money(GameState.agency.balance)}).`; GameState.addLog(t, 'warn'); events.push({ type: 'warn', text: t });
+            // your best client resents the financial mess: −1 morale/week while in the red
+            const roster = Agency.clients().filter(p => p.morale && !p.archived);
+            if (roster.length) {
+                roster.sort((a, b) => b.ability - a.ability || (b.wage || 0) - (a.wage || 0));
+                const star = roster[0];
+                star.morale.agent = Math.max(0, (star.morale.agent || 0) - 1);
+                if (!GameState.agency._redMoaned) {
+                    GameState.agency._redMoaned = true;
+                    GameState.addMail({ kind: 'news', cat: 'morale', subject: `${star.name} isn't happy`, body: `${star.name} caught you after training: “I don't like how you're handling your finances. If the agency can't keep its own books in order, how am I supposed to trust you with my career?” As long as the agency stays in the red, his mood will keep slipping.`, ttl: 6 });
+                    events.push({ type: 'warn', text: `${star.name} is unsettled by the agency's finances.` });
+                }
+            }
+        } else { GameState.agency._redMoaned = false; }
 
         // ---- inbox: new offers during window, sponsors anytime, expiry/persistence ----
         this._deliverPending(events);
@@ -137,7 +151,7 @@ const Sim = {
                 return;
             }
             // small weekly injury chance, a touch higher for outfield
-            if (Math.random() < 0.0035 * ((typeof Upgrades !== 'undefined') ? Upgrades.injuryRiskMult() : 1)) {
+            if (Math.random() < 0.0055 * ((typeof Upgrades !== 'undefined') ? Upgrades.injuryRiskMult() : 1)) {
                 const weeks = 1 + Math.floor(Math.random() * 11);
                 p.injury = { type: INJURY_TYPES[Math.floor(Math.random() * INJURY_TYPES.length)], weeksOut: weeks, total: weeks };
                 if (p.agentId === 'me') {
@@ -219,7 +233,7 @@ const Sim = {
                         !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
                         !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
                     if (cands.length) {
-                        const club = cands[Math.floor(Math.random() * cands.length)];
+                        const club = Agency.pickBuyer(cands, p); if (!club) return;
                         const offer = Agency._offerObj(p, null, club.id, 0, { initiatedByAgent: false });
                         GameState.addMail({ kind: 'transfer', subject: `${club.name} offer ${p.name} a contract`, offer, persistence: 0, ttl: 3 });
                         events.push({ type: 'offer', text: `${club.name} want to sign free agent ${p.name}.` });
@@ -246,7 +260,7 @@ const Sim = {
                         !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
                         !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
                     if (cands.length) {
-                        const buyer = cands[Math.floor(Math.random() * cands.length)];
+                        const buyer = Agency.pickBuyer(cands, p); if (!buyer) return;
                         const fee = Agency.estimateFee(p, buyer);
                         const offer = Agency._offerObj(p, p.clubId, buyer.id, fee, { initiatedByAgent: false });
                         GameState.addMail({ kind: 'transfer', subject: `${buyer.name} bid for ${p.name}`, offer, persistence: Math.random() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Math.random() * 3) });
@@ -390,7 +404,8 @@ const Sim = {
                 && p.age > 23 && p.agentId == null && !p.everClient && !p.archived));
         // record each club's finishing position + trophies (persists across seasons)
         if (!GameState.clubHistory) GameState.clubHistory = {};
-        ['ERE', 'EED', 'TWD', 'DRD'].forEach(div => {
+        ALL_LEAGUE_DIVS.forEach(div => {
+            if (!GameState.league.tables[div]) return;
             League.sortedTable(div).forEach((row, i) => {
                 const trophies = awarded.filter(a => a.clubId === row.clubId).map(a => a.compId);
                 if (!GameState.clubHistory[row.clubId]) GameState.clubHistory[row.clubId] = [];
@@ -398,19 +413,29 @@ const Sim = {
                 if (GameState.clubHistory[row.clubId].length > 40) GameState.clubHistory[row.clubId].shift();
             });
         });
-        // build summary of client trophies
+        // build summary of client trophies (any country)
         const L = GameState.league;
+        const hc = GameState.homeCountry || 'Netherlands';
         const lines = [];
         awarded.forEach(a => {
             if (a.clients.length) {
+                const club = Clubs.getClubById(a.clubId);
+                const abroad = club && club.country !== hc ? ` — abroad in ${club.country}` : '';
                 const names = a.clients.map(id => GameState.getPlayer(id)?.name).filter(Boolean).join(', ');
-                lines.push(`${compName(a.compId)} — ${Clubs.getClubById(a.clubId)?.name}: ${names}`);
+                lines.push(`${compName(a.compId)} — ${club ? club.name : League.teamName(a.clubId)}${abroad}: ${names}`);
             }
         });
-        const champs = ['ERE', 'EED', 'TWD', 'DRD'].map(d => `${COMPETITIONS[d].name}: ${Clubs.getClubById(League.sortedTable(d)[0]?.clubId)?.name || '—'}`).join('<br>');
-        const cupLine = `KNVB Beker: ${Clubs.getClubById(L?.beker?.winner)?.name || '—'}<br>De kleine Beker: ${Clubs.getClubById(L?.kbek?.winner)?.name || '—'}`;
-        const poLine = ['EED', 'TWD', 'DRD'].map(d => L?.playoffs?.[d] ? `${COMPETITIONS[d].short} play-off won by ${Clubs.getClubById(L.playoffs[d].winner)?.name} (promoted)` : null).filter(Boolean).join('<br>');
-        const body = `<strong>Season ${GameState.seasonLabel()} is over.</strong><br><br>Champions:<br>${champs}<br><br>Cups:<br>${cupLine}<br><br>` +
+        const homeDivs = (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[hc]) || ['ERE', 'EED', 'TWD', 'DRD'];
+        const champs = homeDivs.map(d => `${COMPETITIONS[d].name}: ${Clubs.getClubById(League.sortedTable(d)[0]?.clubId)?.name || '—'}`).join('<br>');
+        const CUP_KEY_COMP = { beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC' };
+        const homeCups = (typeof COUNTRY_CUPS !== 'undefined' && COUNTRY_CUPS[hc]) || [['beker', 'KNVB Beker'], ['kbek', 'De kleine Beker']];
+        const cupLine = homeCups.map(([key, label]) => {
+            const wid = L && L[key] ? L[key].winner : null;
+            const nm = wid ? (Clubs.getClubById(wid)?.name || League.teamName(wid)) : '—';
+            return `${label}: ${nm}`;
+        }).join('<br>');
+        const poLine = homeDivs.filter((d, i) => i > 0).map(d => L?.playoffs?.[d] ? `${COMPETITIONS[d].short} play-off won by ${Clubs.getClubById(L.playoffs[d].winner)?.name || League.teamName(L.playoffs[d].winner)} (promoted)` : null).filter(Boolean).join('<br>');
+        const body = `<strong>Season ${GameState.seasonLabel()} is over.</strong><br><br>${hc} champions:<br>${champs}<br><br>Cups:<br>${cupLine}<br><br>` +
             (poLine ? `Promotion play-offs:<br>${poLine}<br><br>` : '') +
             (lines.length ? `🏆 Your clients won:<br>${lines.join('<br>')}` : 'None of your clients won silverware this season.') +
             `<br><br>Final tables, cups and play-offs are viewable in the Leagues tab.`;
@@ -422,7 +447,9 @@ const Sim = {
             champions: { ...((L && L.champions) || {}) },
             beker: L && L.beker ? { winner: L.beker.winner, results: L.beker.results } : null,
             kbek: L && L.kbek ? { winner: L.kbek.winner, results: L.kbek.results, groups: L.kbek.groups } : null,
-            playoffs: L && L.playoffs ? { EED: L.playoffs.EED, TWD: L.playoffs.TWD, DRD: L.playoffs.DRD } : null,
+            facup: L && L.facup ? { winner: L.facup.winner, results: L.facup.results } : null,
+            llc: L && L.llc ? { winner: L.llc.winner, results: L.llc.results, groups: L.llc.groups } : null,
+            playoffs: L && L.playoffs ? { ...L.playoffs } : null,
             prorel: null
         };
         GameState.addLog(`Season ${GameState.seasonLabel()} finished.`, 'season');
@@ -451,24 +478,44 @@ const Sim = {
         GameState.agency.ledger = {};
         GameState.agency.ledgerSeason = year + 1;
         // promotion/relegation from the finished season (moves clubs between divisions)
+        const tierBefore = {}; Clubs.allClubs.forEach(c => tierBefore[c.id] = c.tier);
         const prorel = League.applyPromotionRelegation();
-        if (prorel) {
-            const promoSet = new Set([...(prorel.eedUp || []), ...(prorel.twdUp || []), ...(prorel.drdUp || [])]);
-            const relSet = new Set([...(prorel.ereDown || []), ...(prorel.eedDown || []), ...(prorel.twdDown || [])]);
-            GameState.players.forEach(p => {
-                if (!p.everClient) return;
-                const stints = seasonStints(p, year).filter(st => !st.youth);
-                const end = stints[stints.length - 1]; if (!end) return;
-                let divId = null;
-                Object.entries(end.comps).forEach(([cid, c]) => { const comp = COMPETITIONS[cid]; if (comp && comp.type === 'league' && (c.apps || 0) > 0) divId = cid; });
-                if (!divId) return;
-                const wonTitle = (p.trophies || []).some(t => t.year === year && t.compId === divId);
-                if (!p.movements) p.movements = [];
-                if (promoSet.has(end.clubId) && !wonTitle) p.movements.push({ year, type: 'promo', division: divId });
-                else if (relSet.has(end.clubId)) p.movements.push({ year, type: 'releg', division: divId });
-            });
-        }
+        // record promotions (green ▲) / relegations (red ▼) for clients by their club's tier change — country-agnostic
+        GameState.players.forEach(p => {
+            if (!p.everClient) return;
+            const stints = seasonStints(p, year).filter(st => !st.youth);
+            const end = stints[stints.length - 1]; if (!end) return;
+            let divId = null;
+            Object.entries(end.comps).forEach(([cid, c]) => { const comp = COMPETITIONS[cid]; if (comp && comp.type === 'league' && (c.apps || 0) > 0) divId = cid; });
+            if (!divId) return;
+            const club = Clubs.getClubById(end.clubId); if (!club) return;
+            const oldTier = tierBefore[end.clubId], newTier = club.tier;
+            if (oldTier == null || newTier == null || oldTier === newTier) return;
+            const wonTitle = (p.trophies || []).some(t => t.year === year && t.compId === divId);
+            if (!p.movements) p.movements = [];
+            if (newTier < oldTier && !wonTitle) p.movements.push({ year, type: 'promo', division: divId });   // moved up a tier
+            else if (newTier > oldTier) p.movements.push({ year, type: 'releg', division: divId });            // dropped a tier
+        });
         if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorel = prorel;
+        if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorelEng = (GameState.league && GameState.league.prorelEng) || null;
+        // add your clients' promotions/relegations (incl. those playing abroad) to the season review
+        const hc = GameState.homeCountry || 'Netherlands';
+        const moveLines = [];
+        GameState.players.forEach(p => {
+            if (p.agentId !== 'me') return;
+            (p.movements || []).filter(m => m.year === year).forEach(m => {
+                const club = Clubs.getClubById(p.clubId);
+                const abroad = club && club.country !== hc ? ` — abroad in ${club.country}` : '';
+                const compNm = (COMPETITIONS[m.division] || {}).name || m.division;
+                moveLines.push(`${m.type === 'promo' ? '⬆️ promoted' : '⬇️ relegated'}: ${p.name} (${compNm})${abroad}`);
+            });
+        });
+        if (moveLines.length) {
+            const review = GameState.inbox.find(m => m.kind === 'summary');
+            const block = `<br><br>Your clients' promotions &amp; relegations:<br>${moveLines.join('<br>')}`;
+            if (review) review.body = (review.body || '') + block;
+            else GameState.addMail({ kind: 'news', subject: `Your clients — promotions & relegations`, body: moveLines.join('<br>'), ttl: 6 });
+        }
         if (prorel) {
             const nm = id => Clubs.getClubById(id)?.name || id;
             GameState.addMail({
@@ -488,6 +535,8 @@ const Sim = {
             }
         });
         GameState.seasonStartYear += 1;
+        // pre-season transfers now take effect: the player is officially at his new club, drop the "joining" tag
+        GameState.players.forEach(p => { if (p._joinSeason && p._joinSeason <= GameState.seasonStartYear) { delete p.joiningClubId; delete p._joinSeason; } });
         // players nearing the end announce their final season to their agent
         const RETIRE_REASONS = ['my body is telling me it is time', 'I want to spend more time with my family', 'I feel I have given the game everything', 'a persistent injury has made the decision for me', 'I want to go out on my own terms', 'the passion is no longer what it was'];
         GameState.players.forEach(p => {

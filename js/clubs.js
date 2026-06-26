@@ -138,7 +138,7 @@ const LEAGUES_DATA = {
                 ]
             },
             {
-                id: "C'Ship'",
+                id: "CHAMP",
                 name: "Championship",
                 tier: 2,
                 clubs: [
@@ -277,18 +277,51 @@ const REGIONS = [
     { id: 'zuid', name: 'Zuid', blurb: 'Zeeland, Noord-Brabant & Limburg' },
     { id: 'zuid-holland', name: 'Zuid-Holland', blurb: 'incl. Rotterdam & Den Haag' }
 ];
+// ---- Regions (England) ----
+const REGIONS_EN = [
+    { id: 'greater-london', name: 'Greater London', blurb: 'the capital' },
+    { id: 'north-west', name: 'North West England', blurb: 'Manchester, Liverpool & the North West' },
+    { id: 'south-east', name: 'South East England', blurb: 'the South East' },
+    { id: 'west-midlands', name: 'West Midlands', blurb: 'Birmingham & the West Midlands' },
+    { id: 'north-east', name: 'North East England', blurb: 'the North East' },
+    { id: 'yorkshire', name: 'Yorkshire and the Humber', blurb: 'Yorkshire & the Humber' },
+    { id: 'east-midlands', name: 'East Midlands', blurb: 'the East Midlands' },
+    { id: 'south-west', name: 'South West England', blurb: 'the South West' },
+    { id: 'east-england', name: 'East of England', blurb: 'the East' }
+];
+const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN };
 const CITY_REGION = {
     "Groningen":"noord","Leeuwarden":"noord","Heerenveen":"noord","Harkema":"noord","Emmen":"noord","Assen":"noord","Hoogeveen":"noord",
     "Almelo":"oost","Enschede":"oost","Zwolle":"oost","Genemuiden":"oost","Hardenberg":"oost","Haaksbergen":"oost","Raalte":"oost","Rijssen":"oost","Staphorst":"oost","Arnhem":"oost","Nijmegen":"oost","Doetinchem":"oost","Groesbeek":"oost","Ermelo":"oost","Nijkerk":"oost","Tiel":"oost","Scherpenzeel":"oost",
     "Amsterdam":"noord-holland","Alkmaar":"noord-holland","Haarlem":"noord-holland","Volendam":"noord-holland","Velsen":"noord-holland","Heemskerk":"noord-holland","Huizen":"noord-holland",
     "Utrecht":"middelland","Veenendaal":"middelland","Woerden":"middelland","Bunschoten":"middelland","Almere":"middelland","Urk":"middelland",
     "'s-Hertogenbosch":"zuid","Eindhoven":"zuid","Helmond":"zuid","Oss":"zuid","Werkendam":"zuid","Hoek":"zuid","Maastricht":"zuid","Venlo":"zuid","Sittard":"zuid","Kerkrade":"zuid",
-    "Den Haag":"zuid-holland","Rotterdam":"zuid-holland","Dordrecht":"zuid-holland","Katwijk":"zuid-holland","Barendrecht":"zuid-holland","Maassluis":"zuid-holland","Rijnsburg":"zuid-holland"
+    "Den Haag":"zuid-holland","Rotterdam":"zuid-holland","Dordrecht":"zuid-holland","Katwijk":"zuid-holland","Barendrecht":"zuid-holland","Maassluis":"zuid-holland","Rijnsburg":"zuid-holland",
+    // ---- England ----
+    "London":"greater-london","Bromley":"greater-london","Sutton":"greater-london","Wealdstone":"greater-london",
+    "Liverpool":"north-west","Manchester":"north-west","Birkenhead":"north-west","Stockport":"north-west","Wigan":"north-west","Oldham":"north-west","Salford":"north-west","Rochdale":"north-west","Accrington":"north-west","Blackpool":"north-west","Blackburn":"north-west","Burnley":"north-west","Preston":"north-west","Bolton":"north-west","Fleetwood":"north-west","Crewe":"north-west","Altrincham":"north-west","Barrow-in-Furness":"north-west","Carlisle":"north-west","Morecambe":"north-west","Wrexham":"north-west",
+    "Brighton":"south-east","Southampton":"south-east","Portsmouth":"south-east","Reading":"south-east","Oxford":"south-east","High Wycombe":"south-east","Milton Keynes":"south-east","Gillingham":"south-east","Crawley":"south-east","Worthing":"south-east","Woking":"south-east","Aldershot":"south-east","Eastleigh":"south-east",
+    "Birmingham":"west-midlands","Wolverhampton":"west-midlands","West Bromwich":"west-midlands","Walsall":"west-midlands","Coventry":"west-midlands","Stoke-on-Trent":"west-midlands","Burton upon Trent":"west-midlands","Shrewsbury":"west-midlands","Tamworth":"west-midlands","Solihull":"west-midlands",
+    "Newcastle upon Tyne":"north-east","Sunderland":"north-east","Middlesbrough":"north-east","Hartlepool":"north-east","Gateshead":"north-east",
+    "Leeds":"yorkshire","Hull":"yorkshire","Sheffield":"yorkshire","Bradford":"yorkshire","Barnsley":"yorkshire","Doncaster":"yorkshire","Rotherham":"yorkshire","Huddersfield":"yorkshire","Harrogate":"yorkshire","Halifax":"yorkshire","York":"yorkshire","Grimsby":"yorkshire","Scunthorpe":"yorkshire",
+    "Nottingham":"east-midlands","Derby":"east-midlands","Leicester":"east-midlands","Lincoln":"east-midlands","Mansfield":"east-midlands","Chesterfield":"east-midlands","Northampton":"east-midlands","Boston":"east-midlands","Brackley":"east-midlands",
+    "Bristol":"south-west","Exeter":"south-west","Plymouth":"south-west","Swindon":"south-west","Cheltenham":"south-west","Forest Green":"south-west","Yeovil":"south-west","Bournemouth":"south-west","Cardiff":"south-west","Swansea":"south-west","Newport":"south-west",
+    "Ipswich":"east-england","Norwich":"east-england","Peterborough":"east-england","Cambridge":"east-england","Colchester":"east-england","Southend-on-Sea":"east-england","Braintree":"east-england","Stevenage":"east-england","Watford":"east-england","Luton":"east-england","Borehamwood":"east-england"
 };
 function regionOfCity(city){ return CITY_REGION[city] || 'middelland'; }
-function regionName(id){ const r=REGIONS.find(x=>x.id===id); return r?r.name:id; }
+function regionsForCountry(country){ return REGIONS_BY_COUNTRY[country] || REGIONS; }
+function regionName(id){
+    for (const arr of Object.values(REGIONS_BY_COUNTRY)) { const r = arr.find(x => x.id === id); if (r) return r.name; }
+    return id;
+}
 
 // ---- reserve ("Jong X") clubs ----
+// virtual youth-side name: Dutch clubs field a "Jong X" side, others field an "X U21"
+function youthTeamName(parentOrId){
+    const c = (typeof parentOrId === 'string') ? Clubs.getClubById(parentOrId) : parentOrId;
+    if (!c) return 'U21';
+    return (c.country === 'Netherlands') ? 'Jong ' + c.name : c.name + ' U21';
+}
 function isReserveClub(idOrClub){ const c = (typeof idOrClub === 'string') ? Clubs.getClubById(idOrClub) : idOrClub; return !!(c && /^Jong\s/i.test(c.name)); }
 function reserveClubFor(seniorId){ const s = Clubs.getClubById(seniorId); if (!s) return null; return Clubs.allClubs.find(c => c.name === 'Jong ' + s.name) || null; }
 function parentClubForReserve(reserveId){
@@ -342,8 +375,8 @@ const Clubs = {
         return this.allClubs.filter(c => c.region === regionId);
     },
 
-    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie' },
-    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4 },
+    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League' },
+    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5 },
     setDivision(clubId, divId) {
         const c = this.getClubById(clubId); if (!c) return;
         c.division = divId; c.tier = this.DIV_TIERS[divId]; c.divisionName = this.DIV_NAMES[divId];

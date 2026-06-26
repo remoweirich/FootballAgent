@@ -11,6 +11,8 @@ const GameState = {
     league: null,        // standings, schedules, cups (rebuilt each season)
     clubHistory: {},     // { clubId: [{year, division, position, trophies:[compId]}] }
     lastSeasonReport: null, // snapshot of finished-season cups/play-offs/promotions     // { clubId: [{year, division, position, trophies:[compId]}] }
+    homeCountry: 'Netherlands', // chosen at the start: drives initial talents + domestic scouting regions
+    needsSetup: false,
 
     STORAGE_KEY: 'fam_proto_v4',
 
@@ -46,14 +48,24 @@ const GameState = {
     seasonLabel() { return this.seasonLabelFor(this.seasonStartYear); },
 
     // ---- init ----
+    hasSave() { try { return !!localStorage.getItem(this.STORAGE_KEY); } catch (e) { return false; } },
     init() {
         if (!this.load()) {
-            this.players = PlayerGen.generatePool();
-            Agency.init();
-            PlayerGen.seedKnownProspects();
-            League.setupSeason();
-            this.save();
+            // no save: generate a default game (the live app shows the setup screen first and calls startNewGame)
+            this.startNewGame(this.homeCountry || 'Netherlands', (this.agency && this.agency.name) || 'Your Agency');
         }
+    },
+    startNewGame(country, name) {
+        this.homeCountry = (country && REGIONS_BY_COUNTRY[country]) ? country : 'Netherlands';
+        this.week = 1; this.seasonStartYear = 2025;
+        this.players = PlayerGen.generatePool();
+        Agency.init();
+        this.agency.name = (name && name.trim()) ? name.trim() : 'Your Agency';
+        this.agency.homeCountry = this.homeCountry;
+        PlayerGen.seedKnownProspects();
+        League.setupSeason();
+        this.needsSetup = false;
+        this.save();
     },
 
     getPlayer(id) { return this.players.find(p => p.id === id); },
@@ -83,7 +95,7 @@ const GameState = {
     save() {
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
-                week: this.week, seasonStartYear: this.seasonStartYear,
+                week: this.week, seasonStartYear: this.seasonStartYear, homeCountry: this.homeCountry,
                 players: this.players, inbox: this.inbox, log: this.log,
                 agency: this.agency, league: this.league, clubHistory: this.clubHistory,
                 lastSeasonReport: this.lastSeasonReport
@@ -96,6 +108,7 @@ const GameState = {
         try {
             const d = JSON.parse(raw);
             this.week = d.week; this.seasonStartYear = d.seasonStartYear;
+            this.homeCountry = d.homeCountry || (d.agency && d.agency.homeCountry) || 'Netherlands';
             this.players = d.players || []; this.inbox = d.inbox || [];
             this.log = d.log || []; this.agency = d.agency; this.league = d.league;
             this.clubHistory = d.clubHistory || {};

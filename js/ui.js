@@ -19,6 +19,68 @@ const UI = {
         this.renderActive();
     },
 
+    // first-run screen: pick a home country + name the agency before the world is generated
+    showSetup() {
+        const countries = (typeof REGIONS_BY_COUNTRY !== 'undefined') ? Object.keys(REGIONS_BY_COUNTRY) : ['Netherlands'];
+        const opts = countries.map(c => `<option value="${c}">${c}</option>`).join('');
+        const slides = [
+            { icon: '🤝', title: "You're a football agent", text: "You don't manage a club — you build a stable of players. Discover talents, sign them as clients, and earn a cut of their wages and sponsorship deals as their careers take off." },
+            { icon: '🕵️', title: 'Find the talent', text: "Hire scouts and post them to a region at home (or, with an International Scouting Licence, to a foreign league). Every few weeks they report young prospects. Better scouts — and stronger leagues — turn up better players." },
+            { icon: '✍️', title: 'Sign your clients', text: "Approach a prospect to represent him, then negotiate his move and contract: the club, the role, the wage. From then on you collect commission on his wage and sponsorships every single week." },
+            { icon: '📈', title: 'Game time makes them grow', text: "Players improve mainly by playing. Steer your youngsters to the right club and role — or out on loan — so they get regular minutes and approach their potential. Rising ability means bigger contracts, bigger fees and a bigger cut for you." },
+            { icon: '🏢', title: 'Grow your agency', text: "Wins and big moves build your reputation, which unlocks bigger clients, more scouts and better facilities. Reinvest your commission in Agency upgrades to develop players faster and scout further afield." },
+            { icon: '🗓️', title: 'Play week by week', text: "Hit “Advance week” to roll matches, offers, development and scouting forward. Deals happen in the transfer windows (weeks 1–6 and 21–25). Keep an eye on your inbox for offers, scout reports and the end-of-season review." }
+        ];
+        const el = document.createElement('div');
+        el.id = 'setupOverlay'; el.className = 'setup-overlay';
+        el.innerHTML = `<div class="setup-card">
+            <h1>⚽ Football Agent Manager</h1>
+            <div class="howto">
+                <div class="howto-label">How to play</div>
+                <div class="howto-slide" id="howtoSlide"></div>
+                <div class="howto-nav">
+                    <button class="howto-btn" id="htPrev" aria-label="Previous">◀</button>
+                    <div class="howto-dots" id="htDots"></div>
+                    <button class="howto-btn" id="htNext" aria-label="Next">▶</button>
+                </div>
+            </div>
+            <div class="setup-form">
+                <label class="field-label">Agency name</label>
+                <input id="setupName" class="setup-input" type="text" maxlength="32" placeholder="e.g. Oranje Sports Management" />
+                <label class="field-label">Home country</label>
+                <select id="setupCountry" class="filter-select wide">${opts}</select>
+                <p class="hint">Your home country sets the talents you start with and the regions your scouts can cover. You can unlock other countries later with an International Scouting Licence.</p>
+                <button class="btn-primary lg" id="setupStart">Start your agency ▶</button>
+            </div>
+        </div>`;
+        document.body.appendChild(el);
+
+        // how-to slideshow
+        let idx = 0;
+        const renderSlide = () => {
+            const s = slides[idx];
+            document.getElementById('howtoSlide').innerHTML = `<div class="howto-icon">${s.icon}</div><h3>${s.title}</h3><p>${s.text}</p>`;
+            const dots = document.getElementById('htDots');
+            dots.innerHTML = slides.map((_, i) => `<span class="ht-dot ${i === idx ? 'on' : ''}" data-i="${i}"></span>`).join('');
+            dots.querySelectorAll('.ht-dot').forEach(d => d.addEventListener('click', () => { idx = +d.dataset.i; renderSlide(); }));
+            document.getElementById('htPrev').disabled = idx === 0;
+            const next = document.getElementById('htNext');
+            next.textContent = idx === slides.length - 1 ? '↻' : '▶';
+            next.title = idx === slides.length - 1 ? 'Back to start' : 'Next';
+        };
+        document.getElementById('htPrev').addEventListener('click', () => { if (idx > 0) { idx--; renderSlide(); } });
+        document.getElementById('htNext').addEventListener('click', () => { idx = (idx + 1) % slides.length; renderSlide(); });
+        renderSlide();
+
+        document.getElementById('setupStart').addEventListener('click', () => {
+            const name = document.getElementById('setupName').value;
+            const country = document.getElementById('setupCountry').value;
+            GameState.startNewGame(country, name);
+            el.remove();
+            this.init();
+        });
+    },
+
     // ---------- formatting ----------
     money(n) { return Math.round(n || 0).toLocaleString('en-US'); },
     abilityClass(a) { return a >= 80 ? 'ability-elite' : a >= 65 ? 'ability-great' : a >= 50 ? 'ability-good' : a >= 35 ? 'ability-average' : 'ability-low'; },
@@ -44,11 +106,23 @@ const UI = {
             <path d="${mouth}" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></span>`;
     },
     contractText(p) { return p.contractUntilSeason ? 'until end of ' + GameState.seasonLabelFor(p.contractUntilSeason) : '—'; },
+    // a player who signed in the off-season is shown as "joining X" until the new season starts
+    clubStatusName(p, withDiv) {
+        if (p._joinSeason && p._joinSeason > GameState.seasonStartYear && p.joiningClubId) {
+            const c = Clubs.getClubById(p.joiningClubId);
+            return c ? 'joining ' + c.name : 'joining a new club';
+        }
+        const c = Clubs.getClubById(p.clubId);
+        if (!c) return 'Free agent';
+        return withDiv ? `${c.name} (${c.divisionName})` : c.name;
+    },
     ratingClass(v) { if (!v) return ''; return v < 6 ? 'rating-red' : v < 7 ? 'rating-yellow' : v < 8 ? 'rating-lgreen' : v < 9 ? 'rating-dgreen' : 'rating-blue'; },
     rating(v) { return v ? `<span class="rating ${this.ratingClass(v)}">${v.toFixed(2)}</span>` : '<span class="muted">—</span>'; },
     clubName(id) {
-        if (typeof id === 'string' && id.indexOf('u21') === 0) { const parent = id.split(':')[1], c = parent && Clubs.getClubById(parent); return c ? 'Jong ' + c.name : 'U21'; }
-        const c = Clubs.getClubById(id); return c ? c.name : id;
+        if (typeof id === 'string' && id.indexOf('u21') === 0) { const parent = id.split(':')[1], c = parent && Clubs.getClubById(parent); return c ? youthTeamName(c) : 'U21'; }
+        const c = Clubs.getClubById(id); if (c) return c.name;
+        if (typeof League !== 'undefined' && League.teamName) return League.teamName(id);
+        return id;
     },
     clubLabel(clubId, loan, youth) { const n = this.clubName(clubId); if (youth) return n; return loan ? `${n} <span class="loan-tag">(Loan)</span>` : n; },
 
@@ -198,7 +272,7 @@ const UI = {
         if (p.injury) badges.push(`<span class="pill pill-injury">🩹 ${p.injury.type} (${p.injury.weeksOut}w)</span>`);
         return `<div class="card" data-player="${p.id}">
             <div class="card-head"><div><div class="card-title">${p.name}</div>
-                <div class="card-sub">${p.nationalityFlag} ${p.position} · ${p.age}y · ${club ? club.name : 'Free agent'}</div></div>
+                <div class="card-sub">${p.nationalityFlag} ${p.position} · ${p.age}y · ${this.clubStatusName(p)}</div></div>
                 <div class="card-head-right">${mine ? `<div class="card-morale">${this.moraleSmiley(p)}</div>` : ''}<div class="ovr ${this.abilityClass(p.ability)}">${p.ability}</div></div></div>
             <div class="card-rows">
                 <div><span class="k">Role</span><span class="v">${roleLabel(p.squadRole, p.age)}</span></div>
@@ -231,24 +305,64 @@ const UI = {
     // ---------- Scouts ----------
     renderScouts() {
         const ag = GameState.agency;
+        const hc = GameState.homeCountry || 'Netherlands';
+        const homeRegions = regionsForCountry(hc);
+        const hasLic = Agency.hasIntlLicence();
         const active = ag.scouts.map(s => {
-            const reg = s.region ? `<span class="pill">${regionName(s.region)}</span>` : '<span class="pill pill-warn">Unassigned</span>';
-            const assign = `<div class="assign-row"><select id="rg_${s.id}" class="filter-select">${REGIONS.map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${r.name} — €${this.money(Scouts.regionReportCost(r.id))}/report</option>`).join('')}</select>
+            const scopePill = s.league
+                ? `<span class="pill">🌍 ${(COMPETITIONS[s.league] || {}).name || s.league} · ${s.country}</span>`
+                : s.region ? `<span class="pill">${regionName(s.region)}</span>` : '<span class="pill pill-warn">Unassigned</span>';
+            const regionAssign = `<div class="assign-row"><select id="rg_${s.id}" class="filter-select">${homeRegions.map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${r.name} — €${this.money(Scouts.regionReportCost(r.id))}/report</option>`).join('')}</select>
                 <button class="btn-secondary sm" onclick="UI.assignScoutRegion('${s.id}')">${s.region ? 'Reassign' : 'Assign'}</button></div>`;
+            let intlAssign = '';
+            if (hasLic) {
+                const countries = Scouts.intlCountries();
+                const selC = (s.country && countries.includes(s.country)) ? s.country : countries[0];
+                const cOpts = countries.map(c => `<option value="${c}" ${selC === c ? 'selected' : ''}>${c}</option>`).join('');
+                intlAssign = `<div class="assign-row intl"><span class="cap">🌍 International</span></div>
+                    <div class="assign-row"><select id="intlC_${s.id}" class="filter-select" onchange="UI.onIntlCountry('${s.id}')">${cOpts}</select>
+                    <select id="intlL_${s.id}" class="filter-select">${this._intlLeagueOptions(selC, s.league, s.quality)}</select>
+                    <button class="btn-secondary sm" onclick="UI.assignScoutLeague('${s.id}')">Send</button></div>`;
+            } else {
+                intlAssign = `<div class="assign-row"><span class="hint">🌍 International scouting needs a licence (Agency tab).</span></div>`;
+            }
             const ageSel = `<div class="assign-row"><label class="cap">Max talent age</label><select class="filter-select" onchange="UI.setScoutAge('${s.id}', this.value)">${[15, 16, 17, 18, 19, 20, 21, 22].map(a => `<option value="${a}" ${(s.maxTalentAge || 22) === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div>`;
-            return `<div class="card"><div class="card-head"><div><div class="card-title">${s.name}</div><div class="card-sub">${s.title} · ${reg}</div></div><div class="ovr ${this.abilityClass(s.quality)}">${s.quality}</div></div>
-                <div class="card-rows"><div><span class="k">Wage</span><span class="v">€${this.money(s.weeklyCost)}/wk</span></div><div><span class="k">Next report</span><span class="v">${s.region ? ('~' + s.weeksUntilFind + ' wk') : 'idle · spots ~1–2/yr'}</span></div></div>
-                ${assign}${ageSel}
+            const assigned = s.region || s.league;
+            return `<div class="card"><div class="card-head"><div><div class="card-title">${s.name}</div><div class="card-sub">${s.title} · ${scopePill}</div></div><div class="ovr ${this.abilityClass(s.quality)}">${s.quality}</div></div>
+                <div class="card-rows"><div><span class="k">Wage</span><span class="v">€${this.money(s.weeklyCost)}/wk</span></div><div><span class="k">Next report</span><span class="v">${assigned ? ('~' + s.weeksUntilFind + ' wk') : 'idle · spots ~1–2/yr'}</span></div></div>
+                ${regionAssign}${intlAssign}${ageSel}
                 <button class="btn-ghost danger" onclick="UI.releaseScout('${s.id}')">Release</button></div>`;
         }).join('') || '<div class="empty"><p>No scouts hired.</p></div>';
-        const cat = Scouts.catalogue().map(o => `<div class="card"><div class="card-head"><div><div class="card-title">${o.name}</div><div class="card-sub">${o.title}</div></div><div class="ovr ${this.abilityClass(o.quality)}">${o.quality}</div></div>
+        const cat = Scouts.market().map(o => `<div class="card"><div class="card-head"><div><div class="card-title">${o.name}</div><div class="card-sub">${o.title}</div></div><div class="ovr ${this.abilityClass(o.quality)}">${o.quality}</div></div>
             <div class="card-rows"><div><span class="k">Wage</span><span class="v">€${this.money(o.weeklyCost)}/wk</span></div><div><span class="k">Find quality</span><span class="v">${o.quality < 18 ? 'Very low' : o.quality < 35 ? 'Low' : o.quality < 55 ? 'Decent' : 'High'}</span></div></div>
             <button class="btn-primary" onclick='UI.hireScout(${JSON.stringify(o).replace(/'/g, "&#39;")})'>Hire</button></div>`).join('');
-        const regTable = REGIONS.map(r => `<div class="comp-row"><span>${regionName(r.id)} <span class="muted">${r.blurb}</span></span><span>€${this.money(Scouts.regionReportCost(r.id))}</span></div>`).join('');
-        document.getElementById('scoutsView').innerHTML = `<div class="view-header"><h2>Scouts</h2><p class="muted">Hire a scout for his weekly wage, then assign him to a region. A report (2–3 talents) arrives every 6–7 weeks and costs a per-region fee; a scout's quality drives how good they are.</p></div>
-            <div class="panel"><h3>Your scouts · €${this.money(Agency.weeklyExpenses())}/wk</h3><div class="cards-grid">${active}</div></div>
-            <div class="panel"><h3>Available to hire</h3><p class="hint">Better scouts only take you seriously as your reputation grows.</p><div class="cards-grid">${cat}</div></div>
-            <div class="panel"><h3>Region cost <span class="muted">(per report)</span></h3><p class="hint">Assigning a scout is free; you pay this fee each time he delivers a report. A scout only finds players in his region, and stronger talents land at that region's bigger clubs (with exceptions). Prestigious regions cost more.</p><div class="comp-break">${regTable}</div></div>`;
+        const regTable = homeRegions.map(r => `<div class="comp-row"><span>${regionName(r.id)} <span class="muted">${r.blurb}</span></span><span>€${this.money(Scouts.regionReportCost(r.id))}</span></div>`).join('');
+        const licLine = hasLic
+            ? `<p class="hint">🌍 International Scouting Licence active (${Agency.intlLicenceWeeksLeft()} weeks left). Assign an unassigned scout to a foreign league above.</p>`
+            : `<p class="hint">🌍 Buy an International Scouting Licence in the Agency tab to send scouts abroad (by league).</p>`;
+        document.getElementById('scoutsView').innerHTML = `<div class="view-header"><h2>Scouts</h2><p class="muted">Hire a scout, then assign him to a home region — or, with a licence, to a foreign league. A report (2–3 talents) arrives every 6–7 weeks and costs a per-region/league fee; a scout's quality drives how good they are.</p></div>
+            <div class="panel"><h3>Your scouts · €${this.money(Agency.weeklyExpenses())}/wk</h3>${licLine}<div class="cards-grid">${active}</div></div>
+            <div class="panel"><h3>Available to hire</h3><p class="hint">Better scouts only take you seriously as your reputation grows. This shortlist refreshes every 2 weeks — a scout you hire isn't replaced until the next refresh.</p><div class="cards-grid">${cat}</div></div>
+            <div class="panel"><h3>${hc} region cost <span class="muted">(per report)</span></h3><p class="hint">Assigning a scout is free; you pay this fee each time he delivers a report. A scout only finds players in his region, and stronger talents land at that region's bigger clubs (with exceptions). Prestigious regions cost more.</p><div class="comp-break">${regTable}</div></div>`;
+    },
+    _intlLeagueOptions(country, selectedDiv, scoutQuality) {
+        const divs = (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[country]) || [];
+        return divs.map(d => {
+            const minQ = Scouts.minScoutQualityFor(d);
+            const tooLow = scoutQuality != null && scoutQuality < minQ;
+            return `<option value="${d}" ${selectedDiv === d ? 'selected' : ''} ${tooLow ? 'disabled' : ''}>${(COMPETITIONS[d] || {}).name || d} — €${this.money(Scouts.intlLeagueCost(d))}/report · needs ${minQ}${tooLow ? ' 🔒' : ''}</option>`;
+        }).join('');
+    },
+    onIntlCountry(scoutId) {
+        const c = document.getElementById('intlC_' + scoutId); const l = document.getElementById('intlL_' + scoutId);
+        const s = GameState.agency.scouts.find(x => x.id === scoutId);
+        if (c && l) l.innerHTML = this._intlLeagueOptions(c.value, null, s ? s.quality : null);
+    },
+    assignScoutLeague(scoutId) {
+        const c = document.getElementById('intlC_' + scoutId), l = document.getElementById('intlL_' + scoutId);
+        if (!c || !l) return;
+        const r = Scouts.assignLeague(scoutId, c.value, l.value); GameState.save(); this.refreshTopbar(); this.renderScouts();
+        if (!r.ok) alert(r.message);
     },
     assignScoutRegion(scoutId) {
         const sel = document.getElementById('rg_' + scoutId); if (!sel) return;
@@ -298,6 +412,15 @@ const UI = {
             <div class="panel"><h3>🏢 Office <span class="muted">(weekly running cost)</span></h3><div class="upg-grid">${officeCard}${officeNext}</div></div>
             <div class="panel"><h3>🚗 Vehicles <span class="muted">(buy in order)</span></h3><div class="upg-grid">${vehOwned}${vehNext}</div></div>
             <div class="panel"><h3>🏠 Properties <span class="muted">(buy in order)</span></h3><div class="upg-grid">${propOwned}${propNext}</div></div>
+            <div class="panel"><h3>🌍 International Scouting Licence</h3>${(() => {
+                const has = Agency.hasIntlLicence();
+                const status = has ? `<span class="pill">Active · ${Agency.intlLicenceWeeksLeft()} weeks left</span>` : `<span class="pill pill-warn">Not held</span>`;
+                return `<div class="upg-grid"><div class="upg-card ${has ? 'owned' : ''}"><div class="upg-body">
+                    <div class="upg-name">International Scouting Licence ${status}</div>
+                    <div class="upg-meta">Lets you send unassigned scouts abroad to scout foreign leagues (by league, not region). Valid 3 seasons (156 weeks).</div>
+                    <button class="btn-primary sm" onclick="UI.buyIntlLicence()">${has ? 'Extend' : 'Buy'} — €${this.money(Agency.INTL_LICENCE_COST)}</button>
+                </div></div></div>`;
+            })()}</div>
             <div class="panel"><h3>🏋️ Equipment & Facilities <span class="muted">(buy in any order)</span></h3><div class="upg-grid">${this.equipCards()}</div></div>
             <div class="panel"><h3>🧑‍⚕️ Staff</h3><div class="upg-grid">${this.staffCards()}</div></div>`;
     },
@@ -328,6 +451,7 @@ const UI = {
     buyVehicle() { const r = Upgrades.buyVehicle(); GameState.save(); this.refreshTopbar(); this.renderAgency(); if (!r.ok) alert(r.message); },
     buyProperty() { const r = Upgrades.buyProperty(); GameState.save(); this.refreshTopbar(); this.renderAgency(); if (!r.ok) alert(r.message); },
     upgradeOffice() { const r = Upgrades.upgradeOffice(); GameState.save(); this.refreshTopbar(); this.renderAgency(); if (!r.ok) alert(r.message); },
+    buyIntlLicence() { const r = Agency.buyIntlLicence(); GameState.save(); this.refreshTopbar(); this.renderAgency(); alert(r.message); },
 
     // ---------- Inbox ----------
     renderInbox() {
@@ -364,8 +488,22 @@ const UI = {
         if (m.kind === 'sponsor') return this.mailSponsor(m);
         // news / summary / info
         this.openModal(`<h2>${KIND_ICON[m.kind] || 'ℹ️'} ${m.subject}</h2><p class="muted">W${m.week} ${m.season}</p>
-            <div class="mail-body">${m.body || ''}</div>
+            <div class="mail-body">${this.linkifyPlayers(m.body || '')}</div>
             <div class="modal-actions"><button class="btn-secondary" onclick="UI.dismissMail('${m.id}')">Dismiss</button><button class="btn-primary" onclick="UI.closeModal()">Close</button></div>`);
+    },
+    // make player names inside an email body tappable (links to the player's card)
+    linkifyPlayers(html) {
+        if (!html) return html;
+        const cands = GameState.players.filter(p => p.agentId === 'me' || p.everClient || p.knownToAgent);
+        const seen = new Set(); const list = [];
+        cands.sort((a, b) => b.name.length - a.name.length).forEach(p => { if (p.name && !seen.has(p.name)) { seen.add(p.name); list.push(p); } });
+        let out = html;
+        list.forEach(p => {
+            const esc = p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp('(^|[^\\w>])(' + esc + ')(?![\\w<])', 'g');
+            out = out.replace(re, (mm, pre, nm) => `${pre}<span class="pl-link" onclick="UI.openPlayer('${p.id}')">${nm}</span>`);
+        });
+        return out;
     },
     dismissMail(id) { GameState.removeMail(id); GameState.save(); this.refreshTopbar(); this.closeModal(); if (this.view === 'inbox') this.renderInbox(); },
 
@@ -570,7 +708,7 @@ const UI = {
         else if (this._ctx.tab === 'history') bodyHtml = this.tabHistory(p);
         const club = Clubs.getClubById(p.clubId);
         this.openModal(`<div class="pl-head"><div><h2>${p.name}</h2>
-            <p class="muted">${p.nationalityFlag} ${p.nationality} · ${p.position} · ${p.age}y · ${club ? club.name + ' (' + club.divisionName + ')' : 'Free agent'}</p></div>
+            <p class="muted">${p.nationalityFlag} ${p.nationality} · ${p.position} · ${p.age}y · ${this.clubStatusName(p, true)}</p></div>
             <div class="ovr lg ${this.abilityClass(p.ability)}">${p.ability}</div></div>
             <div class="tabbar">${tabBar}</div><div class="tab-body">${bodyHtml}</div><div id="modalResult"></div>`);
     },
@@ -672,6 +810,18 @@ const UI = {
 
     tabContract(p) {
         const club = Clubs.getClubById(p.clubId);
+        let loanHtml = '';
+        if (p.onLoanAt && !isU21Loan(p)) {
+            const borrower = Clubs.getClubById(p.onLoanAt);
+            const dur = p.loanMid ? `until the winter window of ${GameState.seasonLabelFor(p.loanUntilSeason)}` : `until the end of ${GameState.seasonLabelFor(p.loanUntilSeason)}`;
+            loanHtml = `<h3>Loan spell</h3>
+                <div class="detail-grid">
+                    <div class="detail-stat"><div class="ds-label">On loan at</div><div class="ds-value sm">${borrower ? borrower.name : this.clubName(p.onLoanAt)}</div></div>
+                    <div class="detail-stat"><div class="ds-label">Duration</div><div class="ds-value sm">${dur}</div></div>
+                    <div class="detail-stat"><div class="ds-label">Role there</div><div class="ds-value sm">${ROLE_LABEL[p.loanRole] || roleLabel(p.loanRole, p.age)}</div></div>
+                    <div class="detail-stat"><div class="ds-label">Parent club</div><div class="ds-value sm">${club ? club.name : '—'}</div></div>
+                </div>`;
+        }
         const sponsors = GameState.inbox.filter(m => m.kind === 'sponsor' && m.offer.playerId === p.id);
         const sponsorHtml = sponsors.length ? `<h3>Sponsorship offers</h3>${sponsors.map(m => `<div class="offer-mini"><span>💰 ${(SPONSOR_LABEL[m.offer.level] || 'Sponsor')} interest — ${(m.offer.options ? m.offer.options.length : 1)} option(s)</span><button class="btn-secondary sm" onclick="UI.openMail('${m.id}')">Review</button></div>`).join('')}` : '';
         const deals = (p.sponsorDeals || []).filter(d => d.untilSeason >= GameState.seasonStartYear);
@@ -682,7 +832,7 @@ const UI = {
             ? `<span class="pill pill-list">Transfer-listed</span>`
             : `<button class="btn-secondary" onclick="UI.reqTransferList('${p.id}')">Ask ${club ? club.name : 'club'} to transfer-list ${p.name}</button>`;
         const fee = Agency.releaseFee(p);
-        return `<div class="detail-grid">
+        return `${loanHtml}<div class="detail-grid">
                 <div class="detail-stat"><div class="ds-label">Wage</div><div class="ds-value">€${this.money(p.wage)}<span class="sc-unit">/wk</span></div></div>
                 <div class="detail-stat"><div class="ds-label">Until</div><div class="ds-value sm">${this.contractText(p)}</div></div>
                 <div class="detail-stat"><div class="ds-label">Role</div><div class="ds-value sm">${roleLabel(p.squadRole, p.age)}</div></div>
@@ -699,11 +849,11 @@ const UI = {
             <div class="action-row">${listBtn}</div>
             ${activeSponsorHtml}
             ${sponsorHtml}
-            <h3>Gifts <span class="muted">(boost agent morale)</span></h3>
+            <h3>Gifts <span class="muted">(boost agent morale — pricier for top earners)</span></h3>
             <div class="action-row">
-                <button class="btn-secondary" onclick="UI.gift('${p.id}','small')">Small · €${this.money(Agency.giftCost('small'))}</button>
-                <button class="btn-secondary" onclick="UI.gift('${p.id}','medium')">Medium · €${this.money(Agency.giftCost('medium'))}</button>
-                <button class="btn-secondary" onclick="UI.gift('${p.id}','large')">Large · €${this.money(Agency.giftCost('large'))}</button>
+                <button class="btn-secondary" onclick="UI.gift('${p.id}','small')">Small · €${this.money(Agency.giftCost('small', p))}</button>
+                <button class="btn-secondary" onclick="UI.gift('${p.id}','medium')">Medium · €${this.money(Agency.giftCost('medium', p))}</button>
+                <button class="btn-secondary" onclick="UI.gift('${p.id}','large')">Large · €${this.money(Agency.giftCost('large', p))}</button>
             </div>
             <h3>End representation</h3>
             <p class="hint">${p.repExpired ? 'His representation term has run its course — you can release him at <strong>no cost</strong>.' : `Releasing a client before the term ends means buying out the contract: wage × remaining weeks × your commission = <strong>€${this.money(fee)}</strong>. Once the term is up, release becomes free.`}</p>
@@ -864,17 +1014,19 @@ const UI = {
         const r = Agency.requestTransferListing(p); GameState.save(); this.refreshTopbar(); this.renderPlayer();
         if (!r.ok) alert(r.message);
     },
+    reqTransferList(id) { const r = Agency.requestTransferListing(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
     toggleLL(id) { Agency.toggleLoanList(GameState.getPlayer(id)); GameState.save(); this.renderPlayer(); },
     reqLoan(id) { const r = Agency.requestLoan(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
-    sendU21(id) { const p = GameState.getPlayer(id); const reserve = reserveClubFor(p.clubId); const dest = reserve ? reserve.name : 'Jong ' + (Clubs.getClubById(p.clubId)?.name || ''); if (!confirm(`Send ${p.name} to ${dest}? ${reserve ? "He'll feature in their league games and return to the senior side at season's end." : "He plays youth-league games (good for development) until the end of the season; these don't count toward senior appearances."}`)) return; const r = Agency.sendToU21(p); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
+    sendU21(id) { const p = GameState.getPlayer(id); const reserve = reserveClubFor(p.clubId); const dest = reserve ? reserve.name : youthTeamName(p.clubId); if (!confirm(`Send ${p.name} to ${dest}? ${reserve ? "He'll feature in their league games and return to the senior side at season's end." : "He plays youth-league games (good for development) until the end of the season; these don't count toward senior appearances."}`)) return; const r = Agency.sendToU21(p); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqPromote(id) { const r = Agency.requestPromotion(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqRenewal(id) { const r = Agency.requestRenewalTalks(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
-    gift(id, tier) { const r = Agency.giveGift(GameState.getPlayer(id), tier); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
+    gift(id, tier) { const r = Agency.giveGift(GameState.getPlayer(id), tier); GameState.save(); this.refreshTopbar(); this.renderPlayer(); alert(r.message); },
     release(id) {
         const p = GameState.getPlayer(id), fee = Agency.releaseFee(p);
+        if (fee > GameState.agency.balance) { alert(`You can't afford to release ${p.name}. Buying out the contract costs €${this.money(fee)}, but your balance is €${this.money(GameState.agency.balance)}.`); return; }
         if (!confirm(`Release ${p.name}? You'll pay €${this.money(fee)} to buy out the contract.`)) return;
         const r = Agency.releasePlayer(p); GameState.save(); this.refreshTopbar();
-        if (r.ok) { this.closeModal(); this.switchView('clients'); } else this.result(r.message, 'bad');
+        if (r.ok) { this.closeModal(); this.switchView('clients'); } else alert(r.message);
     },
 
     // ---- shop to ANY club ----
@@ -955,20 +1107,35 @@ const UI = {
     // ============================================================
     renderLeagues() {
         const body = document.getElementById('leaguesView');
-        const tab = this.filters.leagueTab || 'tables';
-        const tabs = [['tables', 'Tables'], ['beker', 'KNVB Beker'], ['kbek', 'De kleine Beker'], ['po', 'Play-offs']];
+        const countries = (typeof COUNTRY_DIVS !== 'undefined') ? Object.keys(COUNTRY_DIVS) : ['Netherlands'];
+        const country = this.filters.lgCountry && countries.includes(this.filters.lgCountry) ? this.filters.lgCountry : countries[0];
+        this.filters.lgCountry = country;
+        const cups = (typeof COUNTRY_CUPS !== 'undefined' && COUNTRY_CUPS[country]) || [];
+        const tabs = [['tables', 'Tables'], ...cups, ['po', 'Play-offs']];
+        let tab = this.filters.leagueTab || 'tables';
+        if (!tabs.some(([k]) => k === tab)) { tab = 'tables'; this.filters.leagueTab = 'tables'; }
+        const countrySel = `<select id="lgCountry" class="filter-select">${countries.map(c => `<option ${country === c ? 'selected' : ''}>${c}</option>`).join('')}</select>`;
         const tabBar = tabs.map(([k, l]) => `<button class="tab ${tab === k ? 'active' : ''}" onclick="UI.setLeagueTab('${k}')">${l}</button>`).join('');
         let section = '';
         if (tab === 'tables') {
-            const divOpts = ['ERE', 'EED', 'TWD', 'DRD'].map(d => `<option value="${d}" ${this.filters.division === d ? 'selected' : ''}>${COMPETITIONS[d].name}</option>`).join('');
-            section = `<div class="controls"><select id="lgCountry" class="filter-select"><option>Netherlands</option></select><select id="lgDivision" class="filter-select">${divOpts}</select></div><div id="standings" class="panel">${this.standingsTable(this.filters.division)}</div>`;
+            const divs = (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[country]) || ['ERE', 'EED', 'TWD', 'DRD'];
+            if (!divs.includes(this.filters.division)) this.filters.division = divs[0];
+            const divOpts = divs.map(d => `<option value="${d}" ${this.filters.division === d ? 'selected' : ''}>${COMPETITIONS[d].name}</option>`).join('');
+            section = `<div class="controls"><select id="lgDivision" class="filter-select">${divOpts}</select></div><div id="standings" class="panel">${this.standingsTable(this.filters.division)}</div>`;
         } else if (tab === 'beker') section = this.cupBekerView();
         else if (tab === 'kbek') section = this.cupKleineView();
+        else if (tab === 'facup') section = this.cupFACupView();
+        else if (tab === 'llc') section = this.cupLLCView();
         else section = this.playoffsView();
         const finished = GameState.league && GameState.league.finished;
-        body.innerHTML = `<div class="view-header"><h2>Competitions</h2><p class="muted">${finished ? 'Season ' + GameState.seasonLabel() + ' — complete' : 'Season ' + GameState.seasonLabel()}</p></div>
+        body.innerHTML = `<div class="view-header"><div class="vh-row"><h2>Competitions</h2>${countrySel}</div><p class="muted">${finished ? 'Season ' + GameState.seasonLabel() + ' — complete' : 'Season ' + GameState.seasonLabel()}</p></div>
             <div class="tabbar">${tabBar}</div>${section}`;
-        if (tab === 'tables') document.getElementById('lgDivision').addEventListener('change', e => { this.filters.division = e.target.value; document.getElementById('standings').innerHTML = this.standingsTable(this.filters.division); });
+        const cSel = document.getElementById('lgCountry');
+        if (cSel) cSel.addEventListener('change', e => { this.filters.lgCountry = e.target.value; this.filters.division = null; this.filters.leagueTab = 'tables'; this.renderLeagues(); });
+        if (tab === 'tables') {
+            const dSel = document.getElementById('lgDivision');
+            if (dSel) dSel.addEventListener('change', e => { this.filters.division = e.target.value; document.getElementById('standings').innerHTML = this.standingsTable(this.filters.division); });
+        }
     },
     setLeagueTab(t) { this.filters.leagueTab = t; this.renderLeagues(); },
     setClientHistSort(key) {
@@ -1042,19 +1209,28 @@ const UI = {
         if (!GameState.league || !GameState.league.tables[div]) return '<p class="muted">No table yet.</p>';
         const rows = League.sortedTable(div);
         const champ = GameState.league.champions && GameState.league.champions[div];
-        const promote = div !== 'ERE', relegate = div !== 'DRD', n = rows.length;
+        const ladder = (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[divCountry(div)]) || ['ERE', 'EED', 'TWD', 'DRD'];
+        const tierIdx = ladder.indexOf(div);
+        const promote = tierIdx > 0, relegate = tierIdx >= 0 && tierIdx < ladder.length - 1;
+        const relCount = div === 'LEAGUE2' ? 2 : 3, n = rows.length;
         const isY = id => isReserveClub(id);
         const pr = League.computeProRel();
-        const mk = (pr && pr.marks && pr.marks[div]) || { green: [], blue: [] };
+        let mk = (pr && pr.marks && pr.marks[div]) || { green: [], blue: [] };
+        // English divisions: computeProRel only marks the Dutch ladder, so derive promotion/play-off zones here
+        if (!mk.green.length && !mk.blue.length && divCountry(div) === 'England') {
+            const ids = rows.map(r => r.clubId);
+            if (div === 'Natleague') mk = { green: ids.slice(0, 1), blue: ids.slice(1, 7) };       // 1 up, 2–7 play-off
+            else if (['CHAMP', 'LEAGUE1', 'LEAGUE2'].includes(div)) mk = { green: ids.slice(0, 2), blue: ids.slice(2, 6) }; // top 2 up, 3–6 play-off
+        }
         const deniedSet = new Set((pr && pr.notes ? pr.notes.filter(nn => nn.div === div) : []).map(nn => nn.clubId));
         const footnotes = [];
         const body = rows.map((r, i) => {
             const c = Clubs.getClubById(r.clubId);
-            const myCount = GameState.players.filter(p => p.agentId === 'me' && p.clubId === r.clubId).length;
+            const myCount = GameState.players.filter(p => p.agentId === 'me' && (p.onLoanAt || p.clubId) === r.clubId).length;
             const rel = Agency.relationship(r.clubId);
             const gd = r.GF - r.GA;
             let zone = '';
-            if (relegate && i >= n - 3) zone = 'zone-relegate';
+            if (relegate && i >= n - relCount) zone = 'zone-relegate';
             else if (mk.green.includes(r.clubId)) zone = 'zone-promote';
             else if (mk.blue.includes(r.clubId)) zone = 'zone-playoff';
             const denied = deniedSet.has(r.clubId);
@@ -1065,7 +1241,9 @@ const UI = {
                 <td>${myCount ? `<span class="mine-badge">${myCount}</span>` : ''}</td>
                 <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${gd > 0 ? '+' : ''}${gd}</td><td class="pts">${r.Pts}</td></tr>`;
         }).join('');
-        const legend = `<div class="zone-legend">${promote ? '<span class="lg-pro">Top 2 promote</span> <span class="lg-po">3–6 play-off</span>' : ''}${relegate ? ' <span class="lg-rel">Bottom 3 relegate</span>' : ''}</div>`;
+        const engPromo = divCountry(div) === 'England';
+        const promoTxt = engPromo ? (div === 'Natleague' ? '<span class="lg-pro">Champion promotes</span> <span class="lg-po">2–7 play-off</span>' : '<span class="lg-pro">Top 2 promote</span> <span class="lg-po">3–6 play-off</span>') : '<span class="lg-pro">Top 2 promote</span> <span class="lg-po">3–6 play-off</span>';
+        const legend = `<div class="zone-legend">${promote ? promoTxt : ''}${relegate ? ` <span class="lg-rel">Bottom ${relCount} relegate</span>` : ''}</div>`;
         const foot = footnotes.length ? `<p class="table-foot">* ${[...new Set(footnotes)].join(', ')} ${footnotes.length > 1 ? 'are reserve sides and cannot be promoted' : 'is a reserve side and cannot be promoted'} ${div === 'EED' ? 'to the Eredivisie' : 'into the same division as their first team / past the reserve-team cap'}; the spot passes to the next eligible club.</p>` : '';
         return `<table class="standings"><thead><tr><th>#</th><th>Club</th><th title="Your players">You</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${body}</tbody></table>
             ${legend}${foot}<p class="hint">Tap a club for its honours and your players there.</p>`;
@@ -1085,6 +1263,25 @@ const UI = {
         const rounds = B.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
         return `<div class="panel">${winner}<p class="hint">Tiers 2–4 (56 clubs) start in round 1; the 18 Eredivisie clubs enter at the Round of 32.</p>${rounds}</div>`;
     },
+    cupFACupView() {
+        const F = (GameState.league && GameState.league.facup) || (GameState.lastSeasonReport && GameState.lastSeasonReport.facup);
+        if (!F || !F.results || !F.results.length) return '<div class="panel"><p class="muted">The FA Cup hasn\'t kicked off yet — the first round is in week 4.</p></div>';
+        const winner = F.winner ? `<div class="cup-winner">🏆 Winner: <strong>${this.clubName(F.winner)}</strong></div>` : '';
+        const rounds = F.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<p class="hint">All 116 English clubs plus 12 non-league guest clubs (128 in total) are drawn from round one; rounds in weeks 4, 7, 15, 26, 32, 38 and 47.</p>${rounds}</div>`;
+    },
+    cupLLCView() {
+        const C = (GameState.league && GameState.league.llc) || (GameState.lastSeasonReport && GameState.lastSeasonReport.llc);
+        if (!C || !C.groups) return '<div class="panel"><p class="muted">The Lower Leagues Cup hasn\'t started yet — group games are in weeks 4 and 7.</p></div>';
+        const winner = C.winner ? `<div class="cup-winner">🏆 Winner: <strong>${this.clubName(C.winner)}</strong></div>` : '';
+        const groups = C.groups.map((g, i) => {
+            const t = League._kSort(g.table);
+            const rows = t.map((r, j) => `<tr class="${j === 0 ? 'zone-promote' : ''}" onclick="UI.openClub('${r.clubId}')" style="cursor:pointer"><td class="club">${this.clubName(r.clubId)}</td><td>${r.P}</td><td>${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA}</td><td class="pts">${r.Pts}</td></tr>`).join('');
+            return `<div class="kgroup"><h4>Group ${i + 1}</h4><table class="standings mini"><thead><tr><th>Club</th><th>P</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        }).join('');
+        const ko = (C.results || []).slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<h3>Group stage <span class="muted">(32 groups of 3 — National League to Championship)</span></h3><p class="hint">Each club plays the other two once (weeks 4 & 7); the 32 group winners go into a drawn knockout (R32 wk15, then 26/32/38, final wk46).</p><div class="kgroups">${groups}</div>${ko ? `<h3>Knockout</h3>${ko}` : ''}</div>`;
+    },
     cupKleineView() {
         const K = (GameState.league && GameState.league.kbek) || (GameState.lastSeasonReport && GameState.lastSeasonReport.kbek);
         if (!K || !K.groups) return '<div class="panel"><p class="muted">De kleine Beker hasn\'t started yet — group games are in weeks 4, 7 and 16.</p></div>';
@@ -1098,20 +1295,26 @@ const UI = {
         return `<div class="panel">${winner}<h3>Group stage <span class="muted">(12 mixed groups of 3)</span></h3><p class="hint">12 group winners + the 4 best runners-up reach the last 16.</p><div class="kgroups">${groups}</div>${ko ? `<h3>Knockout</h3>${ko}` : ''}</div>`;
     },
     playoffsView() {
+        const country = this.filters.lgCountry || 'Netherlands';
         const P = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.playoffs : (GameState.lastSeasonReport && GameState.lastSeasonReport.playoffs);
-        const pr = GameState.lastSeasonReport && GameState.lastSeasonReport.prorel;
+        const divs = ((typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[country]) || []).filter((d, i) => i > 0); // skip top tier
         let blocks = '';
-        ['EED', 'TWD', 'DRD'].forEach(div => {
+        divs.forEach(div => {
             const po = P && P[div];
-            if (!po) { blocks += `<div class="po-block"><h4>${COMPETITIONS[div].name} — promotion play-off</h4><p class="muted">Not played yet (week 46).</p></div>`; return; }
-            blocks += `<div class="po-block"><h4>${COMPETITIONS[div].name} — promotion play-off</h4>
-                <div class="cup-round"><h5>Semi-finals</h5>${po.sf.map(t => this._tie(t)).join('')}</div>
+            const title = `${COMPETITIONS[div] ? COMPETITIONS[div].name : div} — promotion play-off`;
+            if (!po) { blocks += `<div class="po-block"><h4>${title}</h4><p class="muted">Not played yet (week 46).</p></div>`; return; }
+            const elim = po.elim ? `<div class="cup-round"><h5>Eliminators</h5>${po.elim.map(t => this._tie(t)).join('')}</div>` : '';
+            blocks += `<div class="po-block"><h4>${title}</h4>
+                ${elim}
+                <div class="cup-round"><h5>Semi-finals</h5>${(po.sf || []).map(t => this._tie(t)).join('')}</div>
                 <div class="cup-round"><h5>Final</h5>${this._tie(po.final)}</div>
                 <div class="cup-winner">⬆️ Promoted: <strong>${this.clubName(po.winner)}</strong></div></div>`;
         });
+        const lr = GameState.lastSeasonReport || {};
         let prBlock = '';
-        if (pr) {
-            const nm = id => this.clubName(id);
+        const nm = id => this.clubName(id);
+        if (country === 'Netherlands' && lr.prorel) {
+            const pr = lr.prorel;
             prBlock = `<div class="panel"><h3>Promotion &amp; relegation</h3>
                 <div class="comp-row"><span>⬆️ To Eredivisie</span><span>${pr.eedUp.map(nm).join(', ')}</span></div>
                 <div class="comp-row"><span>⬇️ From Eredivisie</span><span>${pr.ereDown.map(nm).join(', ')}</span></div>
@@ -1119,8 +1322,22 @@ const UI = {
                 <div class="comp-row"><span>⬇️ From Eerste</span><span>${pr.eedDown.map(nm).join(', ')}</span></div>
                 <div class="comp-row"><span>⬆️ To Tweede</span><span>${pr.drdUp.map(nm).join(', ')}</span></div>
                 <div class="comp-row"><span>⬇️ From Tweede</span><span>${pr.twdDown.map(nm).join(', ')}</span></div></div>`;
+        } else if (country === 'England' && lr.prorelEng) {
+            const e = lr.prorelEng;
+            prBlock = `<div class="panel"><h3>Promotion &amp; relegation</h3>
+                <div class="comp-row"><span>⬆️ To Premier League</span><span>${e.champUp.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From Premier League</span><span>${e.premDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To Championship</span><span>${e.l1Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From Championship</span><span>${e.champDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To League One</span><span>${e.l2Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From League One</span><span>${e.l1Down.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To League Two</span><span>${e.nlUp.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From League Two</span><span>${e.l2Down.map(nm).join(', ')}</span></div></div>`;
         }
-        return `<div class="panel"><p class="hint">Places 3–6 contest a play-off (week 46) for the third promotion spot; the higher seed plays at home (3 v 6, 4 v 5, then the final).</p>${blocks}</div>${prBlock}`;
+        const hint = country === 'England'
+            ? 'Championship, League One and League Two: places 3–6 contest a play-off for the last promotion spot. National League: places 2–7, with 2 &amp; 3 seeded to the semi-finals.'
+            : 'Places 3–6 contest a play-off (week 46) for the third promotion spot; the higher seed plays at home (3 v 6, 4 v 5, then the final).';
+        return `<div class="panel"><p class="hint">${hint}</p>${blocks}</div>${prBlock}`;
     },
 
     // ---- club detail (honours + your clients there; no full squad) ----

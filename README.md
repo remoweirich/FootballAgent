@@ -1,3 +1,64 @@
+## v26 changes
+- Added a clickable "How to play" guide to the start screen (where you pick your home country and name your agency): six short slides explaining the core idea — you're an agent who finds talents, signs them as clients, earns commission, develops players through game time, and grows the agency's reputation week by week. Navigate with the arrows or the dots; it loops back to the start.
+
+## v25 changes — fixes batch
+1. KNVB Beker fixed: only Dutch clubs take part (English sides were wrongly drawn in). The Dutch and English cups are now strictly separate.
+2. Match pacing eased: the opening league weeks now play a single matchday each instead of jumping two at a time, and fixtures stay on a smooth pace afterwards (leagues still finish on schedule). Rotation players now clearly play less than starters (about half as many games) rather than near-starter minutes.
+3. Player development slowed further (roughly halved again): an ideal young regular now gains about 5–7 ability over a full season, so agency development upgrades matter again.
+4. Scouts now need a minimum quality to work a foreign league: 65 for the top tier, 60 for the second, 50 for the third, 40 for the fourth and 30 for the fifth. A scout below the threshold can't be assigned there.
+5. The season review now summarises your home country's title race, cups and play-offs (not always the Dutch ones), and additionally calls out any of your clients — including those playing abroad — who win silverware or are promoted/relegated. Client promotions and relegations are now listed in the review.
+
+## v24 changes — fixes batch
+1. Player development reworked: progression is now paced by playing time, form, the gap to potential and genuine week-to-week randomness, capped at ~11 ability across a full season and spread evenly through it (no more "+1 every two weeks" or a big start-of-season jump that then stalls). Regulars who play a lot can still reach their potential over a few seasons; benchwarmers gain very little. Injuries are slightly more frequent and cost development time.
+2. English youth sides are now named "Club U21" (e.g. "Arsenal U21") instead of "Jong Club"; Dutch sides keep the "Jong X" name.
+3. English play-offs fixed: the semi-final and eliminator ties now actually show the two clubs (previously blank). Championship/League One/League Two: 3 v 6 and 4 v 5. National League: eliminators 4 v 7 and 5 v 6; the 4 v 7 winner meets 3rd and the 5 v 6 winner meets 2nd in the semis, then the final decides the last promotion spot.
+4. Honours and recent finishes are now tracked for every nation (England included), not just the Netherlands — and any future nation is covered automatically.
+5. A transfer agreed in the off-season (weeks 49–52) now shows the player as "joining X" until the new season starts, and no fresh approaches arrive until the winter window (week 21) rather than week 1.
+6. Player names inside emails are now tappable and open the player's card.
+7. "Ask the club to transfer-list X" now works — the club gives a clear yes/no response (the handler was missing entirely).
+8. English league tables now mark the promotion, play-off and relegation zones (and the champion), just like the Dutch tables.
+
+## v23 changes — pick your home country + international scouting
+- New game setup: before kick-off you now choose a home country and name your agency on a start screen. (Existing saves keep playing; clear local storage to see the setup screen.)
+- Your home country shapes the start: your initial known talents are all from that country, and your scouts can only be assigned to that country's scouting regions.
+- England is now selectable as a home nation, with nine scouting regions defined (Greater London, North West, South East, West Midlands, North East, Yorkshire & the Humber, East Midlands, South West, East of England) and English scout names. Talents found in a region play for that region's clubs, just like in the Netherlands. Region report costs scale with the prestige of each region's clubs.
+- International scouting: buy an International Scouting Licence in the Agency tab (€20,000, valid 3 seasons / 156 weeks). With a licence, an unassigned scout can be sent abroad — you pick a country (for now the other of England/Netherlands) and a specific league to scout (international scouting is by league, not region).
+- International report costs are tiered off your dearest home region (travel + prestige): roughly 1.5× for the lowest league, ~2.5× for the next two, 3× for the second tier and 5× for the top flight.
+- A talent's calibre still depends on the scout, but stronger leagues (higher Elo/reputation) let the same scout unearth great talents more often — scouting the Premier League turns up better prospects than the Dutch lower leagues. English clubs also pay higher wages than Dutch clubs.
+- This framework is built to extend: more countries and leagues can be added later and will plug straight into the home-country selection and international scouting.
+
+## v22 changes — fixes batch
+1. Promotion/relegation arrows now work for every country (England included) and any future league: a client's ▲/▼ is derived generically from his club's tier change between seasons, not from hard-coded Dutch divisions.
+2. The Leagues tab now has a top-level country selector; the cup tabs shown depend on the chosen country (Netherlands → KNVB Beker, kleine Beker; England → FA Cup, Lower Leagues Cup). Play-offs and tables are also country-scoped. Adding a country later only needs an entry in COUNTRY_CUPS.
+3. Transfer interest now strongly prefers the player's own country; cross-border bids are rare, and rarer the lower the player's level (Urk bids for a TEC player far sooner than Carlisle would).
+4. Players out on loan now appear under the borrowing club in the league table (red dot), not their parent club.
+5. Gifts now cost relative to the player's wage (top earners are pricier to please), and the player gives spoken pop-up feedback that scales with how generous the gift was.
+6. While the agency is in the red, your best client (by ability, then wage) loses 1 morale per week, explained by a story-style inbox email rather than a technical note. A fresh email is sent each time you fall back into the red.
+7. The scout shortlist refreshes only every 2 weeks instead of on every visit; hiring a scout leaves that slot empty until the next refresh.
+8. A player whose club contract has expired (a free agent) earns you no wage commission until he signs somewhere new — sponsorship income still pays.
+9. Releasing a client you can't afford to buy out is now blocked with a pop-up explaining the shortfall.
+10. A loaned-out player's loan terms are now visible on his Contract tab: borrowing club, duration, and his role there.
+
+## v21 changes — English football integrated (stage 2: cups)
+- FA Cup added: all 116 English clubs plus 12 non-league guest clubs (Hashtag United, Truro City, Fylde, Kidderminster, Macclesfield, Hemel Hempstead, Maidenhead United, Ebbsfleet, Slough, Chesham, Salisbury, Dagenham & Redbridge) make 128 entrants, drawn from round one and played through the bracket in weeks 4, 7, 15, 26, 32, 38 and 47. The 12 guest clubs exist only in the FA Cup — they can't be scouted or signed and have no squads (their strength tracks their reputation, ~20–21).
+- Lower Leagues Cup added: the 96 clubs from National League up to Championship are drawn into 32 groups of three, each club playing the other two once (weeks 4 & 7). The 32 group winners go into a drawn knockout — round of 32 (week 15), then weeks 26/32/38 and the final in week 46.
+- Both cups run in parallel with the Dutch KNVB Beker and kleine Beker, are rebuilt fresh each season, and award trophies to the winning club's players. FA Cup and Lower Leagues Cup appearances count toward players' all-time (career) totals like other cups.
+- Leagues tab: two new tabs (FA Cup, Lower Leagues Cup) show the live draw, group tables and bracket.
+
+## v20 changes — English football integrated (stage 1: leagues)
+- Adopted the expanded clubs.js: the 116 English clubs across five divisions are now part of the world (the broken "C'Ship'" id was normalised to CHAMP).
+- The league engine is now country-aware. Both pyramids run in parallel each season: Netherlands (Eredivisie → Derde Divisie) and England (Premier League 20, Championship 24, League One 24, League Two 24, National League 24). Larger 24-team divisions play occasional midweek rounds so every league still finishes on schedule (including the new break weeks).
+- English promotion/relegation implemented with the exact rules and play-offs:
+  - Premier League: bottom 3 down.
+  - Championship / League One: top 2 up, play-off for places 3–6, bottom 3 down.
+  - League Two: top 2 up, play-off for places 3–6, bottom 2 down.
+  - National League: champion up, then a six-team play-off for places 2–7 (2 & 3 seeded straight to the semi-finals, 4 v 7 and 5 v 6 eliminators, then semis and a final) for the second promotion spot.
+  Promotions always match relegations, so every division keeps its size season after season.
+- Leagues tab: a country selector now lets you switch between the Netherlands and England and view that country's division tables, with tier-correct promotion/relegation/play-off zones.
+
+### Coming next (stage 2)
+The two English cups are the next step and will be built and tested on their own: the FA Cup (all 116 English clubs plus 12 virtual non-transferable clubs, fully drawn from round 1 through the bracket, weeks 4/7/15/26/32/38/47) and the Lower Leagues Cup (the 96 clubs from National League to Championship in 32 groups of three, group winners into a drawn round of 32 and bracket; groups in weeks 4 & 7, then 15/26/32/38/46).
+
 ## v19 changes
 - Adopted the updated role set in scouting.js (new play-style roles and additional country league ladders).
 - Added a per-role card bias to the match engine: more aggressive roles pick up bookings faster. Biases — physical_defender 1.8, destroyer 1.7, relentless_runner 1.3, attacking_fb 1.3, pressing_forward 1.2, pace_winger 1.2, defensive_fb 0.8, dribbler 0.7; every other role is neutral (1.0).

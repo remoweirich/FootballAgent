@@ -7,17 +7,47 @@ const COMPETITIONS = {
     EED: { name: 'Eerste Divisie', short: 'EED', type: 'league' },
     TWD: { name: 'Tweede Divisie', short: 'TWD', type: 'league' },
     DRD: { name: 'Derde Divisie', short: 'DRD', type: 'league' },
+    PREM: { name: 'Premier League', short: 'PL', type: 'league' },
+    CHAMP: { name: 'Championship', short: 'CHA', type: 'league' },
+    LEAGUE1: { name: 'League One', short: 'L1', type: 'league' },
+    LEAGUE2: { name: 'League Two', short: 'L2', type: 'league' },
+    Natleague: { name: 'National League', short: 'NL', type: 'league' },
     BEKER: { name: 'KNVB Beker', short: 'Beker', type: 'cup' },
     KBEK: { name: 'De kleine Beker', short: 'kl. Beker', type: 'cup' },
+    FACUP: { name: 'FA Cup', short: 'FA Cup', type: 'cup' },
+    LLC: { name: 'Lower Leagues Cup', short: 'LLC', type: 'cup' },
     PO: { name: 'Promotion Play-off', short: 'PO', type: 'playoff' },
     UCL: { name: 'Champions League', short: 'UCL', type: 'cont' },
     JCS: { name: 'Johan Cruijff Schaal', short: 'JCS', type: 'super' },
     U21: { name: 'U21 League', short: 'U21', type: 'youth', youth: true }
 };
-function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : id; }
+function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : (Clubs.DIV_NAMES && Clubs.DIV_NAMES[id]) || id; }
 
 const DIV_ORDER = ['ERE', 'EED', 'TWD', 'DRD'];
 const DIV_TIER = { ERE: 1, EED: 2, TWD: 3, DRD: 4 };
+// every country's league ladder, top tier first
+const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'] };
+const ALL_LEAGUE_DIVS = Object.values(COUNTRY_DIVS).reduce((a, b) => a.concat(b), []);
+// cups shown per country in the Leagues tab (extend this when adding more countries)
+const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']] };
+function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
+
+// 12 non-league "virtual" clubs that only ever appear in the FA Cup (no squads, no transfers)
+const FACUP_VIRTUAL = [
+    { id: 'v_hashtag', name: 'Hashtag United', reputation: 20 },
+    { id: 'v_truro', name: 'Truro City', reputation: 21 },
+    { id: 'v_fylde', name: 'Fylde', reputation: 21 },
+    { id: 'v_kidderminster', name: 'Kidderminster', reputation: 21 },
+    { id: 'v_macclesfield', name: 'Macclesfield', reputation: 20 },
+    { id: 'v_hemel', name: 'Hemel Hempstead', reputation: 20 },
+    { id: 'v_maidenhead', name: 'Maidenhead United', reputation: 21 },
+    { id: 'v_ebbsfleet', name: 'Ebbsfleet', reputation: 21 },
+    { id: 'v_slough', name: 'Slough', reputation: 20 },
+    { id: 'v_chesham', name: 'Chesham', reputation: 20 },
+    { id: 'v_salisbury', name: 'Salisbury', reputation: 20 },
+    { id: 'v_dagenham', name: 'Dagenham & Redbridge', reputation: 21 },
+];
+const FACUP_VIRTUAL_MAP = FACUP_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
 
 const League = {
     roundRobin(ids) {
@@ -40,7 +70,7 @@ const League = {
 
     setupSeason() {
         const tables = {}, schedule = {}, mdIndex = {};
-        DIV_ORDER.forEach(div => {
+        ALL_LEAGUE_DIVS.forEach(div => {
             const ids = Clubs.getClubsByDivision(div).map(c => c.id);
             schedule[div] = this.roundRobin(ids);
             mdIndex[div] = 0;
@@ -50,7 +80,9 @@ const League = {
             tables, schedule, mdIndex,
             beker: this._buildBeker(),
             kbek: this._buildKleine(),
-            playoffs: { EED: null, TWD: null, DRD: null, _done: false },
+            facup: this._buildFACup(),
+            llc: this._buildLLC(),
+            playoffs: { EED: null, TWD: null, DRD: null, CHAMP: null, LEAGUE1: null, LEAGUE2: null, Natleague: null, _done: false },
             prorel: null,
             champions: {},
             finished: false
@@ -59,7 +91,7 @@ const League = {
 
     // ---------------- KNVB Beker ----------------
     _buildBeker() {
-        const lower = Clubs.allClubs.filter(c => c.tier >= 2 && c.tier <= 4).map(c => c.id);
+        const lower = Clubs.allClubs.filter(c => c.country === 'Netherlands' && c.tier >= 2 && c.tier <= 4).map(c => c.id);
         return { remaining: this.shuffle(lower), stage: 'early', results: [], winner: null };
     },
     _bekerRoundName(week) {
@@ -123,6 +155,80 @@ const League = {
             rh.cards += Math.floor(Math.random() * 4); ra.cards += Math.floor(Math.random() * 4);
             grp.md++;
         });
+    },
+    // ---------------- FA Cup (England) ----------------
+    _buildFACup() {
+        const eng = Clubs.getClubsByCountry('England').map(c => c.id);
+        const all = eng.concat(FACUP_VIRTUAL.map(v => v.id));   // 116 + 12 = 128
+        return { remaining: this.shuffle(all), results: [], winner: null };
+    },
+    _facupRoundName(week) {
+        return ({ 4: 'First round', 7: 'Second round', 15: 'Round of 16', 26: 'Round of 8', 32: 'Quarter-finals', 38: 'Semi-finals', 47: 'Final' })[week] || 'Round';
+    },
+    facupStep(week) {
+        const F = GameState.league.facup; if (!F || F.winner) return;
+        const pairs = this._pairUp(this.shuffle(F.remaining));
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const r = this.playMatch(h, a, 'FACUP', true);
+            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+        });
+        F.remaining = winners;
+        F.results.push({ week, round: this._facupRoundName(week), ties });
+        if (week === 47 || F.remaining.length <= 1) F.winner = F.remaining[0];
+    },
+
+    // ---------------- Lower Leagues Cup (England: National League..Championship) ----------------
+    _buildLLC() {
+        const pool = this.shuffle(
+            ['CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), [])
+        ); // 96 teams
+        const groups = [];
+        for (let g = 0; g < 32 && pool.length >= 3; g++) {
+            const teams = [pool.pop(), pool.pop(), pool.pop()];
+            groups.push({
+                teams,
+                table: teams.map(id => ({ clubId: id, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, Pts: 0, cards: 0 })),
+                fixtures: [[0, 1], [0, 2], [1, 2]],
+                md: 0
+            });
+        }
+        return { groups, results: [], remaining: [], groupDone: false, winner: null };
+    },
+    _llcPlayFixture(grp) {
+        if (grp.md >= grp.fixtures.length) return;
+        const [i, j] = grp.fixtures[grp.md];
+        const h = grp.teams[i], a = grp.teams[j];
+        const r = this.playMatch(h, a, 'LLC', true);
+        const rh = grp.table.find(x => x.clubId === h), ra = grp.table.find(x => x.clubId === a);
+        rh.P++; ra.P++; rh.GF += r.hg; rh.GA += r.ag; ra.GF += r.ag; ra.GA += r.hg;
+        if (r.hg > r.ag) { rh.W++; ra.L++; rh.Pts += 3; } else if (r.hg < r.ag) { ra.W++; rh.L++; ra.Pts += 3; } else { rh.D++; ra.D++; rh.Pts++; ra.Pts++; }
+        rh.cards += Math.floor(Math.random() * 4); ra.cards += Math.floor(Math.random() * 4);
+        grp.md++;
+    },
+    llcGroupStep(week) {
+        const C = GameState.league.llc; if (!C) return;
+        if (week === 4) { C.groups.forEach(grp => { this._llcPlayFixture(grp); this._llcPlayFixture(grp); }); }   // two of the three group games
+        else if (week === 7) {
+            C.groups.forEach(grp => this._llcPlayFixture(grp));                                                  // final group game
+            C.remaining = this.shuffle(C.groups.map(grp => this._kSort(grp.table)[0].clubId));                   // 32 group winners -> R32
+            C.groupDone = true;
+        }
+    },
+    _llcRoundName(week) { return ({ 15: 'Round of 32', 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 46: 'Final' })[week] || 'Round'; },
+    llcKOStep(week) {
+        const C = GameState.league.llc; if (!C || C.winner || !C.groupDone) return;
+        const pairs = this._pairUp(this.shuffle(C.remaining));
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); return; }
+            const r = this.playMatch(h, a, 'LLC', true);
+            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._llcRoundName(week), ties });
+        if (week === 46 || C.remaining.length <= 1) C.winner = C.remaining[0];
     },
     clubPosition(clubId) {
         const club = Clubs.getClubById(clubId);
@@ -234,24 +340,102 @@ const League = {
         };
     },
     applyPromotionRelegation() {
-        const c = this.computeProRel(); if (!c) return null;
-        const move = (arr, div) => arr.forEach(id => Clubs.setDivision(id, div));
-        move(c.ereDown, 'EED'); move(c.eedUp, 'ERE');
-        move(c.eedDown, 'TWD'); move(c.twdUp, 'EED');
-        move(c.twdDown, 'DRD'); move(c.drdUp, 'TWD');
+        const c = this.computeProRel();
+        if (c) {
+            const move = (arr, div) => arr.forEach(id => Clubs.setDivision(id, div));
+            move(c.ereDown, 'EED'); move(c.eedUp, 'ERE');
+            move(c.eedDown, 'TWD'); move(c.twdUp, 'EED');
+            move(c.twdDown, 'DRD'); move(c.drdUp, 'TWD');
+        }
+        this.applyPromotionRelegationEngland();
         return c;
+    },
+
+    // ---------------- England: play-offs + promotion/relegation ----------------
+    _poSeries(seeds, div) {
+        // 4-team play-off (seeds = [s1,s2,s3,s4] by league finish): SF s1vs4 (3v6) & s2vs3 (4v5), then final
+        const sf1r = this.playMatch(seeds[0], seeds[3], 'PO', true);
+        const sf2r = this.playMatch(seeds[1], seeds[2], 'PO', true);
+        const sf1 = { h: seeds[0], a: seeds[3], hg: sf1r.hg, ag: sf1r.ag, winner: sf1r.winner };
+        const sf2 = { h: seeds[1], a: seeds[2], hg: sf2r.hg, ag: sf2r.ag, winner: sf2r.winner };
+        const order = this.sortedTable(div).map(r => r.clubId); const seed = id => order.indexOf(id);
+        const home = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
+        const away = home === sf1.winner ? sf2.winner : sf1.winner;
+        const fin = this.playMatch(home, away, 'PO', true);
+        return { sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner }, winner: fin.winner };
+    },
+    playPlayoffsEngland() {
+        const L = GameState.league;
+        ['CHAMP', 'LEAGUE1', 'LEAGUE2'].forEach(div => {
+            const t = this.sortedTable(div).map(r => r.clubId);
+            if (t.length < 6) { L.playoffs[div] = null; return; }
+            L.playoffs[div] = this._poSeries([t[2], t[3], t[4], t[5]], div);   // places 3,4,5,6
+        });
+        // National League: places 2-7. Eliminators 4v7 and 5v6; winners meet 3 and 2 in the semis.
+        const div = 'Natleague', t = this.sortedTable(div).map(r => r.clubId);
+        if (t.length >= 7) {
+            const e1r = this.playMatch(t[3], t[6], 'PO', true);   // 4 v 7
+            const e2r = this.playMatch(t[4], t[5], 'PO', true);   // 5 v 6
+            const e1 = { h: t[3], a: t[6], hg: e1r.hg, ag: e1r.ag, winner: e1r.winner };
+            const e2 = { h: t[4], a: t[5], hg: e2r.hg, ag: e2r.ag, winner: e2r.winner };
+            const sf1r = this.playMatch(t[2], e1.winner, 'PO', true);   // 3 v winner(4v7)
+            const sf2r = this.playMatch(t[1], e2.winner, 'PO', true);   // 2 v winner(5v6)
+            const sf1 = { h: t[2], a: e1.winner, hg: sf1r.hg, ag: sf1r.ag, winner: sf1r.winner };
+            const sf2 = { h: t[1], a: e2.winner, hg: sf2r.hg, ag: sf2r.ag, winner: sf2r.winner };
+            const seed = id => t.indexOf(id);
+            const home = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
+            const away = home === sf1.winner ? sf2.winner : sf1.winner;
+            const fin = this.playMatch(home, away, 'PO', true);
+            L.playoffs[div] = { elim: [e1, e2], sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner }, winner: fin.winner };
+        } else L.playoffs[div] = null;
+    },
+    applyPromotionRelegationEngland() {
+        const L = GameState.league;
+        if (!L.tables.PREM) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const prem = ord('PREM'), champ = ord('CHAMP'), l1 = ord('LEAGUE1'), l2 = ord('LEAGUE2'), nl = ord('Natleague');
+        const poW = d => (L.playoffs && L.playoffs[d]) ? L.playoffs[d].winner : null;
+        const take = (n, autos, pw, ordered) => {
+            const o = []; autos.forEach(id => { if (id && !o.includes(id)) o.push(id); });
+            if (pw && !o.includes(pw)) o.push(pw);
+            for (const id of ordered) { if (o.length >= n) break; if (!o.includes(id)) o.push(id); }
+            return o.slice(0, n);
+        };
+        const champUp = take(3, [champ[0], champ[1]], poW('CHAMP'), champ);
+        const l1Up = take(3, [l1[0], l1[1]], poW('LEAGUE1'), l1);
+        const l2Up = take(3, [l2[0], l2[1]], poW('LEAGUE2'), l2);
+        const nlUp = take(2, [nl[0]], poW('Natleague'), nl);
+        const premDown = prem.slice(-3), champDown = champ.slice(-3), l1Down = l1.slice(-3), l2Down = l2.slice(-2);
+        const move = (arr, div) => arr.forEach(id => Clubs.setDivision(id, div));
+        move(premDown, 'CHAMP'); move(champUp, 'PREM');
+        move(champDown, 'LEAGUE1'); move(l1Up, 'CHAMP');
+        move(l1Down, 'LEAGUE2'); move(l2Up, 'LEAGUE1');
+        move(l2Down, 'Natleague'); move(nlUp, 'LEAGUE2');
+        L.prorelEng = { premDown, champUp, champDown, l1Up, l1Down, l2Up, l2Down, nlUp };
+        return L.prorelEng;
     },
 
     clubStrength(clubId) {
         const c = Clubs.getClubById(clubId);
-        if (!c) return 50;
+        if (!c) { const v = (typeof FACUP_VIRTUAL_MAP !== 'undefined') ? FACUP_VIRTUAL_MAP[clubId] : null; return v ? v.reputation : 50; }
         const squad = GameState.players.filter(p => effectiveClubId(p) === clubId && !p.injury);
         const top = squad.sort((a, b) => b.ability - a.ability).slice(0, 11);
         const avg = top.length ? top.reduce((s, p) => s + p.ability, 0) / top.length : c.reputation;
         return c.reputation * 0.5 + avg * 0.5;
     },
+    teamName(id) {
+        const c = Clubs.getClubById(id);
+        if (c) return c.name;
+        const v = (typeof FACUP_VIRTUAL_MAP !== 'undefined') ? FACUP_VIRTUAL_MAP[id] : null;
+        return v ? v.name : id;
+    },
 
     // ---------------- weekly simulation ----------------
+    _leagueWeeksRemaining(fromWeek) {
+        const NO_LEAGUE = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
+        let n = 0; for (let w = fromWeek; w <= 45; w++) if (!NO_LEAGUE.has(w)) n++;
+        return n;
+    },
     simulateWeek() {
         const L = GameState.league; if (!L) return;
         const week = GameState.week;
@@ -259,9 +443,27 @@ const League = {
         // no league matches in the opening fortnight or during international breaks (cups still run)
         const NO_LEAGUE = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
         if (!NO_LEAGUE.has(week)) {
-            DIV_ORDER.forEach(div => {
-                const s = L.schedule[div], idx = L.mdIndex[div];
-                if (idx < s.length) { s[idx].forEach(([h, a]) => this.playLeagueMatch(div, h, a)); L.mdIndex[div] = idx + 1; }
+            // how many active league weeks have elapsed (incl. this one) vs the whole season — used to spread
+            // any extra rounds evenly across the campaign instead of cramming them into the opening weeks
+            let elapsed = 0, total = 0;
+            for (let w = 1; w <= 45; w++) { if (NO_LEAGUE.has(w)) continue; total++; if (w <= week) elapsed++; }
+            ALL_LEAGUE_DIVS.forEach(div => {
+                const s = L.schedule[div]; if (!s) return;
+                const remMd = s.length - L.mdIndex[div];
+                if (remMd <= 0) return;
+                // ease in: the first few active league weeks play a single matchday so fixtures don't jump by two
+                // right away; afterwards we hold a linear pace, with any doubles spread across the campaign
+                let perWeek;
+                if (elapsed <= 6) {
+                    perWeek = Math.min(remMd, 1);
+                } else {
+                    const targetByNow = Math.round(s.length * elapsed / total);
+                    perWeek = Math.max(1, Math.min(remMd, targetByNow - L.mdIndex[div]));
+                }
+                for (let k = 0; k < perWeek && L.mdIndex[div] < s.length; k++) {
+                    s[L.mdIndex[div]].forEach(([h, a]) => this.playLeagueMatch(div, h, a));
+                    L.mdIndex[div] += 1;
+                }
             });
         }
 
@@ -274,7 +476,12 @@ const League = {
             this.kleineKOStep(week);
         }
 
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); L.playoffs._done = true; }
+        // English cups (run in parallel with the Dutch ones)
+        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.facup) this.facupStep(week);
+        if ((week === 4 || week === 7) && L.llc) this.llcGroupStep(week);
+        else if ([15, 26, 32, 38, 46].includes(week) && L.llc) this.llcKOStep(week);
+
+        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); L.playoffs._done = true; }
     },
 
     playLeagueMatch(div, homeId, awayId) {
@@ -338,7 +545,7 @@ const League = {
         for (const p of outfield) { if (starters.length >= 11) break; starters.push(p); }
 
         // squad role decides how often a player actually features: a star plays nearly every game, a fringe player seldom
-        const ATTEND = { key: 0.95, starter: 0.86, rotation: 0.60, fringe: 0.33, youth: 0.15 };
+        const ATTEND = { key: 0.95, starter: 0.82, rotation: 0.26, fringe: 0.16, youth: 0.08 };
         const willPlay = pl => Math.random() < (ATTEND[pl.squadRole] ?? 0.6);
         const benchPool = outfield.filter(p => !starters.includes(p));   // remaining outfielders, best-first
         const finalStarters = [];
@@ -412,12 +619,15 @@ const League = {
 
     finishSeason() {
         const L = GameState.league, year = GameState.seasonStartYear, awarded = [];
-        DIV_ORDER.forEach(div => {
+        ALL_LEAGUE_DIVS.forEach(div => {
+            if (!L.tables[div]) return;
             const champ = this.sortedTable(div)[0];
             if (champ) { L.champions[div] = champ.clubId; this.awardTrophy(champ.clubId, div, year, awarded); }
         });
         if (L.beker && L.beker.winner) this.awardTrophy(L.beker.winner, 'BEKER', year, awarded);
         if (L.kbek && L.kbek.winner) this.awardTrophy(L.kbek.winner, 'KBEK', year, awarded);
+        if (L.facup && L.facup.winner) this.awardTrophy(L.facup.winner, 'FACUP', year, awarded);
+        if (L.llc && L.llc.winner) this.awardTrophy(L.llc.winner, 'LLC', year, awarded);
         L.finished = true;
         return awarded;
     },
