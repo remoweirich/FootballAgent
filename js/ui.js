@@ -471,6 +471,14 @@ const UI = {
     },
     markAllRead() { GameState.markAllRead(); GameState.save(); this.refreshTopbar(); this.renderInbox(); },
     dismissAll() { if (!GameState.inbox.length) return; if (confirm('Dismiss all messages? Pending offers will be cleared too.')) { GameState.dismissAllMail(); GameState.save(); this.refreshTopbar(); this.renderInbox(); } },
+    rejectPlayerOffers(pid) {
+        const p = GameState.getPlayer(pid);
+        const offers = GameState.inbox.filter(m => (m.kind === 'transfer' || m.kind === 'loan') && m.offer && m.offer.playerId === pid);
+        if (!offers.length) return;
+        if (!confirm(`Reject all ${offers.length} transfer/loan offer(s) for ${p ? p.name : 'this player'}? Sponsor and renewal offers are kept.`)) return;
+        offers.forEach(m => GameState.removeMail(m.id));
+        GameState.save(); this.refreshTopbar(); this.renderPlayer();
+    },
     mailMeta(m) {
         const p = GameState.getPlayer(m.offer.playerId); if (!p) return '';
         if (m.kind === 'transfer') return `€${this.money(m.offer.transferFee)}`;
@@ -511,7 +519,7 @@ const UI = {
         const o = m.offer, p = GameState.getPlayer(o.playerId), to = Clubs.getClubById(o.toClubId), from = Clubs.getClubById(o.fromClubId);
         if (!p || !to) { this.dismissMail(m.id); return; }
         this._ctx = { mailId: m.id, pkgRound: 1, agreed: null };
-        const bonusMax = Agency.maxSigningBonus(p, o.proposedWage);
+        const bonusMax = Math.max(Agency.maxSigningBonus(p, o.proposedWage), Agency.agentFeeCap(o.transferFee));
         const cut = w => Math.round(w * p.wageCommission / 100);
         const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
         const fromLeague = Agency.isFreeAgent(p) || !from ? 'free agent (no club)' : `${from.name}, ${from.divisionName}`;
@@ -530,7 +538,7 @@ const UI = {
             <div class="slider-block"><label>Squad role <span class="cap">(more minutes = faster development)</span></label>
                 <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === (o.role || 'rotation') ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
             <div class="slider-block"><label>Contract length: <strong id="tmVal">3</strong> season(s)</label><input type="range" id="tmSlider" min="1" max="6" value="3"></div>
-            <div class="slider-block"><label>Your signing bonus (Handgeld): €<strong id="sbVal">0</strong></label><input type="range" id="sbSlider" min="0" max="${bonusMax}" step="${Math.max(10, Math.round(bonusMax / 50))}" value="0"></div>
+            <div class="slider-block"><label>Your agent's fee (Handgeld): <span class="cap">(up to €5m on big transfers)</span> €<strong id="sbVal">0</strong></label><input type="range" id="sbSlider" min="0" max="${bonusMax}" step="${Math.max(10, Math.round(bonusMax / 50))}" value="0"></div>
             ${(() => { const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id); return others.length ? `<div class="callout">Competing bids: ${others.map(x => `<a href="#" onclick="UI.openMail('${x.id}');return false;">${Clubs.getClubById(x.offer.toClubId)?.name} · ${ROLE_LABEL[x.offer.role || 'rotation']}</a>`).join(' · ')}</div>` : ''; })()}
             <div class="modal-actions"><button class="btn-ghost danger" onclick="UI.rejectMail('${m.id}')">Reject</button><button class="btn-secondary" onclick="UI.proposePackage('${to.id}')">Propose package</button></div>
             <div id="modalResult"></div>`);
@@ -549,6 +557,7 @@ const UI = {
     proposePackage(clubId) {
         const club = Clubs.getClubById(clubId), m = GameState.inbox.find(x => x.id === this._ctx.mailId), p = GameState.getPlayer(m.offer.playerId);
         const pkg = this._readPkg();
+        pkg.fee = m.offer.transferFee;
         const r = Agency.evaluateTransfer(p, club, pkg, this._ctx.pkgRound++);
         const res = document.getElementById('modalResult');
         const c = r.counter;
@@ -588,7 +597,7 @@ const UI = {
             <p class="greet">“${Agency.greetingFor(club.id)}”</p>
             <div class="callout neg-facts">
                 <div><span class="k">Current wage</span><span class="v">€${this.money(p.wage)}/wk</span></div>
-                <div><span class="k">Club</span><span class="v">${club.name}, ${club.divisionName}</span></div>
+                <div><span class="k">Club</span><span class="v">${club.name}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
                 <div><span class="k">Role · until</span><span class="v">${roleLabel(p.squadRole, p.age)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
             </div>
             <p>Push for whatever wage you like — the club will say if it's too much.</p>
@@ -716,8 +725,9 @@ const UI = {
     tabOverview(p, mine) {
         const club = Clubs.getClubById(p.clubId), tot = seasonTotals(p, GameState.seasonStartYear);
         const offers = GameState.inbox.filter(m => m.offer && m.offer.playerId === p.id);
+        const rejectable = offers.filter(m => m.kind === 'transfer' || m.kind === 'loan').length;
         const offerHtml = offers.length ? `<h3>Open offers</h3><div class="offer-mini-list">${offers.map(m =>
-            `<div class="offer-mini"><span>${KIND_ICON[m.kind]} ${m.subject}</span><button class="btn-secondary sm" onclick="UI.openMail('${m.id}')">Open</button></div>`).join('')}</div>` : '';
+            `<div class="offer-mini"><span>${KIND_ICON[m.kind]} ${m.subject}</span><button class="btn-secondary sm" onclick="UI.openMail('${m.id}')">Open</button></div>`).join('')}</div>${rejectable > 1 ? `<div class="offer-reject-all"><button class="btn-ghost sm danger" onclick="UI.rejectPlayerOffers('${p.id}')">Reject all ${rejectable} transfer/loan offers</button></div>` : ''}` : '';
         const atReserve = isReserveClub(p.clubId);
         const status = mine ? `<div class="status-row">
             <button class="chip-toggle ${p.transferListed ? 'on' : ''}" onclick="UI.toggleTL('${p.id}')">${p.transferListed ? '✓ Transfer-listed (click to remove)' : 'Request transfer-listing'}</button>
@@ -1126,6 +1136,8 @@ const UI = {
         else if (tab === 'kbek') section = this.cupKleineView();
         else if (tab === 'facup') section = this.cupFACupView();
         else if (tab === 'llc') section = this.cupLLCView();
+        else if (tab === 'dfb') section = this.cupDFBView();
+        else if (tab === 'lpokal') section = this.cupLandespokalView();
         else section = this.playoffsView();
         const finished = GameState.league && GameState.league.finished;
         body.innerHTML = `<div class="view-header"><div class="vh-row"><h2>Competitions</h2>${countrySel}</div><p class="muted">${finished ? 'Season ' + GameState.seasonLabel() + ' — complete' : 'Season ' + GameState.seasonLabel()}</p></div>
@@ -1205,6 +1217,24 @@ const UI = {
             <p class="hint">Tap a player to revisit his career. Updated each season; includes your current clients too.</p>`;
     },
 
+    _germanZone(div, pos) {
+        // direct promotion/relegation = full shade; Relegation play-off spots = lighter shade
+        if (div === 'BUNDES') { if (pos >= 17) return 'zone-relegate'; if (pos === 16) return 'zone-releg-down'; return ''; }
+        if (div === '2BUNDES') { if (pos <= 2) return 'zone-promote'; if (pos === 3) return 'zone-releg-up'; if (pos >= 17) return 'zone-relegate'; if (pos === 16) return 'zone-releg-down'; return ''; }
+        if (div === '3LIGA') { if (pos <= 2) return 'zone-promote'; if (pos === 3) return 'zone-releg-up'; if (pos >= 17) return 'zone-relegate'; return ''; }
+        if (div === 'REGIONAL1' || div === 'REGIONAL2') { if (pos <= 4) return 'zone-promote'; if (pos >= 21) return 'zone-relegate'; return ''; }
+        if (div === 'REGIONAL3') { if (pos <= 4) return 'zone-promote'; return ''; }
+        return '';
+    },
+    _germanLegend(div) {
+        const P = '<span class="lg-pro">promote</span>', R = '<span class="lg-rel">relegate</span>', RP = '<span class="lg-relplay">Relegation</span>';
+        if (div === 'BUNDES') return `17–18 ${R} · 16th ${RP}`;
+        if (div === '2BUNDES') return `1–2 ${P} · 3rd ${RP} · 16th ${RP} · 17–18 ${R}`;
+        if (div === '3LIGA') return `1–2 ${P} · 3rd ${RP} · 17–20 ${R}`;
+        if (div === 'REGIONAL1' || div === 'REGIONAL2') return `1–4 ${P} · 21–24 ${R}`;
+        if (div === 'REGIONAL3') return `1–4 ${P}`;
+        return '';
+    },
     standingsTable(div) {
         if (!GameState.league || !GameState.league.tables[div]) return '<p class="muted">No table yet.</p>';
         const rows = League.sortedTable(div);
@@ -1230,7 +1260,8 @@ const UI = {
             const rel = Agency.relationship(r.clubId);
             const gd = r.GF - r.GA;
             let zone = '';
-            if (relegate && i >= n - relCount) zone = 'zone-relegate';
+            if (divCountry(div) === 'Germany') zone = this._germanZone(div, i + 1, n);
+            else if (relegate && i >= n - relCount) zone = 'zone-relegate';
             else if (mk.green.includes(r.clubId)) zone = 'zone-promote';
             else if (mk.blue.includes(r.clubId)) zone = 'zone-playoff';
             const denied = deniedSet.has(r.clubId);
@@ -1243,7 +1274,9 @@ const UI = {
         }).join('');
         const engPromo = divCountry(div) === 'England';
         const promoTxt = engPromo ? (div === 'Natleague' ? '<span class="lg-pro">Champion promotes</span> <span class="lg-po">2–7 play-off</span>' : '<span class="lg-pro">Top 2 promote</span> <span class="lg-po">3–6 play-off</span>') : '<span class="lg-pro">Top 2 promote</span> <span class="lg-po">3–6 play-off</span>';
-        const legend = `<div class="zone-legend">${promote ? promoTxt : ''}${relegate ? ` <span class="lg-rel">Bottom ${relCount} relegate</span>` : ''}</div>`;
+        const legend = (divCountry(div) === 'Germany')
+            ? `<div class="zone-legend">${this._germanLegend(div)}</div>`
+            : `<div class="zone-legend">${promote ? promoTxt : ''}${relegate ? ` <span class="lg-rel">Bottom ${relCount} relegate</span>` : ''}</div>`;
         const foot = footnotes.length ? `<p class="table-foot">* ${[...new Set(footnotes)].join(', ')} ${footnotes.length > 1 ? 'are reserve sides and cannot be promoted' : 'is a reserve side and cannot be promoted'} ${div === 'EED' ? 'to the Eredivisie' : 'into the same division as their first team / past the reserve-team cap'}; the spot passes to the next eligible club.</p>` : '';
         return `<table class="standings"><thead><tr><th>#</th><th>Club</th><th title="Your players">You</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${body}</tbody></table>
             ${legend}${foot}<p class="hint">Tap a club for its honours and your players there.</p>`;
@@ -1294,8 +1327,60 @@ const UI = {
         const ko = (K.results || []).slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
         return `<div class="panel">${winner}<h3>Group stage <span class="muted">(12 mixed groups of 3)</span></h3><p class="hint">12 group winners + the 4 best runners-up reach the last 16.</p><div class="kgroups">${groups}</div>${ko ? `<h3>Knockout</h3>${ko}` : ''}</div>`;
     },
+    cupDFBView() {
+        const D = (GameState.league && GameState.league.dfb) || (GameState.lastSeasonReport && GameState.lastSeasonReport.dfb);
+        if (!D || !D.results || !D.results.length) return '<div class="panel"><p class="muted">Der DFB Pokal beginnt in Woche 4 mit der 1. Runde.</p></div>';
+        const winner = D.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(D.winner)}</strong></div>` : '';
+        const rounds = D.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· Wo ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<p class="hint">Alle 128 deutschen Klubs starten in der 1. Runde. Teams aus Bundesliga, 2. Bundesliga und 3. Liga sind gesetzt (als Auswärtsmannschaft) und treffen in Runde 1 nicht aufeinander. Runden in den Wochen 4, 7, 15, 26, 32, 38 und 47.</p>${rounds}</div>`;
+    },
+    cupLandespokalView() {
+        const P = (GameState.league && GameState.league.lpokal) || (GameState.lastSeasonReport && GameState.lastSeasonReport.lpokal);
+        if (!P || !P.results || !P.results.length) return '<div class="panel"><p class="muted">Der Landespokal beginnt in Woche 4 mit der 1. Runde.</p></div>';
+        const winner = P.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(P.winner)}</strong></div>` : '';
+        const rounds = P.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· Wo ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<p class="hint">Die 48 Klubs der 1. und 2. Regionalliga spielen zwei Runden (Wo 4 & 7); die 12 Überlebenden werden mit den 20 Teams der 3. Liga zusammen ab dem Sechzehntelfinale (Wo 15) ausgelost. Weitere Runden in den Wochen 26, 32, 38 und 47.</p>${rounds}</div>`;
+    },
+    _relegTie(t, upLabel, downLabel) {
+        if (!t) return '<p class="muted">Nicht gespielt (Woche 46).</p>';
+        const nm = id => `<span class="tie-club" onclick="UI.openClub('${id}')" style="cursor:pointer">${this.clubName(id)}</span>`;
+        const l1 = t.leg1, l2 = t.leg2;
+        const pens = t.pens ? ` <span class="pill pill-warn">i.E.</span>` : '';
+        return `<div class="cup-round">
+            <div class="tie"><span>${nm(l1.h)}</span><span class="tie-score">${l1.hg}–${l1.ag}</span><span>${nm(l1.a)}</span></div>
+            <div class="tie"><span>${nm(l2.h)}</span><span class="tie-score">${l2.hg}–${l2.ag}</span><span>${nm(l2.a)}</span></div>
+            <div class="comp-row"><span>Gesamt</span><span>${this.clubName(t.a)} ${t.aggA}–${t.aggB} ${this.clubName(t.b)}${pens}</span></div>
+            <div class="cup-winner">✅ ${upLabel}: <strong>${this.clubName(t.winner)}</strong></div></div>`;
+    },
+    _germanPlayoffsView() {
+        const G = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.germanReleg : (GameState.lastSeasonReport && GameState.lastSeasonReport.germanReleg);
+        const nm = id => this.clubName(id);
+        let releg;
+        if (!G) releg = '<div class="po-block"><h4>Relegation</h4><p class="muted">Noch nicht gespielt (Woche 46).</p></div>';
+        else releg = `<div class="po-block"><h4>Relegation Bundesliga / 2. Bundesliga</h4>${this._relegTie(G.top, 'Bundesliga', '2. Bundesliga')}</div>
+            <div class="po-block"><h4>Relegation 2. Bundesliga / 3. Liga</h4>${this._relegTie(G.bottom, '2. Bundesliga', '3. Liga')}</div>`;
+        const lr = GameState.lastSeasonReport || {};
+        let prBlock = '';
+        if (lr.prorelGer) {
+            const g = lr.prorelGer;
+            const up16 = g.b2_3Up ? ' (+ Relegations-Sieger)' : '', dn16 = g.buli16Down ? ' (inkl. Relegation)' : '';
+            prBlock = `<div class="panel"><h3>Auf- &amp; Abstieg</h3>
+                <div class="comp-row"><span>⬆️ In die Bundesliga</span><span>${g.buliUpDirect.map(nm).join(', ')}${up16}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der Bundesliga</span><span>${g.buliDown.map(nm).join(', ')}${dn16}</span></div>
+                <div class="comp-row"><span>⬆️ In die 2. Bundesliga</span><span>${g.l3UpDirect.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der 2. Bundesliga</span><span>${g.b2DownDirect.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ In die 3. Liga</span><span>${g.rl1Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der 3. Liga</span><span>${g.l3DownDirect.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ In die 1. Regionalliga</span><span>${g.rl2Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der 1. Regionalliga</span><span>${g.rl1Down.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ In die 2. Regionalliga</span><span>${g.rl3Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der 2. Regionalliga</span><span>${g.rl2Down.map(nm).join(', ')}</span></div></div>`;
+        }
+        return `<div class="panel"><p class="hint">Relegation (Woche 46): Bundesliga-16. gegen 2.-Bundesliga-3. und 2.-Bundesliga-16. gegen 3.-Liga-3., je über Hin- und Rückspiel, bei Gleichstand Elfmeterschiessen. Reserveteams können nicht in die 2. Bundesliga aufsteigen (Platz wird weitergegeben).</p>${releg}</div>${prBlock}`;
+    },
     playoffsView() {
         const country = this.filters.lgCountry || 'Netherlands';
+        if (country === 'Germany') return this._germanPlayoffsView();
         const P = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.playoffs : (GameState.lastSeasonReport && GameState.lastSeasonReport.playoffs);
         const divs = ((typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[country]) || []).filter((d, i) => i > 0); // skip top tier
         let blocks = '';

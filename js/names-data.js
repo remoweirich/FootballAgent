@@ -834,18 +834,18 @@ function getRandomNationality() {
 // 85% from region, 14% international mix, 1% complete wildcard
 function getRegionBasedNationality(scoutRegion) {
     const rand = Math.random();
-    
-    // 1% chance: Complete wildcard (any nationality from database)
-    if (rand < 0.01) {
+
+    // ~11% chance: complete wildcard from the full weighted distribution (global variety)
+    if (rand < 0.11) {
         return getRandomNationality();
     }
-    
-    // 85% chance: Player from scout's region
-    if (rand < 0.86) {  // 0.01 + 0.85 = 0.86
+
+    // ~68% chance: player from the club's own country
+    if (rand < 0.79) {
         return getRegionPrimaryNationality(scoutRegion);
     }
-    
-    // 14% chance: International player (nearby countries or immigrants)
+
+    // ~21% chance: international player (nearby countries / diaspora)
     return getRegionSecondaryNationality(scoutRegion);
 }
 

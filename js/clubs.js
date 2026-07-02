@@ -119,7 +119,7 @@ const LEAGUES_DATA = {
                     { id: "Chelsea", name: "Chelsea", city: "London", colors: { primary: "#034694", secondary: "#FFFFFF" }, reputation: 88 },
                     { id: "Liverpool", name: "Liverpool", city: "Liverpool", colors: { primary: "#C8102E", secondary: "#FFFFFF" }, reputation: 90 },
                     { id: "Manchester United", name: "Manchester United", city: "Manchester", colors: { primary: "#DA291C", secondary: "#FFFFFF" }, reputation: 89 },
-                    { id: "Manchester City", name: "Manchester City", city: "Manchester", colors: { primary: "#6CABDD", secondary: "#FFFFFF" }, reputation: 89 },
+                    { id: "Manchester City", name: "Manchester City", city: "Manchester", colors: { primary: "#6CABDD", secondary: "#FFFFFF" }, reputation: 90 },
                     { id: "Tottenham", name: "Tottenham Hotspur", city: "London", colors: { primary: "#132257", secondary: "#FFFFFF" }, reputation: 88 },
                     { id: "Everton", name: "Everton", city: "Liverpool", colors: { primary: "#003399", secondary: "#FFFFFF" }, reputation: 77 },
                     { id: "Aston Villa", name: "Aston Villa", city: "Birmingham", colors: { primary: "#95BFE5", secondary: "#670E36" }, reputation: 83 },
@@ -177,10 +177,10 @@ const LEAGUES_DATA = {
                     { id: "Leicester", name: "Leicester City", city: "Leicester", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 63 },
                     { id: "Oxford", name: "Oxford United", city: "Oxford", colors: { primary: "#FFCD00", secondary: "#000000" }, reputation: 61 },
                     { id: "Sheffield Wednesday", name: "Sheffield Wednesday", city: "Sheffield", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 60 },
-                    { id: "Bradford", name: "Bradford City", city: "Bradford", colors: { primary: "#E30613", secondary: "#000000" }, reputation: 59 },
+                    { id: "Bradford", name: "Bradford City", city: "Bradford", colors: { primary: "#7B003A", secondary: "#FFC72C" }, reputation: 59 },
                     { id: "Stevenage", name: "Stevenage", city: "Stevenage", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 59 },
                     { id: "Luton", name: "Luton Town", city: "Luton", colors: { primary: "#FFCD00", secondary: "#000000" }, reputation: 58 },
-                    { id: "Plymouth", name: "Plymouth Argyle", city: "Plymouth", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 58 },
+                    { id: "Plymouth", name: "Plymouth Argyle", city: "Plymouth", colors: { primary: "#007B5F", secondary: "#FFFFFF" }, reputation: 58 },
                     { id: "Huddersfield", name: "Huddersfield Town", city: "Huddersfield", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 57 },
                     { id: "Mansfield", name: "Mansfield Town", city: "Mansfield", colors: { primary: "#FFCD00", secondary: "#000000" }, reputation: 57 },
                     { id: "Wycombe", name: "Wycombe Wanderers", city: "High Wycombe", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 57 },
@@ -207,14 +207,14 @@ const LEAGUES_DATA = {
                     { id: "Exeter", name: "Exeter City", city: "Exeter", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 52 },
                     { id: "Port Vale", name: "Port Vale", city: "Stoke-on-Trent", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 52 },
                     { id: "Rotherham", name: "Rotherham United", city: "Rotherham", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 51 },
-                    { id: "Northampton", name: "Northampton Town", city: "Northampton", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "Northampton", name: "Northampton Town", city: "Northampton", colors: { primary: "#6C1D45", secondary: "#FFFFFF" }, reputation: 50 },
                     { id: "Salford", name: "Salford City", city: "Salford", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 50 },
                     { id: "Chesterfield", name: "Chesterfield", city: "Chesterfield", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 49 },
                     { id: "Grimsby", name: "Grimsby Town", city: "Grimsby", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 49 },
-                    { id: "Barnet", name: "Barnet", city: "London", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "Barnet", name: "Barnet", city: "London", colors: { primary: "#F7A800", secondary: "#000000" }, reputation: 48 },
                     { id: "Swindon", name: "Swindon Town", city: "Swindon", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 48 },
                     { id: "Oldham", name: "Oldham Athletic", city: "Oldham", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 47 },
-                    { id: "Crewe", name: "Crewe Alexandra", city: "Crewe", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "Crewe", name: "Crewe Alexandra", city: "Crewe", colors: { primary: "#DA020E", secondary: "#FFFFFF" }, reputation: 47 },
                     { id: "Colchester", name: "Colchester United", city: "Colchester", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 46 },
                     { id: "Walsall", name: "Walsall", city: "Walsall", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 46 },
                     { id: "Bristol Rovers", name: "Bristol Rovers", city: "Bristol", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 46 },
@@ -223,7 +223,7 @@ const LEAGUES_DATA = {
                     { id: "Gillingham", name: "Gillingham", city: "Gillingham", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 44 },
                     { id: "Cheltenham", name: "Cheltenham Town", city: "Cheltenham", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 44 },
                     { id: "Shrewsbury", name: "Shrewsbury Town", city: "Shrewsbury", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 44 },
-                    { id: "Newport", name: "Newport County", city: "Newport", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "Newport", name: "Newport County", city: "Newport", colors: { primary: "#FFB81C", secondary: "#000000" }, reputation: 43 },
                     { id: "Tranmere", name: "Tranmere Rovers", city: "Birkenhead", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 43 },
                     { id: "Crawley", name: "Crawley Town", city: "Crawley", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 42 },
                     { id: "York", name: "York City", city: "York", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 41 },
@@ -241,24 +241,326 @@ const LEAGUES_DATA = {
                     { id: "Boreham Wood", name: "Boreham Wood", city: "Borehamwood", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 39 },
                     { id: "Scunthorpe", name: "Scunthorpe United", city: "Scunthorpe", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 39 },
                     { id: "Southend", name: "Southend United", city: "Southend-on-Sea", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
-                    { id: "Forest Green", name: "Forest Green Rovers", city: "Forest Green", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 41 },
+                    { id: "Forest Green", name: "Forest Green Rovers", city: "Forest Green", colors: { primary: "#00593C", secondary: "#000000" }, reputation: 41 },
                     { id: "Halifax", name: "Halifax Town", city: "Halifax", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
                     { id: "Hartlepool", name: "Hartlepool United", city: "Hartlepool", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
-                    { id: "Woking", name: "Woking", city: "Woking", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 36 },
-                    { id: "Tamworth", name: "Tamworth", city: "Tamworth", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "Woking", name: "Woking", city: "Woking", colors: { primary: "#C8102E", secondary: "#FFFFFF" }, reputation: 36 },
+                    { id: "Tamworth", name: "Tamworth", city: "Tamworth", colors: { primary: "#E20E17", secondary: "#000000" }, reputation: 35 },
                     { id: "Boston United", name: "Boston United", city: "Boston", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 34 },
                     { id: "Altrincham", name: "Altrincham", city: "Altrincham", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 33 },
                     { id: "Solihull Moors", name: "Solihull Moors", city: "Solihull", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 32 },
                     { id: "Wealdstone", name: "Wealdstone", city: "Wealdstone", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 31 },
-                    { id: "Yeovil", name: "Yeovil Town", city: "Yeovil", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 32 },
+                    { id: "Yeovil", name: "Yeovil Town", city: "Yeovil", colors: { primary: "#007A3B", secondary: "#FFFFFF" }, reputation: 32 },
                     { id: "Eastleigh", name: "Eastleigh", city: "Eastleigh", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 31 },
                     { id: "Gateshead", name: "Gateshead", city: "Gateshead", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 30 },
-                    { id: "Sutton United", name: "Sutton United", city: "Sutton", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "Sutton United", name: "Sutton United", city: "Sutton", colors: { primary: "#FFCC00", secondary: "#5B3A29" }, reputation: 29 },
                     { id: "Aldershot", name: "Aldershot Town", city: "Aldershot", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 29 },
                     { id: "Brackley", name: "Brackley Town", city: "Brackley", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 28 },
-                    { id: "Morecambe", name: "Morecambe", city: "Morecambe", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Morecambe", name: "Morecambe", city: "Morecambe", colors: { primary: "#B4141E", secondary: "#FFFFFF" }, reputation: 27 },
                     { id: "Braintree", name: "Braintree Town", city: "Braintree", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 26 },
                     { id: "Worthing", name: "Worthing", city: "Worthing", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 26 }
+                ]
+            }
+        ]
+    },
+    "Germany": {
+        country: "Germany",
+        tiers: [
+            {
+                id: "BUNDES",
+                name: "Bundesliga",
+                tier: 1,
+                clubs: [
+                    { id: "Bayern Munich", name: "Bayern Munich", city: "Munich", colors: { primary: "#DC052D", secondary: "#FFFFFF" }, reputation: 90 },
+                    { id: "Dortmund", name: "Borussia Dortmund", city: "Dortmund", colors: { primary: "#FDE100", secondary: "#000000" }, reputation: 85 },
+                    { id: "Leipzig", name: "RB Leipzig", city: "Leipzig", colors: { primary: "#FFFFFF", secondary: "#E30613" }, reputation: 85 },
+                    { id: "Leverkusen", name: "Bayer Leverkusen", city: "Leverkusen", colors: { primary: "#E30613", secondary: "#000000" }, reputation: 84 },
+                    { id: "Mönchengladbach", name: "Borussia Mönchengladbach", city: "Mönchengladbach", colors: { primary: "#FFFFFF", secondary: "#00A94F" }, reputation: 77 },
+                    { id: "Frankfurt", name: "Eintracht Frankfurt", city: "Frankfurt", colors: { primary: "#E1000F", secondary: "#000000" }, reputation: 81 },
+                    { id: "Köln", name: "1. FC Köln", city: "Cologne", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 74 },
+                    { id: "Freiburg", name: "SC Freiburg", city: "Freiburg", colors: { primary: "#E30613", secondary: "#000000" }, reputation: 78 },
+                    { id: "Hoffenheim", name: "TSG Hoffenheim", city: "Hoffenheim", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 78 },
+                    { id: "Stuttgart", name: "VfB Stuttgart", city: "Stuttgart", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 81 },
+                    { id: "Mainz 05", name: "1. FSV Mainz 05", city: "Mainz", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 77 },
+                    { id: "Augsburg", name: "FC Augsburg", city: "Augsburg", colors: { primary: "#BA3733", secondary: "#46714D" }, reputation: 74 },
+                    { id: "Bremen", name: "Werder Bremen", city: "Bremen", colors: { primary: "#009639", secondary: "#FFFFFF" }, reputation: 74 },
+                    { id: "Schalke", name: "FC Schalke 04", city: "Gelsenkirchen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 75 },
+                    { id: "Elversberg", name: "SV Elversberg", city: "Elversberg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "Paderborn", name: "SC Paderborn 07", city: "Paderborn", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 71 },
+                    { id: "Hamburg", name: "Hamburger SV", city: "Hamburg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 74 },
+                    { id: "Union", name: "FC Union Berlin", city: "Berlin", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 75 }
+                ]
+            },
+            {
+                id: "2BUNDES",
+                name: "2. Bundesliga",
+                tier: 2,
+                clubs: [
+                    { id: "Wolfsburg", name: "VfL Wolfsburg", city: "Wolfsburg", colors: { primary: "#009639", secondary: "#FFFFFF" }, reputation: 78 },
+                    { id: "St. Pauli", name: "FC St. Pauli", city: "Hamburg", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 71 },
+                    { id: "Heidenheim", name: "1. FC Heidenheim", city: "Heidenheim", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 71 },
+                    { id: "Darmstadt", name: "SV Darmstadt 98", city: "Darmstadt", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "Hannover", name: "Hannover 96", city: "Hanover", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 69 },
+                    { id: "Kaiserslautern", name: "1. FC Kaiserslautern", city: "Kaiserslautern", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 67 },
+                    { id: "Hertha", name: "Hertha BSC", city: "Berlin", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "Nürnberg", name: "1. FC Nürnberg", city: "Nuremberg", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 68 },
+                    { id: "Bochum", name: "VfL Bochum", city: "Bochum", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 66 },
+                    { id: "Karlsruhe", name: "Karlsruher SC", city: "Karlsruhe", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 64 },
+                    { id: "Dresden", name: "Dynamo Dresden", city: "Dresden", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 64 },
+                    { id: "Kiel", name: "Holstein Kiel", city: "Kiel", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 64 },
+                    { id: "Bielefeld", name: "Arminia Bielefeld", city: "Bielefeld", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 63 },
+                    { id: "Magdeburg", name: "1. FC Magdeburg", city: "Magdeburg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 62 },
+                    { id: "Braunschweig", name: "Eintracht Braunschweig", city: "Braunschweig", colors: { primary: "#F6E500", secondary: "#003D7C" }, reputation: 62 },
+                    { id: "Fürth", name: "SpVgg Greuther Fürth", city: "Fürth", colors: { primary: "#009540", secondary: "#FFFFFF" }, reputation: 61 },
+                    { id: "Osnabrück", name: "VfL Osnabrück", city: "Osnabrück", colors: { primary: "#5C2D91", secondary: "#FFFFFF" }, reputation: 60 },
+                    { id: "Cottbus", name: "Energie Cottbus", city: "Cottbus", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 58 }
+                ]
+            },
+            {
+                id: "3LIGA",
+                name: "3. Liga",
+                tier: 3,
+                clubs: [
+                    { id: "Düsseldorf", name: "Fortuna Düsseldorf", city: "Düsseldorf", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 64 },
+                    { id: "Münster", name: "Preußen Münster", city: "Münster", colors: { primary: "#00723F", secondary: "#FFFFFF" }, reputation: 61 },
+                    { id: "Essen", name: "Rot-Weiss Essen", city: "Essen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 60 },
+                    { id: "Duisburg", name: "MSV Duisburg", city: "Duisburg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 59 },
+                    { id: "Rostock", name: "Hansa Rostock", city: "Rostock", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 58 },
+                    { id: "Verl", name: "SC Verl", city: "Verl", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 57 },
+                    { id: "Aachen", name: "Alemannia Aachen", city: "Aachen", colors: { primary: "#000000", secondary: "#FFD200" }, reputation: 57 },
+                    { id: "Wiesbaden", name: "SV Wehen Wiesbaden", city: "Wiesbaden", colors: { primary: "#E2001A", secondary: "#000000" }, reputation: 56 },
+                    { id: "Mannheim", name: "SV Waldhof Mannheim", city: "Mannheim", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 56 },
+                    { id: "Viktoria Köln", name: "Viktoria Köln", city: "Cologne", colors: { primary: "#ac2200", secondary: "#000000" }, reputation: 55 },
+                    { id: "Ingolstadt", name: "FC Ingolstadt 04", city: "Ingolstadt", colors: { primary: "#D40028", secondary: "#000000" }, reputation: 54 },
+                    { id: "Regensburg", name: "SSV Jahn Regensburg", city: "Regensburg", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 54 },
+                    { id: "Stuttgart II", name: "VfB Stuttgart II", city: "Stuttgart", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 52 },
+                    { id: "Saarbrücken", name: "1. FC Saarbrücken", city: "Saarbrücken", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 51 },
+                    { id: "Hoffenheim II", name: "TSG Hoffenheim II", city: "Hoffenheim", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "Havelse", name: "TSV Havelse", city: "Garbsen", colors: { primary: "#009540", secondary: "#FFFFFF" }, reputation: 51 },
+                    { id: "Meppen", name: "SV Meppen", city: "Meppen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "Fortuna Köln", name: "Fortuna Köln", city: "Cologne", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 49 },
+                    { id: "Großaspach", name: "SG Sonnenhof Großaspach", city: "Aspach", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "Würzburger", name: "Würzburger Kickers", city: "Würzburg", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 48 }
+                ]
+            },
+            {
+                id: "REGIONAL1",
+                name: "1. Regionalliga",
+                tier: 4,
+                clubs: [
+                    { id: "1860", name: "TSV 1860 München", city: "Munich", colors: { primary: "#0A9BD6", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "Unterhaching", name: "SpVgg Unterhaching", city: "Unterhaching", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "Illertissen", name: "FV Illertissen", city: "Illertissen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "Vilzing", name: "DJK Vilzing", city: "Vilzing", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 39 },
+                    { id: "Bayern II", name: "Bayern Munich II", city: "Munich", colors: { primary: "#DC052D", secondary: "#FFFFFF" }, reputation: 42 },
+                    { id: "Oberhausen", name: "Rot-Weiß Oberhausen", city: "Oberhausen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "Schalke II", name: "FC Schalke 04 II", city: "Gelsenkirchen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "Dortmund II", name: "Borussia Dortmund II", city: "Dortmund", colors: { primary: "#FDE100", secondary: "#000000" }, reputation: 44 },
+                    { id: "Gütersloh", name: "FC Gütersloh", city: "Gütersloh", colors: { primary: "#00963F", secondary: "#000000" }, reputation: 45 },
+                    { id: "Siegen", name: "Sportfreunde Siegen", city: "Siegen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "Freiberg", name: "SGV Freiberg", city: "Freiberg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "FSV Frankfurt", name: "FSV Frankfurt", city: "Frankfurt", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "Homburg", name: "FC 08 Homburg", city: "Homburg", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 42 },
+                    { id: "Aue", name: "FC Erzgebirge Aue", city: "Aue", colors: { primary: "#5C2D91", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "Ulm", name: "SSV Ulm 1846", city: "Ulm", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 49 },
+                    { id: "Schweinfurt", name: "1. FC Schweinfurt 05", city: "Schweinfurt", colors: { primary: "#00843D", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "Stuttgarter Kickers", name: "Stuttgarter Kickers", city: "Stuttgart", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 39 },
+                    { id: "Lok Leipzig", name: "Lokomotive Leipzig", city: "Leipzig", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "Jena", name: "Carl Zeiss Jena", city: "Jena", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "Zwickau", name: "FSV Zwickau", city: "Zwickau", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 44 },
+                    { id: "Halle", name: "Hallescher FC", city: "Halle", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 42 },
+                    { id: "Erfurt", name: "FC Rot-Weiß Erfurt", city: "Erfurt", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 39 },
+                    { id: "Drochtersen", name: "SV Drochtersen/Assel", city: "Drochtersen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "Oldenburg", name: "VfB Oldenburg", city: "Oldenburg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 41 }
+                ]
+            },
+            {
+                id: "REGIONAL2",
+                name: "2. Regionalliga",
+                tier: 5,
+                clubs: [
+                    { id: "Jeddeloh", name: "SSV Jeddeloh II", city: "Jeddeloh", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
+                    { id: "Lübeck", name: "Phönix Lübeck", city: "Lübeck", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 36 },
+                    { id: "Bremer SV", name: "Bremer SV", city: "Bremen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "Altglienicke", name: "VSG Altglienicke", city: "Berlin", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
+                    { id: "Chemnitz", name: "Chemnitzer FC", city: "Chemnitz", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 37 },
+                    { id: "Preussen", name: "BFC Preussen", city: "Berlin", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 32 },
+                    { id: "Chemie Leipzig", name: "Chemie Leipzig", city: "Leipzig", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "Steinbach", name: "TSV Steinbach", city: "Steinbach", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 37 },
+                    { id: "Kassel", name: "Hessen Kassel", city: "Kassel", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "Sandhausen", name: "SV Sandhausen", city: "Sandhausen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "Bonner SC", name: "Bonner SC", city: "Bonn", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 39 },
+                    { id: "Köln II", name: "1. FC Köln II", city: "Cologne", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "Lotte", name: "Sportfreunde Lotte", city: "Lotte", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 36 },
+                    { id: "Bocholt", name: "VfL Bocholt", city: "Bocholt", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 32 },
+                    { id: "Aubstadt", name: "TSV Aubstadt", city: "Aubstadt", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "Eichstätt", name: "VfB Eichstätt", city: "Eichstätt", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "Burghausen", name: "Wacker Burghausen", city: "Burghausen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 32 },
+                    { id: "Buchbach", name: "TSV Buchbach", city: "Buchbach", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "Memmingen", name: "FC Memmingen", city: "Memmingen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "Emden", name: "Kickers Emden", city: "Emden", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "Hamburg II", name: "Hamburger SV II", city: "Hamburg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 32 },
+                    { id: "Babelsberg", name: "SV Babelsberg 03", city: "Potsdam", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "Greifswald", name: "Greifswalder FC", city: "Greifswald", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "Offenbach", name: "Kickers Offenbach", city: "Offenbach", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 34 }
+                ]
+            },
+            {
+                id: "REGIONAL3",
+                name: "3. Regionalliga",
+                tier: 6,
+                clubs: [
+                    { id: "Bayreuth", name: "SpVgg Bayreuth", city: "Bayreuth", colors: { primary: "#FFD200", secondary: "#000000" }, reputation: 29 },
+                    { id: "Augsburg II", name: "FC Augsburg II", city: "Augsburg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 28 },
+                    { id: "Schwaben Augsburg", name: "FC Schwaben Augsburg", city: "Augsburg", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "Landsberg", name: "TSV Landsberg", city: "Landsberg", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Eltersdorf", name: "SC Eltersdorf", city: "Eltersdorf", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Paderborn II", name: "SC Paderborn 07 II", city: "Paderborn", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Rödinghausen", name: "SV Rödinghausen", city: "Rödinghausen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 28 },
+                    { id: "Wiedenbrück", name: "SC Wiedenbrück", city: "Wiedenbrück", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 28 },
+                    { id: "Bergisch Gladbach", name: "SV Bergisch Gladbach 09", city: "Bergisch Gladbach", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Wattenscheid", name: "Wattenscheid 09", city: "Bochum", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 28 },
+                    { id: "Barockstadt", name: "SG Barockstadt", city: "Fulda", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "Walldorf", name: "Astoria Walldorf", city: "Walldorf", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "Trier", name: "Eintracht Trier", city: "Trier", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Aalen", name: "VfR Aalen", city: "Aalen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Tasmania", name: "Tasmania Berlin", city: "Berlin", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 25 },
+                    { id: "Hertha II", name: "Hertha BSC II", city: "Berlin", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Dynamo Berlin", name: "BFC Dynamo", city: "Berlin", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 28 },
+                    { id: "RSV Eintracht", name: "RSV Eintracht 1949", city: "Berlin", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 28 },
+                    { id: "Weiche", name: "SC Weiche 08", city: "Flensburg", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "VfB Lübeck", name: "VfB Lübeck", city: "Lübeck", colors: { primary: "#00A94F", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "HSC Hannover", name: "HSC Hannover", city: "Hannover", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 28 },
+                    { id: "Schöningen", name: "FSV Schöningen", city: "Schöningen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Norderstedt", name: "FC Eintracht Norderstedt", city: "Norderstedt", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "Todesfelde", name: "SV Todesfelde", city: "Todesfelde", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 27 }
+                ]
+            }
+        ]
+    },
+    "Spain": {
+        country: "Spain",
+        tiers: [
+            { 
+                id: "LaLiga", 
+                name: "La Liga", 
+                tier: 1,
+                clubs: [
+                    { id: "Real Madrid", name: "Real Madrid", city: "Madrid", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 90 },
+                    { id: "Barcelona", name: "FC Barcelona", city: "Barcelona", colors: { primary: "#A50044", secondary: "#005BAC" }, reputation: 90 },
+                    { id: "Atletico", name: "Atletico Madrid", city: "Madrid", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 86 },
+                    { id: "Villarreal", name: "Villarreal CF", city: "Villarreal", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 82 },
+                    { id: "Sevilla", name: "Sevilla FC", city: "Seville", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 80 },
+                    { id: "Betis", name: "Real Betis", city: "Seville", colors: { primary: "#009540", secondary: "#FFFFFF" }, reputation: 79 },
+                    { id: "Valencia", name: "Valencia CF", city: "Valencia", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 78 },
+                    { id: "Real Sociedad", name: "Real Sociedad", city: "San Sebastián", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 79 },
+                    { id: "Athletic Bilbao", name: "Athletic Club", city: "Bilbao", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 78 },
+                    { id: "Espanyol", name: "RCD Espanyol", city: "Barcelona", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "Celta Vigo", name: "RC Celta de Vigo", city: "Vigo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "Vallecano", name: "Rayo Vallecano", city: "Madrid", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 75 },
+                    { id: "Alaves", name: "Deportivo Alavés", city: "Vitoria-Gasteiz", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 74 },
+                    { id: "Getafe", name: "Getafe CF", city: "Getafe", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "Elche", name: "Elche CF", city: "Elche", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 73 },
+                    { id: "Levante", name: "Levante UD", city: "Valencia", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 74 },
+                    { id: "Osasuna", name: "CA Osasuna", city: "Pamplona", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 74 },
+                    { id: "Racing Santander", name: "Racing Santander", city: "Santander", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 73 },
+                    { id: "Deportivo", name: "Deportivo La Coruña", city: "La Coruña", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 72 },
+                    { id: "Malaga", name: "Málaga CF", city: "Málaga", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 72 }
+                ]
+            },
+            {
+                id: "LaLiga2", 
+                name: "La Liga 2",
+                tier: 2,
+                clubs: [
+                    { id: "Mallorca", name: "RCD Mallorca", city: "Palma de Mallorca", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 74 },
+                    { id: "Girona", name: "Girona FC", city: "Girona", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 74 },
+                    { id: "Oviedo", name: "Real Oviedo", city: "Oviedo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "Almeria", name: "UD Almería", city: "Almería", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 71 },
+                    { id: "Las Palmas", name: "UD Las Palmas", city: "Las Palmas", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 70 },
+                    { id: "Castellón", name: "CD Castellón", city: "Castellón de la Plana", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 69 },
+                    { id: "Burgos", name: "Burgos CF", city: "Burgos", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 69 },
+                    { id: "Eibar", name: "SD Eibar", city: "Eibar", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "Gijón", name: "Sporting Gijón", city: "Gijón", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 70 },
+                    { id: "Cordoba", name: "Córdoba CF", city: "Córdoba", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 68 },
+                    { id: "Ceuta", name: "AD Ceuta", city: "Ceuta", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 66 },
+                    { id: "Albacete", name: "Albacete Balompié", city: "Albacete", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 67 },
+                    { id: "Andorra", name: "FC Andorra", city: "Andorra la Vella", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 66 },
+                    { id: "Granada", name: "Granada CF", city: "Granada", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 70 },
+                    { id: "Real Sociedad B", name: "Real Sociedad B", city: "San Sebastián", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 65 },
+                    { id: "Leganés", name: "CD Leganés", city: "Leganés", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 66 },
+                    { id: "Valladolid", name: "Real Valladolid", city: "Valladolid", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 66 },
+                    { id: "Cádiz", name: "Cádiz CF", city: "Cádiz", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 65 },
+                    { id: "Tenerife", name: "CD Tenerife", city: "Santa Cruz de Tenerife", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 64 },
+                    { id: "Eldense", name: "CD Eldense", city: "Elda", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 63 },
+                    { id: "Sabadell", name: "CE Sabadell", city: "Sabadell", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 62 },
+                    { id: "Celta Vigo B", name: "Celta Vigo B", city: "Vigo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 61 },
+                ]
+            },
+            {
+                id: "PrimeraSup",
+                name: "Primera Superior",
+                tier: 3,
+                clubs: [
+                    { id: "Zaragoza", name: "Real Zaragoza", city: "Zaragoza", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 59 },
+                    { id: "Huesca", name: "SD Huesca", city: "Huesca", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 61 },
+                    { id: "Leonesa", name: "Cultural Leonesa", city: "León", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 59 },
+                    { id: "Mirandés", name: "CD Mirandés", city: "Miranda de Ebro", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 60 },
+                    { id: "Zamora", name: "Zamora CF", city: "Zamora", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 58 },
+                    { id: "Ponferradina", name: "SD Ponferradina", city: "Ponferrada", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 58 },
+                    { id: "Pontevedra", name: "Pontevedra CF", city: "Pontevedra", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 57 },
+                    { id: "Barakaldo", name: "Barakaldo CF", city: "Barakaldo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 57 },
+                    { id: "Unionistas", name: "Uniónistas CF", city: "Salamanca", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 56 },
+                    { id: "Lugo", name: "CD Lugo", city: "Lugo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 55 },
+                    { id: "Mérida", name: "Mérida AD", city: "Mérida", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 54 },
+                    { id: "Arenas", name: "Arenas Club", city: "Getxo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 54 },
+                    { id: "Ferrol", name: "Racing de Ferrol", city: "Ferrol", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 53 },
+                    { id: "Atletico Madrid B", name: "Atlético Madrileño", city: "Madrid", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 57 },
+                    { id: "Villareal B", name: "Villarreal B", city: "Villarreal", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 56 },
+                    { id: "Real Madrid B", name: "Real Madrid Castilla", city: "Madrid", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 56 },
+                    { id: "Europa", name: "CE Europa", city: "Barcelona", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 54 },
+                    { id: "Cartagena", name: "FC Cartagena", city: "Cartagena", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 53 },
+                    { id: "Antequera", name: "Antequera CF", city: "Antequera", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 52 },
+                    { id: "Algeciras", name: "Algeciras CF", city: "Algeciras", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 51 },
+                    { id: "Hércules", name: "Hércules CF", city: "Alicante", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 50 },
+                    { id: "Real Murcia", name: "Real Murcia CF", city: "Murcia", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 49 }
+                ]
+            },
+            {
+                id: "PrimeraInf",
+                name: "Primera Inferior",
+                tier: 4,
+                clubs: [
+                    { id: "Alcorcón", name: "AD Alcorcón", city: "Alcorcón", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 49 },
+                    { id: "Ibiza", name: "UD Ibiza", city: "Ibiza", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "Teruel", name: "CD Teruel", city: "Teruel", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "Gimnástica", name: "Gimnástica de Torrelavega", city: "Torrelavega", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 46 },
+                    { id: "Torremolinos", name: "UD Torremolinos", city: "Torremolinos", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "Majadaonda", name: "Rayo Majadahonda", city: "Majadahonda", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "Sant Andreu", name: "UE Sant Andreu", city: "Barcelona", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 41 },
+                    { id: "Águilas", name: "Águilas FC", city: "Águilas", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "Real Jaén", name: "Real Jaén CF", city: "Jaén", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
+                    { id: "Athletic Bilbao B", name: "Bilbao Athletic", city: "Bilbao", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 43 },
+                    { id: "Avilés", name: "Real Avilés CF", city: "Avilés", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 49 },
+                    { id: "Cacereño", name: "CP Cacereño", city: "Cáceres", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "Extremadura", name: "CD Extremadura", city: "Almendralejo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 46 },
+                    { id: "Real Union", name: "Real Unión", city: "Irun", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "Fabril", name: "Deportivo Fabril", city: "La Coruña", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 44 },
+                    { id: "Ourense", name: "CD Ourense", city: "Ourense", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 42 },
+                    { id: "Coria", name: "CD Coria", city: "Coria", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "Logroñés", name: "UD Logroñés", city: "Logroño", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 39 },
+                    { id: "Barcelona B", name: "FC Barcelona B", city: "Barcelona", colors: { primary: "#A50044", secondary: "#005BAC" }, reputation: 48 },
+                    { id: "Terrassa", name: "Terrassa FC", city: "Terrassa", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
+                    { id: "Rayo Cantabria", name: "Rayo Cantabria", city: "Santander", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 37 },
+                    { id: "Basconia", name: "CD Basconia", city: "Bilbao", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 37 },
+                ]
+            },
+            {
+                id: "Segunda",
+                name: "Segunda Federación",
+                tier: 5,
+                clubs: [
+                    { id: "Real Oviedo B", name: "Real Oviedo Vetusta", city: "Oviedo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 }
                 ]
             }
         ]
@@ -289,7 +591,24 @@ const REGIONS_EN = [
     { id: 'south-west', name: 'South West England', blurb: 'the South West' },
     { id: 'east-england', name: 'East of England', blurb: 'the East' }
 ];
-const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN };
+// ---- Regions (Germany) ----
+const REGIONS_DE = [
+    { id: 'bayern', name: 'Bayern', blurb: 'Bavaria' },
+    { id: 'nordoster', name: 'Nordosten', blurb: 'Northeast Germany' },
+    { id: 'westen', name: 'Westen', blurb: 'Western Germany' },
+    { id: 'sudwesten', name: 'Südwesten', blurb: 'Southwest Germany' },
+    { id: 'nord', name: 'Norden', blurb: 'Northern Germany' }
+];
+// ---- Regions (Spain) ----
+const REGIONS_ES = [
+    { id: 'sur de españa', name: 'Sur de España', blurb: 'Andalusia and Murcia' },
+    { id: 'españa central', name: 'España central', blurb: 'Madrid, Extremadura and Castilla la Mancha' },
+    { id: 'noreste de españa', name: 'Noreste de España', blurb: 'Aragon, Catalonia and Valencia' },
+    { id: 'noroeste de españa', name: 'Noroeste de España', blurb: 'Galicia, Asturias, Castilla and León' },
+    { id: 'nor de españa', name: 'Nor de España', blurb: 'Cantabria, Basque Country, Navarra and La Rioja' },
+    { id: 'islas', name: 'Islas', blurb: 'Balearic Islands and Canary Islands' }
+];
+const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN, Germany: REGIONS_DE, Spain: REGIONS_ES };
 const CITY_REGION = {
     "Groningen":"noord","Leeuwarden":"noord","Heerenveen":"noord","Harkema":"noord","Emmen":"noord","Assen":"noord","Hoogeveen":"noord",
     "Almelo":"oost","Enschede":"oost","Zwolle":"oost","Genemuiden":"oost","Hardenberg":"oost","Haaksbergen":"oost","Raalte":"oost","Rijssen":"oost","Staphorst":"oost","Arnhem":"oost","Nijmegen":"oost","Doetinchem":"oost","Groesbeek":"oost","Ermelo":"oost","Nijkerk":"oost","Tiel":"oost","Scherpenzeel":"oost",
@@ -306,7 +625,13 @@ const CITY_REGION = {
     "Leeds":"yorkshire","Hull":"yorkshire","Sheffield":"yorkshire","Bradford":"yorkshire","Barnsley":"yorkshire","Doncaster":"yorkshire","Rotherham":"yorkshire","Huddersfield":"yorkshire","Harrogate":"yorkshire","Halifax":"yorkshire","York":"yorkshire","Grimsby":"yorkshire","Scunthorpe":"yorkshire",
     "Nottingham":"east-midlands","Derby":"east-midlands","Leicester":"east-midlands","Lincoln":"east-midlands","Mansfield":"east-midlands","Chesterfield":"east-midlands","Northampton":"east-midlands","Boston":"east-midlands","Brackley":"east-midlands",
     "Bristol":"south-west","Exeter":"south-west","Plymouth":"south-west","Swindon":"south-west","Cheltenham":"south-west","Forest Green":"south-west","Yeovil":"south-west","Bournemouth":"south-west","Cardiff":"south-west","Swansea":"south-west","Newport":"south-west",
-    "Ipswich":"east-england","Norwich":"east-england","Peterborough":"east-england","Cambridge":"east-england","Colchester":"east-england","Southend-on-Sea":"east-england","Braintree":"east-england","Stevenage":"east-england","Watford":"east-england","Luton":"east-england","Borehamwood":"east-england"
+    "Ipswich":"east-england","Norwich":"east-england","Peterborough":"east-england","Cambridge":"east-england","Colchester":"east-england","Southend-on-Sea":"east-england","Braintree":"east-england","Stevenage":"east-england","Watford":"east-england","Luton":"east-england","Borehamwood":"east-england",
+    // ---- Germany ----
+    "Munich":"bayern","Augsburg":"bayern","Nuremberg":"bayern","Fürth":"bayern","Regensburg":"bayern","Ingolstadt":"bayern","Unterhaching":"bayern","Illertissen":"bayern","Vilzing":"bayern","Würzburg":"bayern","Schweinfurt":"bayern","Bayreuth":"bayern","Landsberg":"bayern","Eltersdorf":"bayern","Aubstadt":"bayern","Eichstätt":"bayern","Burghausen":"bayern","Buchbach":"bayern","Memmingen":"bayern",
+    "Berlin":"nordoster","Leipzig":"nordoster","Dresden":"nordoster","Magdeburg":"nordoster","Cottbus":"nordoster","Chemnitz":"nordoster","Potsdam":"nordoster","Jena":"nordoster","Zwickau":"nordoster","Halle":"nordoster","Erfurt":"nordoster","Greifswald":"nordoster","Aue":"nordoster",
+    "Dortmund":"westen","Gelsenkirchen":"westen","Cologne":"westen","Leverkusen":"westen","Mönchengladbach":"westen","Düsseldorf":"westen","Essen":"westen","Duisburg":"westen","Bochum":"westen","Bielefeld":"westen","Münster":"westen","Paderborn":"westen","Aachen":"westen","Verl":"westen","Oberhausen":"westen","Gütersloh":"westen","Siegen":"westen","Bergisch Gladbach":"westen","Wiedenbrück":"westen","Rödinghausen":"westen","Bocholt":"westen","Lotte":"westen","Bonn":"westen",
+    "Stuttgart":"sudwesten","Freiburg":"sudwesten","Hoffenheim":"sudwesten","Mainz":"sudwesten","Kaiserslautern":"sudwesten","Karlsruhe":"sudwesten","Heidenheim":"sudwesten","Darmstadt":"sudwesten","Frankfurt":"sudwesten","Mannheim":"sudwesten","Saarbrücken":"sudwesten","Elversberg":"sudwesten","Homburg":"sudwesten","Trier":"sudwesten","Walldorf":"sudwesten","Sandhausen":"sudwesten","Aalen":"sudwesten","Ulm":"sudwesten","Freiberg":"sudwesten","Kassel":"sudwesten","Wiesbaden":"sudwesten","Offenbach":"sudwesten","Fulda":"sudwesten","Steinbach":"sudwesten","Aspach":"sudwesten",
+    "Hamburg":"nord","Bremen":"nord","Hanover":"nord","Hannover":"nord","Kiel":"nord","Wolfsburg":"nord","Braunschweig":"nord","Osnabrück":"nord","Oldenburg":"nord","Meppen":"nord","Emden":"nord","Norderstedt":"nord","Flensburg":"nord","Lübeck":"nord","Todesfelde":"nord","Drochtersen":"nord","Jeddeloh":"nord","Garbsen":"nord","Schöningen":"nord","Rostock":"nord"
 };
 function regionOfCity(city){ return CITY_REGION[city] || 'middelland'; }
 function regionsForCountry(country){ return REGIONS_BY_COUNTRY[country] || REGIONS; }
@@ -320,9 +645,21 @@ function regionName(id){
 function youthTeamName(parentOrId){
     const c = (typeof parentOrId === 'string') ? Clubs.getClubById(parentOrId) : parentOrId;
     if (!c) return 'U21';
-    return (c.country === 'Netherlands') ? 'Jong ' + c.name : c.name + ' U21';
+    if (c.country === 'Netherlands') return 'Jong ' + c.name;
+    if (c.country === 'Germany') return c.name + ' II';
+    return c.name + ' U21';
 }
-function isReserveClub(idOrClub){ const c = (typeof idOrClub === 'string') ? Clubs.getClubById(idOrClub) : idOrClub; return !!(c && /^Jong\s/i.test(c.name)); }
+function isReserveClub(idOrClub){
+    const c = (typeof idOrClub === 'string') ? Clubs.getClubById(idOrClub) : idOrClub;
+    if (!c) return false;
+    let base = null;
+    if (/^Jong\s/i.test(c.name)) base = c.name.replace(/^Jong\s+/i, '');
+    else if (/\sU21$/.test(c.name)) base = c.name.replace(/\sU21$/, '');
+    else if (/\sII$/.test(c.name)) base = c.name.replace(/\sII$/, '');
+    else return false;
+    // only a reserve if a distinct senior club with the base name actually exists
+    return Clubs.allClubs.some(o => o.id !== c.id && o.name === base);
+}
 function reserveClubFor(seniorId){ const s = Clubs.getClubById(seniorId); if (!s) return null; return Clubs.allClubs.find(c => c.name === 'Jong ' + s.name) || null; }
 function parentClubForReserve(reserveId){
     const r = Clubs.getClubById(reserveId); if (!r || !/^Jong\s/i.test(r.name)) return null;
@@ -355,6 +692,13 @@ const Clubs = {
         }
         
         console.log(`✅ ${this.allClubs.length} clubs created`);
+        // reserve/second teams wear their parent club's colours (for consistent emblems)
+        this.allClubs.forEach(c => {
+            if (!isReserveClub(c.id)) return;
+            const base = c.name.replace(/^Jong\s+/i, '').replace(/\sU21$/, '').replace(/\sII$/, '');
+            const parent = this.allClubs.find(o => o.id !== c.id && o.name === base);
+            if (parent) c.colors = { primary: parent.colors.primary, secondary: parent.colors.secondary };
+        });
         return this.allClubs;
     },
     
@@ -375,8 +719,8 @@ const Clubs = {
         return this.allClubs.filter(c => c.region === regionId);
     },
 
-    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League' },
-    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5 },
+    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga' },
+    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6 },
     setDivision(clubId, divId) {
         const c = this.getClubById(clubId); if (!c) return;
         c.division = divId; c.tier = this.DIV_TIERS[divId]; c.divisionName = this.DIV_NAMES[divId];

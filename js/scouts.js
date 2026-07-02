@@ -11,6 +11,10 @@ const SCOUT_NAMES = {
     England: {
         first: ['James', 'Jack', 'Harry', 'George', 'Oliver', 'Thomas', 'William', 'Charlie', 'Daniel', 'Joseph', 'Samuel', 'Lewis', 'Ryan', 'Liam', 'Nathan', 'Scott', 'Wayne', 'Gary', 'Paul', 'Steve', 'Mark', 'Lee', 'Ian', 'Phil', 'Dean', 'Craig', 'Darren', 'Neil', 'Alan', 'Terry'],
         last: ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright', 'Thompson', 'Evans', 'Walker', 'White', 'Roberts', 'Green', 'Hall', 'Wood', 'Harris', 'Clarke', 'Jackson', 'Turner', 'Hill', 'Cooper', 'Ward', 'Morris', 'Moore', 'King', 'Baker', 'Morgan']
+    },
+    Germany: {
+        first: ['Michael', 'Thomas', 'Andreas', 'Stefan', 'Klaus', 'Jürgen', 'Wolfgang', 'Dieter', 'Uwe', 'Matthias', 'Frank', 'Markus', 'Christian', 'Sebastian', 'Lukas', 'Felix', 'Jonas', 'Tobias', 'Sven', 'Dirk', 'Bernd', 'Rainer', 'Horst', 'Günter', 'Helmut', 'Manfred', 'Rolf', 'Jörg', 'Kai', 'Oliver'],
+        last: ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann', 'Schäfer', 'Koch', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann', 'Braun', 'Krüger', 'Hartmann', 'Lange', 'Werner', 'Krause', 'Lehmann', 'Köhler', 'Herrmann', 'Kaiser']
     }
 };
 
@@ -72,7 +76,7 @@ const Scouts = {
     },
     // per-report cost of scouting a foreign league, as a multiple of the dearest home region (travel + prestige)
     intlLeagueMult(div) {
-        const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5 };
+        const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5, REGIONAL3: 1.2, REGIONAL2: 1.5, REGIONAL1: 2, '3LIGA': 2.5, '2BUNDES': 3, BUNDES: 4.5 };
         return m[div] || 2.5;
     },
     intlLeagueCost(div) {
@@ -88,7 +92,7 @@ const Scouts = {
     // a scout must be good enough to work a given foreign league: by tier 65/60/50/40/30
     minScoutQualityFor(division) {
         const tier = ((Clubs.getClubsByDivision(division)[0] || {}).tier) || 3;
-        return ({ 1: 65, 2: 60, 3: 50, 4: 40, 5: 30 })[tier] || 50;
+        return ({ 1: 65, 2: 60, 3: 50, 4: 40, 5: 30, 6: 25 })[tier] || 50;
     },
     // foreign countries you may scout in (everything except your home country)
     intlCountries() {

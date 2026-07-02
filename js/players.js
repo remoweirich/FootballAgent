@@ -13,7 +13,7 @@ const POS_LIST = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const ATTACK_POS = ['CAM', 'LW', 'RW', 'ST'];
 const MID_POS = ['CDM', 'CM', 'CAM'];
 // English football pays more than Dutch (applied to every player's wage)
-const COUNTRY_WAGE_MULT = { Netherlands: 1.0, England: 1.25 };
+const COUNTRY_WAGE_MULT = { Netherlands: 1.0, England: 1.25, Germany: 1.12 };
 // development pacing: deliberately slow — a top young regular gains roughly a handful of points a
 // season on his own, and agency development upgrades give a meaningful, noticeable boost on top
 const DEV_BASE = 0.08;

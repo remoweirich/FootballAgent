@@ -251,32 +251,47 @@ const Sim = {
             }
             if (pending < 2 && !(p._txOffersFrom && GameState.absWeek() < p._txOffersFrom)) {
                 const tot = seasonTotals(p, GameState.seasonStartYear);
-                const attract = p.ability + Math.min(20, tot.apps) * 0.4 + (p.transferListed ? 20 : 0);
-                const chance = Math.min(0.30, 0.02 + attract / 400);
+                const attract = 10 + Math.min(20, tot.apps) * 0.5 + (p.transferListed ? 22 : 0);
+                // elite players attract bids far less often — only a handful of clubs can afford them, and
+                // they don't get fresh approaches every window
+                const scarcity = p.ability >= 84 ? 0.30 : p.ability >= 80 ? 0.48 : p.ability >= 74 ? 0.68 : p.ability >= 68 ? 0.90 : 1.0;
+                const chance = Math.min(0.26, 0.02 + attract / 320) * scarcity;
                 if (Math.random() < chance) {
                     const lo = p.transferListed ? p.ability - 14 : p.ability - 6;
+                    const val = Agency.playerValue(p);
                     const cands = Clubs.allClubs.filter(c =>
                         c.id !== p.clubId && c.reputation >= lo && c.reputation <= p.ability + 16 &&
+                        Agency.buyerMaxFee(c) >= val * 0.55 &&
                         !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
                         !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
                     if (cands.length) {
-                        const buyer = Agency.pickBuyer(cands, p); if (!buyer) return;
-                        const fee = Agency.estimateFee(p, buyer);
-                        const offer = Agency._offerObj(p, p.clubId, buyer.id, fee, { initiatedByAgent: false });
-                        GameState.addMail({ kind: 'transfer', subject: `${buyer.name} bid for ${p.name}`, offer, persistence: Math.random() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Math.random() * 3) });
-                        events.push({ type: 'offer', text: `${buyer.name} bid €${UI.money(fee)} for ${p.name} (${ROLE_LABEL[offer.role]}).` });
+                        const buyer = Agency.pickBuyer(cands, p);
+                        if (buyer) {
+                            const fee = Agency.estimateFee(p, buyer);
+                            const offer = Agency._offerObj(p, p.clubId, buyer.id, fee, { initiatedByAgent: false });
+                            GameState.addMail({ kind: 'transfer', subject: `${buyer.name} bid for ${p.name}`, offer, persistence: Math.random() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Math.random() * 3) });
+                            events.push({ type: 'offer', text: `${buyer.name} bid €${UI.money(fee)} for ${p.name} (${ROLE_LABEL[offer.role]}).` });
+                            // after a bid, this player isn't approached again for a while — longer for the elite
+                            p._txOffersFrom = GameState.absWeek() + (p.ability >= 80 ? 18 + Math.floor(Math.random() * 18) : 7 + Math.floor(Math.random() * 9));
+                        }
                     }
                 }
             }
-            // loan offers if loan-listed (offers wait until the week after listing)
+            // loan offers if loan-listed — interest is NOT guaranteed. Each cycle we roll whether any club
+            // fancies him (based on his appeal); often there's a genuine dry spell with no interest at all
             if (p.loanListed && !p.onLoanAt && !(p._loanOffersFrom && GameState.absWeek() < p._loanOffersFrom) && !GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id)) {
-                if (Math.random() < 0.4) {
+                const appeal = Math.max(0.08, Math.min(0.55, ((p.ability || 45) - 35) / 80 + (22 - (p.age || 22)) * 0.02));
+                if (Math.random() < appeal) {
                     const club = Clubs.getClubById(p.clubId);
                     const dest = Agency._findLoanClub(p, club || Clubs.allClubs[0]);
                     if (dest && !Agency.clubHasMyPlayerAtPos(dest.id, p.position, p.id)) {
                         GameState.addMail({ kind: 'loan', subject: `${dest.name} want ${p.name} on loan`, offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, role: Agency.maxRoleAt(p, dest) }, persistence: 0, ttl: 3 });
                         events.push({ type: 'offer', text: `${dest.name} want ${p.name} on loan.` });
                     }
+                    p._loanOffersFrom = GameState.absWeek() + 3 + Math.floor(Math.random() * 5);
+                } else {
+                    // nobody's biting right now — a real dry spell before anyone looks again
+                    p._loanOffersFrom = GameState.absWeek() + 6 + Math.floor(Math.random() * 10);
                 }
             }
         });
@@ -427,7 +442,7 @@ const Sim = {
         });
         const homeDivs = (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[hc]) || ['ERE', 'EED', 'TWD', 'DRD'];
         const champs = homeDivs.map(d => `${COMPETITIONS[d].name}: ${Clubs.getClubById(League.sortedTable(d)[0]?.clubId)?.name || '—'}`).join('<br>');
-        const CUP_KEY_COMP = { beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC' };
+        const CUP_KEY_COMP = { beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC', dfb: 'DFB', lpokal: 'LPOKAL' };
         const homeCups = (typeof COUNTRY_CUPS !== 'undefined' && COUNTRY_CUPS[hc]) || [['beker', 'KNVB Beker'], ['kbek', 'De kleine Beker']];
         const cupLine = homeCups.map(([key, label]) => {
             const wid = L && L[key] ? L[key].winner : null;
@@ -450,6 +465,9 @@ const Sim = {
             facup: L && L.facup ? { winner: L.facup.winner, results: L.facup.results } : null,
             llc: L && L.llc ? { winner: L.llc.winner, results: L.llc.results, groups: L.llc.groups } : null,
             playoffs: L && L.playoffs ? { ...L.playoffs } : null,
+            dfb: L && L.dfb ? { winner: L.dfb.winner, results: L.dfb.results } : null,
+            lpokal: L && L.lpokal ? { winner: L.lpokal.winner, results: L.lpokal.results } : null,
+            germanReleg: L && L.germanReleg ? { ...L.germanReleg } : null,
             prorel: null
         };
         GameState.addLog(`Season ${GameState.seasonLabel()} finished.`, 'season');
@@ -498,6 +516,7 @@ const Sim = {
         });
         if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorel = prorel;
         if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorelEng = (GameState.league && GameState.league.prorelEng) || null;
+        if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorelGer = (GameState.league && GameState.league.prorelGer) || null;
         // add your clients' promotions/relegations (incl. those playing abroad) to the season review
         const hc = GameState.homeCountry || 'Netherlands';
         const moveLines = [];

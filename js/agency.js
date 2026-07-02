@@ -57,21 +57,23 @@ const Agency = {
         return { ok: true };
     },
 
-    // base commission ceiling (forward commissions on transfers/renewals)
+    // base commission ceiling (forward commissions on transfers/renewals). lev = how far the agency
+    // out-ranks the player. A balanced matchup lands ~10-12%; standout talents give less; weaker players
+    // tolerate more, but 25% stays out of reach (only very lopsided pairings approach the cap).
     maxCommissions(p) {
         const lev = GameState.agency.reputation - p.ability;
         return {
-            wage: Math.max(0, Math.min(25, Math.round(7 + lev * 0.7))),
-            sponsor: Math.max(0, Math.min(25, Math.round(10 + lev * 0.8)))
+            wage: Math.max(5, Math.min(18, Math.round(10 + lev * 0.32))),
+            sponsor: Math.max(6, Math.min(20, Math.round(12 + lev * 0.36)))
         };
     },
-    // signing ceiling: players tolerate a higher cut for a LONGER commitment
+    // signing ceiling: a LONGER commitment buys a little extra tolerance, but only a little
     maxSignCommissions(p, term) {
         const lev = GameState.agency.reputation - p.ability;
-        const termBonus = Math.max(0, term - 1) * 1.0;
+        const termBonus = Math.max(0, term - 1) * 0.4;   // up to +3.6 at a 10-year deal
         return {
-            wage: Math.max(0, Math.min(25, Math.round(4 + lev * 0.6 + termBonus))),
-            sponsor: Math.max(0, Math.min(25, Math.round(6 + lev * 0.7 + termBonus)))
+            wage: Math.max(5, Math.min(18, Math.round(9 + lev * 0.30 + termBonus))),
+            sponsor: Math.max(6, Math.min(20, Math.round(11 + lev * 0.34 + termBonus)))
         };
     },
 
@@ -258,9 +260,11 @@ const Agency = {
         return { until: Y + 1, mid: false };                          // 1.5 seasons
     },
     _findLoanClub(p, parent) {
-        const pool = Clubs.allClubs.filter(c => c.id !== parent.id && c.reputation <= parent.reputation + 2)
+        // clubs a rung or two below the parent that would actually give him a role; may be none
+        const pool = Clubs.allClubs.filter(c => c.id !== parent.id && c.reputation <= parent.reputation + 2 && ROLE_ORDER.indexOf(this.maxRoleAt(p, c)) >= ROLE_ORDER.indexOf('fringe'))
             .sort((a, b) => Math.abs(a.reputation - (parent.reputation - 8)) - Math.abs(b.reputation - (parent.reputation - 8)));
-        return pool[Math.floor(Math.random() * Math.min(5, pool.length))] || parent;
+        if (!pool.length) return null;
+        return pool[Math.floor(Math.random() * Math.min(5, pool.length))] || null;
     },
 
     // ---------- shop player to ANY club ----------
@@ -392,12 +396,17 @@ const Agency = {
         if (!role) return true;
         return ROLE_ORDER.indexOf(role) <= ROLE_ORDER.indexOf(this.clubRoleCeiling(p, club));
     },
-    // largest signing bonus the club will stomach for this player
-    clubBonusWillingness(p, club, wage) {
-        const fair = this.maxSigningBonus(p, wage);
+    // largest signing bonus the club will stomach. On a TRANSFER this is an agent's fee that scales with the
+    // transfer fee (up to €5m); for renewals (no transferFee passed) it stays the modest wage-based figure.
+    clubBonusWillingness(p, club, wage, transferFee) {
         const rel = this.relationship(club ? club.id : null);
         const fit = p.ability - (club ? club.reputation : 45);
         const f = Math.max(0.08, Math.min(1, 0.42 + fit / 60 + (rel - 55) / 280));
+        if (transferFee != null) {
+            const cap = Math.max(this.maxSigningBonus(p, wage), this.agentFeeCap(transferFee));
+            return Math.round(cap * f / 1000) * 1000;
+        }
+        const fair = this.maxSigningBonus(p, wage);
         return Math.round(fair * f / 10) * 10;
     },
 
@@ -417,7 +426,7 @@ const Agency = {
         const maxWage = Math.round(this.maxClubWage(p, club) * termFactor / 10) * 10;
         const roleCeil = this.clubRoleCeiling(p, club);
         const roleOk = ROLE_ORDER.indexOf(pkg.role) <= ROLE_ORDER.indexOf(roleCeil);
-        const maxBonus = this.clubBonusWillingness(p, club, Math.min(pkg.wage, maxWage));
+        const maxBonus = this.clubBonusWillingness(p, club, Math.min(pkg.wage, maxWage), pkg.fee);
         const wageOk = pkg.wage <= maxWage, bonusOk = (pkg.bonus || 0) <= maxBonus;
         const counter = { wage: Math.min(pkg.wage, maxWage), role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, maxBonus) };
 
@@ -464,7 +473,7 @@ const Agency = {
         if (role && !this.roleAcceptable(p, toClub, role))
             return { ok: false, message: `${toClub.name} won't give ${p.name} a ${ROLE_LABEL[role]} role — the most they'll offer is ${ROLE_LABEL[this.clubRoleCeiling(p, toClub)]}. Lower the role and try again.` };
         const reqBonus = Math.max(0, Math.round(signingBonus || 0));
-        const okBonus = this.clubBonusWillingness(p, toClub, agreedWage);
+        const okBonus = this.clubBonusWillingness(p, toClub, agreedWage, o.transferFee);
         if (reqBonus > okBonus)
             return { ok: false, message: `${toClub.name} won't pay a €${UI.money(reqBonus)} signing bonus for ${p.name} — they'll go to about €${UI.money(okBonus)}. Lower it and try again.` };
 
@@ -642,13 +651,39 @@ const Agency = {
     toggleLoanList(p) { p.loanListed = !p.loanListed; if (p.loanListed) p._loanOffersFrom = GameState.absWeek() + 1; GameState.addLog(`${p.name} ${p.loanListed ? 'added to' : 'removed from'} loan list.`, 'info'); return p.loanListed; },
 
     // ---------- helpers ----------
+    // the most a club will spend on a single player, driven by its league's wealth and its own standing.
+    // the Premier League can bankroll huge fees; the Eredivisie and lower leagues simply cannot.
+    _leagueCap(div) {
+        const CAP = { PREM: 95000000, CHAMP: 32000000, LEAGUE1: 11000000, LEAGUE2: 4000000, Natleague: 1500000, ERE: 24000000, EED: 8000000, TWD: 3000000, DRD: 1000000, BUNDES: 60000000, '2BUNDES': 18000000, '3LIGA': 6000000, REGIONAL1: 2500000, REGIONAL2: 1000000, REGIONAL3: 500000 };
+        return CAP[div] != null ? CAP[div] : 6000000;
+    },
+    buyerMaxFee(club) {
+        if (!club) return 6000000;
+        return Math.round(this._leagueCap(club.division) * (0.5 + (club.reputation - 45) / 55));
+    },
+    // intrinsic value of a player, independent of any particular buyer
+    playerValue(p) {
+        let v = 380 * Math.pow(1.15, p.ability);                       // steep in current ability
+        const potGap = Math.max(0, (p.potential || p.ability) - p.ability);
+        const potWeight = p.age <= 21 ? 1.3 : p.age <= 25 ? 0.8 : p.age <= 28 ? 0.4 : 0.15;
+        v *= 1 + potGap * 0.045 * potWeight;                           // upside is worth most in the young
+        const ageMult = p.age <= 19 ? 1.35 : p.age <= 21 ? 1.25 : p.age <= 23 ? 1.12 : p.age <= 26 ? 1.0 : p.age <= 29 ? 0.82 : p.age <= 31 ? 0.58 : 0.38;
+        v *= ageMult;
+        const yrsLeft = Math.max(0, (p.contractUntilSeason || GameState.seasonStartYear) - GameState.seasonStartYear);
+        v *= 0.78 + Math.min(4, yrsLeft) * 0.11;                       // longer deal left -> pricier
+        return v;
+    },
     estimateFee(p, targetClub) {
-        let v = Math.exp(p.ability / 9) * 200;                 // ~6k at 4th-tier level, scaling steeply with ability
-        v *= 1 + Math.max(0, p.potential - p.ability) / 40;
-        if (p.age <= 20) v *= 1.25;
-        if (p.age >= 30) v *= 0.6;
-        if (targetClub) v *= 0.7 + targetClub.reputation / 140;
-        return Math.max(500, Math.round(v / 500) * 500);
+        let v = this.playerValue(p);
+        if (targetClub) {
+            v *= 0.72 + targetClub.reputation / 150;                   // a buyer-quality premium
+            v = Math.min(v, this.buyerMaxFee(targetClub));            // but never beyond what they can afford
+        }
+        return Math.max(500, Math.round(v / 10000) * 10000);
+    },
+    // agent's fee on a transfer scales with the size of the deal, up to €5m on a €100m+ move
+    agentFeeCap(transferFee) {
+        return Math.min(5000000, Math.round((transferFee || 0) * 0.05 / 1000) * 1000);
     },
     _offerObj(p, fromId, toId, fee, opts = {}) {
         const toClub = Clubs.getClubById(toId);

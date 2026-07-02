@@ -12,6 +12,15 @@ const COMPETITIONS = {
     LEAGUE1: { name: 'League One', short: 'L1', type: 'league' },
     LEAGUE2: { name: 'League Two', short: 'L2', type: 'league' },
     Natleague: { name: 'National League', short: 'NL', type: 'league' },
+    BUNDES: { name: 'Bundesliga', short: 'BL', type: 'league' },
+    '2BUNDES': { name: '2. Bundesliga', short: '2.BL', type: 'league' },
+    '3LIGA': { name: '3. Liga', short: '3.Liga', type: 'league' },
+    REGIONAL1: { name: '1. Regionalliga', short: 'RL1', type: 'league' },
+    REGIONAL2: { name: '2. Regionalliga', short: 'RL2', type: 'league' },
+    REGIONAL3: { name: '3. Regionalliga', short: 'RL3', type: 'league' },
+    DFB: { name: 'DFB Pokal', short: 'DFB', type: 'cup' },
+    LPOKAL: { name: 'Landespokal', short: 'LP', type: 'cup' },
+    GRELEG: { name: 'Relegation', short: 'Releg', type: 'playoff' },
     BEKER: { name: 'KNVB Beker', short: 'Beker', type: 'cup' },
     KBEK: { name: 'De kleine Beker', short: 'kl. Beker', type: 'cup' },
     FACUP: { name: 'FA Cup', short: 'FA Cup', type: 'cup' },
@@ -26,10 +35,10 @@ function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : (Clubs
 const DIV_ORDER = ['ERE', 'EED', 'TWD', 'DRD'];
 const DIV_TIER = { ERE: 1, EED: 2, TWD: 3, DRD: 4 };
 // every country's league ladder, top tier first
-const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'] };
+const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'] };
 const ALL_LEAGUE_DIVS = Object.values(COUNTRY_DIVS).reduce((a, b) => a.concat(b), []);
 // cups shown per country in the Leagues tab (extend this when adding more countries)
-const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']] };
+const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']] };
 function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
 
 // 12 non-league "virtual" clubs that only ever appear in the FA Cup (no squads, no transfers)
@@ -82,7 +91,10 @@ const League = {
             kbek: this._buildKleine(),
             facup: this._buildFACup(),
             llc: this._buildLLC(),
+            dfb: this._buildDFB(),
+            lpokal: this._buildLandespokal(),
             playoffs: { EED: null, TWD: null, DRD: null, CHAMP: null, LEAGUE1: null, LEAGUE2: null, Natleague: null, _done: false },
+            germanReleg: null,
             prorel: null,
             champions: {},
             finished: false
@@ -339,6 +351,12 @@ const League = {
             notes
         };
     },
+    // promoted clubs edge up in prestige, relegated clubs edge down — gently, so standings stay coherent
+    // season to season instead of the same clubs yo-yoing at random
+    _repDrift(ups, downs) {
+        (ups || []).forEach(id => { const c = Clubs.getClubById(id); if (c) c.reputation = Math.min(95, c.reputation + 2); });
+        (downs || []).forEach(id => { const c = Clubs.getClubById(id); if (c) c.reputation = Math.max(20, c.reputation - 2); });
+    },
     applyPromotionRelegation() {
         const c = this.computeProRel();
         if (c) {
@@ -346,8 +364,10 @@ const League = {
             move(c.ereDown, 'EED'); move(c.eedUp, 'ERE');
             move(c.eedDown, 'TWD'); move(c.twdUp, 'EED');
             move(c.twdDown, 'DRD'); move(c.drdUp, 'TWD');
+            this._repDrift([...c.eedUp, ...c.twdUp, ...c.drdUp], [...c.ereDown, ...c.eedDown, ...c.twdDown]);
         }
         this.applyPromotionRelegationEngland();
+        this.applyPromotionRelegationGermany();
         return c;
     },
 
@@ -411,8 +431,162 @@ const League = {
         move(champDown, 'LEAGUE1'); move(l1Up, 'CHAMP');
         move(l1Down, 'LEAGUE2'); move(l2Up, 'LEAGUE1');
         move(l2Down, 'Natleague'); move(nlUp, 'LEAGUE2');
+        this._repDrift([...champUp, ...l1Up, ...l2Up, ...nlUp], [...premDown, ...champDown, ...l1Down, ...l2Down]);
         L.prorelEng = { premDown, champUp, champDown, l1Up, l1Down, l2Up, l2Down, nlUp };
         return L.prorelEng;
+    },
+
+    // ================= GERMANY =================
+    // ---- DFB Pokal: all 6 German leagues; top-3-tier seeded (drawn away) & kept apart in round 1 ----
+    _buildDFB() {
+        const seeded = [];
+        ['BUNDES', '2BUNDES', '3LIGA'].forEach(d => seeded.push(...Clubs.getClubsByDivision(d).map(c => c.id)));
+        const lower = [];
+        ['REGIONAL1', 'REGIONAL2', 'REGIONAL3'].forEach(d => lower.push(...Clubs.getClubsByDivision(d).map(c => c.id)));
+        return { seeded, lower, remaining: null, results: [], winner: null };
+    },
+    _dfbRoundName(week) {
+        return ({ 4: '1. Runde', 7: '2. Runde', 15: '3. Runde', 26: 'Achtelfinale', 32: 'Viertelfinale', 38: 'Halbfinale', 47: 'Finale' })[week] || 'Runde';
+    },
+    dfbStep(week) {
+        const D = GameState.league.dfb; if (!D || D.winner) return;
+        let pairs;
+        if (week === 4) {
+            const seeded = this.shuffle(D.seeded.slice()), lower = this.shuffle(D.lower.slice());
+            pairs = [];
+            seeded.forEach(s => { const h = lower.pop(); pairs.push(h != null ? [h, s] : [s, null]); });   // seeded away
+            while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
+            if (lower.length) pairs.push([lower.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(D.remaining));
+        }
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const r = this.playMatch(h, a, 'DFB', true);
+            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+        });
+        D.remaining = winners;
+        D.results.push({ week, round: this._dfbRoundName(week), ties });
+        if (week === 47 || D.remaining.length <= 1) D.winner = D.remaining[0];
+    },
+
+    // ---- Landespokal: RL1+RL2 play 2 rounds, survivors merge with 3.Liga into the main bracket ----
+    _buildLandespokal() {
+        const rl = [];
+        ['REGIONAL1', 'REGIONAL2'].forEach(d => rl.push(...Clubs.getClubsByDivision(d).map(c => c.id)));
+        return { remaining: this.shuffle(rl), merged: false, results: [], winner: null };
+    },
+    _lpokalRoundName(week) {
+        return ({ 4: '1. Runde', 7: '2. Runde', 15: '3. Runde', 26: 'Achtelfinale', 32: 'Viertelfinale', 38: 'Halbfinale', 47: 'Finale' })[week] || 'Runde';
+    },
+    lpokalStep(week) {
+        const P = GameState.league.lpokal; if (!P || P.winner) return;
+        if (week === 15 && !P.merged) {
+            P.remaining = this.shuffle(P.remaining.concat(Clubs.getClubsByDivision('3LIGA').map(c => c.id)));
+            P.merged = true;
+        }
+        const pairs = this._pairUp(this.shuffle(P.remaining));
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const r = this.playMatch(h, a, 'LPOKAL', true);
+            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+        });
+        P.remaining = winners;
+        P.results.push({ week, round: this._lpokalRoundName(week), ties });
+        if (week === 47 || P.remaining.length <= 1) P.winner = P.remaining[0];
+    },
+
+    // ---- German relegation: two-legged ties (higher seed hosts leg 2), penalties if level on aggregate ----
+    _twoLeggedTie(aId, bId, comp) {
+        const l1 = this.playMatch(bId, aId, comp, true);   // leg 1 away for a
+        const l2 = this.playMatch(aId, bId, comp, true);   // leg 2 home for a
+        const aggA = l1.ag + l2.hg, aggB = l1.hg + l2.ag;
+        let winner, pens = null;
+        if (aggA > aggB) winner = aId;
+        else if (aggB > aggA) winner = bId;
+        else { const sA = this.clubStrength(aId), sB = this.clubStrength(bId); winner = (Math.random() < sA / (sA + sB)) ? aId : bId; pens = { winner }; }
+        return { a: aId, b: bId, leg1: { h: bId, a: aId, hg: l1.hg, ag: l1.ag }, leg2: { h: aId, a: bId, hg: l2.hg, ag: l2.ag }, aggA, aggB, winner, pens };
+    },
+    playGermanRelegation() {
+        const L = GameState.league;
+        if (!L.tables.BUNDES) { L.germanReleg = null; return; }
+        const B = this.sortedTable('BUNDES').map(r => r.clubId);
+        const B2 = this.sortedTable('2BUNDES').map(r => r.clubId);
+        const L3 = this.sortedTable('3LIGA').map(r => r.clubId);
+        const top = (B.length >= 16 && B2.length >= 3) ? this._twoLeggedTie(B[15], B2[2], 'GRELEG') : null;
+        const bottom = (B2.length >= 16 && L3.length >= 3) ? this._twoLeggedTie(B2[15], L3[2], 'GRELEG') : null;
+        L.germanReleg = { top, bottom };
+    },
+
+    // pick `count` promotees from `order`, skipping excluded teams and skipping reserves once the cap is hit
+    _promoteRespectingReserves(order, count, existingReserves, maxReserves, excludeSet) {
+        const out = []; let res = existingReserves;
+        for (const id of order) {
+            if (out.length >= count) break;
+            if (excludeSet && excludeSet.has(id)) continue;
+            const isRes = isReserveClub(id);
+            if (isRes && res >= maxReserves) continue;   // pass the spot to the next non-reserve
+            out.push(id); if (isRes) res++;
+        }
+        return out;
+    },
+
+    applyPromotionRelegationGermany() {
+        const L = GameState.league;
+        if (!L.tables.BUNDES) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const B = ord('BUNDES'), B2 = ord('2BUNDES'), L3 = ord('3LIGA'), R1 = ord('REGIONAL1'), R2 = ord('REGIONAL2'), R3 = ord('REGIONAL3');
+        const gr = L.germanReleg || {};
+
+        // relegation outcomes
+        const topA = B[15], topB = B2[2];
+        const topWinner = gr.top ? gr.top.winner : topA;
+        const buli16Down = topWinner !== topA, b2_3Up = topWinner === topB;
+        const botA = B2[15], botB = L3[2];
+        const botWinner = gr.bottom ? gr.bottom.winner : botA;
+        const b2_16Down = botWinner !== botA, l3_3Up = botWinner === botB;
+
+        // direct moves
+        const buliDown = [B[16], B[17]];
+        const buliUpDirect = [B2[0], B2[1]];
+        const l3UpDirect = this._promoteRespectingReserves(L3, 2, 0, 0, new Set([topB, botB]));   // no reserves into 2.Bundesliga
+        const b2DownDirect = [B2[16], B2[17]];
+        const l3DownDirect = [L3[16], L3[17], L3[18], L3[19]];
+
+        // Regionalliga promotions with reserve caps
+        const leaving3L = new Set([...l3UpDirect, ...l3DownDirect]); if (l3_3Up) leaving3L.add(botB);
+        const in3LfromB2 = [...b2DownDirect]; if (b2_16Down) in3LfromB2.push(botA);
+        const res3L = [...L3.filter(id => !leaving3L.has(id)), ...in3LfromB2].filter(isReserveClub).length;
+        const rl1Up = this._promoteRespectingReserves(R1, 4, res3L, 3, null);
+        const rl1Down = [R1[20], R1[21], R1[22], R1[23]];
+
+        const leavingR1 = new Set([...rl1Up, ...rl1Down]);
+        const resR1 = [...R1.filter(id => !leavingR1.has(id)), ...l3DownDirect].filter(isReserveClub).length;
+        const rl2Up = this._promoteRespectingReserves(R2, 4, resR1, 5, null);
+        const rl2Down = [R2[20], R2[21], R2[22], R2[23]];
+
+        const leavingR2 = new Set([...rl2Up, ...rl2Down]);
+        const resR2 = [...R2.filter(id => !leavingR2.has(id)), ...rl1Down].filter(isReserveClub).length;
+        const rl3Up = this._promoteRespectingReserves(R3, 4, resR2, 5, null);
+
+        // apply
+        const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
+        move(buliDown, '2BUNDES'); move(buliUpDirect, 'BUNDES');
+        if (b2_3Up) move([topB], 'BUNDES'); if (buli16Down) move([topA], '2BUNDES');
+        move(l3UpDirect, '2BUNDES'); if (l3_3Up) move([botB], '2BUNDES');
+        move(b2DownDirect, '3LIGA'); if (b2_16Down) move([botA], '3LIGA');
+        move(l3DownDirect, 'REGIONAL1'); move(rl1Up, '3LIGA');
+        move(rl1Down, 'REGIONAL2'); move(rl2Up, 'REGIONAL1');
+        move(rl2Down, 'REGIONAL3'); move(rl3Up, 'REGIONAL2');
+
+        const ups = [...buliUpDirect, ...l3UpDirect, ...rl1Up, ...rl2Up, ...rl3Up]; if (b2_3Up) ups.push(topB); if (l3_3Up) ups.push(botB);
+        const downs = [...buliDown, ...b2DownDirect, ...l3DownDirect, ...rl1Down, ...rl2Down]; if (buli16Down) downs.push(topA); if (b2_16Down) downs.push(botA);
+        this._repDrift(ups, downs);
+
+        L.prorelGer = { buliDown, buliUpDirect, b2_3Up, buli16Down, l3UpDirect, l3_3Up, b2_16Down, b2DownDirect, l3DownDirect, rl1Up, rl1Down, rl2Up, rl2Down, rl3Up };
+        return L.prorelGer;
     },
 
     clubStrength(clubId) {
@@ -481,7 +655,11 @@ const League = {
         if ((week === 4 || week === 7) && L.llc) this.llcGroupStep(week);
         else if ([15, 26, 32, 38, 46].includes(week) && L.llc) this.llcKOStep(week);
 
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); L.playoffs._done = true; }
+        // German cups (same rounds/weeks as the others)
+        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.dfb) this.dfbStep(week);
+        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.lpokal) this.lpokalStep(week);
+
+        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); L.playoffs._done = true; }
     },
 
     playLeagueMatch(div, homeId, awayId) {
@@ -544,9 +722,11 @@ const League = {
         guaranteed.forEach(p => { if (starters.length < 11) starters.push(p); });
         for (const p of outfield) { if (starters.length >= 11) break; starters.push(p); }
 
-        // squad role decides how often a player actually features: a star plays nearly every game, a fringe player seldom
+        // squad role decides how often a player features — but a loaned-in player follows the role his
+        // loan deal guaranteed (a youth prospect loaned out as a star plays like a star at the loan club)
         const ATTEND = { key: 0.95, starter: 0.82, rotation: 0.26, fringe: 0.16, youth: 0.08 };
-        const willPlay = pl => Math.random() < (ATTEND[pl.squadRole] ?? 0.6);
+        const effRole = pl => (pl.onLoanAt === clubId ? (pl.loanRole || 'starter') : pl.squadRole);
+        const willPlay = pl => Math.random() < (ATTEND[effRole(pl)] ?? 0.6);
         const benchPool = outfield.filter(p => !starters.includes(p));   // remaining outfielders, best-first
         const finalStarters = [];
         starters.forEach(pl => {
@@ -559,7 +739,7 @@ const League = {
         const subs = maybeLoan.concat(benchPool).slice(0, 5);
         const appear = [];
         finalStarters.forEach(p => appear.push({ p, full: true, g: 0, a: 0 }));
-        subs.forEach(p => { if (Math.random() < (ATTEND[p.squadRole] ?? 0.5) * 0.7) appear.push({ p, full: false, g: 0, a: 0 }); });
+        subs.forEach(p => { if (Math.random() < (ATTEND[effRole(p)] ?? 0.5) * 0.7) appear.push({ p, full: false, g: 0, a: 0 }); });
         if (!appear.length) return;
 
         const posW = { ST: 1.0, LW: 0.8, RW: 0.8, CAM: 0.7, CM: 0.4, CDM: 0.2, LB: 0.15, RB: 0.15, CB: 0.12, GK: 0.0 };

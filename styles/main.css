@@ -490,3 +490,14 @@ svg.chart .grid { stroke: var(--line, #e5e7eb); stroke-width: 1; opacity: .55; }
 .howto-dots { display: flex; gap: 7px; }
 .ht-dot { width: 8px; height: 8px; border-radius: 50%; background: #2c3a58; cursor: pointer; transition: background .15s; }
 .ht-dot.on { background: #6ea8fe; }
+
+/* reject-all on player card */
+.offer-reject-all { margin-top: .5rem; text-align: right; }
+
+/* ---- Germany: Relegation play-off zones (lighter shade than direct up/down) ---- */
+.standings tr.zone-releg-up td.pos { box-shadow: inset 5px 0 0 #86efac; }      /* lighter green */
+.standings tr.zone-releg-down td.pos { box-shadow: inset 5px 0 0 #fca5a5; }    /* lighter red */
+.standings tr.zone-releg-up { background: #f0fdf4; }
+.standings tr.zone-releg-down { background: #fef2f2; }
+.zone-legend .lg-relplay { padding-left: .5rem; position: relative; }
+.zone-legend .lg-relplay::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 12px; border-radius: 2px; background: linear-gradient(#86efac, #fca5a5); }

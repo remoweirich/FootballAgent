@@ -1,3 +1,33 @@
+## v29 — Germany added as a full country
+Germany is now a selectable home country and a scoutable foreign country, wired throughout exactly like England and the Netherlands.
+
+**Leagues (constant sizes):** Bundesliga 18, 2. Bundesliga 18, 3. Liga 20, and 1./2./3. Regionalliga 24 each — held constant across seasons.
+
+**Promotion / relegation.** Bundesliga: 17–18 down, 16th into the Relegation. 2. Bundesliga: 1–2 up, 3rd into a Relegation for a top-flight place, 17–18 down, 16th into a Relegation against the 3. Liga. 3. Liga: 1–2 up, 3rd into a Relegation, 17–20 down; reserve teams cannot rise into the 2. Bundesliga (the spot passes down). Regionalligen: 1–4 up, 21–24 down, with reserve-team caps per league (max 3 in the 3. Liga, max 5 in the 1./2. Regionalliga) — when a cap is reached, a reserve side's promotion spot passes to the next eligible club. The Relegation ties are two-legged (home & away) and decided on penalties if level on aggregate, played in the same week as the other countries' play-offs.
+
+**Standings markings.** Direct promotion/relegation places show the full-strength colour bar; Relegation play-off places show a lighter shade, so the two are easy to tell apart.
+
+**Cups (same weeks as the other countries).** DFB Pokal: all 128 German clubs from round one, with Bundesliga/2. Bundesliga/3. Liga sides seeded (drawn away) and kept apart in round one, then a straight knockout. Landespokal: the 48 Regionalliga clubs play two rounds; the 12 survivors join the 20 3.-Liga clubs from the round of 32 onward.
+
+**Money.** German transfer budgets and wages sit between England and the Netherlands. German scout names added.
+
+**Club colours.** Audited club colours across all three countries and corrected the clearly-wrong ones (e.g. Preußen Münster green, Osnabrück purple, Greuther Fürth green, Alemannia Aachen black-yellow, Erzgebirge Aue purple, Plymouth Argyle green, Bradford City claret-amber, Newport County amber). Reserve/second teams now inherit their parent club's colours.
+
+## v28 changes — transfer system overhaul
+1. Leagues no longer bid alike. Each club's maximum outlay now depends on its league's wealth and its own standing: the Premier League can fund huge fees (weak PREM sides still reach €40m+, big ones €120m+), while the Eredivisie tops out around €28m and lower leagues far less. The same star costs far more from a rich buyer than a modest one.
+2. Fees now reflect potential, age and contract length, not just current ability. A young player with a high ceiling is worth far more than an older player at the same rating; more years left on the deal raises the fee. The ability→fee curve is steep, so €60m+ moves (ability 84+) are genuinely rare while €20m moves are common — and elite players no longer get fresh bids every window (an 88-rated star sees roughly one approach every few seasons; a solid pro several a season).
+3. Transfers now carry an Agent's Fee instead of the small wage-based signing bonus: it scales with the deal (5% of the fee) up to €5,000,000 on €100m+ transfers. Contract renewals are unchanged.
+4. The "reject all offers" button moved from the inbox to the player card, under that player's Open-offers list, so you clear the offers for one specific player you're not selling.
+
+## v27 changes — fixes batch
+1. English promotion/relegation verified and hardened. The movement itself was already correct (bottom 3 down, top 2 + play-off winner up, mid-table untouched, stable division sizes over many seasons); to stop promoted/relegated sides from yo-yoing so it *looks* random, clubs now drift slightly in reputation when they go up (+2) or down (−2).
+2. Commission ceilings rebalanced. A balanced talent now sits around 8–15%; standout talents (strong relative to your agency's reputation) concede less; weaker players tolerate more, but the cap is 18% wage / 20% sponsorship, so 25% is no longer reachable — and a "normal-good" player won't rubber-stamp a huge cut just because you're famous. Longer contracts still buy a little extra tolerance, but only a little.
+3. Nationality variety greatly increased. Scouted players are now ~68% from the club's own country, ~21% from nearby/diaspora nations and ~11% a full wildcard drawn from the whole 77-nation database, so the many defined nations now show up regularly.
+4. Loan-listed players are no longer guaranteed a loan offer. Interest is rolled per cycle based on the player's appeal, with genuine dry spells — sometimes no club comes in at all for a while.
+5. New "Reject all offers" button in the inbox: clears all pending transfer and loan offers in one click while keeping scout reports, renewals and other messages.
+6. Loaned-out players now feature according to the role their loan deal secured. A youth prospect loaned out as a star now plays like a star at the loan club (previously his parent-club role suppressed his minutes).
+7. Offer screens show the offering/relevant club's league and current table position (e.g. "Wolves, Championship · 1st/24 · 23pts"), now including the renewal screen for consistency.
+
 ## v26 changes
 - Added a clickable "How to play" guide to the start screen (where you pick your home country and name your agency): six short slides explaining the core idea — you're an agent who finds talents, signs them as clients, earns commission, develops players through game time, and grows the agency's reputation week by week. Navigate with the arrows or the dots; it loops back to the start.
 
