@@ -1353,14 +1353,14 @@ const UI = {
         if (!D || !D.results || !D.results.length) return '<div class="panel"><p class="muted">Der DFB Pokal beginnt in Woche 4 mit der 1. Runde.</p></div>';
         const winner = D.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(D.winner)}</strong></div>` : '';
         const rounds = D.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· Wo ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
-        return `<div class="panel">${winner}<p class="hint">Alle 128 deutschen Klubs starten in der 1. Runde. Teams aus Bundesliga, 2. Bundesliga und 3. Liga sind gesetzt (als Auswärtsmannschaft) und treffen in Runde 1 nicht aufeinander. Runden in den Wochen 4, 7, 15, 26, 32, 38 und 47.</p>${rounds}</div>`;
+        return `<div class="panel">${winner}<p class="hint">All 128 German clubs will enter the competition in the first round. Teams from the Bundesliga, 2. Bundesliga and 3. Liga are seeded (as the away team) and will not face each other in the first round. Rounds will take place in weeks 4, 7, 15, 26, 32, 38 and 47.</p>${rounds}</div>`;
     },
     cupLandespokalView() {
         const P = (GameState.league && GameState.league.lpokal) || (GameState.lastSeasonReport && GameState.lastSeasonReport.lpokal);
         if (!P || !P.results || !P.results.length) return '<div class="panel"><p class="muted">Der Landespokal beginnt in Woche 4 mit der 1. Runde.</p></div>';
         const winner = P.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(P.winner)}</strong></div>` : '';
         const rounds = P.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· Wo ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
-        return `<div class="panel">${winner}<p class="hint">Die 48 Klubs der 1. und 2. Regionalliga spielen zwei Runden (Wo 4 & 7); die 12 Überlebenden werden mit den 20 Teams der 3. Liga zusammen ab dem Sechzehntelfinale (Wo 15) ausgelost. Weitere Runden in den Wochen 26, 32, 38 und 47.</p>${rounds}</div>`;
+        return `<div class="panel">${winner}<p class="hint">The 48 clubs in the 1st and 2nd Regionalliga will play two rounds (Weeks 4 & 7); the 12 remaining teams will be drawn together with the 20 teams from the 3. Liga from the round of 32 (Week 15) onwards. Further rounds will take place in Weeks 26, 32, 38 and 47.</p>${rounds}</div>`;
     },
     _relegTie(t, upLabel, downLabel) {
         if (!t) return '<p class="muted">Nicht gespielt (Woche 46).</p>';
@@ -1381,16 +1381,16 @@ const UI = {
         return `<div class="panel">${winner}<p class="hint">${hint}</p>${rounds}</div>`;
     },
     cupCDRView() {
-        return this._spanishCupView('cdr', 'La Copa del Rey', 'Los 64 clubes de las tres primeras divisiones entran en la 1ª ronda. Los clubes de La Liga están cabezas de serie (juegan fuera) y no pueden enfrentarse en la primera ronda. Rondas en las semanas 4, 7, 15, 26, 38 y 47 (una jornada menos que los demás países).');
+        return this._spanishCupView('cdr', 'La Copa del Rey', 'All 64 clubs in the top three divisions enter the first round. La Liga clubs are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
     },
     cupCFEDView() {
-        return this._spanishCupView('cfed', 'La Copa Federación', 'Los 64 clubes de las tres últimas divisiones entran en la 1ª ronda. Los clubes de la Primera Superior están cabezas de serie (juegan fuera) y no pueden enfrentarse en la primera ronda. Rondas en las semanas 4, 7, 15, 26, 38 y 47.');
+        return this._spanishCupView('cfed', 'La Copa Federación', 'The 64 clubs from the bottom three divisions enter the first round. Clubs in the Primera Superior are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
     },
     _germanPlayoffsView() {
         const G = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.germanReleg : (GameState.lastSeasonReport && GameState.lastSeasonReport.germanReleg);
         const nm = id => this.clubName(id);
         let releg;
-        if (!G) releg = '<div class="po-block"><h4>Relegation</h4><p class="muted">Noch nicht gespielt (Woche 46).</p></div>';
+        if (!G) releg = '<div class="po-block"><h4>Relegation</h4><p class="muted">Not yet played (Week 46).</p></div>';
         else releg = `<div class="po-block"><h4>Relegation Bundesliga / 2. Bundesliga</h4>${this._relegTie(G.top, 'Bundesliga', '2. Bundesliga')}</div>
             <div class="po-block"><h4>Relegation 2. Bundesliga / 3. Liga</h4>${this._relegTie(G.bottom, '2. Bundesliga', '3. Liga')}</div>`;
         const lr = GameState.lastSeasonReport || {};
@@ -1410,7 +1410,7 @@ const UI = {
                 <div class="comp-row"><span>⬆️ In die 2. Regionalliga</span><span>${g.rl3Up.map(nm).join(', ')}</span></div>
                 <div class="comp-row"><span>⬇️ Aus der 2. Regionalliga</span><span>${g.rl2Down.map(nm).join(', ')}</span></div></div>`;
         }
-        return `<div class="panel"><p class="hint">Relegation (Woche 46): Bundesliga-16. gegen 2.-Bundesliga-3. und 2.-Bundesliga-16. gegen 3.-Liga-3., je über Hin- und Rückspiel, bei Gleichstand Elfmeterschiessen. Reserveteams können nicht in die 2. Bundesliga aufsteigen (Platz wird weitergegeben).</p>${releg}</div>${prBlock}`;
+        return `<div class="panel"><p class="hint">Relegation play-offs (Week 46): 16th-placed Bundesliga side v 3rd-placed 2. Bundesliga side and 16th-placed 2. Bundesliga side v 3rd-placed 3. Liga side, each over two legs; in the event of a draw, the tie will be decided by a penalty shoot-out. Reserve teams cannot be promoted to the 2. Bundesliga (the place is passed on).</p>${releg}</div>${prBlock}`;
     },
     _spanishPlayoffsView() {
         const P = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.playoffs : (GameState.lastSeasonReport && GameState.lastSeasonReport.playoffs);
@@ -1448,7 +1448,7 @@ const UI = {
                 <div class="comp-row"><span>⬆️ A Primera Inferior</span><span>${e.sgPromote.map(nm).join(', ')}</span></div>
                 <div class="comp-row"><span>⬇️ De Primera Inferior</span><span>${e.piDown.map(nm).join(', ')}</span></div></div>`;
         }
-        return `<div class="panel"><p class="hint">Play-offs de ascenso (semana 46): semifinales y final a doble partido (ida y vuelta), con penaltis si hay empate. Los filiales no pueden ascender a La Liga (la plaza pasa al siguiente equipo).</p>${blocks}</div>${prBlock}`;
+        return `<div class="panel"><p class="hint">Promotion play-offs (week 46): semi-finals and final played over two legs (home and away), with a penalty shoot-out in the event of a draw. Reserve teams cannot be promoted to La Liga (the place goes to the next team in the running).</p>${blocks}</div>${prBlock}`;
     },
     playoffsView() {
         const country = this.filters.lgCountry || 'Netherlands';
