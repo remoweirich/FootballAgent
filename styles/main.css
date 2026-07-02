@@ -501,3 +501,7 @@ svg.chart .grid { stroke: var(--line, #e5e7eb); stroke-width: 1; opacity: .55; }
 .standings tr.zone-releg-down { background: #fef2f2; }
 .zone-legend .lg-relplay { padding-left: .5rem; position: relative; }
 .zone-legend .lg-relplay::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 12px; border-radius: 2px; background: linear-gradient(#86efac, #fca5a5); }
+
+/* ---- Spain: promotion play-off legend marker (lighter green) ---- */
+.zone-legend .lg-playup { padding-left: .5rem; position: relative; }
+.zone-legend .lg-playup::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 12px; border-radius: 2px; background: #86efac; }

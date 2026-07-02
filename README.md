@@ -1,3 +1,20 @@
+## v30 — Spain added as a full country
+Spain is now a selectable home country and a scoutable foreign country, wired throughout exactly like Germany and England.
+
+**Leagues (constant sizes):** La Liga 20, La Liga 2 22, Primera Superior 22, Primera Inferior 22, Segunda Federación 20 — held constant across seasons.
+
+**Promotion / relegation.** La Liga: 18–20 down. La Liga 2: 1–2 up, 3–6 into two-legged play-offs (3 v 6 & 4 v 5, then a two-legged final) for the third promotion place, 19–22 down; max 2 reserve sides, and reserves cannot rise to La Liga (the place passes down). Primera Superior / Primera Inferior: 1–3 up, 4–7 into the same play-off (4 v 7 & 5 v 6), 19–22 down; max 4 reserve sides in Primera Superior. Segunda Federación: 1–3 up, 4–7 into the play-off, no relegation. All play-off ties are two-legged (home & away) and decided on penalties if level on aggregate, played in the same week as the other countries' play-offs.
+
+**Standings markings.** Direct promotion/relegation places show the full-strength colour bar; promotion play-off places show a lighter shade.
+
+**Cups (same weeks as the other countries, one round fewer — 64 clubs).** Copa del Rey: the 64 clubs of the top three divisions from round one, La Liga sides seeded (drawn away) and kept apart in round one. Copa Federación: the 64 clubs of the bottom three divisions, Primera Superior sides seeded (drawn away) and kept apart in round one. Both skip one cup weekend (week 32).
+
+**Reserve sides** are identified by a "B" in the club id (which isn't always shown in the name, e.g. Real Madrid Castilla, Bilbao Athletic, Valencia Mestalla).
+
+**Money.** Spanish transfer budgets and wages sit between England and Germany. Spanish scout names added.
+
+**Club colours.** Audited Spanish club colours and corrected the clearly-wrong ones (e.g. Real Madrid white, Celta Vigo sky blue, Elche green, Córdoba green, Eibar maroon-blue, Alcorcón yellow, Cartagena black-white, Pontevedra maroon, Valencia white-orange). Reserve (B) sides inherit their parent club's colours.
+
 ## v29 — Germany added as a full country
 Germany is now a selectable home country and a scoutable foreign country, wired throughout exactly like England and the Netherlands.
 

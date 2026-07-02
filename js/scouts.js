@@ -15,6 +15,10 @@ const SCOUT_NAMES = {
     Germany: {
         first: ['Michael', 'Thomas', 'Andreas', 'Stefan', 'Klaus', 'Jürgen', 'Wolfgang', 'Dieter', 'Uwe', 'Matthias', 'Frank', 'Markus', 'Christian', 'Sebastian', 'Lukas', 'Felix', 'Jonas', 'Tobias', 'Sven', 'Dirk', 'Bernd', 'Rainer', 'Horst', 'Günter', 'Helmut', 'Manfred', 'Rolf', 'Jörg', 'Kai', 'Oliver'],
         last: ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann', 'Schäfer', 'Koch', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann', 'Braun', 'Krüger', 'Hartmann', 'Lange', 'Werner', 'Krause', 'Lehmann', 'Köhler', 'Herrmann', 'Kaiser']
+    },
+    Spain: {
+        first: ['Antonio', 'Manuel', 'José', 'Francisco', 'David', 'Juan', 'Javier', 'Daniel', 'Carlos', 'Miguel', 'Alejandro', 'Rafael', 'Pablo', 'Sergio', 'Fernando', 'Jorge', 'Alberto', 'Luis', 'Álvaro', 'Adrián', 'Diego', 'Rubén', 'Óscar', 'Raúl', 'Iván', 'Pedro', 'Andrés', 'Ángel', 'Marcos', 'Gonzalo'],
+        last: ['García', 'Rodríguez', 'González', 'Fernández', 'López', 'Martínez', 'Sánchez', 'Pérez', 'Gómez', 'Martín', 'Jiménez', 'Ruiz', 'Hernández', 'Díaz', 'Moreno', 'Álvarez', 'Romero', 'Alonso', 'Gutiérrez', 'Navarro', 'Torres', 'Domínguez', 'Vázquez', 'Ramos', 'Gil', 'Serrano', 'Molina', 'Blanco', 'Castro', 'Ortega']
     }
 };
 
@@ -76,7 +80,7 @@ const Scouts = {
     },
     // per-report cost of scouting a foreign league, as a multiple of the dearest home region (travel + prestige)
     intlLeagueMult(div) {
-        const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5, REGIONAL3: 1.2, REGIONAL2: 1.5, REGIONAL1: 2, '3LIGA': 2.5, '2BUNDES': 3, BUNDES: 4.5 };
+        const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5, REGIONAL3: 1.2, REGIONAL2: 1.5, REGIONAL1: 2, '3LIGA': 2.5, '2BUNDES': 3, BUNDES: 4.5, Segunda: 1.5, PrimeraInf: 2, PrimeraSup: 2.5, LaLiga2: 3, LaLiga: 4.8 };
         return m[div] || 2.5;
     },
     intlLeagueCost(div) {

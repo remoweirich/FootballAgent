@@ -654,7 +654,7 @@ const Agency = {
     // the most a club will spend on a single player, driven by its league's wealth and its own standing.
     // the Premier League can bankroll huge fees; the Eredivisie and lower leagues simply cannot.
     _leagueCap(div) {
-        const CAP = { PREM: 95000000, CHAMP: 32000000, LEAGUE1: 11000000, LEAGUE2: 4000000, Natleague: 1500000, ERE: 24000000, EED: 8000000, TWD: 3000000, DRD: 1000000, BUNDES: 60000000, '2BUNDES': 18000000, '3LIGA': 6000000, REGIONAL1: 2500000, REGIONAL2: 1000000, REGIONAL3: 500000 };
+        const CAP = { PREM: 95000000, CHAMP: 32000000, LEAGUE1: 11000000, LEAGUE2: 4000000, Natleague: 1500000, ERE: 24000000, EED: 8000000, TWD: 3000000, DRD: 1000000, BUNDES: 60000000, '2BUNDES': 18000000, '3LIGA': 6000000, REGIONAL1: 2500000, REGIONAL2: 1000000, REGIONAL3: 500000, LaLiga: 75000000, LaLiga2: 14000000, PrimeraSup: 5000000, PrimeraInf: 2000000, Segunda: 800000 };
         return CAP[div] != null ? CAP[div] : 6000000;
     },
     buyerMaxFee(club) {

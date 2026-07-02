@@ -442,7 +442,7 @@ const Sim = {
         });
         const homeDivs = (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[hc]) || ['ERE', 'EED', 'TWD', 'DRD'];
         const champs = homeDivs.map(d => `${COMPETITIONS[d].name}: ${Clubs.getClubById(League.sortedTable(d)[0]?.clubId)?.name || '—'}`).join('<br>');
-        const CUP_KEY_COMP = { beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC', dfb: 'DFB', lpokal: 'LPOKAL' };
+        const CUP_KEY_COMP = { beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC', dfb: 'DFB', lpokal: 'LPOKAL', cdr: 'CDR', cfed: 'CFED' };
         const homeCups = (typeof COUNTRY_CUPS !== 'undefined' && COUNTRY_CUPS[hc]) || [['beker', 'KNVB Beker'], ['kbek', 'De kleine Beker']];
         const cupLine = homeCups.map(([key, label]) => {
             const wid = L && L[key] ? L[key].winner : null;
@@ -468,6 +468,8 @@ const Sim = {
             dfb: L && L.dfb ? { winner: L.dfb.winner, results: L.dfb.results } : null,
             lpokal: L && L.lpokal ? { winner: L.lpokal.winner, results: L.lpokal.results } : null,
             germanReleg: L && L.germanReleg ? { ...L.germanReleg } : null,
+            cdr: L && L.cdr ? { winner: L.cdr.winner, results: L.cdr.results } : null,
+            cfed: L && L.cfed ? { winner: L.cfed.winner, results: L.cfed.results } : null,
             prorel: null
         };
         GameState.addLog(`Season ${GameState.seasonLabel()} finished.`, 'season');
@@ -517,6 +519,7 @@ const Sim = {
         if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorel = prorel;
         if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorelEng = (GameState.league && GameState.league.prorelEng) || null;
         if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorelGer = (GameState.league && GameState.league.prorelGer) || null;
+        if (GameState.lastSeasonReport) GameState.lastSeasonReport.prorelEsp = (GameState.league && GameState.league.prorelEsp) || null;
         // add your clients' promotions/relegations (incl. those playing abroad) to the season review
         const hc = GameState.homeCountry || 'Netherlands';
         const moveLines = [];

@@ -1138,6 +1138,8 @@ const UI = {
         else if (tab === 'llc') section = this.cupLLCView();
         else if (tab === 'dfb') section = this.cupDFBView();
         else if (tab === 'lpokal') section = this.cupLandespokalView();
+        else if (tab === 'cdr') section = this.cupCDRView();
+        else if (tab === 'cfed') section = this.cupCFEDView();
         else section = this.playoffsView();
         const finished = GameState.league && GameState.league.finished;
         body.innerHTML = `<div class="view-header"><div class="vh-row"><h2>Competitions</h2>${countrySel}</div><p class="muted">${finished ? 'Season ' + GameState.seasonLabel() + ' — complete' : 'Season ' + GameState.seasonLabel()}</p></div>
@@ -1235,6 +1237,22 @@ const UI = {
         if (div === 'REGIONAL3') return `1–4 ${P}`;
         return '';
     },
+    _spanishZone(div, pos) {
+        // direct promotion/relegation = full shade; promotion play-off spots = lighter shade
+        if (div === 'LaLiga') { if (pos >= 18) return 'zone-relegate'; return ''; }
+        if (div === 'LaLiga2') { if (pos <= 2) return 'zone-promote'; if (pos <= 6) return 'zone-releg-up'; if (pos >= 19) return 'zone-relegate'; return ''; }
+        if (div === 'PrimeraSup' || div === 'PrimeraInf') { if (pos <= 3) return 'zone-promote'; if (pos <= 7) return 'zone-releg-up'; if (pos >= 19) return 'zone-relegate'; return ''; }
+        if (div === 'Segunda') { if (pos <= 3) return 'zone-promote'; if (pos <= 7) return 'zone-releg-up'; return ''; }
+        return '';
+    },
+    _spanishLegend(div) {
+        const P = '<span class="lg-pro">promote</span>', R = '<span class="lg-rel">relegate</span>', PL = '<span class="lg-playup">play-offs</span>';
+        if (div === 'LaLiga') return `18–20 ${R}`;
+        if (div === 'LaLiga2') return `1–2 ${P} · 3–6 ${PL} · 19–22 ${R}`;
+        if (div === 'PrimeraSup' || div === 'PrimeraInf') return `1–3 ${P} · 4–7 ${PL} · 19–22 ${R}`;
+        if (div === 'Segunda') return `1–3 ${P} · 4–7 ${PL}`;
+        return '';
+    },
     standingsTable(div) {
         if (!GameState.league || !GameState.league.tables[div]) return '<p class="muted">No table yet.</p>';
         const rows = League.sortedTable(div);
@@ -1261,6 +1279,7 @@ const UI = {
             const gd = r.GF - r.GA;
             let zone = '';
             if (divCountry(div) === 'Germany') zone = this._germanZone(div, i + 1, n);
+            else if (divCountry(div) === 'Spain') zone = this._spanishZone(div, i + 1);
             else if (relegate && i >= n - relCount) zone = 'zone-relegate';
             else if (mk.green.includes(r.clubId)) zone = 'zone-promote';
             else if (mk.blue.includes(r.clubId)) zone = 'zone-playoff';
@@ -1276,6 +1295,8 @@ const UI = {
         const promoTxt = engPromo ? (div === 'Natleague' ? '<span class="lg-pro">Champion promotes</span> <span class="lg-po">2–7 play-off</span>' : '<span class="lg-pro">Top 2 promote</span> <span class="lg-po">3–6 play-off</span>') : '<span class="lg-pro">Top 2 promote</span> <span class="lg-po">3–6 play-off</span>';
         const legend = (divCountry(div) === 'Germany')
             ? `<div class="zone-legend">${this._germanLegend(div)}</div>`
+            : (divCountry(div) === 'Spain')
+            ? `<div class="zone-legend">${this._spanishLegend(div)}</div>`
             : `<div class="zone-legend">${promote ? promoTxt : ''}${relegate ? ` <span class="lg-rel">Bottom ${relCount} relegate</span>` : ''}</div>`;
         const foot = footnotes.length ? `<p class="table-foot">* ${[...new Set(footnotes)].join(', ')} ${footnotes.length > 1 ? 'are reserve sides and cannot be promoted' : 'is a reserve side and cannot be promoted'} ${div === 'EED' ? 'to the Eredivisie' : 'into the same division as their first team / past the reserve-team cap'}; the spot passes to the next eligible club.</p>` : '';
         return `<table class="standings"><thead><tr><th>#</th><th>Club</th><th title="Your players">You</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${body}</tbody></table>
@@ -1352,6 +1373,19 @@ const UI = {
             <div class="comp-row"><span>Gesamt</span><span>${this.clubName(t.a)} ${t.aggA}–${t.aggB} ${this.clubName(t.b)}${pens}</span></div>
             <div class="cup-winner">✅ ${upLabel}: <strong>${this.clubName(t.winner)}</strong></div></div>`;
     },
+    _spanishCupView(key, title, hint) {
+        const C = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
+        if (!C || !C.results || !C.results.length) return `<div class="panel"><p class="muted">${title} comienza en la 1ª ronda (semana 4).</p></div>`;
+        const winner = C.winner ? `<div class="cup-winner">🏆 Campeón: <strong>${this.clubName(C.winner)}</strong></div>` : '';
+        const rounds = C.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· sem ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<p class="hint">${hint}</p>${rounds}</div>`;
+    },
+    cupCDRView() {
+        return this._spanishCupView('cdr', 'La Copa del Rey', 'Los 64 clubes de las tres primeras divisiones entran en la 1ª ronda. Los clubes de La Liga están cabezas de serie (juegan fuera) y no pueden enfrentarse en la primera ronda. Rondas en las semanas 4, 7, 15, 26, 38 y 47 (una jornada menos que los demás países).');
+    },
+    cupCFEDView() {
+        return this._spanishCupView('cfed', 'La Copa Federación', 'Los 64 clubes de las tres últimas divisiones entran en la 1ª ronda. Los clubes de la Primera Superior están cabezas de serie (juegan fuera) y no pueden enfrentarse en la primera ronda. Rondas en las semanas 4, 7, 15, 26, 38 y 47.');
+    },
     _germanPlayoffsView() {
         const G = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.germanReleg : (GameState.lastSeasonReport && GameState.lastSeasonReport.germanReleg);
         const nm = id => this.clubName(id);
@@ -1378,9 +1412,48 @@ const UI = {
         }
         return `<div class="panel"><p class="hint">Relegation (Woche 46): Bundesliga-16. gegen 2.-Bundesliga-3. und 2.-Bundesliga-16. gegen 3.-Liga-3., je über Hin- und Rückspiel, bei Gleichstand Elfmeterschiessen. Reserveteams können nicht in die 2. Bundesliga aufsteigen (Platz wird weitergegeben).</p>${releg}</div>${prBlock}`;
     },
+    _spanishPlayoffsView() {
+        const P = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.playoffs : (GameState.lastSeasonReport && GameState.lastSeasonReport.playoffs);
+        const nm = id => this.clubName(id);
+        const lk = id => `<span class="tie-club" onclick="UI.openClub('${id}')" style="cursor:pointer">${this.clubName(id)}</span>`;
+        const poTie = t => {
+            if (!t) return '';
+            const l1 = t.leg1, l2 = t.leg2, pens = t.pens ? ' <span class="pill pill-warn">pen.</span>' : '';
+            return `<div class="cup-round">
+                <div class="tie"><span>${lk(l1.h)}</span><span class="tie-score">${l1.hg}–${l1.ag}</span><span>${lk(l1.a)}</span></div>
+                <div class="tie"><span>${lk(l2.h)}</span><span class="tie-score">${l2.hg}–${l2.ag}</span><span>${lk(l2.a)}</span></div>
+                <div class="comp-row"><span>Global</span><span>${this.clubName(t.a)} ${t.aggA}–${t.aggB} ${this.clubName(t.b)}${pens}</span></div></div>`;
+        };
+        let blocks = '';
+        ['LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'].forEach(div => {
+            const po = P && P[div];
+            const title = `${COMPETITIONS[div] ? COMPETITIONS[div].name : div} — play-off de ascenso`;
+            if (!po) { blocks += `<div class="po-block"><h4>${title}</h4><p class="muted">Aún no jugado (semana 46).</p></div>`; return; }
+            blocks += `<div class="po-block"><h4>${title}</h4>
+                <div class="cup-round"><h5>Semifinales</h5>${(po.sf || []).map(poTie).join('')}</div>
+                <div class="cup-round"><h5>Final</h5>${poTie(po.final)}</div>
+                <div class="cup-winner">⬆️ Asciende: <strong>${nm(po.winner)}</strong></div></div>`;
+        });
+        const lr = GameState.lastSeasonReport || {};
+        let prBlock = '';
+        if (lr.prorelEsp) {
+            const e = lr.prorelEsp;
+            prBlock = `<div class="panel"><h3>Ascensos y descensos</h3>
+                <div class="comp-row"><span>⬆️ A La Liga</span><span>${e.l2Promote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ De La Liga</span><span>${e.llDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ A La Liga 2</span><span>${e.psPromote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ De La Liga 2</span><span>${e.l2Down.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ A Primera Superior</span><span>${e.piPromote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ De Primera Superior</span><span>${e.psDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ A Primera Inferior</span><span>${e.sgPromote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ De Primera Inferior</span><span>${e.piDown.map(nm).join(', ')}</span></div></div>`;
+        }
+        return `<div class="panel"><p class="hint">Play-offs de ascenso (semana 46): semifinales y final a doble partido (ida y vuelta), con penaltis si hay empate. Los filiales no pueden ascender a La Liga (la plaza pasa al siguiente equipo).</p>${blocks}</div>${prBlock}`;
+    },
     playoffsView() {
         const country = this.filters.lgCountry || 'Netherlands';
         if (country === 'Germany') return this._germanPlayoffsView();
+        if (country === 'Spain') return this._spanishPlayoffsView();
         const P = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.playoffs : (GameState.lastSeasonReport && GameState.lastSeasonReport.playoffs);
         const divs = ((typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[country]) || []).filter((d, i) => i > 0); // skip top tier
         let blocks = '';

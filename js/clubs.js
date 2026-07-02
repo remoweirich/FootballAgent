@@ -352,7 +352,7 @@ const LEAGUES_DATA = {
                     { id: "Unterhaching", name: "SpVgg Unterhaching", city: "Unterhaching", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 50 },
                     { id: "Illertissen", name: "FV Illertissen", city: "Illertissen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 45 },
                     { id: "Vilzing", name: "DJK Vilzing", city: "Vilzing", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 39 },
-                    { id: "Bayern II", name: "Bayern Munich II", city: "Munich", colors: { primary: "#DC052D", secondary: "#FFFFFF" }, reputation: 42 },
+                    { id: "Bayern II", name: "Bayern Munich II", city: "Munich", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 42 },
                     { id: "Oberhausen", name: "Rot-Weiß Oberhausen", city: "Oberhausen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 48 },
                     { id: "Schalke II", name: "FC Schalke 04 II", city: "Gelsenkirchen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 43 },
                     { id: "Dortmund II", name: "Borussia Dortmund II", city: "Dortmund", colors: { primary: "#FDE100", secondary: "#000000" }, reputation: 44 },
@@ -446,24 +446,24 @@ const LEAGUES_DATA = {
                 name: "La Liga", 
                 tier: 1,
                 clubs: [
-                    { id: "Real Madrid", name: "Real Madrid", city: "Madrid", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 90 },
+                    { id: "Real Madrid", name: "Real Madrid", city: "Madrid", colors: { primary: "#FFFFFF", secondary: "#FEBE10" }, reputation: 90 },
                     { id: "Barcelona", name: "FC Barcelona", city: "Barcelona", colors: { primary: "#A50044", secondary: "#005BAC" }, reputation: 90 },
                     { id: "Atletico", name: "Atletico Madrid", city: "Madrid", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 86 },
                     { id: "Villarreal", name: "Villarreal CF", city: "Villarreal", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 82 },
                     { id: "Sevilla", name: "Sevilla FC", city: "Seville", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 80 },
                     { id: "Betis", name: "Real Betis", city: "Seville", colors: { primary: "#009540", secondary: "#FFFFFF" }, reputation: 79 },
-                    { id: "Valencia", name: "Valencia CF", city: "Valencia", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 78 },
+                    { id: "Valencia", name: "Valencia CF", city: "Valencia", colors: { primary: "#FFFFFF", secondary: "#EE7203" }, reputation: 78 },
                     { id: "Real Sociedad", name: "Real Sociedad", city: "San Sebastián", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 79 },
                     { id: "Athletic Bilbao", name: "Athletic Club", city: "Bilbao", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 78 },
                     { id: "Espanyol", name: "RCD Espanyol", city: "Barcelona", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 76 },
-                    { id: "Celta Vigo", name: "RC Celta de Vigo", city: "Vigo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "Celta Vigo", name: "RC Celta de Vigo", city: "Vigo", colors: { primary: "#6AADE4", secondary: "#FFFFFF" }, reputation: 76 },
                     { id: "Vallecano", name: "Rayo Vallecano", city: "Madrid", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 75 },
                     { id: "Alaves", name: "Deportivo Alavés", city: "Vitoria-Gasteiz", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 74 },
                     { id: "Getafe", name: "Getafe CF", city: "Getafe", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 76 },
-                    { id: "Elche", name: "Elche CF", city: "Elche", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 73 },
+                    { id: "Elche", name: "Elche CF", city: "Elche", colors: { primary: "#00915A", secondary: "#FFFFFF" }, reputation: 73 },
                     { id: "Levante", name: "Levante UD", city: "Valencia", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 74 },
                     { id: "Osasuna", name: "CA Osasuna", city: "Pamplona", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 74 },
-                    { id: "Racing Santander", name: "Racing Santander", city: "Santander", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 73 },
+                    { id: "Racing Santander", name: "Racing Santander", city: "Santander", colors: { primary: "#00A94F", secondary: "#FFFFFF" }, reputation: 73 },
                     { id: "Deportivo", name: "Deportivo La Coruña", city: "La Coruña", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 72 },
                     { id: "Malaga", name: "Málaga CF", city: "Málaga", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 72 }
                 ]
@@ -480,9 +480,9 @@ const LEAGUES_DATA = {
                     { id: "Las Palmas", name: "UD Las Palmas", city: "Las Palmas", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 70 },
                     { id: "Castellón", name: "CD Castellón", city: "Castellón de la Plana", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 69 },
                     { id: "Burgos", name: "Burgos CF", city: "Burgos", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 69 },
-                    { id: "Eibar", name: "SD Eibar", city: "Eibar", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "Eibar", name: "SD Eibar", city: "Eibar", colors: { primary: "#9F1E3C", secondary: "#005BAC" }, reputation: 70 },
                     { id: "Gijón", name: "Sporting Gijón", city: "Gijón", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 70 },
-                    { id: "Cordoba", name: "Córdoba CF", city: "Córdoba", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 68 },
+                    { id: "Cordoba", name: "Córdoba CF", city: "Córdoba", colors: { primary: "#007A33", secondary: "#FFFFFF" }, reputation: 68 },
                     { id: "Ceuta", name: "AD Ceuta", city: "Ceuta", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 66 },
                     { id: "Albacete", name: "Albacete Balompié", city: "Albacete", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 67 },
                     { id: "Andorra", name: "FC Andorra", city: "Andorra la Vella", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 66 },
@@ -508,18 +508,18 @@ const LEAGUES_DATA = {
                     { id: "Mirandés", name: "CD Mirandés", city: "Miranda de Ebro", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 60 },
                     { id: "Zamora", name: "Zamora CF", city: "Zamora", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 58 },
                     { id: "Ponferradina", name: "SD Ponferradina", city: "Ponferrada", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 58 },
-                    { id: "Pontevedra", name: "Pontevedra CF", city: "Pontevedra", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 57 },
+                    { id: "Pontevedra", name: "Pontevedra CF", city: "Pontevedra", colors: { primary: "#6B2737", secondary: "#FFFFFF" }, reputation: 57 },
                     { id: "Barakaldo", name: "Barakaldo CF", city: "Barakaldo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 57 },
                     { id: "Unionistas", name: "Uniónistas CF", city: "Salamanca", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 56 },
                     { id: "Lugo", name: "CD Lugo", city: "Lugo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 55 },
                     { id: "Mérida", name: "Mérida AD", city: "Mérida", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 54 },
                     { id: "Arenas", name: "Arenas Club", city: "Getxo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 54 },
-                    { id: "Ferrol", name: "Racing de Ferrol", city: "Ferrol", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 53 },
+                    { id: "Ferrol", name: "Racing de Ferrol", city: "Ferrol", colors: { primary: "#009B48", secondary: "#FFFFFF" }, reputation: 53 },
                     { id: "Atletico Madrid B", name: "Atlético Madrileño", city: "Madrid", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 57 },
                     { id: "Villareal B", name: "Villarreal B", city: "Villarreal", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 56 },
                     { id: "Real Madrid B", name: "Real Madrid Castilla", city: "Madrid", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 56 },
                     { id: "Europa", name: "CE Europa", city: "Barcelona", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 54 },
-                    { id: "Cartagena", name: "FC Cartagena", city: "Cartagena", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 53 },
+                    { id: "Cartagena", name: "FC Cartagena", city: "Cartagena", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 53 },
                     { id: "Antequera", name: "Antequera CF", city: "Antequera", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 52 },
                     { id: "Algeciras", name: "Algeciras CF", city: "Algeciras", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 51 },
                     { id: "Hércules", name: "Hércules CF", city: "Alicante", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 50 },
@@ -531,7 +531,7 @@ const LEAGUES_DATA = {
                 name: "Primera Inferior",
                 tier: 4,
                 clubs: [
-                    { id: "Alcorcón", name: "AD Alcorcón", city: "Alcorcón", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 49 },
+                    { id: "Alcorcón", name: "AD Alcorcón", city: "Alcorcón", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 49 },
                     { id: "Ibiza", name: "UD Ibiza", city: "Ibiza", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 48 },
                     { id: "Teruel", name: "CD Teruel", city: "Teruel", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 47 },
                     { id: "Gimnástica", name: "Gimnástica de Torrelavega", city: "Torrelavega", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 46 },
@@ -552,7 +552,7 @@ const LEAGUES_DATA = {
                     { id: "Barcelona B", name: "FC Barcelona B", city: "Barcelona", colors: { primary: "#A50044", secondary: "#005BAC" }, reputation: 48 },
                     { id: "Terrassa", name: "Terrassa FC", city: "Terrassa", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
                     { id: "Rayo Cantabria", name: "Rayo Cantabria", city: "Santander", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 37 },
-                    { id: "Basconia", name: "CD Basconia", city: "Bilbao", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 37 },
+                    { id: "Basconia", name: "CD Basconia", city: "Bilbao", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 37 }
                 ]
             },
             {
@@ -560,7 +560,26 @@ const LEAGUES_DATA = {
                 name: "Segunda Federación",
                 tier: 5,
                 clubs: [
-                    { id: "Real Oviedo B", name: "Real Oviedo Vetusta", city: "Oviedo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 }
+                    { id: "Real Oviedo B", name: "Real Oviedo Vetusta", city: "Oviedo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "Bergantiños", name: "Bergantiños FC", city: "Carballo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38},
+                    { id: "Alavés B", name: "Deportivo Alavés B", city: "Vitoria-Gasteiz", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "Sestao River", name: "Sestao River", city: "Sestao", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 37 },
+                    { id: "Arosa", name: "Arosa SC", city: "Vilagarcía de Arousa", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "Peña Sport", name: "Peña Sport FC", city: "Tafalla", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 30 },
+                    { id: "Sevilla Atlético", name: "FC Sevilla Atlético", city: "Sevilla", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 36 },
+                    { id: "R. Huelva", name: "Recreativo Huelva", city: "Huelva", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 34 },
+                    { id: "Xerez", name: "Deportivo Xerez", city: "Jerez de la Frontera ", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "Marbella", name: "Marbella FC", city: "Marbella", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "Don Benito", name: "CD Don Benito", city: "Don Benito", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 30 },
+                    { id: "Lucena", name: "Ciudad Lucena", city: "Lucena", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "Tamaraceite", name: "UD Tamaraceite", city: "Las Palmas de Gran Canaria", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "Sanluqueño", name: "Atlético Sanluqueño", city: "Sanlúcar de Barrameda", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "UCAM Murcia", name: "UCAM Murcia", city: "Murcia", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "Valencia B", name: "Valencia Mestalla", city: "Valencia", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "Intercity", name: "CF Intercity", city: "Alicante", colors: { primary: "#A50044", secondary: "#005BAC" }, reputation: 29 },
+                    { id: "CD Guadalajara", name: "CD Guadalajara", city: "Guadalajara", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "Salamanca", name: "Salamanca CF UDS", city: "Villares de la Reina (Salamanca)", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "Atlético Albacete", name: "Atlético Albacete", city: "Albacete", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 33 }
                 ]
             }
         ]
@@ -631,7 +650,15 @@ const CITY_REGION = {
     "Berlin":"nordoster","Leipzig":"nordoster","Dresden":"nordoster","Magdeburg":"nordoster","Cottbus":"nordoster","Chemnitz":"nordoster","Potsdam":"nordoster","Jena":"nordoster","Zwickau":"nordoster","Halle":"nordoster","Erfurt":"nordoster","Greifswald":"nordoster","Aue":"nordoster",
     "Dortmund":"westen","Gelsenkirchen":"westen","Cologne":"westen","Leverkusen":"westen","Mönchengladbach":"westen","Düsseldorf":"westen","Essen":"westen","Duisburg":"westen","Bochum":"westen","Bielefeld":"westen","Münster":"westen","Paderborn":"westen","Aachen":"westen","Verl":"westen","Oberhausen":"westen","Gütersloh":"westen","Siegen":"westen","Bergisch Gladbach":"westen","Wiedenbrück":"westen","Rödinghausen":"westen","Bocholt":"westen","Lotte":"westen","Bonn":"westen",
     "Stuttgart":"sudwesten","Freiburg":"sudwesten","Hoffenheim":"sudwesten","Mainz":"sudwesten","Kaiserslautern":"sudwesten","Karlsruhe":"sudwesten","Heidenheim":"sudwesten","Darmstadt":"sudwesten","Frankfurt":"sudwesten","Mannheim":"sudwesten","Saarbrücken":"sudwesten","Elversberg":"sudwesten","Homburg":"sudwesten","Trier":"sudwesten","Walldorf":"sudwesten","Sandhausen":"sudwesten","Aalen":"sudwesten","Ulm":"sudwesten","Freiberg":"sudwesten","Kassel":"sudwesten","Wiesbaden":"sudwesten","Offenbach":"sudwesten","Fulda":"sudwesten","Steinbach":"sudwesten","Aspach":"sudwesten",
-    "Hamburg":"nord","Bremen":"nord","Hanover":"nord","Hannover":"nord","Kiel":"nord","Wolfsburg":"nord","Braunschweig":"nord","Osnabrück":"nord","Oldenburg":"nord","Meppen":"nord","Emden":"nord","Norderstedt":"nord","Flensburg":"nord","Lübeck":"nord","Todesfelde":"nord","Drochtersen":"nord","Jeddeloh":"nord","Garbsen":"nord","Schöningen":"nord","Rostock":"nord"
+    "Hamburg":"nord","Bremen":"nord","Hanover":"nord","Hannover":"nord","Kiel":"nord","Wolfsburg":"nord","Braunschweig":"nord","Osnabrück":"nord","Oldenburg":"nord","Meppen":"nord","Emden":"nord","Norderstedt":"nord","Flensburg":"nord","Lübeck":"nord","Todesfelde":"nord","Drochtersen":"nord","Jeddeloh":"nord","Garbsen":"nord","Schöningen":"nord","Rostock":"nord",
+    // ---- Spain ----
+    "Seville":"sur de españa","Sevilla":"sur de españa","Málaga":"sur de españa","Córdoba":"sur de españa","Granada":"sur de españa","Cádiz":"sur de españa","Almería":"sur de españa","Huelva":"sur de españa","Jerez de la Frontera ":"sur de españa","Marbella":"sur de españa","Lucena":"sur de españa","Sanlúcar de Barrameda":"sur de españa","Murcia":"sur de españa","Cartagena":"sur de españa","Antequera":"sur de españa","Algeciras":"sur de españa","Águilas":"sur de españa","Jaén":"sur de españa","Ceuta":"sur de españa","Torremolinos":"sur de españa",
+    "Madrid":"españa central","Getafe":"españa central","Leganés":"españa central","Alcorcón":"españa central","Majadahonda":"españa central","Guadalajara":"españa central","Mérida":"españa central","Cáceres":"españa central","Almendralejo":"españa central","Don Benito":"españa central","Coria":"españa central","Albacete":"españa central",
+    "Barcelona":"noreste de españa","Valencia":"noreste de españa","Villarreal":"noreste de españa","Zaragoza":"noreste de españa","Huesca":"noreste de españa","Elche":"noreste de españa","Castellón de la Plana":"noreste de españa","Girona":"noreste de españa","Sabadell":"noreste de españa","Terrassa":"noreste de españa","Alicante":"noreste de españa","Elda":"noreste de españa","Teruel":"noreste de españa","Andorra la Vella":"noreste de españa",
+    "Vigo":"noroeste de españa","La Coruña":"noroeste de españa","Oviedo":"noroeste de españa","Gijón":"noroeste de españa","León":"noroeste de españa","Ponferrada":"noroeste de españa","Pontevedra":"noroeste de españa","Zamora":"noroeste de españa","Lugo":"noroeste de españa","Ferrol":"noroeste de españa","Salamanca":"noroeste de españa","Valladolid":"noroeste de españa","Burgos":"noroeste de españa","Ourense":"noroeste de españa","Villares de la Reina (Salamanca)":"noroeste de españa","Vilagarcía de Arousa":"noroeste de españa","Avilés":"noroeste de españa","Miranda de Ebro":"noroeste de españa","Carballo":"noroeste de españa",
+    "Bilbao":"nor de españa","San Sebastián":"nor de españa","Vitoria-Gasteiz":"nor de españa","Pamplona":"nor de españa","Santander":"nor de españa","Eibar":"nor de españa","Barakaldo":"nor de españa","Getxo":"nor de españa","Sestao":"nor de españa","Irun":"nor de españa","Logroño":"nor de españa","Tafalla":"nor de españa","Torrelavega":"nor de españa",
+    "Palma de Mallorca":"islas","Las Palmas":"islas","Santa Cruz de Tenerife":"islas","Ibiza":"islas","Las Palmas de Gran Canaria":"islas"
+
 };
 function regionOfCity(city){ return CITY_REGION[city] || 'middelland'; }
 function regionsForCountry(country){ return REGIONS_BY_COUNTRY[country] || REGIONS; }
@@ -647,11 +674,13 @@ function youthTeamName(parentOrId){
     if (!c) return 'U21';
     if (c.country === 'Netherlands') return 'Jong ' + c.name;
     if (c.country === 'Germany') return c.name + ' II';
+    if (c.country === 'Spain') return c.name + ' B';
     return c.name + ' U21';
 }
 function isReserveClub(idOrClub){
     const c = (typeof idOrClub === 'string') ? Clubs.getClubById(idOrClub) : idOrClub;
     if (!c) return false;
+    if (c.country === 'Spain' && / B$/.test(c.id)) return true;
     let base = null;
     if (/^Jong\s/i.test(c.name)) base = c.name.replace(/^Jong\s+/i, '');
     else if (/\sU21$/.test(c.name)) base = c.name.replace(/\sU21$/, '');
@@ -693,10 +722,12 @@ const Clubs = {
         
         console.log(`✅ ${this.allClubs.length} clubs created`);
         // reserve/second teams wear their parent club's colours (for consistent emblems)
+        const ES_RESERVE_PARENT = { 'Real Sociedad B': 'Real Sociedad', 'Celta Vigo B': 'Celta Vigo', 'Atletico Madrid B': 'Atletico', 'Villareal B': 'Villarreal', 'Real Madrid B': 'Real Madrid', 'Athletic Bilbao B': 'Athletic Bilbao', 'Barcelona B': 'Barcelona', 'Real Oviedo B': 'Oviedo', 'Alavés B': 'Alaves', 'Valencia B': 'Valencia' };
         this.allClubs.forEach(c => {
             if (!isReserveClub(c.id)) return;
-            const base = c.name.replace(/^Jong\s+/i, '').replace(/\sU21$/, '').replace(/\sII$/, '');
-            const parent = this.allClubs.find(o => o.id !== c.id && o.name === base);
+            let parent = null;
+            if (c.country === 'Spain' && ES_RESERVE_PARENT[c.id]) parent = this.getClubById(ES_RESERVE_PARENT[c.id]);
+            else { const base = c.name.replace(/^Jong\s+/i, '').replace(/\sU21$/, '').replace(/\sII$/, ''); parent = this.allClubs.find(o => o.id !== c.id && o.name === base); }
             if (parent) c.colors = { primary: parent.colors.primary, secondary: parent.colors.secondary };
         });
         return this.allClubs;
@@ -719,8 +750,8 @@ const Clubs = {
         return this.allClubs.filter(c => c.region === regionId);
     },
 
-    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga' },
-    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6 },
+    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga', LaLiga: 'La Liga', LaLiga2: 'La Liga 2', PrimeraSup: 'Primera Superior', PrimeraInf: 'Primera Inferior', Segunda: 'Segunda Federación' },
+    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6, LaLiga: 1, LaLiga2: 2, PrimeraSup: 3, PrimeraInf: 4, Segunda: 5 },
     setDivision(clubId, divId) {
         const c = this.getClubById(clubId); if (!c) return;
         c.division = divId; c.tier = this.DIV_TIERS[divId]; c.divisionName = this.DIV_NAMES[divId];
