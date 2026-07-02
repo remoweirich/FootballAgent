@@ -1350,20 +1350,20 @@ const UI = {
     },
     cupDFBView() {
         const D = (GameState.league && GameState.league.dfb) || (GameState.lastSeasonReport && GameState.lastSeasonReport.dfb);
-        if (!D || !D.results || !D.results.length) return '<div class="panel"><p class="muted">Der DFB Pokal beginnt in Woche 4 mit der 1. Runde.</p></div>';
-        const winner = D.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(D.winner)}</strong></div>` : '';
-        const rounds = D.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· Wo ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        if (!D || !D.results || !D.results.length) return '<div class="panel"><p class="muted">The DFB Pokal kicks off in week 4.</p></div>';
+        const winner = D.winner ? `<div class="cup-winner">🏆 Winnter: <strong>${this.clubName(D.winner)}</strong></div>` : '';
+        const rounds = D.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
         return `<div class="panel">${winner}<p class="hint">All 128 German clubs will enter the competition in the first round. Teams from the Bundesliga, 2. Bundesliga and 3. Liga are seeded (as the away team) and will not face each other in the first round. Rounds will take place in weeks 4, 7, 15, 26, 32, 38 and 47.</p>${rounds}</div>`;
     },
     cupLandespokalView() {
         const P = (GameState.league && GameState.league.lpokal) || (GameState.lastSeasonReport && GameState.lastSeasonReport.lpokal);
-        if (!P || !P.results || !P.results.length) return '<div class="panel"><p class="muted">Der Landespokal beginnt in Woche 4 mit der 1. Runde.</p></div>';
-        const winner = P.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(P.winner)}</strong></div>` : '';
-        const rounds = P.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· Wo ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        if (!P || !P.results || !P.results.length) return '<div class="panel"><p class="muted">The Landespokal kicks off in week 4.</p></div>';
+        const winner = P.winner ? `<div class="cup-winner">🏆 Winner: <strong>${this.clubName(P.winner)}</strong></div>` : '';
+        const rounds = P.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
         return `<div class="panel">${winner}<p class="hint">The 48 clubs in the 1st and 2nd Regionalliga will play two rounds (Weeks 4 & 7); the 12 remaining teams will be drawn together with the 20 teams from the 3. Liga from the round of 32 (Week 15) onwards. Further rounds will take place in Weeks 26, 32, 38 and 47.</p>${rounds}</div>`;
     },
     _relegTie(t, upLabel, downLabel) {
-        if (!t) return '<p class="muted">Nicht gespielt (Woche 46).</p>';
+        if (!t) return '<p class="muted">Not yet played (week 46).</p>';
         const nm = id => `<span class="tie-club" onclick="UI.openClub('${id}')" style="cursor:pointer">${this.clubName(id)}</span>`;
         const l1 = t.leg1, l2 = t.leg2;
         const pens = t.pens ? ` <span class="pill pill-warn">i.E.</span>` : '';
@@ -1375,9 +1375,9 @@ const UI = {
     },
     _spanishCupView(key, title, hint) {
         const C = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
-        if (!C || !C.results || !C.results.length) return `<div class="panel"><p class="muted">${title} comienza en la 1ª ronda (semana 4).</p></div>`;
-        const winner = C.winner ? `<div class="cup-winner">🏆 Campeón: <strong>${this.clubName(C.winner)}</strong></div>` : '';
-        const rounds = C.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· sem ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        if (!C || !C.results || !C.results.length) return `<div class="panel"><p class="muted">${title} starts its first round in week 4.</p></div>`;
+        const winner = C.winner ? `<div class="Winner">🏆 Campeón: <strong>${this.clubName(C.winner)}</strong></div>` : '';
+        const rounds = C.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
         return `<div class="panel">${winner}<p class="hint">${hint}</p>${rounds}</div>`;
     },
     cupCDRView() {
