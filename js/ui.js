@@ -1351,7 +1351,7 @@ const UI = {
     cupDFBView() {
         const D = (GameState.league && GameState.league.dfb) || (GameState.lastSeasonReport && GameState.lastSeasonReport.dfb);
         if (!D || !D.results || !D.results.length) return '<div class="panel"><p class="muted">The DFB Pokal kicks off in week 4.</p></div>';
-        const winner = D.winner ? `<div class="cup-winner">🏆 Winnter: <strong>${this.clubName(D.winner)}</strong></div>` : '';
+        const winner = D.winner ? `<div class="cup-winner">🏆 Winner: <strong>${this.clubName(D.winner)}</strong></div>` : '';
         const rounds = D.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
         return `<div class="panel">${winner}<p class="hint">All 128 German clubs will enter the competition in the first round. Teams from the Bundesliga, 2. Bundesliga and 3. Liga are seeded (as the away team) and will not face each other in the first round. Rounds will take place in weeks 4, 7, 15, 26, 32, 38 and 47.</p>${rounds}</div>`;
     },
@@ -1381,10 +1381,10 @@ const UI = {
         return `<div class="panel">${winner}<p class="hint">${hint}</p>${rounds}</div>`;
     },
     cupCDRView() {
-        return this._spanishCupView('cdr', 'La Copa del Rey', 'All 64 clubs in the top three divisions enter the first round. La Liga clubs are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
+        return this._spanishCupView('cdr', 'Copa del Rey', 'All 64 clubs in the top three divisions enter the first round. La Liga clubs are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
     },
     cupCFEDView() {
-        return this._spanishCupView('cfed', 'La Copa Federación', 'The 64 clubs from the bottom three divisions enter the first round. Clubs in the Primera Superior are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
+        return this._spanishCupView('cfed', 'Copa Federación', 'The 64 clubs from the bottom three divisions enter the first round. Clubs in the Primera Superior are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
     },
     _germanPlayoffsView() {
         const G = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.germanReleg : (GameState.lastSeasonReport && GameState.lastSeasonReport.germanReleg);
@@ -1399,16 +1399,16 @@ const UI = {
             const g = lr.prorelGer;
             const up16 = g.b2_3Up ? ' (+ Relegations-Sieger)' : '', dn16 = g.buli16Down ? ' (inkl. Relegation)' : '';
             prBlock = `<div class="panel"><h3>Auf- &amp; Abstieg</h3>
-                <div class="comp-row"><span>⬆️ In die Bundesliga</span><span>${g.buliUpDirect.map(nm).join(', ')}${up16}</span></div>
-                <div class="comp-row"><span>⬇️ Aus der Bundesliga</span><span>${g.buliDown.map(nm).join(', ')}${dn16}</span></div>
-                <div class="comp-row"><span>⬆️ In die 2. Bundesliga</span><span>${g.l3UpDirect.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ Aus der 2. Bundesliga</span><span>${g.b2DownDirect.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬆️ In die 3. Liga</span><span>${g.rl1Up.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ Aus der 3. Liga</span><span>${g.l3DownDirect.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬆️ In die 1. Regionalliga</span><span>${g.rl2Up.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ Aus der 1. Regionalliga</span><span>${g.rl1Down.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬆️ In die 2. Regionalliga</span><span>${g.rl3Up.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ Aus der 2. Regionalliga</span><span>${g.rl2Down.map(nm).join(', ')}</span></div></div>`;
+                <div class="comp-row"><span>⬆️ To the Bundesliga</span><span>${g.buliUpDirect.map(nm).join(', ')}${up16}</span></div>
+                <div class="comp-row"><span>⬇️ From the Bundesliga</span><span>${g.buliDown.map(nm).join(', ')}${dn16}</span></div>
+                <div class="comp-row"><span>⬆️ To the 2. Bundesliga</span><span>${g.l3UpDirect.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From the 2. Bundesliga</span><span>${g.b2DownDirect.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To the 3. Liga</span><span>${g.rl1Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From the 3. Liga</span><span>${g.l3DownDirect.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To the 1. Regionalliga</span><span>${g.rl2Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From the 1. Regionalliga</span><span>${g.rl1Down.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To the 2. Regionalliga</span><span>${g.rl3Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From the 2. Regionalliga</span><span>${g.rl2Down.map(nm).join(', ')}</span></div></div>`;
         }
         return `<div class="panel"><p class="hint">Relegation play-offs (Week 46): 16th-placed Bundesliga side v 3rd-placed 2. Bundesliga side and 16th-placed 2. Bundesliga side v 3rd-placed 3. Liga side, each over two legs; in the event of a draw, the tie will be decided by a penalty shoot-out. Reserve teams cannot be promoted to the 2. Bundesliga (the place is passed on).</p>${releg}</div>${prBlock}`;
     },
@@ -1427,8 +1427,8 @@ const UI = {
         let blocks = '';
         ['LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'].forEach(div => {
             const po = P && P[div];
-            const title = `${COMPETITIONS[div] ? COMPETITIONS[div].name : div} — play-off de ascenso`;
-            if (!po) { blocks += `<div class="po-block"><h4>${title}</h4><p class="muted">Aún no jugado (semana 46).</p></div>`; return; }
+            const title = `${COMPETITIONS[div] ? COMPETITIONS[div].name : div} — promotion play-off`;
+            if (!po) { blocks += `<div class="po-block"><h4>${title}</h4><p class="muted">Not yet played (week 46).</p></div>`; return; }
             blocks += `<div class="po-block"><h4>${title}</h4>
                 <div class="cup-round"><h5>Semifinales</h5>${(po.sf || []).map(poTie).join('')}</div>
                 <div class="cup-round"><h5>Final</h5>${poTie(po.final)}</div>
@@ -1439,14 +1439,14 @@ const UI = {
         if (lr.prorelEsp) {
             const e = lr.prorelEsp;
             prBlock = `<div class="panel"><h3>Ascensos y descensos</h3>
-                <div class="comp-row"><span>⬆️ A La Liga</span><span>${e.l2Promote.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ De La Liga</span><span>${e.llDown.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬆️ A La Liga 2</span><span>${e.psPromote.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ De La Liga 2</span><span>${e.l2Down.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬆️ A Primera Superior</span><span>${e.piPromote.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ De Primera Superior</span><span>${e.psDown.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬆️ A Primera Inferior</span><span>${e.sgPromote.map(nm).join(', ')}</span></div>
-                <div class="comp-row"><span>⬇️ De Primera Inferior</span><span>${e.piDown.map(nm).join(', ')}</span></div></div>`;
+                <div class="comp-row"><span>⬆️ To La Liga</span><span>${e.l2Promote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From La Liga</span><span>${e.llDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To La Liga 2</span><span>${e.psPromote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From La Liga 2</span><span>${e.l2Down.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To Primera Superior</span><span>${e.piPromote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From Primera Superior</span><span>${e.psDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ To Primera Inferior</span><span>${e.sgPromote.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ From Primera Inferior</span><span>${e.piDown.map(nm).join(', ')}</span></div></div>`;
         }
         return `<div class="panel"><p class="hint">Promotion play-offs (week 46): semi-finals and final played over two legs (home and away), with a penalty shoot-out in the event of a draw. Reserve teams cannot be promoted to La Liga (the place goes to the next team in the running).</p>${blocks}</div>${prBlock}`;
     },
