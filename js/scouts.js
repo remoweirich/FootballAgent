@@ -31,13 +31,13 @@ const Scouts = {
     },
     _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); },
 
-    // weekly salary grows steeply with quality
-    salaryFor(q) { return Math.round(8 + q * q * 0.30); },
-    _q(mean, sd) { return Math.max(3, Math.min(95, Math.round(PlayerGen.gauss(mean, sd)))); },
+    // weekly salary grows steeply with quality (~€3.3k at 70, €6.2k at 80, €10.7k at 90, €16.6k at 99)
+    salaryFor(q) { return Math.round(17400 * Math.pow(Math.max(0, q) / 100, 4.63) / 10) * 10; },
+    _q(mean, sd) { return Math.max(3, Math.min(99, Math.round(PlayerGen.gauss(mean, sd)))); },
 
     // What you can attract depends on agency reputation. Three suggestions, scaled to your standing,
-    // never below quality 15, with the occasional stand-out available.
-    _clampQ(q) { return Math.max(15, Math.min(95, Math.round(q))); },
+    // never below quality 15, with the occasional stand-out available — a genuine 99 is rare but possible.
+    _clampQ(q) { return Math.max(15, Math.min(99, Math.round(q))); },
     titleFor(q) { return q >= 70 ? 'Chief scout' : q >= 52 ? 'Senior scout' : q >= 34 ? 'Lead scout' : q >= 22 ? 'Regional scout' : 'Local talent spotter'; },
     catalogue() {
         const rep = GameState.agency.reputation;
@@ -49,10 +49,11 @@ const Scouts = {
         return [q1, q2, q3].map(q => this.makeOffer(this.titleFor(q), q));
     },
     makeOffer(title, quality) {
+        const weeklyCost = Math.round(this.salaryFor(quality) * (0.85 + Math.random() * 0.30) / 10) * 10;
         return {
             id: 's_' + Math.random().toString(36).slice(2, 8),
             name: this.scoutName(), title,
-            quality, weeklyCost: this.salaryFor(quality), region: null, maxTalentAge: 22
+            quality, weeklyCost, region: null, maxTalentAge: 22
         };
     },
     setMaxAge(scoutId, age) {

@@ -31,9 +31,14 @@ const PlayerGen = {
         return 26 + Math.floor(Math.random() * 4);
     },
 
-    wageFor(ability, tier) {
-        let w = 0.5 * Math.pow(ability, 2);
-        if (tier === 1) w *= 1.6; else if (tier === 2) w *= 1.1;
+    // pay scales with the club's actual reputation, not its tier label — a Dutch Derde Divisie side
+    // (amateur, reputation ~30) pays far less than a similarly-tiered but professional foreign club.
+    // Above ability 50 pay accelerates (a great player isn't just "a bit more" than a good one — the gap
+    // to genuine elite quality is where the big money is), while lower abilities are untouched.
+    wageFor(ability, reputation) {
+        const rep = reputation != null ? reputation : 45;
+        let w = 0.5 * Math.pow(ability, 2) * Math.pow(1.045, Math.max(0, ability - 50));
+        w *= Math.max(0.28, Math.min(2.2, Math.pow(rep / 50, 1.4)));
         return Math.max(30, Math.round(w / 10) * 10);
     },
     sponsorBaseFor(ability) { return ability < 60 ? 0 : Math.round(Math.pow(ability - 55, 2) * 5 / 10) * 10; },
@@ -53,7 +58,7 @@ const PlayerGen = {
         const isYouth = age <= 22;
         const peakAge = this.peakAgeFor(position);
         const potential = isYouth ? this.youthPotential(age, ability) : Math.max(ability, ability + (age < peakAge ? 3 : 0));
-        const wage = Math.round(this.wageFor(ability, club.tier) * (COUNTRY_WAGE_MULT[club.country] || 1) / 10) * 10;
+        const wage = Math.round(this.wageFor(ability, club.reputation) * (COUNTRY_WAGE_MULT[club.country] || 1) / 10) * 10;
         return {
             id: this._id(),
             name: generateName(nat), nationality: nat, nationalityFlag: getNationalityFlag(nat),

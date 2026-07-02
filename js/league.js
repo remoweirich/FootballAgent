@@ -927,6 +927,10 @@ const League = {
         if (L.kbek && L.kbek.winner) this.awardTrophy(L.kbek.winner, 'KBEK', year, awarded);
         if (L.facup && L.facup.winner) this.awardTrophy(L.facup.winner, 'FACUP', year, awarded);
         if (L.llc && L.llc.winner) this.awardTrophy(L.llc.winner, 'LLC', year, awarded);
+        if (L.dfb && L.dfb.winner) this.awardTrophy(L.dfb.winner, 'DFB', year, awarded);
+        if (L.lpokal && L.lpokal.winner) this.awardTrophy(L.lpokal.winner, 'LPOKAL', year, awarded);
+        if (L.cdr && L.cdr.winner) this.awardTrophy(L.cdr.winner, 'CDR', year, awarded);
+        if (L.cfed && L.cfed.winner) this.awardTrophy(L.cfed.winner, 'CFED', year, awarded);
         L.finished = true;
         return awarded;
     },

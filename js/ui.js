@@ -125,6 +125,12 @@ const UI = {
         return id;
     },
     clubLabel(clubId, loan, youth) { const n = this.clubName(clubId); if (youth) return n; return loan ? `${n} <span class="loan-tag">(Loan)</span>` : n; },
+    // wraps clubHtml in a click-to-open-club-page span when the club actually exists (skips virtual U21 sides);
+    // stops the click bubbling up to a parent row's own onclick (e.g. a season header toggle)
+    clubLink(clubId, clubHtml) {
+        if (!Clubs.getClubById(clubId)) return clubHtml;
+        return `<span onclick="event.stopPropagation();UI.openClub('${clubId}')" style="cursor:pointer;text-decoration:underline dotted">${clubHtml}</span>`;
+    },
 
     // ---------- chrome ----------
     refreshTopbar() {
@@ -369,7 +375,7 @@ const UI = {
         const r = Scouts.assignRegion(scoutId, sel.value); GameState.save(); this.refreshTopbar(); this.renderScouts();
         if (!r.ok) alert(r.message);
     },
-    setScoutAge(scoutId, age) { Scouts.setMaxAge(scoutId, +age); GameState.save(); this.renderScouts(); },
+    setScoutAge(scoutId, age) { Scouts.setMaxAge(scoutId, +age); GameState.save(); },
     hireScout(o) { const r = Scouts.hire(o); GameState.save(); this.refreshTopbar(); this.renderScouts(); if (!r.ok) alert(r.message); },
     releaseScout(id) { Scouts.release(id); GameState.save(); this.refreshTopbar(); this.renderScouts(); },
 
@@ -536,10 +542,10 @@ const UI = {
             <div class="slider-block"><label>Wage at ${to.name}: <strong id="wgVal">€${this.money(o.proposedWage)}/wk</strong> <span class="cap">(your cut: €<span id="wgCut">${this.money(cut(o.proposedWage))}</span>/wk)</span></label>
                 <input type="range" id="wgSlider" min="${o.proposedWage}" max="${wageMax}" step="10" value="${o.proposedWage}"></div>
             <div class="slider-block"><label>Squad role <span class="cap">(more minutes = faster development)</span></label>
-                <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === (o.role || 'rotation') ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
+                <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === (o.role || 'rotation') ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select></div>
             <div class="slider-block"><label>Contract length: <strong id="tmVal">3</strong> season(s)</label><input type="range" id="tmSlider" min="1" max="6" value="3"></div>
             <div class="slider-block"><label>Your agent's fee (Handgeld): <span class="cap">(up to €5m on big transfers)</span> €<strong id="sbVal">0</strong></label><input type="range" id="sbSlider" min="0" max="${bonusMax}" step="${Math.max(10, Math.round(bonusMax / 50))}" value="0"></div>
-            ${(() => { const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id); return others.length ? `<div class="callout">Competing bids: ${others.map(x => `<a href="#" onclick="UI.openMail('${x.id}');return false;">${Clubs.getClubById(x.offer.toClubId)?.name} · ${ROLE_LABEL[x.offer.role || 'rotation']}</a>`).join(' · ')}</div>` : ''; })()}
+            ${(() => { const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id); return others.length ? `<div class="callout">Competing bids: ${others.map(x => `<a href="#" onclick="UI.openMail('${x.id}');return false;">${Clubs.getClubById(x.offer.toClubId)?.name} · ${roleLabel(x.offer.role || 'rotation', p.age)}</a>`).join(' · ')}</div>` : ''; })()}
             <div class="modal-actions"><button class="btn-ghost danger" onclick="UI.rejectMail('${m.id}')">Reject</button><button class="btn-secondary" onclick="UI.proposePackage('${to.id}')">Propose package</button></div>
             <div id="modalResult"></div>`);
         document.getElementById('tmSlider').addEventListener('input', e => document.getElementById('tmVal').textContent = e.target.value);
@@ -561,7 +567,7 @@ const UI = {
         const r = Agency.evaluateTransfer(p, club, pkg, this._ctx.pkgRound++);
         const res = document.getElementById('modalResult');
         const c = r.counter;
-        const pkgLine = `€${this.money(c.wage)}/wk · ${ROLE_LABEL[c.role]} · ${c.term}yr · €${this.money(c.bonus)} bonus`;
+        const pkgLine = `€${this.money(c.wage)}/wk · ${roleLabel(c.role, p.age)} · ${c.term}yr · €${this.money(c.bonus)} bonus`;
         if (r.status === 'accept') {
             const ar = Agency.acceptTransfer(m, c.wage, c.role, c.term, c.bonus); GameState.save(); this.refreshTopbar();
             res.innerHTML = `<div class="result ok">${r.message}<br><span class="muted">${ar.message}</span></div><div class="modal-actions"><button class="btn-primary" onclick="UI.closeModal();UI.switchView('clients')">Done</button></div>`;
@@ -605,7 +611,7 @@ const UI = {
                 <input type="range" id="wgSlider" min="${o.proposedWage}" max="${wageMax}" step="10" value="${o.proposedWage}">
                 <button class="btn-secondary sm" onclick="UI.negRenewWage('${club.id}')">Put it to the club</button> <span id="wgMsg" class="inline-msg"></span></div>
             <div class="slider-block"><label>Squad role at ${club.name}</label>
-                <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === p.squadRole ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
+                <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === p.squadRole ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select></div>
             <div class="slider-block"><label>Contract length: <strong id="tmVal">${o.proposedTermSeasons}</strong> season(s)</label><input type="range" id="tmSlider" min="1" max="6" value="${o.proposedTermSeasons}"></div>
             <div class="modal-actions"><button class="btn-ghost danger" onclick="UI.rejectMail('${m.id}')">Decline</button><button class="btn-primary" onclick="UI.doAcceptRenewal('${m.id}')">Accept renewal</button></div>
             <div id="modalResult"></div>`);
@@ -633,7 +639,7 @@ const UI = {
         const offered = o.role || 'starter';
         this._ctx = { loanMailId: m.id, loanRole: offered, loanRound: 1 };   // loanRole = role the club has agreed to so far
         const others = GameState.inbox.filter(x => x.kind === 'loan' && x.offer.playerId === p.id && x.id !== m.id);
-        const compare = others.length ? `<div class="callout">Other clubs after ${p.name}: ${others.map(x => `<a href="#" onclick="UI.openMail('${x.id}');return false;">${Clubs.getClubById(x.offer.toClubId)?.name} (${ROLE_LABEL[x.offer.role || 'starter']})</a>`).join(' · ')}</div>` : '';
+        const compare = others.length ? `<div class="callout">Other clubs after ${p.name}: ${others.map(x => `<a href="#" onclick="UI.openMail('${x.id}');return false;">${Clubs.getClubById(x.offer.toClubId)?.name} (${roleLabel(x.offer.role || 'starter', p.age)})</a>`).join(' · ')}</div>` : '';
         const durOpts = Agency.loanDurationOptions();
         const inWindow = durOpts.length > 0;
         const durBlock = inWindow
@@ -642,10 +648,10 @@ const UI = {
         const acceptBtn = inWindow ? `<button class="btn-primary" onclick="UI.doAcceptLoan('${m.id}')">Accept loan</button>` : '';
         this.openModal(`<h2>🔁 Loan — ${p.name}</h2>
             <p class="greet">“${Agency.greetingFor(to.id)}”</p>
-            <p class="muted">${to.name} (${to.divisionName})${this.clubPosLine(to.id)}${p.clubId ? ` · from ${Clubs.getClubById(p.clubId)?.name || ''}${this.clubPosLine(p.clubId)}` : ''} · they propose: <strong>${ROLE_LABEL[offered]}</strong></p>
+            <p class="muted">${to.name} (${to.divisionName})${this.clubPosLine(to.id)}${p.clubId ? ` · from ${Clubs.getClubById(p.clubId)?.name || ''}${this.clubPosLine(p.clubId)}` : ''} · they propose: <strong>${roleLabel(offered, p.age)}</strong></p>
             <p>Push for more game time — they may dig in, or give in if you persist and they trust you.</p>
-            <div class="slider-block"><label>Ask for role: <strong id="lrAgreed">${ROLE_LABEL[offered]}</strong> agreed</label>
-                <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === offered ? 'selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select>
+            <div class="slider-block"><label>Ask for role: <strong id="lrAgreed">${roleLabel(offered, p.age)}</strong> agreed</label>
+                <select id="roleSel" class="filter-select wide">${ROLE_ORDER.map(r => `<option value="${r}" ${r === offered ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select>
                 <button class="btn-secondary sm" onclick="UI.negLoanRole('${to.id}')">Put it to the club</button> <span id="lrMsg" class="inline-msg"></span></div>
             ${compare}
             ${durBlock}
@@ -656,8 +662,8 @@ const UI = {
         const requested = document.getElementById('roleSel').value;
         const r = Agency.negotiateLoanRole(p, club, requested, this._ctx.loanRound++);
         const msg = document.getElementById('lrMsg'), agreedEl = document.getElementById('lrAgreed');
-        if (r.status === 'accept') { this._ctx.loanRole = r.role; agreedEl.textContent = ROLE_LABEL[r.role]; msg.innerHTML = `<span class="ok-text">“${r.message}”</span>`; }
-        else { if (ROLE_ORDER.indexOf(r.role) > ROLE_ORDER.indexOf(this._ctx.loanRole)) { this._ctx.loanRole = r.role; agreedEl.textContent = ROLE_LABEL[r.role]; } msg.innerHTML = `<span class="bad-text">“${r.message}”</span>`; }
+        if (r.status === 'accept') { this._ctx.loanRole = r.role; agreedEl.textContent = roleLabel(r.role, p.age); msg.innerHTML = `<span class="ok-text">“${r.message}”</span>`; }
+        else { if (ROLE_ORDER.indexOf(r.role) > ROLE_ORDER.indexOf(this._ctx.loanRole)) { this._ctx.loanRole = r.role; agreedEl.textContent = roleLabel(r.role, p.age); } msg.innerHTML = `<span class="bad-text">“${r.message}”</span>`; }
     },
     doAcceptLoan(mailId) {
         const m = GameState.inbox.find(x => x.id === mailId); if (!m) return this.closeModal();
@@ -742,6 +748,8 @@ const UI = {
                 moveBtns += atReserve
                     ? `<button class="btn-secondary" onclick="UI.reqPromote('${p.id}')">Request promotion</button>`
                     : `<button class="btn-secondary" onclick="UI.sendU21('${p.id}')">Send to reserves/U21</button>`;
+            } else if (isU21Loan(p) || isReserveClub(p.onLoanAt)) {
+                moveBtns = `<button class="btn-secondary" onclick="UI.reqU21Recall('${p.id}')">Request recall from ${this.clubName(p.onLoanAt)}</button>`;
             }
             action = `<div class="action-row">${moveBtns}<button class="btn-secondary" onclick="UI.reqRenewal('${p.id}')">Renewal talks</button></div>`;
         } else {
@@ -828,7 +836,7 @@ const UI = {
                 <div class="detail-grid">
                     <div class="detail-stat"><div class="ds-label">On loan at</div><div class="ds-value sm">${borrower ? borrower.name : this.clubName(p.onLoanAt)}</div></div>
                     <div class="detail-stat"><div class="ds-label">Duration</div><div class="ds-value sm">${dur}</div></div>
-                    <div class="detail-stat"><div class="ds-label">Role there</div><div class="ds-value sm">${ROLE_LABEL[p.loanRole] || roleLabel(p.loanRole, p.age)}</div></div>
+                    <div class="detail-stat"><div class="ds-label">Role there</div><div class="ds-value sm">${roleLabel(p.loanRole, p.age)}</div></div>
                     <div class="detail-stat"><div class="ds-label">Parent club</div><div class="ds-value sm">${club ? club.name : '—'}</div></div>
                 </div>`;
         }
@@ -892,12 +900,12 @@ const UI = {
             if (t >= xMin - 1 && t <= xMax + 1) yearTicks.push({ v: t, label: a + 'y' });
         }
 
-        // --- Ability: ~20-point window that grows if he's improved more ---
+        // --- Ability: ~20-point window that grows (zooms out) as his career range widens ---
         const aLo = Math.min(...ax.map(d => d.y)), aHi = Math.max(...ax.map(d => d.y));
-        const span = Math.max(20, Math.ceil((aHi - aLo + 4) / 5) * 5);
         let yLo = Math.max(1, Math.floor((aLo - 2) / 5) * 5);
-        let yHi = Math.min(99, yLo + span);
-        if (yHi - yLo < span) yLo = Math.max(1, yHi - span);
+        let yHi = Math.min(99, Math.ceil((aHi + 2) / 5) * 5);   // always leave headroom above the highest point so far
+        if (yHi - yLo < 20) yHi = Math.min(99, yLo + 20);
+        if (yHi - yLo < 20) yLo = Math.max(1, yHi - 20);        // window got squeezed against the 99 ceiling — widen downward instead
 
         // --- Wage: grid step by level, with headroom below the lowest wage ---
         const wHi0 = Math.max(...wx.map(d => d.y)), wLo0 = Math.min(...wx.map(d => d.y));
@@ -974,11 +982,11 @@ const UI = {
             const endStint = stints[stints.length - 1];
             const endClub = endStint ? Clubs.getClubById(endStint.clubId) : null;
             const seasonLeague = this._seasonLeagueName(endStint);
-            const endLabel = endStint ? `${this.clubName(endStint.clubId)}${seasonLeague ? ', ' + seasonLeague : (endClub ? ', ' + endClub.divisionName : '')}` : '';
+            const endLabel = endStint ? `${this.clubLink(endStint.clubId, this.clubName(endStint.clubId))}${seasonLeague ? ', ' + seasonLeague : (endClub ? ', ' + endClub.divisionName : '')}` : '';
             let inner = '';
             if (open) {
                 inner = '<div class="comp-break">' + stints.slice().reverse().map(st => {
-                    const head = `<div class="stint-head"><span class="comp-name">${this.clubLabel(st.clubId, st.loan, st.youth)}</span><span>${st.totals.apps} apps · ${gOrCs(st.totals)} · ${st.totals.assists} a · ${this.rating(st.totals.avg)}</span></div>`;
+                    const head = `<div class="stint-head"><span class="comp-name">${this.clubLink(st.clubId, this.clubLabel(st.clubId, st.loan, st.youth))}</span><span>${st.totals.apps} apps · ${gOrCs(st.totals)} · ${st.totals.assists} a · ${this.rating(st.totals.avg)}</span></div>`;
                     const comps = Object.entries(st.comps).map(([cid, c]) => {
                         const avg = c.apps ? c.ratingSum / c.apps : 0;
                         return `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} apps · ${gk ? (c.cs || 0) + ' cs' : c.goals + ' g'} · ${c.assists} a · ${c.yellow}🟨 ${c.red}🟥 · ${this.rating(avg)}</span></div>`;
@@ -1029,6 +1037,7 @@ const UI = {
     reqLoan(id) { const r = Agency.requestLoan(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
     sendU21(id) { const p = GameState.getPlayer(id); const reserve = reserveClubFor(p.clubId); const dest = reserve ? reserve.name : youthTeamName(p.clubId); if (!confirm(`Send ${p.name} to ${dest}? ${reserve ? "He'll feature in their league games and return to the senior side at season's end." : "He plays youth-league games (good for development) until the end of the season; these don't count toward senior appearances."}`)) return; const r = Agency.sendToU21(p); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqPromote(id) { const r = Agency.requestPromotion(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
+    reqU21Recall(id) { const r = Agency.requestU21Recall(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.renderPlayer(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqRenewal(id) { const r = Agency.requestRenewalTalks(GameState.getPlayer(id)); GameState.save(); this.refreshTopbar(); this.result(r.message, r.ok ? 'ok' : 'bad'); },
     gift(id, tier) { const r = Agency.giveGift(GameState.getPlayer(id), tier); GameState.save(); this.refreshTopbar(); this.renderPlayer(); alert(r.message); },
     release(id) {
@@ -1039,20 +1048,46 @@ const UI = {
         if (r.ok) { this.closeModal(); this.switchView('clients'); } else alert(r.message);
     },
 
-    // ---- shop to ANY club ----
+    // ---- shop to ANY club, any country, one or several at once ----
     openShop(id) {
         const p = GameState.getPlayer(id);
-        const byDiv = { ERE: [], EED: [], TWD: [], DRD: [] };
-        Clubs.allClubs.filter(c => c.id !== p.clubId).forEach(c => byDiv[c.division]?.push(c));
-        const groups = Object.entries(byDiv).map(([div, cs]) => `<optgroup label="${COMPETITIONS[div].name}">${cs.sort((a, b) => b.reputation - a.reputation).map(c => `<option value="${c.id}">${c.name} (rep ${c.reputation})</option>`).join('')}</optgroup>`).join('');
-        this.openModal(`<h2>Shop ${p.name}</h2><p class="muted">Pitch him to any club — even one far above his level (they simply won't respond). 50% chance the parent club hears about it.</p>
-            <label class="field-label">Target club</label><select id="shopTarget" class="filter-select wide">${groups}</select>
-            <div class="modal-actions"><button class="btn-secondary" onclick="UI.openPlayer('${p.id}')">Back</button><button class="btn-primary" onclick="UI.doShop('${p.id}')">Pitch player</button></div><div id="modalResult"></div>`);
+        this._ctx.shopSelected = new Set();
+        this._ctx.shopCountry = (Clubs.getClubById(p.clubId) || {}).country || GameState.homeCountry || 'Netherlands';
+        this._renderShop(id);
+    },
+    _renderShop(id) {
+        const p = GameState.getPlayer(id);
+        const countries = Object.keys(COUNTRY_DIVS);
+        const country = this._ctx.shopCountry;
+        const sel = this._ctx.shopSelected;
+        const tabs = countries.map(c => `<button class="chip-toggle ${c === country ? 'on' : ''}" onclick="UI.setShopCountry('${id}','${c}')">${c}</button>`).join('');
+        const groups = (COUNTRY_DIVS[country] || []).map(div => {
+            const clubs = Clubs.getClubsByDivision(div).filter(c => c.id !== p.clubId).sort((a, b) => b.reputation - a.reputation);
+            if (!clubs.length) return '';
+            const rows = clubs.map(c => `<label class="comp-row" style="cursor:pointer"><span><input type="checkbox" ${sel.has(c.id) ? 'checked' : ''} onchange="UI.toggleShopClub('${id}','${c.id}')"> ${c.name}</span><span class="muted">rep ${c.reputation}</span></label>`).join('');
+            return `<div class="comp-break"><h4>${COMPETITIONS[div].name}</h4>${rows}</div>`;
+        }).join('');
+        const count = sel.size;
+        this.openModal(`<h2>Shop ${p.name}</h2><p class="muted">Pitch him to any club, in any country — pick one or several. Clubs may show no interest, say they don't need him, or that they can't afford him; 50% chance the parent club hears about each pitch.</p>
+            <div class="status-row">${tabs}</div>
+            ${groups}
+            <div class="modal-actions"><button class="btn-secondary" onclick="UI.openPlayer('${p.id}')">Back</button><button class="btn-primary" onclick="UI.doShop('${p.id}')" ${count ? '' : 'disabled'}>Pitch to ${count || 0} club${count === 1 ? '' : 's'}</button></div><div id="modalResult"></div>`);
+    },
+    setShopCountry(id, country) { this._ctx.shopCountry = country; this._renderShop(id); },
+    toggleShopClub(id, clubId) {
+        const sel = this._ctx.shopSelected;
+        if (sel.has(clubId)) sel.delete(clubId); else sel.add(clubId);
+        this._renderShop(id);
     },
     doShop(id) {
-        const r = Agency.shopPlayer(GameState.getPlayer(id), document.getElementById('shopTarget').value);
+        const targets = Array.from(this._ctx.shopSelected || []);
+        if (!targets.length) return;
+        const p = GameState.getPlayer(id);
+        const lines = targets.map(cid => Agency.shopPlayer(p, cid).message);
         GameState.save(); this.refreshTopbar();
-        this.result(r.message, r.ok ? (r.interested ? 'ok' : 'info') : 'bad');
+        this._ctx.shopSelected = new Set();
+        this._renderShop(id);
+        this.result(lines.join('<br>'), 'info');
     },
 
     // ---- sign negotiation (multi-step) ----
@@ -1198,9 +1233,10 @@ const UI = {
         const posFilter = this.filters.chPos || 'all';
         const rows = GameState.players.filter(p => p.everClient).map(p => {
             const c = careerLeagueTotal(p);
+            const club = p.clubId ? Clubs.getClubById(p.clubId) : null;
             return { p, name: p.name, nat: p.nationality, flag: p.nationalityFlag, position: p.position, grp: POSGROUP[p.position] || 'MID',
                 apps: c.apps, goals: c.goals, cs: c.cs || 0, assists: c.assists, yellow: c.yellow, red: c.red, avg: c.avg,
-                seasons: seasonsActiveLeague(p), status: p.archived ? (p.retired ? 'Retired' : 'Archived') : (p.agentId === 'me' ? 'Active' : 'Ex-client') };
+                club, seasons: seasonsActiveLeague(p), status: p.archived ? (p.retired ? 'Retired' : 'Archived') : (p.agentId === 'me' ? 'Active' : 'Ex-client') };
         }).filter(r => posFilter === 'all' || r.grp === posFilter);
         if (!rows.length) return '<p class="muted">No clients yet — sign players and their careers will be recorded here.</p>';
         const key = this.filters.chSort || 'apps', dir = this.filters.chDir || 'desc';
@@ -1211,12 +1247,13 @@ const UI = {
             .map(([k, l]) => `<button class="chip-toggle ${posFilter === k ? 'on' : ''}" onclick="UI.setClientHistPos('${k}')">${l}</button>`).join('');
         const body = rows.map(r => `<tr onclick="UI.openHistoryPlayer('${r.p.id}')" style="cursor:pointer">
             <td class="club">${r.flag} ${r.name}</td><td>${r.position}</td><td>${r.nat}</td>
+            <td>${r.club ? this.clubLink(r.club.id, r.club.name) : '<span class="muted">—</span>'}</td>
             <td>${r.apps}</td><td>${r.p.position === 'GK' ? r.cs : r.goals}</td><td>${r.assists}</td>
             <td class="yellow">${r.yellow}</td><td>${r.red}</td><td class="pts">${r.avg ? r.avg.toFixed(2) : '—'}</td><td>${r.seasons}</td>
             <td><span class="pill">${r.status}</span></td></tr>`).join('');
         return `<div class="controls">${posBtns}</div>
-            <table class="standings"><thead><tr>${th('name', 'Player')}${th('position', 'Pos')}${th('nat', 'Nat')}${th('apps', 'Apps')}<th onclick="UI.setClientHistSort('goals')" style="cursor:pointer">Gls/CS${arrow('goals')}</th>${th('assists', 'Ast')}${th('yellow', 'Y')}${th('red', 'R')}${th('avg', 'Avg')}${th('seasons', 'Seasons')}<th>Status</th></tr></thead><tbody>${body}</tbody></table>
-            <p class="hint">Tap a player to revisit his career. Updated each season; includes your current clients too.</p>`;
+            <table class="standings"><thead><tr>${th('name', 'Player')}${th('position', 'Pos')}${th('nat', 'Nat')}<th>Club</th>${th('apps', 'Apps')}<th onclick="UI.setClientHistSort('goals')" style="cursor:pointer">Gls/CS${arrow('goals')}</th>${th('assists', 'Ast')}${th('yellow', 'Y')}${th('red', 'R')}${th('avg', 'Avg')}${th('seasons', 'Seasons')}<th>Status</th></tr></thead><tbody>${body}</tbody></table>
+            <p class="hint">Tap a player to revisit his career, or a club to open its page. Updated each season; includes your current clients too.</p>`;
     },
 
     _germanZone(div, pos) {
@@ -1387,7 +1424,9 @@ const UI = {
         return this._spanishCupView('cfed', 'Copa Federación', 'The 64 clubs from the bottom three divisions enter the first round. Clubs in the Primera Superior are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
     },
     _germanPlayoffsView() {
-        const G = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.germanReleg : (GameState.lastSeasonReport && GameState.lastSeasonReport.germanReleg);
+        // this season's own relegation play-offs only — never fall back to last season's, so the tab
+        // clears out the moment a new season starts instead of showing a stale bracket for months
+        const G = GameState.league && GameState.league.germanReleg;
         const nm = id => this.clubName(id);
         let releg;
         if (!G) releg = '<div class="po-block"><h4>Relegation</h4><p class="muted">Not yet played (Week 46).</p></div>';
@@ -1413,7 +1452,8 @@ const UI = {
         return `<div class="panel"><p class="hint">Relegation play-offs (Week 46): 16th-placed Bundesliga side v 3rd-placed 2. Bundesliga side and 16th-placed 2. Bundesliga side v 3rd-placed 3. Liga side, each over two legs; in the event of a draw, the tie will be decided by a penalty shoot-out. Reserve teams cannot be promoted to the 2. Bundesliga (the place is passed on).</p>${releg}</div>${prBlock}`;
     },
     _spanishPlayoffsView() {
-        const P = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.playoffs : (GameState.lastSeasonReport && GameState.lastSeasonReport.playoffs);
+        // this season's own play-offs only — never fall back to last season's stale bracket
+        const P = GameState.league && GameState.league.playoffs;
         const nm = id => this.clubName(id);
         const lk = id => `<span class="tie-club" onclick="UI.openClub('${id}')" style="cursor:pointer">${this.clubName(id)}</span>`;
         const poTie = t => {
@@ -1454,7 +1494,8 @@ const UI = {
         const country = this.filters.lgCountry || 'Netherlands';
         if (country === 'Germany') return this._germanPlayoffsView();
         if (country === 'Spain') return this._spanishPlayoffsView();
-        const P = (GameState.league && GameState.league.playoffs && GameState.league.playoffs._done) ? GameState.league.playoffs : (GameState.lastSeasonReport && GameState.lastSeasonReport.playoffs);
+        // this season's own play-offs only — never fall back to last season's stale bracket
+        const P = GameState.league && GameState.league.playoffs;
         const divs = ((typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[country]) || []).filter((d, i) => i > 0); // skip top tier
         let blocks = '';
         divs.forEach(div => {

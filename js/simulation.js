@@ -27,6 +27,13 @@ const Sim = {
         // individual birthdays (week 1 = 1 July): a player ages on his birth week
         GameState.players.forEach(p => { if (!p.archived && (p.birthWeek || 0) === week) p.age += 1; });
 
+        // ---- transfer window just closed ----
+        if (GameState.isTransferWindowOpen(prevWeek) && !GameState.isTransferWindowOpen(week)) {
+            const reopens = prevWeek <= 6 ? 'the winter window (week 21)' : `next season's summer window (week 1 of ${GameState.seasonLabelFor(GameState.seasonStartYear + 1)})`;
+            GameState.addMail({ kind: 'news', cat: 'general', subject: 'Transfer window closed', body: `The transfer window has closed. No new transfers or loans until ${reopens} — renewals and other business carry on as usual.`, ttl: 4 });
+            GameState.addLog('Transfer window closed.', 'info');
+        }
+
         // ---- mid-season loan returns (summer half/1.5-season loans end at the winter window) ----
         if (week >= 21 && week <= 25) {
             GameState.players.forEach(p => {
@@ -173,7 +180,7 @@ const Sim = {
             const tot = seasonTotals(p, year);
             const ratio = tot.apps / Math.max(1, week * 0.8);
             const timeTarget = Math.max(15, Math.min(95, ratio * 100));
-            const bench = PlayerGen.wageFor(p.ability, club ? club.tier : 3);
+            const bench = PlayerGen.wageFor(p.ability, club ? club.reputation : 45);
             const wRatio = p.wage / Math.max(1, bench);
             const wageTarget = Math.max(20, Math.min(95, 30 + wRatio * 50));
             p.morale.club += (clubTarget - p.morale.club) * 0.1;
@@ -249,7 +256,7 @@ const Sim = {
                 GameState.addMail({ kind: 'news', subject: `${homeClub.name} list ${p.name}`, body: `${homeClub.name} no longer count on ${p.name} and have placed him on the transfer list to recoup a fee.`, ttl: 4 });
                 events.push({ type: 'offer', text: `${homeClub.name} have transfer-listed ${p.name}.` });
             }
-            if (pending < 2 && !(p._txOffersFrom && GameState.absWeek() < p._txOffersFrom)) {
+            if (pending < 3 && !(p._txOffersFrom && GameState.absWeek() < p._txOffersFrom)) {
                 const tot = seasonTotals(p, GameState.seasonStartYear);
                 const attract = 10 + Math.min(20, tot.apps) * 0.5 + (p.transferListed ? 22 : 0);
                 // elite players attract bids far less often — only a handful of clubs can afford them, and
@@ -265,13 +272,41 @@ const Sim = {
                         !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
                         !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
                     if (cands.length) {
-                        const buyer = Agency.pickBuyer(cands, p);
-                        if (buyer) {
-                            const fee = Agency.estimateFee(p, buyer);
-                            const offer = Agency._offerObj(p, p.clubId, buyer.id, fee, { initiatedByAgent: false });
-                            GameState.addMail({ kind: 'transfer', subject: `${buyer.name} bid for ${p.name}`, offer, persistence: Math.random() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Math.random() * 3) });
-                            events.push({ type: 'offer', text: `${buyer.name} bid €${UI.money(fee)} for ${p.name} (${ROLE_LABEL[offer.role]}).` });
-                            // after a bid, this player isn't approached again for a while — longer for the elite
+                        // a player clearly outgrowing his club, in hot form, or a big-potential prospect
+                        // draws interest from more than one suitor at once — a real bidding situation
+                        const abilityGap = p.ability - (homeClub ? homeClub.reputation : 45);
+                        const hot = tot.apps >= 6 && tot.avg > 7.5;
+                        const bigUpside = ((p.potential || p.ability) - p.ability) >= 15 && p.age <= 23;
+                        let suitors = 1;
+                        if (abilityGap > 10) suitors++;
+                        if (hot) suitors++;
+                        if (bigUpside) suitors++;
+                        suitors = Math.min(suitors, 3 - pending, cands.length);
+                        const pool = cands.slice();
+                        const buyers = [];
+                        for (let i = 0; i < suitors; i++) {
+                            const buyer = Agency.pickBuyer(pool, p);
+                            if (!buyer) break;
+                            buyers.push(buyer);
+                            pool.splice(pool.indexOf(buyer), 1);
+                        }
+                        if (buyers.length === 1) {
+                            const fee = Agency.estimateFee(p, buyers[0]);
+                            const offer = Agency._offerObj(p, p.clubId, buyers[0].id, fee, { initiatedByAgent: false });
+                            GameState.addMail({ kind: 'transfer', subject: `${buyers[0].name} bid for ${p.name}`, offer, persistence: Math.random() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Math.random() * 3) });
+                            events.push({ type: 'offer', text: `${buyers[0].name} bid €${UI.money(fee)} for ${p.name} (${roleLabel(offer.role, p.age)}).` });
+                        } else if (buyers.length > 1) {
+                            const names = [];
+                            buyers.forEach(buyer => {
+                                const fee = Agency.estimateFee(p, buyer);
+                                const offer = Agency._offerObj(p, p.clubId, buyer.id, fee, { initiatedByAgent: false });
+                                GameState.addMail({ kind: 'transfer', subject: `${buyer.name} bid for ${p.name}`, offer, persistence: Math.random() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Math.random() * 3) });
+                                names.push(`${buyer.name} (€${UI.money(fee)})`);
+                            });
+                            events.push({ type: 'offer', text: `${buyers.length} clubs want ${p.name} — ${names.join(', ')}.` });
+                        }
+                        if (buyers.length) {
+                            // after a bidding round, this player isn't approached again for a while — longer for the elite
                             p._txOffersFrom = GameState.absWeek() + (p.ability >= 80 ? 18 + Math.floor(Math.random() * 18) : 7 + Math.floor(Math.random() * 9));
                         }
                     }
@@ -305,21 +340,25 @@ const Sim = {
         });
         return n;
     },
-    // which sponsor tier a player can attract, from his division, game time and quality
+    // which sponsor tier a player can attract, from his division, game time and quality —
+    // capped by the agency's office (a Home Office can only land local deals, however good the player is)
     _sponsorLevelFor(p) {
         const club = Clubs.getClubById(p.clubId);
         const div = club ? club.division : null;       // 'ERE'|'EED'|'TWD'|'DRD'
         const apps = this._seasonLeagueApps(p, GameState.seasonStartYear);
         const talent = p.potential >= 78 && p.age <= 21;   // promising youngsters punch above their weight
-        if (p.ability >= 90) return 'worldwide';
-        if (div === 'ERE' && p.ability >= 80) return 'international';
-        if (div === 'ERE') return 'national';
-        if (div === 'EED' && apps > 25) return 'national';
-        if (talent) return 'national';
-        if (div === 'EED' && apps > 5) return 'regional';
-        if (div === 'TWD' && apps > 25) return 'regional';
-        if (div === 'DRD' && apps > 25) return 'local';
-        return null;
+        let level;
+        if (p.ability >= 90) level = 'worldwide';
+        else if (div === 'ERE' && p.ability >= 80) level = 'international';
+        else if (div === 'ERE') level = 'national';
+        else if (div === 'EED' && apps > 25) level = 'national';
+        else if (talent) level = 'national';
+        else if (div === 'EED' && apps > 5) level = 'regional';
+        else if (div === 'TWD' && apps > 25) level = 'regional';
+        else if (div === 'DRD' && apps > 25) level = 'local';
+        else return null;
+        const cap = SPONSOR_LEVELS.indexOf(Upgrades.sponsorLevel());
+        return SPONSOR_LEVELS[Math.min(SPONSOR_LEVELS.indexOf(level), cap)];
     },
     _sponsorOffers(events) {
         const wkBase = { local: 50, regional: 200, national: 1000, international: 10000, worldwide: 50000 };
