@@ -1,0 +1,249 @@
+/* ============================================================
+   Football Agent Manager — Components
+   Reusable classes generalised from the design mockups.
+   Requires design-tokens.css. Framework-agnostic (plain classes;
+   works with vanilla JS, React className, Svelte, etc.).
+   ============================================================ */
+
+/* ---------- App shell ----------
+   Scroll model: .screen is the ONE scroll container, sized off the dynamic
+   viewport (100dvh, 100vh fallback). The .app-bar / .push-bar stick to its
+   top; the .bottom-nav is a fixed overlay. Only the content in between
+   scrolls. html/body/#app never scroll (see app.css). */
+.screen{
+  background:var(--bg); color:var(--text); font-family:var(--font);
+  -webkit-font-smoothing:antialiased;
+  /* fallback when .screen is not a flex child of #app */
+  height:100vh;      height:100dvh;
+  max-height:100vh;  max-height:100dvh;
+  /* when #app lays it out as a flex column child (preferred), let it size
+     itself between any hoisted bars */
+  flex:1 1 auto; min-height:0;
+  overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain;
+  padding-left:var(--screen-pad); padding-right:var(--screen-pad);
+  /* leave room for the fixed bottom nav */
+  padding-bottom:calc(var(--nav-clear) + env(safe-area-inset-bottom));
+}
+
+.app-bar{
+  position:sticky; top:0; z-index:30;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:space-between;
+  min-height:var(--hit-target);
+  padding:calc(env(safe-area-inset-top) + var(--space-2)) var(--screen-pad) var(--space-3);
+}
+/* when the bar lives INSIDE the padded .screen (current router structure),
+   bleed it edge-to-edge so scrolling content can't peek past the gutters;
+   a bar hoisted out of .screen needs no correction */
+.screen > .app-bar{ margin:0 calc(-1 * var(--screen-pad)); }
+/* hairline appears only once content has scrolled under the bar
+   (ui-helpers.js toggles .is-scrolled) */
+.app-bar.is-scrolled{ box-shadow:0 .5px 0 var(--line-strong); }
+.app-bar__title{ font-size:var(--fs-xl); font-weight:var(--weight-semibold); }
+.app-bar__sub{ font-size:var(--fs-sm); color:var(--text-faint); margin-left:var(--space-2); }
+
+/* Back button + title (detail screens) */
+.nav-back{ display:flex; align-items:center; gap:var(--space-3); }
+
+/* ---------- Icon button + notification badge (e.g. Inbox) ---------- */
+.icon-btn{
+  position:relative; width:var(--icon-btn); height:var(--icon-btn);
+  border-radius:var(--radius-md); background:var(--surface-raised);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--text-bright); flex:none;
+}
+.icon-btn .ti{ font-size:19px; }
+.badge{
+  position:absolute; top:-3px; right:-3px; min-width:16px; height:16px;
+  padding:0 4px; border-radius:9px; background:var(--danger);
+  color:#2A0A0E; font-size:var(--fs-xs); font-weight:var(--weight-semibold);
+  display:flex; align-items:center; justify-content:center;
+  border:2px solid var(--bg);
+}
+
+/* ---------- Bottom navigation (5 items; Home centred) ---------- */
+.bottom-nav{
+  position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex;
+  background:var(--nav-bg); border-top:1px solid var(--line-strong);
+  padding:13px 4px calc(16px + env(safe-area-inset-bottom));
+  box-sizing:border-box; min-height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+}
+.nav-item{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+  font-size:11.5px; color:var(--text-dim);
+  background:none; border:0; cursor:pointer;
+}
+.nav-item .ti{ font-size:var(--nav-icon); }
+.nav-item.is-active{ color:var(--accent); }
+
+/* ---------- Tab bar (scrollable, many tabs) ----------
+   Scroll affordance: js/ui-helpers.js toggles .can-scroll-l / .can-scroll-r
+   while scrolling and centres the .is-active tab, so hidden tabs read as
+   "more over here" (edge fade) instead of looking cut off. */
+.tab-bar{
+  display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch;
+  border-bottom:.5px solid var(--line-strong); scrollbar-width:none;
+  --fade-l:0px; --fade-r:0px;
+  -webkit-mask-image:linear-gradient(90deg,
+    transparent 0, #000 var(--fade-l),
+    #000 calc(100% - var(--fade-r)), transparent 100%);
+  mask-image:linear-gradient(90deg,
+    transparent 0, #000 var(--fade-l),
+    #000 calc(100% - var(--fade-r)), transparent 100%);
+}
+.tab-bar::-webkit-scrollbar{ display:none; }
+.tab-bar.can-scroll-l{ --fade-l:28px; }
+.tab-bar.can-scroll-r{ --fade-r:28px; }
+/* opt-in: keep the tab strip pinned under the sticky header on long detail
+   screens (client detail with 7 tabs, leagues views) */
+.tab-bar--sticky{ position:sticky; top:var(--app-bar-h); background:var(--bg); z-index:25; }
+.tab{
+  flex:none; white-space:nowrap; padding:9px 12px; font-size:12.5px;
+  color:var(--text-faint); border-bottom:var(--tab-underline) solid transparent;
+  margin-bottom:-.5px; background:none; border-top:0; border-left:0; border-right:0; cursor:pointer;
+  scroll-margin-inline:28px; /* keep the centred tab clear of the edge fades */
+}
+.tab.is-active{ color:var(--accent); border-bottom-color:var(--accent); }
+
+/* ---------- Cards & rows ---------- */
+.card{
+  background:var(--surface); border:.5px solid var(--line);
+  border-radius:var(--radius-lg); padding:var(--space-3) var(--card-pad);
+}
+.list-row{
+  display:flex; align-items:center; gap:11px;
+  padding:11px 0; border-bottom:.5px solid var(--line-faint);
+}
+.list-row:last-child{ border-bottom:0; }
+.section-label{ font-size:var(--fs-sm); color:var(--text-faint); font-weight:var(--weight-semibold); }
+/* optional leading icon in a section label:
+   <div class="section-label"><i class="ti ti-users"></i>Your clients</div> */
+.section-label .ti{ font-size:13px; vertical-align:-2px; margin-right:5px; color:var(--text-dim); }
+
+/* ---------- Metric cell (dashboard / agency stats) ---------- */
+.metric{ background:var(--surface-raised); border-radius:var(--radius-lg); padding:10px 12px; }
+.metric__label{ font-size:11.5px; color:var(--text-faint); }
+.metric__label .ti{ font-size:12px; vertical-align:-2px; margin-right:4px; }
+.metric__value{ font-size:var(--fs-2xl); font-weight:var(--weight-semibold); margin-top:3px; }
+
+/* ---------- Pills / status chips ---------- */
+.pill{
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:var(--fs-sm); font-weight:var(--weight-semibold);
+  border-radius:var(--radius-sm); padding:4px 9px; border:.5px solid transparent;
+}
+.pill--accent{ color:var(--accent-text); background:var(--accent-tint); border-color:var(--accent-border); }
+.pill--danger{ color:var(--danger-text); background:var(--danger-tint); border-color:var(--danger-border); }
+.pill--gold{ color:var(--gold); background:var(--gold-tint); border-color:var(--gold-border); }
+.pill--info{ color:var(--info-text); background:rgba(76,141,240,.14); border-color:rgba(76,141,240,.3); }
+
+/* count badge inside a filter chip */
+.count{
+  font-size:var(--fs-xs); font-weight:var(--weight-semibold);
+  background:rgba(255,255,255,.10); border-radius:var(--radius-sm);
+  padding:0 5px; min-width:15px; text-align:center;
+}
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  min-height:var(--hit-target); box-sizing:border-box;
+  border-radius:var(--radius-md); padding:11px 14px;
+  font-size:13.5px; font-weight:var(--weight-semibold);
+  border:1px solid transparent; cursor:pointer; width:100%;
+}
+.btn--primary{ background:var(--accent); color:var(--accent-ink); }
+.btn--accent-outline{ background:var(--accent-tint); color:var(--accent-text); border-color:var(--accent-border); }
+.btn--danger{ background:var(--danger-tint); color:var(--danger-text); border-color:var(--danger-border); }
+.btn--ghost{ background:var(--surface-raised); color:var(--text-secondary); border-color:var(--line-strong); }
+.btn--sm{ min-height:0; padding:6px 10px; font-size:var(--fs-sm); width:auto; }
+
+/* ---------- Ability badge (colour set per band via --ab) ----------
+   Usage: <span class="ability" style="--ab:var(--ability-6)">79</span>
+   Map a rating to its band token with abilityVar() in DESIGN_SYSTEM.md */
+.ability{
+  --ab:var(--text);
+  min-width:32px; text-align:center; padding:4px 6px;
+  border-radius:var(--radius-sm); font-size:15px; font-weight:var(--weight-semibold);
+  color:var(--ab); border:1px solid;
+  border-color:color-mix(in srgb, var(--ab) 40%, transparent);
+  background:color-mix(in srgb, var(--ab) 15%, transparent);
+}
+.ability--lg{ min-width:40px; padding:7px 9px; font-size:19px; border-radius:var(--radius-md); }
+
+/* ---------- Morale dots (order: Club · Playing time · Wage · You) ---------- */
+.morale{ display:flex; gap:3px; }
+.morale__dot{ width:var(--dot-morale); height:var(--dot-morale); border-radius:var(--radius-round); }
+/* apply --state-good / --state-mid / --state-bad per dot */
+
+/* ---------- Morale bars (detail screen) ---------- */
+.bar{ height:7px; background:var(--track); border-radius:5px; overflow:hidden; }
+.bar__fill{ height:100%; border-radius:5px; }  /* width:N%; background:var(--state-*) */
+
+/* ---------- Stat strip (apps / goals / rating …) ---------- */
+.stat-strip{ display:flex; }
+.stat{ flex:1; text-align:center; }
+.stat__value{ display:block; font-size:var(--fs-md); font-weight:var(--weight-semibold); }
+.stat__label{ font-size:var(--fs-xs); color:var(--text-faint); }
+.stat__label .ti{ font-size:11px; vertical-align:-1.5px; margin-right:3px; }
+
+/* ---------- Slider (wage / fee) ---------- */
+.slider{ position:relative; height:var(--slider-track); background:var(--track); border-radius:5px; }
+.slider__fill{ position:absolute; left:0; top:0; height:var(--slider-track); background:var(--accent); border-radius:5px; }
+.slider__handle{
+  position:absolute; top:50%; transform:translate(-50%,-50%);
+  width:var(--slider-handle); height:var(--slider-handle); border-radius:var(--radius-round);
+  background:var(--text); box-shadow:0 0 0 3px var(--bg);
+}
+
+/* ---------- Segmented control (role / length / duration) ---------- */
+.segmented{ display:flex; gap:6px; }
+.seg{
+  flex:1; text-align:center; padding:7px 4px; font-size:var(--fs-sm);
+  background:var(--surface-raised); color:var(--text-secondary);
+  border:.5px solid var(--line-strong); border-radius:var(--radius-sm); cursor:pointer;
+}
+.seg.is-on{ background:var(--accent-tint); color:var(--accent-text); border-color:var(--accent-border); font-weight:var(--weight-semibold); }
+
+/* ---------- Country flag (3 horizontal bands) ----------
+   <span class="flag"><i style="background:#..."></i> x3 </span>
+   Real app: replace with the flag-icons set (see DESIGN_SYSTEM.md). */
+.flag{
+  display:inline-flex; flex-direction:column; width:var(--flag-w); height:var(--flag-h);
+  border-radius:2px; overflow:hidden; flex:none; box-shadow:0 0 0 .5px rgba(255,255,255,.18);
+}
+.flag > i{ flex:1; }
+
+/* club colour chip */
+.chip{ width:var(--chip-club); height:var(--chip-club); border-radius:var(--radius-round); flex:none; }
+
+/* ---------- Club crest (generated SVG shield) ----------
+   A step up from the bare colour chip where the row has room: standings
+   club cell, client cards, negotiation headers. Generated client-side from
+   the club's colour + initial — see crestSVG() in UI_POLISH_TODO.md. */
+.crest{ width:18px; height:21px; flex:none; display:block;
+        filter:drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.crest--lg{ width:26px; height:30px; }
+
+/* ---------- Pictogram box (agency categories / upgrade tiers) ---------- */
+.pic{
+  width:var(--pic-box); height:var(--pic-box); border-radius:var(--radius-md);
+  display:flex; align-items:center; justify-content:center; flex:none;
+  background:var(--surface-raised); color:var(--text-secondary);
+}
+.pic .ti{ font-size:18px; }
+.pic--owned{ background:var(--accent-tint); color:var(--accent); }
+.pic--current{ background:var(--accent); color:var(--accent-ink); }
+.pic--locked{ background:var(--surface-sunken); color:#4A525C; border:.5px solid var(--line-faint); }
+
+/* ---------- Upgrade ladder tier ---------- */
+.tier{ display:flex; gap:12px; align-items:stretch; }
+.tier__body{
+  flex:1; display:flex; align-items:center; gap:8px;
+  background:var(--surface); border:.5px solid var(--line);
+  border-radius:11px; padding:10px 12px;
+}
+.tier__body--current{ background:var(--accent-fill); border:1px solid var(--accent-border); }
+.tier__body--locked{ background:var(--surface-sunken); border-color:var(--line-faint); }
+.tier__name{ font-size:13.5px; font-weight:var(--weight-semibold); }
+.tier__benefit{ font-size:11.5px; margin-top:2px; }

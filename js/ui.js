@@ -1175,6 +1175,9 @@ const UI = {
         else if (tab === 'lpokal') section = this.cupLandespokalView();
         else if (tab === 'cdr') section = this.cupCDRView();
         else if (tab === 'cfed') section = this.cupCFEDView();
+        else if (tab === 'schwcup') section = this.cupSchweizerView();
+        else if (tab === 'cupabass') section = this.cupCupaBassView();
+        else if (tab === 'lichcup') section = this.cupLichtensteinView();
         else section = this.playoffsView();
         const finished = GameState.league && GameState.league.finished;
         body.innerHTML = `<div class="view-header"><div class="vh-row"><h2>Competitions</h2>${countrySel}</div><p class="muted">${finished ? 'Season ' + GameState.seasonLabel() + ' — complete' : 'Season ' + GameState.seasonLabel()}</p></div>
@@ -1290,6 +1293,24 @@ const UI = {
         if (div === 'Segunda') return `1–3 ${P} · 4–7 ${PL}`;
         return '';
     },
+    _swissZone(div, pos) {
+        // direct promotion/relegation = full shade; Barrage spots = lighter shade
+        if (div === 'SuperLeagueCH') { if (pos === 12) return 'zone-relegate'; if (pos === 11) return 'zone-releg-down'; return ''; }
+        if (div === 'ChallengeLeague') { if (pos === 1) return 'zone-promote'; if (pos === 2) return 'zone-releg-up'; if (pos === 10) return 'zone-relegate'; if (pos === 9) return 'zone-releg-down'; return ''; }
+        if (div === 'PromotionLeague') { if (pos === 1) return 'zone-promote'; if (pos === 2) return 'zone-releg-up'; if (pos >= 16) return 'zone-relegate'; return ''; }
+        if (div === '1.LigaCH') { if (pos <= 2) return 'zone-promote'; if (pos <= 6) return 'zone-releg-up'; if (pos >= 21) return 'zone-relegate'; return ''; }
+        if (div === '2.LigaCH') { if (pos <= 3) return 'zone-promote'; if (pos <= 7) return 'zone-releg-up'; return ''; }
+        return '';
+    },
+    _swissLegend(div) {
+        const P = '<span class="lg-pro">promote</span>', R = '<span class="lg-rel">relegate</span>', B = '<span class="lg-relplay">Barrage</span>';
+        if (div === 'SuperLeagueCH') return `12th ${R} · 11th ${B}`;
+        if (div === 'ChallengeLeague') return `1st ${P} · 2nd ${B} · 9th ${B} · 10th ${R}`;
+        if (div === 'PromotionLeague') return `1st ${P} · 2nd ${B} · 16–18 ${R}`;
+        if (div === '1.LigaCH') return `1–2 ${P} · 3–6 <span class="lg-playup">play-offs</span> · 21–24 ${R}`;
+        if (div === '2.LigaCH') return `1–3 ${P} · 4–7 <span class="lg-playup">play-offs</span>`;
+        return '';
+    },
     standingsTable(div) {
         if (!GameState.league || !GameState.league.tables[div]) return '<p class="muted">No table yet.</p>';
         const rows = League.sortedTable(div);
@@ -1317,6 +1338,7 @@ const UI = {
             let zone = '';
             if (divCountry(div) === 'Germany') zone = this._germanZone(div, i + 1, n);
             else if (divCountry(div) === 'Spain') zone = this._spanishZone(div, i + 1);
+            else if (divCountry(div) === 'Switzerland') zone = this._swissZone(div, i + 1);
             else if (relegate && i >= n - relCount) zone = 'zone-relegate';
             else if (mk.green.includes(r.clubId)) zone = 'zone-promote';
             else if (mk.blue.includes(r.clubId)) zone = 'zone-playoff';
@@ -1334,6 +1356,8 @@ const UI = {
             ? `<div class="zone-legend">${this._germanLegend(div)}</div>`
             : (divCountry(div) === 'Spain')
             ? `<div class="zone-legend">${this._spanishLegend(div)}</div>`
+            : (divCountry(div) === 'Switzerland')
+            ? `<div class="zone-legend">${this._swissLegend(div)}</div>`
             : `<div class="zone-legend">${promote ? promoTxt : ''}${relegate ? ` <span class="lg-rel">Bottom ${relCount} relegate</span>` : ''}</div>`;
         const foot = footnotes.length ? `<p class="table-foot">* ${[...new Set(footnotes)].join(', ')} ${footnotes.length > 1 ? 'are reserve sides and cannot be promoted' : 'is a reserve side and cannot be promoted'} ${div === 'EED' ? 'to the Eredivisie' : 'into the same division as their first team / past the reserve-team cap'}; the spot passes to the next eligible club.</p>` : '';
         return `<table class="standings"><thead><tr><th>#</th><th>Club</th><th title="Your players">You</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${body}</tbody></table>
@@ -1423,6 +1447,77 @@ const UI = {
     cupCFEDView() {
         return this._spanishCupView('cfed', 'Copa Federación', 'The 64 clubs from the bottom three divisions enter the first round. Clubs in the Primera Superior are seeded (they play away) and cannot face each other in the first round. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.');
     },
+    cupSchweizerView() {
+        const C = (GameState.league && GameState.league.schwcup) || (GameState.lastSeasonReport && GameState.lastSeasonReport.schwcup);
+        if (!C || !C.results || !C.results.length) return '<div class="panel"><p class="muted">Der Schweizer Cup startet in Woche 4.</p></div>';
+        const winner = C.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(C.winner)}</strong></div>` : '';
+        const rounds = C.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<p class="hint">1. Hauptrunde: die 1. Liga (auswärts) trifft auf die 2. Liga. Die 24 Sieger treffen in der 2. Hauptrunde auf Super League (gesetzt, auswärts), Challenge League und Promotion League — 64 Klubs total. Reservemannschaften sowie Vaduz und Eschen/Mauren werden durch virtuelle Amateurvereine ersetzt.</p>${rounds}</div>`;
+    },
+    cupCupaBassView() {
+        const C = (GameState.league && GameState.league.cupabass) || (GameState.lastSeasonReport && GameState.lastSeasonReport.cupabass);
+        if (!C || !C.results || !C.results.length) return '<div class="panel"><p class="muted">Die Cupa Bass startet in Woche 4.</p></div>';
+        const winner = C.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(C.winner)}</strong></div>` : '';
+        const rounds = C.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<p class="hint">64 Klubs aus Promotion League, 1. Liga und 2. Liga (ohne Eschen/Mauren und eine zufällige Reservemannschaft). Klubs der Promotion League sind gesetzt und spielen auswärts. Rounds take place in weeks 4, 7, 15, 26, 38 and 47.</p>${rounds}</div>`;
+    },
+    _tie2Leg(t) {
+        if (!t) return '';
+        const nm = id => `<span class="tie-club" onclick="UI.openClub('${id}')" style="cursor:pointer">${this.clubName(id)}</span>`;
+        const l1 = t.leg1, l2 = t.leg2, pens = t.pens ? ' <span class="pill pill-warn">i.E.</span>' : '';
+        return `<div class="cup-round">
+            <div class="tie"><span>${nm(l1.h)}</span><span class="tie-score">${l1.hg}–${l1.ag}</span><span>${nm(l1.a)}</span></div>
+            <div class="tie"><span>${nm(l2.h)}</span><span class="tie-score">${l2.hg}–${l2.ag}</span><span>${nm(l2.a)}</span></div>
+            <div class="comp-row"><span>Total</span><span>${this.clubName(t.a)} ${t.aggA}–${t.aggB} ${this.clubName(t.b)}${pens}</span></div></div>`;
+    },
+    _lichTie(t) {
+        if (!t) return '';
+        if (t.bye) return `<div class="tie">${this.clubName(t.h)}<span class="muted">Freilos</span></div>`;
+        if (t.leg1) return `${this._tie2Leg(t)}<div class="cup-winner">✅ Weiter: <strong>${this.clubName(t.winner)}</strong></div>`;
+        return this._tie(t);
+    },
+    cupLichtensteinView() {
+        const C = (GameState.league && GameState.league.lichcup) || (GameState.lastSeasonReport && GameState.lastSeasonReport.lichcup);
+        if (!C || !C.results || !C.results.length) return '<div class="panel"><p class="muted">Der Liechtensteiner Cup beginnt im Viertelfinal (Woche 32).</p></div>';
+        const winner = C.winner ? `<div class="cup-winner">🏆 Sieger: <strong>${this.clubName(C.winner)}</strong></div>` : '';
+        const rounds = C.results.slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._lichTie(t)).join('')}</div>`).join('');
+        return `<div class="panel">${winner}<p class="hint">Vaduz, Eschen/Mauren und 6 liechtensteinische Amateurvereine. Viertelfinal und Halbfinal über Hin- und Rückspiel, der Final ist ein einzelnes Spiel.</p>${rounds}</div>`;
+    },
+    _swissPlayoffsView() {
+        const L = GameState.league;
+        const bar = L && L.swissBarrage;
+        const nm = id => this.clubName(id);
+        let barBlock;
+        if (!bar) barBlock = '<div class="po-block"><h4>Barrage</h4><p class="muted">Noch nicht gespielt (Woche 46).</p></div>';
+        else barBlock = `<div class="po-block"><h4>Barrage Super League / Challenge League</h4>${this._relegTie(bar.top, 'Super League', 'Challenge League')}</div>
+            <div class="po-block"><h4>Barrage Challenge League / Promotion League</h4>${this._relegTie(bar.bottom, 'Challenge League', 'Promotion League')}</div>`;
+        const P = L && L.playoffs;
+        let poBlocks = '';
+        ['1.LigaCH', '2.LigaCH'].forEach(div => {
+            const po = P && P[div];
+            const title = `${COMPETITIONS[div] ? COMPETITIONS[div].name : div} — Aufstiegs-Playoff`;
+            if (!po) { poBlocks += `<div class="po-block"><h4>${title}</h4><p class="muted">Noch nicht gespielt (Woche 46).</p></div>`; return; }
+            poBlocks += `<div class="po-block"><h4>${title}</h4>
+                <div class="cup-round"><h5>Halbfinal</h5>${(po.sf || []).map(t => this._tie2Leg(t)).join('')}</div>
+                <div class="cup-round"><h5>Final</h5>${this._tie2Leg(po.final)}</div>
+                <div class="cup-winner">⬆️ Aufgestiegen: <strong>${nm(po.winner)}</strong></div></div>`;
+        });
+        const lr = GameState.lastSeasonReport || {};
+        let prBlock = '';
+        if (lr.prorelSwiss) {
+            const s = lr.prorelSwiss;
+            prBlock = `<div class="panel"><h3>Auf- &amp; Abstieg</h3>
+                <div class="comp-row"><span>⬆️ In die Super League</span><span>${s.clUp.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der Super League</span><span>${s.slDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ In die Challenge League</span><span>${s.plToCL.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der Challenge League</span><span>${s.clDown.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ In die Promotion League</span><span>${s.l1Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der Promotion League</span><span>${s.plRelegDirect.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬆️ In die 1. Liga</span><span>${s.l2Up.map(nm).join(', ')}</span></div>
+                <div class="comp-row"><span>⬇️ Aus der 1. Liga</span><span>${s.l1RelegDirect.map(nm).join(', ')}</span></div></div>`;
+        }
+        return `<div class="panel"><p class="hint">Barrage (Woche 46): Super-League-11. gegen Challenge-League-2., Challenge-League-9. gegen Promotion-League-2., je über Hin- und Rückspiel (bei Gleichstand Elfmeterschiessen). Challenge League lässt keine Reservemannschaften zu — der Platz geht in diesem Fall an den nächsten berechtigten Promotion-League-Klub. 1. und 2. Liga: Playoff der Plätze 3–6 bzw. 4–7, ebenfalls über Hin- und Rückspiel.</p>${barBlock}${poBlocks}</div>${prBlock}`;
+    },
     _germanPlayoffsView() {
         // this season's own relegation play-offs only — never fall back to last season's, so the tab
         // clears out the moment a new season starts instead of showing a stale bracket for months
@@ -1494,6 +1589,7 @@ const UI = {
         const country = this.filters.lgCountry || 'Netherlands';
         if (country === 'Germany') return this._germanPlayoffsView();
         if (country === 'Spain') return this._spanishPlayoffsView();
+        if (country === 'Switzerland') return this._swissPlayoffsView();
         // this season's own play-offs only — never fall back to last season's stale bracket
         const P = GameState.league && GameState.league.playoffs;
         const divs = ((typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[country]) || []).filter((d, i) => i > 0); // skip top tier

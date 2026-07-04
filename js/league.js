@@ -28,6 +28,15 @@ const COMPETITIONS = {
     Segunda: { name: 'Segunda Federación', short: 'Segunda', type: 'league' },
     CDR: { name: 'Copa del Rey', short: 'Copa', type: 'cup' },
     CFED: { name: 'Copa Federación', short: 'C.Fed', type: 'cup' },
+    SuperLeagueCH: { name: 'Super League', short: 'SL', type: 'league' },
+    ChallengeLeague: { name: 'Challenge League', short: 'CL', type: 'league' },
+    PromotionLeague: { name: 'Promotion League', short: 'PL', type: 'league' },
+    '1.LigaCH': { name: '1. Liga', short: '1.Liga', type: 'league' },
+    '2.LigaCH': { name: '2. Liga', short: '2.Liga', type: 'league' },
+    SCHWCUP: { name: 'Schweizer Cup', short: 'Schw. Cup', type: 'cup' },
+    CUPABASS: { name: 'Cupa Bass', short: 'Cupa Bass', type: 'cup' },
+    LICHCUP: { name: 'Liechtensteiner Cup', short: 'Lie. Cup', type: 'cup' },
+    CHBAR: { name: 'Barrage', short: 'Barrage', type: 'playoff' },
     BEKER: { name: 'KNVB Beker', short: 'Beker', type: 'cup' },
     KBEK: { name: 'De kleine Beker', short: 'kl. Beker', type: 'cup' },
     FACUP: { name: 'FA Cup', short: 'FA Cup', type: 'cup' },
@@ -42,10 +51,10 @@ function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : (Clubs
 const DIV_ORDER = ['ERE', 'EED', 'TWD', 'DRD'];
 const DIV_TIER = { ERE: 1, EED: 2, TWD: 3, DRD: 4 };
 // every country's league ladder, top tier first
-const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'] };
+const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'], Switzerland: ['SuperLeagueCH', 'ChallengeLeague', 'PromotionLeague', '1.LigaCH', '2.LigaCH'] };
 const ALL_LEAGUE_DIVS = Object.values(COUNTRY_DIVS).reduce((a, b) => a.concat(b), []);
 // cups shown per country in the Leagues tab (extend this when adding more countries)
-const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']] };
+const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Schweizer Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']] };
 function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
 
 // 12 non-league "virtual" clubs that only ever appear in the FA Cup (no squads, no transfers)
@@ -65,6 +74,38 @@ const FACUP_VIRTUAL = [
 ];
 const FACUP_VIRTUAL_MAP = FACUP_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
 
+// 13 non-league Swiss "virtual" clubs (+ 2 Liechtenstein amateur sides) that stand in for reserve/U21
+// teams and Vaduz/Eschen-Mauren in the Schweizer Cup, whenever those clubs draw a fixture there
+const SWISSCUP_VIRTUAL = [
+    { id: 'vch_pully', name: 'Pully Football', reputation: 15 },
+    { id: 'vch_terresainte', name: 'US Terre Sainte', reputation: 15 },
+    { id: 'vch_italienge', name: 'CS Italien GE', reputation: 15 },
+    { id: 'vch_brunnen', name: 'FC Brunnen', reputation: 15 },
+    { id: 'vch_rotkreuz', name: 'FC Rotkreuz', reputation: 15 },
+    { id: 'vch_vedeggio', name: 'Vedeggio Calcio', reputation: 15 },
+    { id: 'vch_regensdorf', name: 'FC Regensdorf', reputation: 15 },
+    { id: 'vch_interlaken', name: 'FC Interlaken', reputation: 15 },
+    { id: 'vch_zurichcity', name: 'Zürich City SC', reputation: 15 },
+    { id: 'vch_rebstein', name: 'FC Rebstein', reputation: 15 },
+    { id: 'vch_liestal', name: 'FC Liestal', reputation: 15 },
+    { id: 'vch_schaffhausensv', name: 'SV Schaffhausen', reputation: 15 },
+    { id: 'vch_wiesendangen', name: 'FC Wiesendangen', reputation: 15 },
+];
+const SWISSCUP_VIRTUAL_MAP = SWISSCUP_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
+
+// Liechtenstein amateur sides that only ever appear in the Liechtensteiner Cup, alongside Vaduz and
+// Eschen/Mauren themselves (who otherwise play out their real season in the Swiss league pyramid)
+const LICHCUP_VIRTUAL = [
+    { id: 'vli_triesen', name: 'FC Triesen', reputation: 10 },
+    { id: 'vli_balzers', name: 'FC Balzers', reputation: 10 },
+    { id: 'vli_triesenberg', name: 'FC Triesenberg', reputation: 10 },
+    { id: 'vli_ruggell', name: 'FC Ruggell', reputation: 10 },
+    { id: 'vli_schaan', name: 'FC Schaan', reputation: 10 },
+    { id: 'vli_schellenberg', name: 'FC Schellenberg', reputation: 5 },
+];
+const LICHCUP_VIRTUAL_MAP = LICHCUP_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
+function findVirtualClub(id) { return FACUP_VIRTUAL_MAP[id] || SWISSCUP_VIRTUAL_MAP[id] || LICHCUP_VIRTUAL_MAP[id] || null; }
+
 const League = {
     roundRobin(ids) {
         ids = [...ids];
@@ -82,13 +123,16 @@ const League = {
         }
         return rounds.concat(rounds.map(rd => rd.map(([h, a]) => [a, h])));
     },
+    // Swiss Super League / Challenge League: every pair meets 4 times a season, not 2
+    quadRoundRobin(ids) { return this.roundRobin(ids).concat(this.roundRobin(ids)); },
     shuffle(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; },
 
     setupSeason() {
         const tables = {}, schedule = {}, mdIndex = {};
+        const QUAD = new Set(['SuperLeagueCH', 'ChallengeLeague']);
         ALL_LEAGUE_DIVS.forEach(div => {
             const ids = Clubs.getClubsByDivision(div).map(c => c.id);
-            schedule[div] = this.roundRobin(ids);
+            schedule[div] = QUAD.has(div) ? this.quadRoundRobin(ids) : this.roundRobin(ids);
             mdIndex[div] = 0;
             tables[div] = ids.map(id => ({ clubId: id, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, Pts: 0 }));
         });
@@ -102,8 +146,12 @@ const League = {
             lpokal: this._buildLandespokal(),
             cdr: this._buildSpanishCup(['LaLiga'], ['LaLiga2', 'PrimeraSup']),
             cfed: this._buildSpanishCup(['PrimeraSup'], ['PrimeraInf', 'Segunda']),
-            playoffs: { EED: null, TWD: null, DRD: null, CHAMP: null, LEAGUE1: null, LEAGUE2: null, Natleague: null, LaLiga2: null, PrimeraSup: null, PrimeraInf: null, Segunda: null, _done: false },
+            schwcup: this._buildSchweizerCup(),
+            cupabass: this._buildCupaBass(),
+            lichcup: this._buildLichCup(),
+            playoffs: { EED: null, TWD: null, DRD: null, CHAMP: null, LEAGUE1: null, LEAGUE2: null, Natleague: null, LaLiga2: null, PrimeraSup: null, PrimeraInf: null, Segunda: null, '1.LigaCH': null, '2.LigaCH': null, _done: false },
             germanReleg: null,
+            swissBarrage: null,
             prorel: null,
             champions: {},
             finished: false
@@ -378,6 +426,7 @@ const League = {
         this.applyPromotionRelegationEngland();
         this.applyPromotionRelegationGermany();
         this.applyPromotionRelegationSpain();
+        this.applyPromotionRelegationSwiss();
         return c;
     },
 
@@ -704,9 +753,208 @@ const League = {
         return L.prorelEsp;
     },
 
+    // ================= SWITZERLAND =================
+    // draw a stand-in from a virtual pool for a club that isn't allowed to actually play a cup tie
+    // (reserve/U21 sides, and Vaduz/Eschen-Mauren in the two Swiss FA cups); reuses a name if the
+    // pool's ever exhausted rather than breaking the bracket
+    _swissVirtualSub(pool, usedSet) {
+        let pick = pool.find(v => !usedSet.has(v.id));
+        if (!pick) pick = pool[Math.floor(Math.random() * pool.length)];
+        usedSet.add(pick.id);
+        return pick.id;
+    },
+    _swissCupEligible(id, usedSet) {
+        if (id === 'Eschen/Mauren' || id === 'Vaduz' || isReserveClub(id)) return this._swissVirtualSub(SWISSCUP_VIRTUAL, usedSet);
+        return id;
+    },
+
+    // ---- Schweizer Cup: R1 is 1. Liga (away) v 2. Liga (home); R2 merges in the top 3 divisions
+    // (64 clubs total) with Super League seeded away and kept apart from each other ----
+    _buildSchweizerCup() {
+        return { remaining: null, results: [], winner: null, _r1Winners: null, _usedVirtual: new Set() };
+    },
+    _schweizerCupRoundName(week) {
+        return ({ 4: '1. Hauptrunde', 7: '2. Hauptrunde', 15: '3. Hauptrunde', 26: 'Achtelfinal', 32: 'Viertelfinal', 38: 'Halbfinal', 47: 'Final' })[week] || 'Runde';
+    },
+    schweizerCupStep(week) {
+        const C = GameState.league.schwcup; if (!C || C.winner) return;
+        let pairs;
+        if (week === 4) {
+            const away = this.shuffle(Clubs.getClubsByDivision('1.LigaCH').map(c => this._swissCupEligible(c.id, C._usedVirtual)));
+            const home = this.shuffle(Clubs.getClubsByDivision('2.LigaCH').map(c => this._swissCupEligible(c.id, C._usedVirtual)));
+            pairs = home.map((h, i) => [h, away[i]]);
+        } else if (C.remaining === null) {
+            const seeded = this.shuffle(Clubs.getClubsByDivision('SuperLeagueCH').map(c => this._swissCupEligible(c.id, C._usedVirtual)));
+            const lower = this.shuffle([
+                ...(C._r1Winners || []),
+                ...Clubs.getClubsByDivision('ChallengeLeague').map(c => c.id),
+                ...Clubs.getClubsByDivision('PromotionLeague').map(c => this._swissCupEligible(c.id, C._usedVirtual))
+            ]);
+            pairs = [];
+            seeded.forEach(s => { const h = lower.pop(); pairs.push(h != null ? [h, s] : [s, null]); });
+            while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
+            if (lower.length) pairs.push([lower.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const r = this.playMatch(h, a, 'SCHWCUP', true);
+            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+        });
+        C.results.push({ week, round: this._schweizerCupRoundName(week), ties });
+        if (week === 4) { C._r1Winners = winners; return; }
+        C.remaining = winners;
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // ---- Cupa Bass: Promotion League + 1. Liga + 2. Liga (66 clubs) minus Eschen/Mauren and one
+    // random reserve side -> a clean 64; Promotion League seeded away, one fewer round than the others ----
+    _buildCupaBass() {
+        const pool = ['PromotionLeague', '1.LigaCH', '2.LigaCH'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);
+        let entrants = pool.filter(id => id !== 'Eschen/Mauren');
+        const reserves = entrants.filter(isReserveClub);
+        if (entrants.length > 64 && reserves.length) {
+            const drop = reserves[Math.floor(Math.random() * reserves.length)];
+            entrants = entrants.filter(id => id !== drop);
+        }
+        const promSet = new Set(Clubs.getClubsByDivision('PromotionLeague').map(c => c.id));
+        const seeded = entrants.filter(id => promSet.has(id));
+        const lower = entrants.filter(id => !promSet.has(id));
+        return { seeded, lower, remaining: null, results: [], winner: null };
+    },
+    _cupaBassRoundName(week) {
+        return ({ 4: '1. Hauptrunde', 7: '2. Hauptrunde', 15: 'Achtelfinal', 26: 'Viertelfinal', 38: 'Halbfinal', 47: 'Final' })[week] || 'Runde';
+    },
+    cupaBassStep(week) {
+        const C = GameState.league.cupabass; if (!C || C.winner) return;
+        let pairs;
+        if (C.remaining === null) {
+            const seeded = this.shuffle(C.seeded.slice()), lower = this.shuffle(C.lower.slice());
+            pairs = [];
+            seeded.forEach(s => { const h = lower.pop(); pairs.push(h != null ? [h, s] : [s, null]); });
+            while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
+            if (lower.length) pairs.push([lower.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const r = this.playMatch(h, a, 'CUPABASS', true);
+            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._cupaBassRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // ---- Liechtensteiner Cup: Vaduz + Eschen/Mauren + 6 Liechtenstein amateur sides; QF & SF are
+    // two-legged, the final is a single match ----
+    _buildLichCup() {
+        const teams = ['Vaduz', 'Eschen/Mauren', ...LICHCUP_VIRTUAL.map(v => v.id)];
+        return { remaining: this.shuffle(teams), results: [], winner: null };
+    },
+    _lichCupRoundName(week) { return ({ 32: 'Viertelfinal', 38: 'Halbfinal', 47: 'Final' })[week] || 'Runde'; },
+    lichCupStep(week) {
+        const C = GameState.league.lichcup; if (!C || C.winner) return;
+        const pairs = this._pairUp(C.remaining);
+        const ties = [], winners = [];
+        const twoLegged = week !== 47;
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            if (twoLegged) {
+                const t = this._twoLeggedTie(h, a, 'LICHCUP');
+                ties.push(t); winners.push(t.winner);
+            } else {
+                const r = this.playMatch(h, a, 'LICHCUP', true);
+                ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            }
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._lichCupRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // ---- Barrage: Super League 11th v Challenge League 2nd, and Challenge League 9th v Promotion
+    // League 2nd (Challenge League bans reserves outright, so PL's barrage slot skips past any reserve) ----
+    playSwissBarrages() {
+        const L = GameState.league;
+        if (!L.tables.SuperLeagueCH) { L.swissBarrage = null; return; }
+        const SL = this.sortedTable('SuperLeagueCH').map(r => r.clubId);
+        const CL = this.sortedTable('ChallengeLeague').map(r => r.clubId);
+        const PL = this.sortedTable('PromotionLeague').map(r => r.clubId);
+        const top = (SL.length >= 11 && CL.length >= 2) ? this._twoLeggedTie(SL[10], CL[1], 'CHBAR') : null;
+        const plUp = this._promoteRespectingReserves(PL, 2, 0, 0, null);
+        const bottom = (CL.length >= 9 && plUp.length >= 2) ? this._twoLeggedTie(CL[8], plUp[1], 'CHBAR') : null;
+        L.swissBarrage = { top, bottom, plUp };
+    },
+
+    // ---- 1. Liga & 2. Liga promotion play-offs: identical shape to the Spanish 4-team play-off ----
+    playPlayoffsSwiss() {
+        const L = GameState.league;
+        if (!L.tables['1.LigaCH']) return;
+        [['1.LigaCH', 2], ['2.LigaCH', 3]].forEach(([div, autoUp]) => {
+            const t = this.sortedTable(div).map(r => r.clubId);
+            if (t.length < autoUp + 4) { L.playoffs[div] = null; return; }
+            L.playoffs[div] = this._spanishPOSeries([t[autoUp], t[autoUp + 1], t[autoUp + 2], t[autoUp + 3]], div);
+        });
+    },
+
+    applyPromotionRelegationSwiss() {
+        const L = GameState.league;
+        if (!L.tables.SuperLeagueCH) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const SL = ord('SuperLeagueCH'), CL = ord('ChallengeLeague'), PL = ord('PromotionLeague'), L1 = ord('1.LigaCH'), L2 = ord('2.LigaCH');
+        const bar = L.swissBarrage || {};
+        const poW = d => (L.playoffs && L.playoffs[d]) ? L.playoffs[d].winner : null;
+
+        // Super League <-> Challenge League barrage (11th v Challenge League 2nd)
+        const slA = SL[10], clB = CL[1];
+        const topWinner = bar.top ? bar.top.winner : slA;
+        const sl11Down = topWinner !== slA;
+        const slDown = sl11Down ? [SL[11], slA] : [SL[11]];
+        const clUp = sl11Down ? [CL[0], clB] : [CL[0]];
+
+        // Challenge League <-> Promotion League barrage (9th v Promotion League's reserve-respecting 2nd —
+        // Challenge League never admits a reserve side, so the spot skips to the next eligible PL club)
+        const plUp2 = bar.plUp || this._promoteRespectingReserves(PL, 2, 0, 0, null);
+        const plDirect = plUp2[0], plA = plUp2[1], clB2 = CL[8];
+        const bottomWinner = bar.bottom ? bar.bottom.winner : clB2;
+        const plWinsBarrage = bottomWinner === plA;
+        const clDown = plWinsBarrage ? [CL[9], clB2] : [CL[9]];
+        const plToCL = plWinsBarrage ? [plDirect, plA] : [plDirect];
+
+        // Promotion League <-> 1. Liga (max 4 reserves in Promotion League)
+        const plRelegDirect = [PL[15], PL[16], PL[17]];
+        const plLeaving = new Set([...plRelegDirect, ...plToCL]);
+        const plArriving = plWinsBarrage ? [] : [clB2];
+        const resPLbase = [...PL.filter(id => !plLeaving.has(id)), ...plArriving].filter(isReserveClub).length;
+        const l1UpCandidates = [L1[0], L1[1], poW('1.LigaCH')].filter(Boolean);
+        const l1Up = this._capReserves(l1UpCandidates, L1, 4, resPLbase, new Set());
+
+        // 1. Liga <-> 2. Liga (max 6 reserves in 1. Liga; 2. Liga has no reserve cap and no relegation)
+        const l1RelegDirect = [L1[20], L1[21], L1[22], L1[23]];
+        const l1Stay = L1.filter(id => !l1RelegDirect.includes(id) && !l1Up.includes(id));
+        const resL1base = [...l1Stay, ...plRelegDirect].filter(isReserveClub).length;
+        const l2UpCandidates = [L2[0], L2[1], L2[2], poW('2.LigaCH')].filter(Boolean);
+        const l2Up = this._capReserves(l2UpCandidates, L2, 6, resL1base, new Set());
+
+        const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
+        move(slDown, 'ChallengeLeague'); move(clUp, 'SuperLeagueCH');
+        move(clDown, 'PromotionLeague'); move(plToCL, 'ChallengeLeague');
+        move(plRelegDirect, '1.LigaCH'); move(l1Up, 'PromotionLeague');
+        move(l1RelegDirect, '2.LigaCH'); move(l2Up, '1.LigaCH');
+
+        this._repDrift([...clUp, ...plToCL, ...l1Up, ...l2Up], [...slDown, ...clDown, ...plRelegDirect, ...l1RelegDirect]);
+        L.prorelSwiss = { slDown, clUp, clDown, plToCL, plRelegDirect, l1Up, l1RelegDirect, l2Up };
+        return L.prorelSwiss;
+    },
+
     clubStrength(clubId) {
         const c = Clubs.getClubById(clubId);
-        if (!c) { const v = (typeof FACUP_VIRTUAL_MAP !== 'undefined') ? FACUP_VIRTUAL_MAP[clubId] : null; return v ? v.reputation : 50; }
+        if (!c) { const v = findVirtualClub(clubId); return v ? v.reputation : 50; }
         const squad = GameState.players.filter(p => effectiveClubId(p) === clubId && !p.injury);
         const top = squad.sort((a, b) => b.ability - a.ability).slice(0, 11);
         const avg = top.length ? top.reduce((s, p) => s + p.ability, 0) / top.length : c.reputation;
@@ -715,7 +963,7 @@ const League = {
     teamName(id) {
         const c = Clubs.getClubById(id);
         if (c) return c.name;
-        const v = (typeof FACUP_VIRTUAL_MAP !== 'undefined') ? FACUP_VIRTUAL_MAP[id] : null;
+        const v = findVirtualClub(id);
         return v ? v.name : id;
     },
 
@@ -778,7 +1026,13 @@ const League = {
         if ([4, 7, 15, 26, 38, 47].includes(week) && L.cdr) this.spanishCupStep('cdr', week);
         if ([4, 7, 15, 26, 38, 47].includes(week) && L.cfed) this.spanishCupStep('cfed', week);
 
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); L.playoffs._done = true; }
+        // Swiss cups: Schweizer Cup runs the full 7 rounds like the others; Cupa Bass is 64 clubs so
+        // skips week 32 like the Spanish cups; the Liechtensteiner Cup is just QF/SF/Final
+        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.schwcup) this.schweizerCupStep(week);
+        if ([4, 7, 15, 26, 38, 47].includes(week) && L.cupabass) this.cupaBassStep(week);
+        if ([32, 38, 47].includes(week) && L.lichcup) this.lichCupStep(week);
+
+        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); L.playoffs._done = true; }
     },
 
     playLeagueMatch(div, homeId, awayId) {
@@ -931,6 +1185,9 @@ const League = {
         if (L.lpokal && L.lpokal.winner) this.awardTrophy(L.lpokal.winner, 'LPOKAL', year, awarded);
         if (L.cdr && L.cdr.winner) this.awardTrophy(L.cdr.winner, 'CDR', year, awarded);
         if (L.cfed && L.cfed.winner) this.awardTrophy(L.cfed.winner, 'CFED', year, awarded);
+        if (L.schwcup && L.schwcup.winner) this.awardTrophy(L.schwcup.winner, 'SCHWCUP', year, awarded);
+        if (L.cupabass && L.cupabass.winner) this.awardTrophy(L.cupabass.winner, 'CUPABASS', year, awarded);
+        if (L.lichcup && L.lichcup.winner) this.awardTrophy(L.lichcup.winner, 'LICHCUP', year, awarded);
         L.finished = true;
         return awarded;
     },

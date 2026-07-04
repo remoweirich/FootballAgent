@@ -13,7 +13,7 @@ const VEHICLES = [
 
 // ---- Properties (bought in order) ----
 const PROPERTIES = [
-    { id: 'caravan', name: 'Wohnwagen', price: 18000, repLimit: 4, players: 2 },
+    { id: 'caravan', name: 'Caravan', price: 18000, repLimit: 4, players: 2 },
     { id: 'apartment', name: 'Appartment', price: 350000, repLimit: 4, players: 3 },
     { id: 'house', name: 'House', price: 1000000, repLimit: 4, players: 3 },
     { id: 'penthouse', name: 'Luxury Penthouse', price: 3000000, repLimit: 4, players: 4 },
@@ -52,7 +52,18 @@ const SPONSOR_COMPANIES = {
             'Autobedrijf Joep', 'Friesdranken Fiona', 'Mediacenter.nl', 'Advocaten De Jong', 'Advocaten Huisema'],
         national: ['Phillippus', 'Post.nl', 'RoboBank', 'Hijnecken', 'Radio Nederland', 'Tele-Holland', 'Het Goede Leven',
             'Prime Insurance', 'Zeker-is-zeker.nl', 'Cryptoleeuw.nl', 'wedden-winnen.nl'],
-        international: ['Purello Tires', 'Carwindow', 'WMB', 'Skybus', 'Monolever', 'SkyFranz', 'Alliance', 'Mercury-Bans'],
+        international: ['Purello Tires', 'Carwindow', 'WMB', 'Skybus', 'Monohebel', 'SkyFranz', 'Alliance', 'Mercury-Bans'],
+        worldwide: ['Naik', 'Adadis', 'Popsi', 'Cola Cola', 'Macrohard', 'Pear', 'Stripeify', 'Qatair', 'Soily Arabica',
+            'Jones & Jones', 'ApprenticeCard', 'Nile', 'Interflix', 'Kansasinstruments', 'Amyrates', 'Cheep Automobiles',
+            'Eddyhat', 'Q-Smartphone', 'OIO'],
+    },
+    CH: {
+        local: ['Bäckerei Müller', 'Schreinerei Baumann', 'Ristorante Rössli', 'Gasthaus zum Ochsen', 'Praxis Auwies', 'Tante Anna Laden',
+            'Doktor Bührer', 'Fahrschule Avdija', 'La Boulangerie Prox', 'Ristorante Amore', 'La Boutique Quotidien', 'Casa Maria', 'Les Menuisiers du Ville'],
+        regional: ['TV {region}', 'Radio {region}', 'La Nouvelle', '{regio} à jour', 'Getränkemarkt Mo', 'Bio-Dschungel', 'Schneider, Schneiter & Leu Anwälte',
+            'MegaDürüm', 'FalafElDorado', 'Bière Artisane', 'Pane e Acqua', 'MediaMakler', 'Tourismus {region}', 'Folg', 'Rolandi'],
+        national: ['Tourismus Schweiz', 'Kohp', 'Mygro', 'LaPoste', 'eSBeBe', 'SwissNet', 'derLöwe.ch', 'primamode.ch', 'Nudel.ch', 'Pepper', 'Krasiqi Consulting'],
+        international: ['Purello Tires', 'Carwindow', 'WMB', 'Skybus', 'Monohebel', 'SkyFranz', 'Alliance', 'Mercury-Bans', 'Loco Choco', ],
         worldwide: ['Naik', 'Adadis', 'Popsi', 'Cola Cola', 'Macrohard', 'Pear', 'Stripeify', 'Qatair', 'Soily Arabica',
             'Jones & Jones', 'ApprenticeCard', 'Nile', 'Interflix', 'Kansasinstruments', 'Amyrates', 'Cheep Automobiles',
             'Eddyhat', 'Q-Smartphone', 'OIO'],

@@ -1,0 +1,240 @@
+/* ============================================================
+   App-level additions on top of design-tokens.css + components.css.
+   Every value here is a var(--…) token — no hard-coded colour,
+   spacing, radius or font size.
+   ============================================================ */
+
+/* ---------- Page shell: the page itself never scrolls ----------
+   .screen (components.css) is the single scroll region, sized off 100dvh
+   with a 100vh fallback. The old `#app { min-height: 100vh }` made the
+   whole document the scroller, which pushed the fixed bottom nav out of
+   reach on real mobile viewports — that model is gone. */
+html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); }
+body { font-family: var(--font); overflow: hidden; }
+* { box-sizing: border-box; }
+#app {
+  height: 100vh; height: 100dvh;
+  overflow: hidden;
+  display: flex; flex-direction: column; /* lets a hoisted header/nav sit outside the scroller */
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* ---------- Persistent finance strip (Balance / this week / Reputation) ----------
+   Sits inline in the top bar itself, between the page title and the inbox icon,
+   on every screen — so both stay visible without a title that's too long crowding it out. */
+.app-bar { gap: var(--space-3); }
+.app-bar__title--shrink { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdr-finance { display: flex; align-items: center; gap: 9px; flex: none; cursor: pointer; }
+.hf-item { display: flex; align-items: center; gap: 3px; font-size: 11px; font-weight: var(--weight-semibold); color: var(--text-secondary); white-space: nowrap; }
+.hf-item i { font-size: 13px; }
+
+/* ---------- Push header (detail / negotiation screens: back + title, no bottom nav) ---------- */
+.screen--push { padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom)); }
+.push-bar {
+  position: sticky; top: 0; z-index: 30; background: var(--bg);
+  display: flex; align-items: center; gap: var(--space-3);
+  min-height: var(--hit-target);
+  padding: calc(env(safe-area-inset-top) + var(--space-2)) var(--screen-pad) var(--space-3);
+}
+.screen > .push-bar { margin: 0 calc(-1 * var(--screen-pad)); }
+.push-bar.is-scrolled { box-shadow: 0 .5px 0 var(--line-strong); }
+.push-bar__title { font-size: var(--fs-xl); font-weight: var(--weight-semibold); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.push-bar__back { display: flex; align-items: center; justify-content: center; width: var(--icon-btn); height: var(--icon-btn); color: var(--text-bright); flex: none; background: none; border: 0; cursor: pointer; }
+
+/* ---------- Fixed primary-action dock (Home "Advance week") ----------
+   Truly fixed to the viewport, just above the bottom nav — always in the same
+   spot regardless of how much content (or how many "needs attention" rows)
+   sits above it. .screen reserves --cta-dock-h of extra bottom padding so the
+   last scrolled row never hides behind it (see .screen--has-cta below). */
+.cta-dock {
+  position: fixed;
+  left: 0; right: 0; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  z-index: 20;
+  padding: var(--space-3) var(--screen-pad) var(--space-4);
+  background: linear-gradient(to top, var(--bg) 78%, transparent);
+}
+.cta-dock .btn--primary { border-radius: var(--radius-lg); }
+.screen--has-cta { padding-bottom: calc(var(--nav-clear) + var(--cta-dock-h) + env(safe-area-inset-bottom)); }
+.btn__stack { flex: 1; text-align: left; }
+.btn__stack small { display: block; font-weight: var(--weight-semibold); font-size: var(--fs-sm); opacity: .72; margin-top: 1px; }
+
+/* ---------- Row with a tinted pictogram (needs-attention, inbox list) ---------- */
+.row-ico { width: 34px; height: 34px; flex: none; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+.row-title { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text); line-height: 1.3; }
+.row-sub { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.35; margin-top: 1px; }
+.row-chev { font-size: 18px; color: var(--text-chevron); flex: none; }
+
+/* ---------- Info cell (label / value) grid: contract facts, key stats ---------- */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.info-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+.info { background: var(--surface-raised); border-radius: var(--radius-md); padding: 9px 11px; }
+.info > span { font-size: 11px; color: var(--text-faint); }
+.info > span .ti { font-size: 12px; vertical-align: -2px; margin-right: 4px; }
+.info > b { display: block; font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text); margin-top: 1px; }
+
+/* ---------- Fixture row (cup ties, play-offs): home/score/away in three fixed columns
+   so every score lines up regardless of team-name length ---------- */
+.fixture { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: .5px solid var(--line-faint); font-size: var(--fs-md); }
+.fixture:last-child { border-bottom: none; }
+.fx-home, .fx-away { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.fx-home { text-align: right; }
+.fx-away { text-align: left; }
+.fx-home.fx-win, .fx-away.fx-win { color: var(--text); font-weight: var(--weight-semibold); }
+.fx-score { flex: none; min-width: 40px; text-align: center; font-weight: var(--weight-semibold); color: var(--text); }
+.fixture--labeled .fx-label { flex: none; width: 40px; font-size: 11px; color: var(--text-faint); }
+
+/* ---------- Fact card: label/value rows inside a bordered card (contract, club profile) ---------- */
+.fcard { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 2px var(--card-pad); margin-bottom: var(--space-4); }
+.frow { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: .5px solid var(--line-faint); font-size: var(--fs-md); gap: var(--space-3); }
+.frow:last-child { border-bottom: none; }
+.frow__k { color: var(--text-muted); }
+.frow__k .ti { font-size: 13px; vertical-align: -2px; margin-right: 6px; color: var(--text-dim); }
+.frow__v { color: var(--text); font-weight: var(--weight-semibold); text-align: right; }
+
+/* ---------- Section label with trailing action ---------- */
+.section-head { display: flex; align-items: center; justify-content: space-between; margin: var(--space-5) 0 var(--space-3); }
+.section-head .section-label { margin: 0; }
+
+/* ---------- Offer "letter" row ---------- */
+.letter { display: flex; align-items: center; gap: var(--space-4); background: var(--surface-raised); border: .5px solid var(--line-strong); border-radius: var(--radius-lg); padding: 11px var(--card-pad); margin-bottom: var(--space-3); cursor: pointer; }
+.letter__dot { width: 9px; height: 9px; border-radius: var(--radius-round); flex: none; }
+.letter__body { flex: 1; min-width: 0; }
+.letter__title { font-size: var(--fs-lg); font-weight: var(--weight-semibold); }
+.letter__sub { font-size: var(--fs-sm); color: var(--text-muted); margin-top: 1px; }
+.letter__fee { text-align: right; }
+.letter__fee-label { font-size: 10.5px; color: var(--text-faint); }
+.letter__fee-value { font-size: 14.5px; font-weight: var(--weight-semibold); color: var(--text); }
+
+/* ---------- Bottom sheet (quick confirmations / pickers) ---------- */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
+.sheet { width: 100%; max-width: 480px; background: var(--surface); border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); padding: var(--space-6) var(--screen-pad) calc(var(--space-6) + env(safe-area-inset-bottom)); max-height: 82vh; max-height: 82dvh; overflow-y: auto; }
+.sheet__handle { width: 36px; height: 4px; border-radius: var(--radius-round); background: var(--line-strong); margin: 0 auto var(--space-5); }
+.sheet__title { font-size: var(--fs-xl); font-weight: var(--weight-semibold); margin-bottom: var(--space-4); }
+
+/* ---------- Modal (used sparingly, for full result confirmations) ---------- */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: center; justify-content: center; z-index: 60; padding: var(--space-6); }
+.modal-card { width: 100%; max-width: 380px; background: var(--surface); border: .5px solid var(--line-strong); border-radius: var(--radius-lg); padding: var(--space-6); }
+
+/* ---------- Native range input, themed to match the mockup slider ---------- */
+.range { -webkit-appearance: none; appearance: none; width: 100%; height: var(--slider-track); border-radius: 5px; background: var(--track); margin: var(--space-2) 0 3px; accent-color: var(--accent); }
+.range::-webkit-slider-thumb { -webkit-appearance: none; width: var(--slider-handle); height: var(--slider-handle); border-radius: var(--radius-round); background: var(--text); box-shadow: 0 0 0 3px var(--bg); cursor: pointer; }
+.range::-moz-range-thumb { width: var(--slider-handle); height: var(--slider-handle); border-radius: var(--radius-round); background: var(--text); box-shadow: 0 0 0 3px var(--bg); border: 0; cursor: pointer; }
+.range::-moz-range-progress { background: var(--accent); height: var(--slider-track); border-radius: 5px; }
+
+/* ---------- Standings table ----------
+   No sticky thead: a sticky th inside the `overflow-x:auto` wrapper below picks
+   THAT div as its nearest scrolling ancestor (not .screen), which made the header
+   stick at the wrong offset and appear to float mid-table. Plain static header. */
+.standings { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.standings th {
+  background: var(--bg);
+  text-align: left; font-weight: var(--weight-semibold); color: var(--text-faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em; padding: var(--space-2) var(--space-2); border-bottom: .5px solid var(--line-strong);
+}
+.standings td { padding: 8px var(--space-2); border-bottom: .5px solid var(--line-faint); color: var(--text-secondary); }
+.standings td.club-cell { color: var(--text); font-weight: var(--weight-semibold); display: flex; align-items: center; gap: var(--space-3); }
+.standings td.num, .standings th.num { text-align: right; }
+.standings tr.mine td.club-cell { color: var(--accent-text-2); }
+.standings tr { position: relative; }
+/* promotion/relegation zone: a colour strip on the row's leading edge, left of the position number */
+.standings td:first-child { border-left: 3px solid transparent; }
+.zone-promote td:first-child { border-left-color: var(--zone-promote); }
+.zone-relegate td:first-child { border-left-color: var(--zone-relegate); }
+.zone-po-up td:first-child { border-left-color: var(--zone-po-up); }
+.zone-po-down td:first-child { border-left-color: var(--zone-po-down); }
+
+/* ---------- Empty / muted states ----------
+   Empty states are content, not absence: icon in a soft disc, a one-line
+   title, a hint that tells the player what to DO, optional CTA.
+   <div class="empty">
+     <div class="empty__icon"><i class="ti ti-zoom-scan"></i></div>
+     <div class="empty__title">No clients yet</div>
+     <div class="empty__hint">Visit Scouting to find your first talent.</div>
+     <button class="btn btn--accent-outline btn--sm empty__cta">Open Scouting</button>
+   </div> */
+.empty { text-align: center; padding: var(--space-7) var(--space-4); color: var(--text-faint); font-size: var(--fs-md); }
+.empty__icon { width: 54px; height: 54px; margin: 0 auto var(--space-4); border-radius: var(--radius-round); background: var(--surface-raised); border: .5px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--text-dim); }
+.empty__title { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.empty__hint { font-size: var(--fs-sm); color: var(--text-faint); line-height: 1.5; margin-top: 3px; }
+.empty__cta { margin-top: var(--space-5); display: inline-flex; width: auto; }
+/* compact variant for small in-card empties ("None." boxes) */
+.empty--inline { padding: var(--space-4); }
+.empty--inline .empty__icon { width: 38px; height: 38px; font-size: 17px; margin-bottom: var(--space-3); }
+.muted { color: var(--text-faint); }
+.hint { font-size: var(--fs-sm); color: var(--text-faint); line-height: 1.5; }
+
+/* ---------- Result banners (accept / reject feedback) ---------- */
+.result { border-radius: var(--radius-md); padding: 10px 12px; font-size: var(--fs-md); margin-top: var(--space-3); }
+.result.ok { background: var(--accent-tint); color: var(--accent-text); border: .5px solid var(--accent-border); }
+.result.bad { background: var(--danger-tint); color: var(--danger-text); border: .5px solid var(--danger-border); }
+.result.info { background: rgba(95,166,246,.12); color: var(--info-text); border: .5px solid rgba(95,166,246,.3); }
+
+/* ---------- Text input (setup screen, filters) ---------- */
+.field-label { display: block; font-size: var(--fs-sm); font-weight: var(--weight-semibold); color: var(--text-secondary); margin: var(--space-4) 0 6px; }
+.text-input, .select-input { width: 100%; box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: 11px 12px; font-size: var(--fs-lg); color: var(--text); font-family: var(--font); }
+.select-input { appearance: none; }
+
+/* ---------- Chart card ---------- */
+.chart-card { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 11px 12px 8px; margin-bottom: var(--space-4); }
+.chart-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.chart-title { font-size: 13.5px; font-weight: var(--weight-semibold); }
+.chart-value { font-size: var(--fs-md); font-weight: var(--weight-semibold); }
+.chart-unit { font-size: 11px; color: var(--text-faint); font-weight: var(--weight-regular); }
+.chart-svg { width: 100%; height: auto; display: block; }
+.chart-svg text { fill: var(--text-dim); font-size: 11px; }
+.chart-svg .grid-line { stroke: var(--grid); }
+.chart-svg .axis-line { stroke: var(--line-strong); }
+
+/* ---------- Season / expandable rows (History tab) ---------- */
+.season-row { padding: 9px 0; border-bottom: .5px solid var(--line-faint); cursor: pointer; }
+.season-row:last-child { border-bottom: none; }
+.season-top { display: flex; align-items: center; justify-content: space-between; }
+.season-name { font-weight: var(--weight-semibold); }
+.season-club { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.season-stat { font-size: 11.5px; color: var(--text-secondary); text-align: right; }
+.season-body { padding: var(--space-3) 0 2px 0; }
+.comp-row { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-sm); padding: 7px 2px; border-top: 1px dashed var(--line-strong); color: var(--text-secondary); }
+
+/* ---------- Toggle chip row (career mode, position filter) ---------- */
+.chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.htog { font-size: 11px; font-weight: var(--weight-semibold); padding: 4px 9px; border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-muted); cursor: pointer; border: .5px solid var(--line-strong); }
+.htog.is-on { background: var(--accent-tint); color: var(--accent-text); border-color: var(--accent-border); }
+
+/* ---------- How-to / setup screen ----------
+   Own scroll region (there's no .screen here). margin:auto on the card
+   centres it AND stays scrollable when content is taller than the viewport
+   (flex centering alone clips the top). */
+.setup-wrap { height: 100vh; height: 100dvh; overflow-y: auto; display: flex; padding: var(--space-6); }
+.setup-card { width: 100%; max-width: 420px; margin: auto; }
+.setup-card h1 { font-size: var(--fs-2xl); text-align: center; margin: 0 0 var(--space-6); }
+.howto { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6); text-align: center; }
+.howto-icon { font-size: 32px; margin-bottom: var(--space-2); }
+.howto h3 { font-size: var(--fs-lg); margin: 0 0 var(--space-2); }
+.howto p { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.5; margin: 0; min-height: 62px; }
+.howto-nav { display: flex; align-items: center; justify-content: center; gap: var(--space-4); margin-top: var(--space-4); }
+.howto-btn { background: var(--surface-raised); border: .5px solid var(--line-strong); color: var(--text-bright); width: 30px; height: 30px; border-radius: var(--radius-round); cursor: pointer; }
+.howto-dots { display: flex; gap: 6px; }
+.ht-dot { width: 6px; height: 6px; border-radius: var(--radius-round); background: var(--line-strong); cursor: pointer; }
+.ht-dot.on { background: var(--accent); }
+
+/* ---------- Client card (Clients screen) ---------- */
+.cl-card { display: block; background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 10px 11px; margin-bottom: var(--space-3); }
+.cl-name { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text); }
+.cl-sub { font-size: var(--fs-sm); color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+.cl-md { width: var(--dot-morale); height: var(--dot-morale); border-radius: var(--radius-round); }
+.cl-stats { display: flex; margin-top: 9px; padding-top: 9px; border-top: .5px solid var(--line-faint); }
+.cl-st { flex: 1; text-align: center; }
+.cl-st b { display: block; font-size: var(--fs-md); font-weight: var(--weight-semibold); color: var(--text); }
+.cl-st span { font-size: 11px; color: var(--text-faint); }
+.cl-chip { font-size: var(--fs-sm); color: var(--text-secondary); background: var(--surface-raised); border: .5px solid var(--line-strong); border-radius: var(--radius-pill); padding: 5px 9px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.cl-chip.cl-on { background: var(--accent-tint); border-color: var(--accent-border); color: var(--accent-text); }
+.cl-ct { font-size: var(--fs-xs); font-weight: var(--weight-semibold); background: rgba(255,255,255,.10); border-radius: var(--radius-xs); padding: 0 5px; min-width: 15px; text-align: center; }
+.cl-chip.cl-on .cl-ct { background: rgba(52,211,153,.22); color: var(--accent-text-2); }
+.gbtn { font-size: var(--fs-sm); color: var(--text-secondary); background: var(--surface-raised); border: .5px solid var(--line-strong); border-radius: var(--radius-md); padding: 6px 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+
+/* ---------- Misc layout ---------- */
+.gap-2 > * + * { margin-top: var(--space-2); }
+.gap-3 > * + * { margin-top: var(--space-3); }
+.flex-row { display: flex; align-items: center; gap: var(--space-3); }
+.spacer { flex: 1; }
+.right { text-align: right; }

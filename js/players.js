@@ -12,8 +12,9 @@ const ROLE_ORDER = ['youth', 'fringe', 'rotation', 'starter', 'key'];
 const POS_LIST = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const ATTACK_POS = ['CAM', 'LW', 'RW', 'ST'];
 const MID_POS = ['CDM', 'CM', 'CAM'];
-// English football pays more than Dutch (applied to every player's wage)
-const COUNTRY_WAGE_MULT = { Netherlands: 1.0, England: 1.25, Germany: 1.12, Spain: 1.18 };
+// English football pays more than Dutch (applied to every player's wage); Switzerland sits just under
+// the Dutch peak (its top clubs' reputations are close to the Eredivisie's, but wages fall a bit short)
+const COUNTRY_WAGE_MULT = { Netherlands: 1.0, England: 1.25, Germany: 1.12, Spain: 1.18, Switzerland: 0.93 };
 // development pacing: deliberately slow — a top young regular gains roughly a handful of points a
 // season on his own, and agency development upgrades give a meaningful, noticeable boost on top
 const DEV_BASE = 0.08;

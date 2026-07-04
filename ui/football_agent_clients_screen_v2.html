@@ -1,0 +1,125 @@
+<style>
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.fa-wrap{width:fit-content;max-width:100%;margin:0 auto;padding:16px;background:var(--surface-1);border-radius:16px}
+.fa-phone{width:334px;max-width:86vw;background:#04070B;border:1px solid rgba(255,255,255,.10);border-radius:40px;padding:9px}
+.fa-scr{background:#0F1318;border-radius:32px;overflow:hidden;font-family:var(--font-sans);color:#EDEFF2}
+.cl-card{background:#14181E;border:.5px solid rgba(255,255,255,.06);border-radius:12px;padding:10px 11px;margin-bottom:8px}
+.cl-fl{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none;width:24px}
+.cl-pos{font-size:11px;font-weight:600;color:#9BA3AE;letter-spacing:.02em}
+.cl-name{font-size:14.5px;font-weight:600;color:#EDEFF2}
+.cl-sub{font-size:12px;color:#8E96A2;margin-top:3px;display:flex;align-items:center;gap:6px}
+.cl-abi{min-width:32px;text-align:center;font-size:15px;font-weight:600;border-radius:8px;padding:4px 6px;border:1px solid}
+.cl-md{width:6px;height:6px;border-radius:50%}
+.cl-stats{display:flex;margin-top:9px;padding-top:9px;border-top:.5px solid rgba(255,255,255,.06)}
+.cl-st{flex:1;text-align:center}
+.cl-st b{display:block;font-size:13px;font-weight:600;color:#EDEFF2}
+.cl-st span{font-size:11px;color:#79818C}
+.cl-chip{font-size:12px;color:#9BA3AE;background:#171C23;border:.5px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 9px;display:inline-flex;align-items:center;gap:5px}
+.cl-on{background:rgba(52,211,153,.13);border-color:rgba(52,211,153,.35);color:#7FD7BC}
+.cl-ct{font-size:11px;font-weight:600;background:rgba(255,255,255,.10);border-radius:8px;padding:0 5px;min-width:15px;text-align:center}
+.cl-on .cl-ct{background:rgba(52,211,153,.22);color:#8CE6C4}
+.gbtn{font-size:12px;color:#AEB6C0;background:#171C23;border:.5px solid rgba(255,255,255,.08);border-radius:9px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px}
+.flg{display:inline-flex;flex-direction:column;width:16px;height:11px;border-radius:2px;overflow:hidden;flex:none;box-shadow:0 0 0 .5px rgba(255,255,255,.18)}
+.flg>span{flex:1}
+.fa-nav{display:flex;background:#0C1015;border-top:1px solid rgba(255,255,255,.07);padding:9px 4px 11px}
+.fa-nav>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:#6C7480}
+</style>
+<h2 class="sr-only">Clients screen: sortable list of 14 represented players. Each card shows nationality flag with position stacked beneath, name and age, club and role, a colour-coded ability rating, four morale dots (club, playing time, wage, agent), appearances, rating, contract length, and wage. Status icons flag offers and injuries.</h2>
+<div class="fa-wrap">
+ <div class="fa-phone">
+  <div class="fa-scr">
+   <div style="display:flex;justify-content:center;padding-top:8px"><div style="width:80px;height:20px;background:#04070B;border-radius:12px"></div></div>
+   <div style="padding:12px 13px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+     <div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:17px;font-weight:600">Clients</span><span style="font-size:12px;color:#79818C">14/20</span></div>
+     <div style="position:relative;width:36px;height:36px;border-radius:11px;background:#171C23;display:flex;align-items:center;justify-content:center">
+      <i class="ti ti-inbox" style="font-size:18px;color:#C4CBD4" aria-hidden="true"></i>
+      <div style="position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;background:#F0596A;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#2A0A0E;border:2px solid #0F1318">3</div>
+     </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:11px 0 10px">
+     <div class="gbtn"><i class="ti ti-history" style="font-size:15px" aria-hidden="true"></i>History</div>
+     <div class="gbtn"><i class="ti ti-arrows-sort" style="font-size:15px" aria-hidden="true"></i>Ability<i class="ti ti-chevron-down" style="font-size:14px;color:#79818C" aria-hidden="true"></i></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+     <div class="cl-chip cl-on">All <span class="cl-ct">14</span></div>
+     <div class="cl-chip">Offers <span class="cl-ct">3</span></div>
+     <div class="cl-chip">Sponsors <span class="cl-ct">2</span></div>
+     <div class="cl-chip">Injury <span class="cl-ct">1</span></div>
+    </div>
+
+    <div class="cl-card">
+     <div style="display:flex;align-items:center;gap:9px">
+      <div class="cl-fl"><span class="flg"><span style="background:#000"></span><span style="background:#DD0000"></span><span style="background:#FFCE00"></span></span><span class="cl-pos">ST</span></div>
+      <div style="flex:1;min-width:0">
+       <div style="display:flex;align-items:center;gap:6px"><span class="cl-name">M. Brandt</span><span style="font-size:12px;color:#79818C">27 y.o.</span><i class="ti ti-currency-euro" style="font-size:14px;color:#34D399" aria-label="offer received"></i></div>
+       <div class="cl-sub"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#E5484D"></span>Leeds City</span><span style="color:#5F6772">·</span><span>Star Player</span></div>
+      </div>
+      <div style="display:flex;gap:3px;margin-right:9px"><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#34D399"></div></div>
+      <div class="cl-abi" style="background:rgba(21,192,124,.18);border-color:rgba(21,192,124,.44);color:#15C07C">86</div>
+     </div>
+     <div class="cl-stats"><div class="cl-st"><b>19</b><span>apps</span></div><div class="cl-st"><b style="color:#34D399">7.3</b><span>rating</span></div><div class="cl-st"><b>2y</b><span>contract</span></div><div class="cl-st"><b>€40k</b><span>wage</span></div></div>
+    </div>
+
+    <div class="cl-card">
+     <div style="display:flex;align-items:center;gap:9px">
+      <div class="cl-fl"><span class="flg"><span style="background:#AE1C28"></span><span style="background:#fff"></span><span style="background:#21468B"></span></span><span class="cl-pos">CB</span></div>
+      <div style="flex:1;min-width:0">
+       <div style="display:flex;align-items:center;gap:6px"><span class="cl-name">L. van Dijk</span><span style="font-size:12px;color:#79818C">24 y.o.</span></div>
+       <div class="cl-sub"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#4C7DF0"></span>Rotterdam SC</span><span style="color:#5F6772">·</span><span>Starter</span></div>
+      </div>
+      <div style="display:flex;gap:3px;margin-right:9px"><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#F0B43C"></div><div class="cl-md" style="background:#34D399"></div></div>
+      <div class="cl-abi" style="background:rgba(74,222,128,.13);border-color:rgba(74,222,128,.34);color:#4ADE80">79</div>
+     </div>
+     <div class="cl-stats"><div class="cl-st"><b>21</b><span>apps</span></div><div class="cl-st"><b style="color:#34D399">7.1</b><span>rating</span></div><div class="cl-st"><b>3y</b><span>contract</span></div><div class="cl-st"><b>€28k</b><span>wage</span></div></div>
+    </div>
+
+    <div class="cl-card">
+     <div style="display:flex;align-items:center;gap:9px">
+      <div class="cl-fl"><span class="flg"><span style="background:#ED2939"></span><span style="background:#fff"></span><span style="background:#ED2939"></span></span><span class="cl-pos">CM</span></div>
+      <div style="flex:1;min-width:0">
+       <div style="display:flex;align-items:center;gap:6px"><span class="cl-name">F. Huber</span><span style="font-size:12px;color:#79818C">29 y.o.</span></div>
+       <div class="cl-sub"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#E0A400"></span>München FC</span><span style="color:#5F6772">·</span><span>Rotation</span></div>
+      </div>
+      <div style="display:flex;gap:3px;margin-right:9px"><div class="cl-md" style="background:#F0B43C"></div><div class="cl-md" style="background:#F0596A"></div><div class="cl-md" style="background:#F0B43C"></div><div class="cl-md" style="background:#34D399"></div></div>
+      <div class="cl-abi" style="background:rgba(76,141,240,.15);border-color:rgba(76,141,240,.36);color:#5FA6F6">74</div>
+     </div>
+     <div class="cl-stats"><div class="cl-st"><b>12</b><span>apps</span></div><div class="cl-st"><b style="color:#F0B43C">6.8</b><span>rating</span></div><div class="cl-st"><b style="color:#F0596A">Final yr</b><span>contract</span></div><div class="cl-st"><b>€22k</b><span>wage</span></div></div>
+    </div>
+
+    <div class="cl-card">
+     <div style="display:flex;align-items:center;gap:9px">
+      <div class="cl-fl"><span class="flg"><span style="flex:3;background:#AA151B"></span><span style="flex:5;background:#F1BF00"></span><span style="flex:3;background:#AA151B"></span></span><span class="cl-pos">RW</span></div>
+      <div style="flex:1;min-width:0">
+       <div style="display:flex;align-items:center;gap:6px"><span class="cl-name">P. Ramos</span><span style="font-size:12px;color:#79818C">22 y.o.</span></div>
+       <div class="cl-sub"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#9B3B4E"></span>Bilbao FC</span><span style="color:#5F6772">·</span><span>Starter</span></div>
+      </div>
+      <div style="display:flex;gap:3px;margin-right:9px"><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#F0B43C"></div><div class="cl-md" style="background:#34D399"></div></div>
+      <div class="cl-abi" style="background:rgba(74,222,128,.13);border-color:rgba(74,222,128,.34);color:#4ADE80">81</div>
+     </div>
+     <div class="cl-stats"><div class="cl-st"><b>20</b><span>apps</span></div><div class="cl-st"><b style="color:#34D399">7.6</b><span>rating</span></div><div class="cl-st"><b>1y</b><span>contract</span></div><div class="cl-st"><b>€35k</b><span>wage</span></div></div>
+    </div>
+
+    <div class="cl-card">
+     <div style="display:flex;align-items:center;gap:9px">
+      <div class="cl-fl"><span class="flg"><span style="background:#CD2A3E"></span><span style="background:#fff"></span><span style="background:#436F4D"></span></span><span class="cl-pos">GK</span></div>
+      <div style="flex:1;min-width:0">
+       <div style="display:flex;align-items:center;gap:6px"><span class="cl-name">A. Nagy</span><span style="font-size:12px;color:#79818C">18 y.o.</span><i class="ti ti-bandage" style="font-size:15px;color:#F0596A" aria-label="injured"></i></div>
+       <div class="cl-sub"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#2E8B57"></span>Debrecen FC</span><span style="color:#5F6772">·</span><span>Hot Prospect</span></div>
+      </div>
+      <div style="display:flex;gap:3px;margin-right:9px"><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#F0B43C"></div><div class="cl-md" style="background:#34D399"></div><div class="cl-md" style="background:#34D399"></div></div>
+      <div class="cl-abi" style="background:rgba(160,130,245,.16);border-color:rgba(160,130,245,.4);color:#B49AF6">58</div>
+     </div>
+     <div class="cl-stats"><div class="cl-st"><b>4</b><span>apps</span></div><div class="cl-st"><b style="color:#34D399">7.0</b><span>rating</span></div><div class="cl-st"><b>4y</b><span>contract</span></div><div class="cl-st"><b>€5k</b><span>wage</span></div></div>
+    </div>
+   </div>
+   <div class="fa-nav">
+    <div><i class="ti ti-trophy" style="font-size:21px" aria-hidden="true"></i><span>Leagues</span></div>
+    <div style="color:#34D399"><i class="ti ti-users" style="font-size:21px" aria-hidden="true"></i><span>Clients</span></div>
+    <div><i class="ti ti-home" style="font-size:21px" aria-hidden="true"></i><span>Home</span></div>
+    <div><i class="ti ti-search" style="font-size:21px" aria-hidden="true"></i><span>Scouting</span></div>
+    <div><i class="ti ti-briefcase" style="font-size:21px" aria-hidden="true"></i><span>Agency</span></div>
+   </div>
+  </div>
+ </div>
+</div>

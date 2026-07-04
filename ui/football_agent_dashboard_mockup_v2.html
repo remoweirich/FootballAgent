@@ -1,0 +1,93 @@
+<style>
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.fa-wrap{width:fit-content;max-width:100%;margin:0 auto;padding:16px;background:var(--surface-1);border-radius:16px}
+.fa-phone{width:330px;max-width:84vw;background:#04070B;border:1px solid rgba(255,255,255,.10);border-radius:40px;padding:9px}
+.fa-scr{background:#0F1318;border-radius:32px;overflow:hidden;font-family:var(--font-sans);color:#EDEFF2}
+.fa-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.fa-ico{width:34px;height:34px;flex:none;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.fa-t{font-size:13.5px;font-weight:600;color:#EDEFF2;line-height:1.3}
+.fa-s{font-size:12px;color:#8E96A2;line-height:1.35;margin-top:1px}
+.fa-nav{display:flex;background:#0C1015;border-top:1px solid rgba(255,255,255,.07);padding:9px 4px 11px}
+.fa-nav>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:#6C7480;white-space:nowrap}
+.fa-chip{width:11px;height:11px;border-radius:50%;flex:none}
+.fa-mc{flex:1;background:#171C23;border-radius:12px;padding:9px 10px}
+</style>
+<h2 class="sr-only">Football agent app mockup: dashboard with finances at the top (balance, reputation, last week), an inbox icon top right, a needs-attention list, client cards showing appearances and rating, an advance-week button at the bottom, and a bottom navigation bar (Leagues, Clients, Home, Scouting, Agency).</h2>
+<div class="fa-wrap">
+ <div class="fa-phone">
+  <div class="fa-scr">
+   <div style="display:flex;justify-content:center;padding-top:8px"><div style="width:80px;height:20px;background:#04070B;border-radius:12px"></div></div>
+   <div style="padding:12px 14px 0">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+     <div>
+      <div style="display:flex;align-items:center;gap:7px">
+       <span style="font-size:11.5px;color:#6C7480;letter-spacing:.02em">Season 26/27</span>
+       <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(52,211,153,.12);border-radius:20px;padding:2px 8px">
+        <span style="width:6px;height:6px;border-radius:50%;background:#34D399"></span>
+        <span style="font-size:11px;color:#7FD7BC;font-weight:600">Window open</span>
+       </span>
+      </div>
+      <div style="font-size:16px;font-weight:600;margin-top:3px">Week 22 · November</div>
+     </div>
+     <div style="position:relative;width:38px;height:38px;border-radius:11px;background:#171C23;display:flex;align-items:center;justify-content:center">
+      <i class="ti ti-inbox" style="font-size:19px;color:#C4CBD4" aria-hidden="true"></i>
+      <div style="position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;padding:0 4px;background:#F0596A;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#2A0A0E;border:2px solid #0F1318">3</div>
+     </div>
+    </div>
+    <div style="display:flex;gap:8px;margin:12px 0 2px">
+     <div class="fa-mc"><div style="font-size:11px;color:#7D8590">Balance</div><div style="font-size:15px;font-weight:600;margin-top:3px">€1.2M</div></div>
+     <div class="fa-mc"><div style="font-size:11px;color:#7D8590">Reputation</div><div style="font-size:15px;font-weight:600;margin-top:3px">64</div></div>
+     <div class="fa-mc"><div style="font-size:11px;color:#7D8590">Last week</div><div style="font-size:15px;font-weight:600;margin-top:3px;color:#34D399">+€48k</div></div>
+    </div>
+    <div style="font-size:12px;color:#7D8590;margin:15px 0 2px;font-weight:600">Needs attention</div>
+    <div class="fa-row">
+     <div class="fa-ico" style="background:rgba(240,180,60,.14);color:#F0B43C"><i class="ti ti-file-text" aria-hidden="true"></i></div>
+     <div style="flex:1"><div class="fa-t">Contract expiring</div><div class="fa-s">L. Hofer · München FC · expires end of season</div></div>
+     <i class="ti ti-chevron-right" style="font-size:18px;color:#5A626D" aria-hidden="true"></i>
+    </div>
+    <div class="fa-row">
+     <div class="fa-ico" style="background:rgba(52,211,153,.13);color:#34D399"><i class="ti ti-currency-euro" aria-hidden="true"></i></div>
+     <div style="flex:1"><div class="fa-t">Offer received</div><div class="fa-s">Bilbao FC want M. Brandt · €2.4M</div></div>
+     <i class="ti ti-chevron-right" style="font-size:18px;color:#5A626D" aria-hidden="true"></i>
+    </div>
+    <div class="fa-row" style="border-bottom:none">
+     <div class="fa-ico" style="background:rgba(120,150,240,.15);color:#8FA6F5"><i class="ti ti-search" aria-hidden="true"></i></div>
+     <div style="flex:1"><div class="fa-t">Scout report ready</div><div class="fa-s">J. García · Primera Superior</div></div>
+     <i class="ti ti-chevron-right" style="font-size:18px;color:#5A626D" aria-hidden="true"></i>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:15px 0 2px">
+     <div style="font-size:12px;color:#7D8590;font-weight:600">Your clients</div>
+     <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:#9BA3AE"><i class="ti ti-user" style="font-size:14px" aria-hidden="true"></i>14/20</div>
+    </div>
+    <div class="fa-row">
+     <div class="fa-chip" style="background:#E5484D"></div>
+     <div style="flex:1"><div class="fa-t">D. Kovač</div><div class="fa-s">ST · Leeds City</div></div>
+     <div style="font-size:12.5px;color:#8E96A2">19 apps · <span style="color:#34D399;font-weight:600">7.3</span></div>
+    </div>
+    <div class="fa-row">
+     <div class="fa-chip" style="background:#4C7DF0"></div>
+     <div style="flex:1"><div class="fa-t">T. Andersson</div><div class="fa-s">CB · Rotterdam SC</div></div>
+     <div style="font-size:12.5px;color:#8E96A2">17 apps · <span style="color:#F0B43C;font-weight:600">6.9</span></div>
+    </div>
+    <div class="fa-row" style="border-bottom:none;justify-content:space-between">
+     <div style="font-size:12.5px;color:#34D399;font-weight:600">See all clients</div>
+     <i class="ti ti-chevron-right" style="font-size:16px;color:#34D399" aria-hidden="true"></i>
+    </div>
+   </div>
+   <div style="display:flex;align-items:center;gap:12px;background:#34D399;border-radius:14px;padding:13px 16px;margin:6px 14px 12px">
+    <div style="flex:1">
+     <div style="font-size:15px;font-weight:600;color:#053A2A">Advance to week 23</div>
+     <div style="font-size:12px;color:#0A5C42;margin-top:2px">3 tasks pending</div>
+    </div>
+    <i class="ti ti-player-play" style="font-size:22px;color:#053A2A" aria-hidden="true"></i>
+   </div>
+   <div class="fa-nav">
+    <div><i class="ti ti-trophy" style="font-size:21px" aria-hidden="true"></i><span>Leagues</span></div>
+    <div><i class="ti ti-users" style="font-size:21px" aria-hidden="true"></i><span>Clients</span></div>
+    <div style="color:#34D399"><i class="ti ti-home" style="font-size:21px" aria-hidden="true"></i><span>Home</span></div>
+    <div><i class="ti ti-search" style="font-size:21px" aria-hidden="true"></i><span>Scouting</span></div>
+    <div><i class="ti ti-briefcase" style="font-size:21px" aria-hidden="true"></i><span>Agency</span></div>
+   </div>
+  </div>
+ </div>
+</div>

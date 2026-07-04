@@ -7,6 +7,9 @@ const SPONSORS = ['Nike', 'Adidas', 'Puma', 'Castrol', 'KPN', 'Heineken Zero', '
 const Sim = {
     advanceWeek() {
         const events = [];
+        // richer one-off "spotlight" moments (e.g. a client retiring) that deserve their own
+        // pop-up after the week summary, instead of just another line in it
+        const spotlights = [];
         GameState.players.forEach(p => p._weekApps = 0);
 
         // ---- detect season-end / rollover ----
@@ -16,11 +19,11 @@ const Sim = {
 
         if (prevWeek === 47) { // finals (wk47) + play-offs (wk46) done -> crown season
             seasonFinished = true;
-            this._endOfSeason(events);
+            this._endOfSeason(events, spotlights);
         }
         if (GameState.week > 52) {
             GameState.week = 1;
-            this._rollNewSeason(events);
+            this._rollNewSeason(events, spotlights);
             rolledSeason = true;
         }
         const week = GameState.week;
@@ -126,7 +129,7 @@ const Sim = {
         this._expireMail(events);
 
         GameState.save();
-        return { events, rolledSeason, seasonFinished };
+        return { events, spotlights, rolledSeason, seasonFinished };
     },
 
     _simU21() {
@@ -180,9 +183,16 @@ const Sim = {
             const tot = seasonTotals(p, year);
             const ratio = tot.apps / Math.max(1, week * 0.8);
             const timeTarget = Math.max(15, Math.min(95, ratio * 100));
-            const bench = PlayerGen.wageFor(p.ability, club ? club.reputation : 45);
-            const wRatio = p.wage / Math.max(1, bench);
-            const wageTarget = Math.max(20, Math.min(95, 30 + wRatio * 50));
+            // a free agent draws no wage at all — genuinely unhappy about it, not neutral, rather
+            // than comparing his stale last salary to a fictitious "bench" at a club he's no longer at
+            let wageTarget;
+            if (Agency.isFreeAgent(p)) {
+                wageTarget = 15;
+            } else {
+                const bench = PlayerGen.wageFor(p.ability, club ? club.reputation : 45);
+                const wRatio = p.wage / Math.max(1, bench);
+                wageTarget = Math.max(20, Math.min(95, 30 + wRatio * 50));
+            }
             p.morale.club += (clubTarget - p.morale.club) * 0.1;
             p.morale.time += (timeTarget - p.morale.time) * 0.1;
             p.morale.wage += (wageTarget - p.morale.wage) * 0.1;
@@ -432,21 +442,36 @@ const Sim = {
         Object.keys(p.stats || {}).forEach(y => { if (seasonTotals(p, +y, true).apps > 0) n++; });
         return n;
     },
-    _endOfSeason(events) {
+    // odds a "final season" player postpones retirement, by appearances that season —
+    // graduated rather than an all-or-nothing threshold
+    _retirePostponeChance(apps) {
+        if (apps >= 30) return 1.0;
+        if (apps >= 25) return 0.9;
+        if (apps >= 20) return 0.6;
+        if (apps >= 15) return 0.3;
+        if (apps >= 10) return 0.1;
+        return 0;
+    },
+    _endOfSeason(events, spotlights) {
         const awarded = League.finishSeason();
         const year = GameState.seasonStartYear;
-        // resolve retirements: a strong, well-used season (>15 games) buys one more year (max 3 stays)
+        // resolve retirements: games played this "final" season buys a graduated chance of one more year (max 3 stays)
         GameState.players.forEach(p => {
             if (p.archived || !p.retiringThisSeason || !p.everClient) return;
             const apps = seasonTotals(p, year).apps;
-            if (apps > 15 && p.retireDelays < 3) {
+            const chance = this._retirePostponeChance(apps);
+            if (p.retireDelays < 3 && Math.random() < chance) {
                 p.retireDelays += 1; p.retireAge = p.age + 1; p.retiringThisSeason = false;
                 if (p.agentId === 'me') {
-                    GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} plays on`, body: `After ${apps} appearances this season, ${p.name} still feels good — he's decided to go one more year after all.`, ttl: 6 });
+                    const body = `After ${apps} appearances this season, ${p.name} still feels good — he's decided to go one more year after all.`;
+                    GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} plays on`, body, ttl: 6 });
                     GameState.addLog(`${p.name} extends his career by another season.`, 'contract');
+                    if (spotlights) spotlights.push({ icon: '💪', title: `${p.name} plays on`, quote: body, playerId: p.id });
                 }
             } else {
-                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} retires`, body: `${p.name} has played his final match and is hanging up his boots after a ${this._seasonsActive(p)}-season career. You can revisit his career any time under Competitions → Client History.`, ttl: 6 });
+                const body = `${p.name} has played his final match and is hanging up his boots after a ${this._seasonsActive(p)}-season career. You can revisit his career any time under Client History.`;
+                if (p.agentId === 'me' && spotlights) spotlights.push({ icon: '👋', title: `${p.name} retires`, quote: body, playerId: p.id });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} retires`, body, ttl: 6 });
                 GameState.addLog(`${p.name} has retired.`, 'contract');
                 p.archived = true; p.retired = true; p.agentId = null; p.clubId = null; p.onLoanAt = null; p.transferListed = false;
             }
@@ -488,7 +513,14 @@ const Sim = {
             const nm = wid ? (Clubs.getClubById(wid)?.name || League.teamName(wid)) : '—';
             return `${label}: ${nm}`;
         }).join('<br>');
-        const poLine = homeDivs.filter((d, i) => i > 0).map(d => L?.playoffs?.[d] ? `${COMPETITIONS[d].short} play-off won by ${Clubs.getClubById(L.playoffs[d].winner)?.name || League.teamName(L.playoffs[d].winner)} (promoted)` : null).filter(Boolean).join('<br>');
+        let poLine = homeDivs.filter((d, i) => i > 0).map(d => L?.playoffs?.[d] ? `${COMPETITIONS[d].short} play-off won by ${Clubs.getClubById(L.playoffs[d].winner)?.name || League.teamName(L.playoffs[d].winner)} (promoted)` : null).filter(Boolean).join('<br>');
+        if (hc === 'Switzerland' && L?.swissBarrage) {
+            const bar = L.swissBarrage;
+            const barLines = [];
+            if (bar.top) barLines.push(`Barrage (SL/CL) won by ${Clubs.getClubById(bar.top.winner)?.name || League.teamName(bar.top.winner)}`);
+            if (bar.bottom) barLines.push(`Barrage (CL/PL) won by ${Clubs.getClubById(bar.bottom.winner)?.name || League.teamName(bar.bottom.winner)}`);
+            poLine = [poLine, ...barLines].filter(Boolean).join('<br>');
+        }
         const body = `<strong>Season ${GameState.seasonLabel()} is over.</strong><br><br>${hc} champions:<br>${champs}<br><br>Cups:<br>${cupLine}<br><br>` +
             (poLine ? `Promotion play-offs:<br>${poLine}<br><br>` : '') +
             (lines.length ? `🏆 Your clients won:<br>${lines.join('<br>')}` : 'None of your clients won silverware this season.') +
@@ -530,7 +562,7 @@ const Sim = {
         if (backNames.length) GameState.addMail({ kind: 'news', subject: 'Players back for pre-season', body: `Back at their parent clubs for the off-season: ${backNames.join(', ')}. You can arrange transfers, loans or new terms before the new season.`, ttl: 6 });
     },
 
-    _rollNewSeason(events) {
+    _rollNewSeason(events, spotlights) {
         const year = GameState.seasonStartYear;
         // archive this season's finance ledger and start a fresh one
         GameState.agency.ledgerLast = GameState.agency.ledger || {};
@@ -605,8 +637,10 @@ const Sim = {
             if (p.age >= p.retireAge - 1) {
                 p.retiringThisSeason = true;
                 if (p.agentId === 'me') {
-                    GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} plans to retire`, body: `Dear agent — thank you for everything over the years. I've decided that this will be my final season, because ${RETIRE_REASONS[Math.floor(Math.random() * RETIRE_REASONS.length)]}. Let's make it a good one.`, ttl: 6 });
+                    const body = `Dear agent — thank you for everything over the years. I've decided that this will be my final season, because ${RETIRE_REASONS[Math.floor(Math.random() * RETIRE_REASONS.length)]}. Let's make it a good one.`;
+                    GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} plans to retire`, body, ttl: 6 });
                     GameState.addLog(`${p.name} announced this will be his final season.`, 'contract');
+                    if (spotlights) spotlights.push({ icon: '🕰️', title: `${p.name} plans to retire`, quote: body, playerId: p.id });
                 }
             }
         });

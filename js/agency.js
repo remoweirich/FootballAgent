@@ -347,7 +347,8 @@ const Agency = {
         if (seasonsLeft > 2 && Math.random() < 0.7) return { ok: false, message: `${club.name} won't talk — plenty of contract left.` };
         if (p.squadRole === 'fringe' && Math.random() < 0.5) return { ok: false, message: `${club.name} aren't planning with ${p.name}.` };
         const proposedWage = Math.max(p.wage + 10, Math.round(PlayerGen.wageFor(p.ability, club.reputation) * 1.1 * this.wagePotentialFactor(p) / 10) * 10);
-        const offer = { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons: 2 + Math.floor(Math.random() * 2) };
+        const proposedTermSeasons = Math.min(2 + Math.floor(Math.random() * 2), this.maxContractTerm(p, club));
+        const offer = { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons };
         GameState.addMail({ kind: 'renewal', subject: `Renewal terms for ${p.name} at ${club.name}`, offer, persistence: 0, ttl: 3 });
         return { ok: true, message: `${club.name} are open to talks — proposal in your inbox.` };
     },
@@ -364,6 +365,14 @@ const Agency = {
         let base = PlayerGen.wageFor(p.ability, club ? club.reputation : 45) * 1.6 * this.wagePotentialFactor(p);   // clear room to push the wage up
         base *= 1 + Math.max(-0.08, Math.min(0.25, (this.relationship(club ? club.id : null) - 55) / 220));
         return Math.round(base / 10) * 10;
+    },
+    // clubs won't lock up an ageing player for years — unless he clearly outclasses the level he's at
+    maxContractTerm(p, club) {
+        const outclass = p.ability - (club ? club.reputation : 45);
+        let cap = p.age >= 35 ? 1 : p.age >= 32 ? 2 : p.age >= 29 ? 3 : 6;
+        if (outclass >= 15) cap += 2;        // way too good for the squad -> they'll stretch
+        else if (outclass >= 8) cap += 1;
+        return Math.max(1, Math.min(6, cap));
     },
     contractSeasonsLeft(p) { return (p.contractUntilSeason != null ? p.contractUntilSeason : GameState.seasonStartYear) - GameState.seasonStartYear; },
     isFreeAgent(p) { return !!p.freeAgent || p.clubId == null; },
@@ -525,6 +534,11 @@ const Agency = {
         if (!preSeason && !o.internal && !isReserveClub(toClub.id) && !seniorSet.has(toClub.id) && seniorSet.size >= 2)
             return { ok: false, message: `${p.name} has already turned out for two clubs this season — he can't join a third until next season.` };
 
+        // clubs won't commit long term to an ageing player unless he clearly outclasses the squad
+        const termCap = this.maxContractTerm(p, toClub);
+        if (term > termCap)
+            return { ok: false, message: `${toClub.name} won't commit to ${term} years for a player his age — at most ${termCap}. Lower the length and try again.` };
+
         // the club won't hand out any role / signing bonus you ask for
         if (role && !this.roleAcceptable(p, toClub, role))
             return { ok: false, message: `${toClub.name} won't give ${p.name} a ${roleLabel(role, p.age)} role — the most they'll offer is ${roleLabel(this.clubRoleCeiling(p, toClub), p.age)}. Lower the role and try again.` };
@@ -578,6 +592,9 @@ const Agency = {
         const term = Math.max(1, Math.min(6, termSeasons || o.proposedTermSeasons || 2));
         if (p._renewSeason === GameState.seasonStartYear)
             return { ok: false, message: `${p.name}'s deal has already been renegotiated this season — you can revisit it next season.` };
+        const termCap = this.maxContractTerm(p, club);
+        if (term > termCap)
+            return { ok: false, message: `${club.name} won't commit to ${term} years for a player his age — at most ${termCap}. Lower the length and try again.` };
         if (role && !this.roleAcceptable(p, club, role))
             return { ok: false, message: `${club.name} won't give ${p.name} a ${roleLabel(role, p.age)} role — the most they'll offer is ${roleLabel(this.clubRoleCeiling(p, club), p.age)}. Lower the role and try again.` };
         p.wage = agreedWage; p.contractUntilSeason = GameState.seasonStartYear + term; p.freeAgent = false; p._renewSeason = GameState.seasonStartYear;
@@ -715,7 +732,9 @@ const Agency = {
     _leagueCap(div) {
         // DRD is the Dutch amateur bottom rung (Derde Divisie) — nowhere near as well-funded as other
         // countries' tier-4 leagues (League Two is fully pro, Regionalliga/Primera Inferior semi-pro)
-        const CAP = { PREM: 95000000, CHAMP: 32000000, LEAGUE1: 11000000, LEAGUE2: 4000000, Natleague: 1500000, ERE: 24000000, EED: 8000000, TWD: 3000000, DRD: 60000, BUNDES: 60000000, '2BUNDES': 18000000, '3LIGA': 6000000, REGIONAL1: 2500000, REGIONAL2: 1000000, REGIONAL3: 500000, LaLiga: 75000000, LaLiga2: 14000000, PrimeraSup: 5000000, PrimeraInf: 2000000, Segunda: 800000 };
+        // Swiss transfer/wage ceilings sit a notch under the Dutch ladder at every tier (Super League
+        // clubs' reputations run neck-and-neck with the Eredivisie's, but real budgets fall a bit short)
+        const CAP = { PREM: 95000000, CHAMP: 32000000, LEAGUE1: 11000000, LEAGUE2: 4000000, Natleague: 1500000, ERE: 24000000, EED: 8000000, TWD: 3000000, DRD: 60000, BUNDES: 60000000, '2BUNDES': 18000000, '3LIGA': 6000000, REGIONAL1: 2500000, REGIONAL2: 1000000, REGIONAL3: 500000, LaLiga: 75000000, LaLiga2: 14000000, PrimeraSup: 5000000, PrimeraInf: 2000000, Segunda: 800000, SuperLeagueCH: 20000000, ChallengeLeague: 6500000, PromotionLeague: 2200000, '1.LigaCH': 45000, '2.LigaCH': 15000 };
         return CAP[div] != null ? CAP[div] : 6000000;
     },
     buyerMaxFee(club) {

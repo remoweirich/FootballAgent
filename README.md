@@ -1,3 +1,60 @@
+
+## v33 — Mobile UI fixes: broken icon/flag CDN, layout bugs, slider bugs
+
+You came back with a screenshot-driven list after trying v32 live. Two turned out to be one root cause each, not scattered problems — worth flagging since they explain most of what looked wrong:
+
+**"No icons or pictures anywhere" — the icon font's CDN link was dead.** `@tabler/icons-webfont@2.47.0` 404s (that version no longer exists on jsdelivr; current is 3.44.0) — every `<i class="ti ti-*">` I'd added in v32 was rendering as an invisible empty box, not because the markup was wrong but because zero icon glyphs were ever defined. Rather than patch the CDN URL and stay dependent on it, I vendored the font locally: `ui/vendor/tabler-icons/` now holds a self-hosted, trimmed CSS (just the 76 icons this app actually uses, 3.5KB instead of the full 209KB/5800-icon set) plus the woff2 file itself. No more CDN, no more version drift.
+
+**Flags "too low-definition, weird" — that's Windows' native flag emoji rendering**, which has always been inconsistent (some flags render as two-letter codes in a box). Same fix, same reasoning: vendored `ui/vendor/flag-icons/` (76 SVGs for every nationality in the game, including the UK's four home nations via `gb-eng/gb-sct/gb-wls/gb-nir` and Kosovo via the common unofficial `xk`), and added `UI.flag(nationality)`. It looks up by the player's nationality *name* fresh each render rather than trusting the emoji string cached on old player records, so it fixes existing saves too, not just new players.
+
+Everything else was a real, separate bug:
+- **Standings header rendering below row 1**: `.standings th` was `position:sticky` inside a `div style="overflow-x:auto"` wrapper — that div (not `.screen`) became the sticky positioning's scroll reference, breaking the layout. Removed the sticky behaviour; it's a short table, doesn't need it.
+- **Promotion/relegation colour** now renders as a `border-left` strip on the row's leading edge (left of the position number), not a span sandwiched between the number and the club name.
+- **Cup/play-off fixtures** now lay out home-team / score / away-team as three flex columns (right-aligned / centred / left-aligned), so every score sits in the same spot regardless of how long the team names are — including the two-legged Barrage and play-off views.
+- **"Advance to week…" button** was `position:sticky`, which only pins to the bottom once there's enough content to scroll past it — on a short "needs attention" list it just sat wherever the content ended, moving day to day. It's `position:fixed` now, always in the same spot above the nav.
+- **Bottom nav made taller** (icons 21→24px, more padding) per your request, with all the scroll-clearance tokens (`--nav-clear`, the new `--cta-dock-h`) updated to match so nothing hides behind it.
+- **Every slider in the app was unusable** (sign-representation terms, transfer wage/term/agent's-fee, renewal wage/term, loan role) — each `oninput`/`onchange` called a full `Router.refresh()` or re-rendered the whole sheet, which tears down and rebuits the `<input type=range>` mid-drag. The browser's drag tracking is tied to the DOM node that existed when the drag started, so recreating it mid-gesture reads as "snaps back and won't move." Fixed by updating only the specific label text via `textContent` on every input tick, never touching the slider's own DOM node. Found and fixed a related latent bug in the same pass: the loan-duration selector's value was being coerced through `+val` (turning `"0.5"` into the number `0.5`), which meant it could never `===`-match the stored string code — so your chosen loan duration silently reverted to the default every time.
+- **Shopping a player to clubs** re-rendered the entire sheet (resetting your scroll) on every single checkbox tick. Now only the "Pitch to N clubs" button's label updates live; the checkbox list itself is untouched unless you switch country or use the new **"Pitch to all"** button next to each league's name (toggles every club in that division at once).
+- **Weekly update / spotlight pop-ups**: tap anywhere in the card now advances (not just the button), so you can rattle through several quiet weeks without re-aiming your thumb — except the spotlight's "View player" link, which still just navigates.
+
+## v32 — Mobile UI polish pass (visual pass by Fable 5, applied by Claude Code)
+
+You asked Fable 5 to look at the mobile UI's layout and visual bugs — no icons/pictures, awkward empty space on sparse screens, tab bars that looked cut off, and the bottom nav needing a scroll to reach because the phone viewport didn't fit right. Fable diagnosed the root cause and rewrote the CSS shell; I applied its files and then worked through the resulting screen-by-screen worklist (`UI_POLISH_TODO.md`) across the actual `ui/js/*.js` files, since Fable didn't have those.
+
+**Root cause, fixed:** `#app` used `min-height: 100vh` with no capped scroll region, so the whole page scrolled as one block — on a real mobile viewport (or a resized browser window) that pushed the `position: fixed` bottom nav out of reach until you scrolled. `.screen` is now the *only* scroll container, sized off `100dvh` (with a `100vh` fallback), flexed between a sticky header and the fixed bottom nav — header and nav are always visible, only the content between them scrolls. New `js/ui-helpers.js` watches the DOM and adds a scroll-fade + auto-centring to any tab bar wider than its container (Leagues' up-to-5 tabs, Client Detail's 7 tabs), so overflow reads as "scrollable" instead of "cut off."
+
+**Icons and identity**, added throughout: club colours now render as a small generated SVG crest (shield + initial) instead of a bare colour dot, on standings, client cards, and club/negotiation headers — a fictional-club-friendly stand-in for real emblems until you add those. Every action button, filter chip, contract row, and stat cell that was bare text now has a leading icon (Tabler, already loaded via CDN). The Agency upgrade ladders (office/vehicles/properties/equipment) get a picture per tier instead of one repeated icon, so a ladder visually climbs — office cycles through 5 icons across its 5 named families, vehicles/properties are matched 1:1 to their real tiers (caravan → home → estate → castle → skyscraper). Empty states (no clients, no scouts, no sponsor deals, empty inbox, filtered-to-nothing lists) are now an icon + a one-line title + a hint that says what to do next, with a CTA where one makes sense, instead of a single flat sentence — this is most of where the "empty-looking" screens came from.
+
+**Checked, no work needed:** nationality flags already render as real Unicode flag emoji (`getNationalityFlag()`) everywhere a player's nationality shows — better than the flag-icon-library approach Fable's worklist assumed, so left alone.
+
+**Not done (flagged, not urgent):** self-hosting Inter + the Tabler webfont instead of loading both from a CDN — only matters once this is packaged for offline/app-store use, no benefit while it's served locally.
+
+Since I can't render a browser myself in this environment, the icon glyph names (a few dozen, spanning fitness/building/vehicle icons that hadn't been used elsewhere in the app yet) are unverified against the pinned Tabler version — everything passes a static syntax check and a CSS-class cross-reference, but worth a visual pass to catch any that render as an empty box.
+
+## v31 — Switzerland added as a full country
+
+Switzerland is now fully wired into the game, and I ran an 8-season simulation to stress-test it before reporting back. Here's what changed:
+
+Switzerland — league system (js/league.js, js/clubs.js)
+
+All 5 tiers wired with correct sizes, promotion/relegation, and Barrage: Super League (12, quadruple round-robin) ↔ Challenge League (10, quadruple round-robin) ↔ Promotion League (18) ↔ 1. Liga (24) ↔ 2. Liga (24), including the two Barrage ties and the two 4-team play-offs (1. Liga, 2. Liga — reused the same 2-legged semi/final structure as Spain's).
+Reserve-team caps enforced correctly (0 in Challenge League, 4 in Promotion League, 6 in 1. Liga), with the promotion spot passing to the next eligible club when a reserve would otherwise be blocked.
+Fixed isReserveClub() to detect Swiss reserves by id containing "U21" (your data doesn't always put it in the name, e.g. id:"FC Lugano U21" → name:"FC Lugano 2") — added a matching color-inheritance override so that one correctly picks up FC Lugano's colours.
+I double- and triple-checked the promotion/relegation math by hand and then empirically: across 8 simulated seasons, every division's size stayed exactly 12/10/18/24/24 and every reserve cap held, including the seasons where caps were hit exactly. Your spec balances perfectly as written — no deviations needed.
+Three cups, all running in parallel with the other countries':
+
+Schweizer Cup: 1. Liga (away) vs 2. Liga (home) in round 1, merging with Super League (seeded away)/Challenge League/Promotion League for a clean round-of-64, then straight through to the final — 7 rounds, same weeks as the other full-format cups. Reserves, Vaduz, and Eschen/Mauren are swapped for your 13 named virtual teams (with a safe reuse fallback if that pool's ever exhausted).
+Cupa Bass: Promotion League + 1. Liga + 2. Liga minus Eschen/Mauren minus one random reserve = 64, Promotion League seeded away, one fewer round like Spain's cups. These clubs play for real (no virtual substitution here, per your spec).
+Liechtensteiner Cup: Vaduz + Eschen/Mauren + your 6 virtual sides, QF/SF two-legged, final single-match.
+Everything else wired: home-country selection, international scouting (regions/leagues/scout names), transfer fee ceilings and wages calibrated just under the Dutch peak, standings zone shading + legends, and cup/play-off views in both UIs (old desktop and new mobile).
+
+Data-quality pass: fixed two copy-paste bugs in your 2.Liga data ("AC Taverne" had name:"FC Concordia BS"; "FC Widnau" had name:"FC Solothurn"), corrected Stade Lausanne-Ouchy's city (was "Lugano"), added ~90 missing Swiss city→region mappings, and gave every Swiss club a real or at least distinct colour instead of the near-universal blue/white placeholder.
+
+On the colour audit — you were right that it wasn't just Switzerland. I found the same pattern in your existing data: lower divisions in England, Germany and Spain had 60–100% of clubs sharing one identical colour pair (worst cases: German 2. Regionalliga was literally only 2 colours for all 24 clubs; English National League was one colour for 18 of 24). I fixed the worst offenders across all of them — every division is now under ~30% max-cluster, in line with what real leagues look like. I used real club colours everywhere I was confident (all top-tier and most recognisable lower-league clubs), and a diversified palette for the more obscure amateur clubs I couldn't verify with confidence — worth a second pass from you once you're building emblems and can eyeball specific ones. Also fixed a stray trailing-space typo in CITY_REGION that was silently mis-categorizing a Spanish club (Xerez) into a Dutch region.
+
+All files pass node --check, and the Switzerland engine ran clean through 8 full simulated seasons with no crashes.
+
+
 ## v30 — Spain added as a full country
 Spain is now a selectable home country and a scoutable foreign country, wired throughout exactly like Germany and England.
 

@@ -1,0 +1,128 @@
+/* ============================================================
+   Football Agent Manager — Design Tokens
+   Dark-first, mobile UI. Import this FIRST; everything else
+   references these variables. To add a light theme later,
+   override the surface + text tokens under a [data-theme="light"].
+   (The near-black #04070B phone bezel in the mockups is only the
+    device frame — it is NOT part of the app.)
+   ============================================================ */
+:root {
+  /* ---- Core surfaces ---- */
+  --bg:             #0F1318;  /* app background / screen */
+  --surface:        #14181E;  /* cards, list rows, tier rows */
+  --surface-raised: #171C23;  /* inputs, chips, metric cells, icon buttons */
+  --surface-sunken: #101318;  /* locked / disabled panels */
+  --nav-bg:         #0C1015;  /* bottom navigation bar */
+
+  /* ---- Hairlines ---- */
+  --line:        rgba(255,255,255,.06);  /* card borders */
+  --line-strong: rgba(255,255,255,.08);  /* input borders, tab track */
+  --line-faint:  rgba(255,255,255,.05);  /* row dividers */
+
+  /* ---- Text ramp ---- */
+  --text:           #EDEFF2;  /* primary */
+  --text-bright:    #C4CBD4;  /* bright icons */
+  --text-secondary: #9BA3AE;  /* labels, sub-headings */
+  --text-muted:     #8E96A2;  /* secondary body */
+  --text-faint:     #79818C;  /* captions, units, sub-values */
+  --text-dim:       #6C7480;  /* axis labels, disabled */
+  --text-chevron:   #5A626D;  /* chevrons, small arrows */
+
+  /* ---- Accent (mint) ---- */
+  --accent:        #34D399;  /* primary action, active nav/tab, current */
+  --accent-ink:    #053A2A;  /* text/icon ON solid accent */
+  --accent-text:   #7FD7BC;  /* accent text on dark (tinted contexts) */
+  --accent-text-2: #8CE6C4;  /* brighter accent text (counts) */
+  --accent-tint:   rgba(52,211,153,.13);  /* tinted pill / button bg */
+  --accent-fill:   rgba(52,211,153,.07);  /* subtle fill (current card) */
+  --accent-border: rgba(52,211,153,.34);  /* tinted pill / button border */
+
+  /* ---- Semantic ---- */
+  --danger:        #F0596A;  /* notification badge, destructive, low state */
+  --danger-text:   #F0888F;  /* destructive button label */
+  --danger-tint:   rgba(240,89,106,.10);
+  --danger-border: rgba(240,89,106,.30);
+  --warning:       #F0B43C;  /* amber / mid state */
+  --info:          #5FA6F6;  /* blue / data series */
+  --info-text:     #8FA6F5;  /* loan pill, info text */
+  --gold:          #E8C468;  /* honours / trophies */
+  --gold-tint:     rgba(224,164,0,.12);
+  --gold-border:   rgba(224,164,0,.28);
+
+  /* ---- Shared state tones (avg rating + morale use these) ---- */
+  --state-good: #34D399;  /* green  (rating >= 7.0 / high morale) */
+  --state-mid:  #F0B43C;  /* amber  (rating 6.5-6.9 / unsettled)  */
+  --state-bad:  #F0596A;  /* red    (rating < 6.5 / unhappy)      */
+  --track:      #232A33;  /* slider / progress track, chart baseline */
+  --grid:       #20262E;  /* chart gridlines */
+
+  /* ---- Ability scale (player quality, 7 bands). See DESIGN_SYSTEM.md ---- */
+  --ability-1: #FF6B78;  /* < 15   red        */
+  --ability-2: #F7973F;  /* 15-29  orange     */
+  --ability-3: #E7C33F;  /* 30-44  yellow     */
+  --ability-4: #B49AF6;  /* 45-59  violet     */
+  --ability-5: #5FA6F6;  /* 60-74  blue       */
+  --ability-6: #4ADE80;  /* 75-84  green      */
+  --ability-7: #15C07C;  /* 85+    dark green */
+
+  /* ---- Standings zones (Leagues screen): direct = full, play-off = lighter ---- */
+  --zone-promote:  #34D399;  /* direct promotion  */
+  --zone-relegate: #F0596A;  /* direct relegation */
+  --zone-po-up:    #86EFAC;  /* promotion play-off (lighter green) */
+  --zone-po-down:  #FCA5A5;  /* relegation play-off (lighter red)  */
+
+  /* ---- Spacing scale ---- */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 14px;
+  --space-6: 16px;
+  --space-7: 20px;
+  --screen-pad: 14px;   /* left/right screen gutter */
+  --card-pad:   12px;   /* inner card padding */
+
+  /* ---- Radii ---- */
+  --radius-xs:    6px;
+  --radius-sm:    8px;   /* segments, pills, small buttons */
+  --radius-md:    10px;  /* buttons, info cells */
+  --radius-lg:    12px;  /* cards, metric cells */
+  --radius-pill:  20px;  /* chips, status pills */
+  --radius-round: 50%;
+
+  /* ---- Typography ---- */
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-xs:  11px;  /* nav labels, captions, axis, tiny badges */
+  --fs-sm:  12px;  /* secondary text, chips, benefits */
+  --fs-md:  13px;  /* body values, stat numbers */
+  --fs-lg:  14px;  /* card titles, list names */
+  --fs-xl:  16px;  /* app-bar / section title */
+  --fs-2xl: 19px;  /* detail name, big metric value */
+  --fs-3xl: 20px;  /* hero number (agreed fee) */
+  --weight-regular:  400;
+  --weight-semibold: 600;
+
+  /* ---- Component sizes ---- */
+  --nav-icon:      24px;
+  --icon-btn:      36px;   /* app-bar icon button */
+  --pic-box:       36px;   /* pictogram box (categories / tiers) */
+  --dot-morale:    6px;
+  --chip-club:     8px;
+  --flag-w:        17px;
+  --flag-h:        12px;
+  --slider-track:  6px;
+  --slider-handle: 15px;
+  --tab-underline: 2px;
+  --hit-target:    44px;   /* minimum touch target */
+
+  /* ---- App shell (scroll model) ----
+     The .screen element is the ONLY scroll region. The sticky .app-bar /
+     .push-bar and the fixed .bottom-nav never move.
+     --app-bar-h is a best-guess default; js/ui-helpers.js overwrites it with
+     the measured height so sticky offsets (.standings th, .tab-bar--sticky)
+     line up exactly under the header. */
+  --app-bar-h: calc(58px + env(safe-area-inset-top));
+  --nav-h: 72px;       /* bottom nav's own content height (excl. safe-area inset) */
+  --nav-clear: var(--nav-h);   /* scroll clearance above the fixed bottom nav */
+  --cta-dock-h: 66px;  /* Home's fixed "Advance week" dock height, for extra scroll clearance */
+}

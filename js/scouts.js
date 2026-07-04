@@ -19,6 +19,10 @@ const SCOUT_NAMES = {
     Spain: {
         first: ['Antonio', 'Manuel', 'José', 'Francisco', 'David', 'Juan', 'Javier', 'Daniel', 'Carlos', 'Miguel', 'Alejandro', 'Rafael', 'Pablo', 'Sergio', 'Fernando', 'Jorge', 'Alberto', 'Luis', 'Álvaro', 'Adrián', 'Diego', 'Rubén', 'Óscar', 'Raúl', 'Iván', 'Pedro', 'Andrés', 'Ángel', 'Marcos', 'Gonzalo'],
         last: ['García', 'Rodríguez', 'González', 'Fernández', 'López', 'Martínez', 'Sánchez', 'Pérez', 'Gómez', 'Martín', 'Jiménez', 'Ruiz', 'Hernández', 'Díaz', 'Moreno', 'Álvarez', 'Romero', 'Alonso', 'Gutiérrez', 'Navarro', 'Torres', 'Domínguez', 'Vázquez', 'Ramos', 'Gil', 'Serrano', 'Molina', 'Blanco', 'Castro', 'Ortega']
+    },
+    Switzerland: {
+        first: ['Lukas', 'Simon', 'Fabian', 'Marco', 'Jonas', 'Sandro', 'Manuel', 'Adrian', 'Reto', 'Beat', 'Urs', 'Christian', 'Thomas', 'Daniel', 'Stefan', 'Martin', 'Jean', 'Pierre', 'Luc', 'Mathieu', 'Guillaume', 'Bastien', 'Alessandro', 'Diego', 'Francesco', 'Pietro', 'Andreas', 'Florian', 'Patrick', 'Hans'],
+        last: ['Müller', 'Meier', 'Schmid', 'Keller', 'Weber', 'Huber', 'Steiner', 'Fischer', 'Gerber', 'Brunner', 'Baumann', 'Moser', 'Zimmermann', 'Frei', 'Widmer', 'Graf', 'Favre', 'Dubois', 'Girard', 'Richard', 'Bernasconi', 'Bianchi', 'Fontana', 'Ferrari', 'Rossi', 'Sutter', 'Studer', 'Wyss', 'Egli', 'Vogel']
     }
 };
 
@@ -81,7 +85,7 @@ const Scouts = {
     },
     // per-report cost of scouting a foreign league, as a multiple of the dearest home region (travel + prestige)
     intlLeagueMult(div) {
-        const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5, REGIONAL3: 1.2, REGIONAL2: 1.5, REGIONAL1: 2, '3LIGA': 2.5, '2BUNDES': 3, BUNDES: 4.5, Segunda: 1.5, PrimeraInf: 2, PrimeraSup: 2.5, LaLiga2: 3, LaLiga: 4.8 };
+        const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5, REGIONAL3: 1.2, REGIONAL2: 1.5, REGIONAL1: 2, '3LIGA': 2.5, '2BUNDES': 3, BUNDES: 4.5, Segunda: 1.5, PrimeraInf: 2, PrimeraSup: 2.5, LaLiga2: 3, LaLiga: 4.8, '2.LigaCH': 1.1, '1.LigaCH': 1.4, PromotionLeague: 2.3, ChallengeLeague: 2.8, SuperLeagueCH: 4.8 };
         return m[div] || 2.5;
     },
     intlLeagueCost(div) {
