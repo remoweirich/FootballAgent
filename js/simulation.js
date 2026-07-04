@@ -2,7 +2,6 @@
 //  Simulation — advancing one calendar week
 // ============================================================
 const INJURY_TYPES = ['Knock', 'Muscle strain', 'Ankle sprain', 'Hamstring', 'Knee ligament'];
-const SPONSORS = ['Nike', 'Adidas', 'Puma', 'Castrol', 'KPN', 'Heineken Zero', 'Rabobank'];
 
 const Sim = {
     advanceWeek() {
@@ -32,13 +31,13 @@ const Sim = {
 
         // ---- transfer window just closed ----
         if (GameState.isTransferWindowOpen(prevWeek) && !GameState.isTransferWindowOpen(week)) {
-            const reopens = prevWeek <= 6 ? 'the winter window (week 21)' : `next season's summer window (week 1 of ${GameState.seasonLabelFor(GameState.seasonStartYear + 1)})`;
+            const reopens = prevWeek <= 6 ? 'the winter window (week 28)' : `next season's summer window (week 1 of ${GameState.seasonLabelFor(GameState.seasonStartYear + 1)})`;
             GameState.addMail({ kind: 'news', cat: 'general', subject: 'Transfer window closed', body: `The transfer window has closed. No new transfers or loans until ${reopens} — renewals and other business carry on as usual.`, ttl: 4 });
             GameState.addLog('Transfer window closed.', 'info');
         }
 
         // ---- mid-season loan returns (summer half/1.5-season loans end at the winter window) ----
-        if (week >= 21 && week <= 25) {
+        if (week >= 28 && week <= 33) {
             GameState.players.forEach(p => {
                 if (p.onLoanAt && !isU21Loan(p) && p.loanMid && p.loanUntilSeason === GameState.seasonStartYear) {
                     const back = Clubs.getClubById(p.clubId);
@@ -356,7 +355,7 @@ const Sim = {
         const club = Clubs.getClubById(p.clubId);
         const div = club ? club.division : null;       // 'ERE'|'EED'|'TWD'|'DRD'
         const apps = this._seasonLeagueApps(p, GameState.seasonStartYear);
-        const talent = p.potential >= 78 && p.age <= 21;   // promising youngsters punch above their weight
+        const talent = p.potential >= 78 && p.age <= 22;   // promising youngsters punch above their weight
         let level;
         if (p.ability >= 90) level = 'worldwide';
         else if (div === 'ERE' && p.ability >= 80) level = 'international';

@@ -17,7 +17,7 @@ const GameState = {
     STORAGE_KEY: 'fam_proto_v4',
 
     // ---- season phase ----
-    isTransferWindowOpen(w = this.week) { return (w >= 1 && w <= 6) || (w >= 21 && w <= 25); },
+    isTransferWindowOpen(w = this.week) { return (w >= 1 && w <= 6) || (w >= 28 && w <= 33); },
     absWeek() { return this.seasonStartYear * 52 + this.week; },
     // record a money flow by category for the Finance tab (positive = income, negative = expense)
     addFinance(cat, amount) {
@@ -30,7 +30,7 @@ const GameState = {
     },
     transferWindowKey(w = this.week) {
         if (w >= 1 && w <= 6) return this.seasonStartYear + ':S';
-        if (w >= 21 && w <= 25) return this.seasonStartYear + ':W';
+        if (w >= 28 && w <= 33) return this.seasonStartYear + ':W';
         return this.seasonStartYear + ':' + w;   // outside windows (e.g. free-agent signings): per-week
     },
     isSeasonActive(w = this.week) { return w >= 1 && w <= 47; },
