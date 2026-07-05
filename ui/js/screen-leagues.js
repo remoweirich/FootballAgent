@@ -104,13 +104,26 @@ const LeaguesScreen = {
         return '';
     },
 
+    // Two-leg ties: rather than spelling out "Aggregate: X" and "Advances: Y" as two
+    // extra lines under every tie, the advancing side's name is just highlighted (mint)
+    // on the return-leg row itself — the scores are right there to add up if you want
+    // to. Every tie (bye, single-match, or two-leg) is wrapped in .tie-block so
+    // different fixtures in the same round get a clear separator between them.
     tie(t) {
         if (!t) return '';
         const lk = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
-        if (t.bye) return `<div class="fixture"><span class="fx-home fx-win">${lk(t.h)}</span><span class="fx-score muted">bye</span><span class="fx-away"></span></div>`;
-        if (t.leg1) return `${this.tie2Leg(t)}<div class="frow"><span class="frow__k">Advances</span><span class="frow__v" style="color:var(--state-good)">${UI.clubName(t.winner)}</span></div>`;
+        if (t.bye) return `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${lk(t.h)}</span><span class="fx-score muted">bye</span><span class="fx-away"></span></div></div>`;
+        if (t.leg1) {
+            const l1 = t.leg1, l2 = t.leg2;
+            const pensPill = t.pens ? ' <span class="pill pill--danger" style="padding:1px 6px;font-size:9.5px;margin-left:4px">pens</span>' : '';
+            const leg = (label, l, highlight) => {
+                const hw = highlight && t.winner === l.h, aw = highlight && t.winner === l.a;
+                return `<div class="fixture fixture--labeled"><span class="fx-label">${label}${highlight ? pensPill : ''}</span><span class="fx-home ${hw ? 'fx-adv' : ''}">${lk(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away ${aw ? 'fx-adv' : ''}">${lk(l.a)}</span></div>`;
+            };
+            return `<div class="tie-block">${leg('Leg 1', l1, false)}${leg('Leg 2', l2, true)}</div>`;
+        }
         const hw = t.winner === t.h, aw = t.winner === t.a;
-        return `<div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div>`;
+        return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
     knockoutCup(key, label) {
         const C = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);

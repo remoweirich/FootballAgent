@@ -1,0 +1,164 @@
+// ============================================================
+//  Storage — IndexedDB-backed save/load, with a localStorage
+//  fallback for environments where IndexedDB isn't available.
+//
+//  Why: a single localStorage JSON blob is fine in a desktop browser tab,
+//  but in an Android WebView-wrapped app the OS can evict localStorage
+//  under storage pressure far more readily than IndexedDB, and there's a
+//  practical size ceiling (localStorage is a synchronous string API — a
+//  large save means blocking JSON.stringify + a blocking write on every
+//  call). IndexedDB is the durable, async-native option WebView apps expect.
+//
+//  Public API (all async — see game-state.js for how GameState.save()/load()
+//  wrap these without every one of the ~80 call sites needing to change):
+//    Storage.saveGame(state)   — queue a save; actual write is debounced
+//    Storage.flush()           — force any queued save through immediately
+//    Storage.loadGame()        — returns the saved state object, or null
+//    Storage.deleteSave()      — wipes both IndexedDB and any legacy copy
+//    Storage.hasSave()         — true if a save exists (either store)
+//    Storage.migrateLegacy()   — one-time import of an old localStorage save
+// ============================================================
+const Storage = {
+    DB_NAME: 'fam',
+    DB_VERSION: 1,
+    STORE: 'saves',
+    KEY: 'current',
+    LEGACY_KEY: 'fam_proto_v4',
+    FLUSH_DELAY_MS: 1500,
+
+    _db: null,
+    _dbPromise: null,
+    _dirty: null,        // most recent state snapshot not yet durably written
+    _flushTimer: null,
+    _flushPromise: null,  // in-flight flush, so overlapping callers can await the same write
+
+    _openDB() {
+        if (this._db) return Promise.resolve(this._db);
+        if (this._dbPromise) return this._dbPromise;
+        if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+        this._dbPromise = new Promise(resolve => {
+            let req;
+            try { req = indexedDB.open(this.DB_NAME, this.DB_VERSION); }
+            catch (e) { resolve(null); return; }
+            req.onupgradeneeded = () => {
+                if (!req.result.objectStoreNames.contains(this.STORE)) req.result.createObjectStore(this.STORE);
+            };
+            req.onsuccess = () => { this._db = req.result; resolve(this._db); };
+            req.onerror = () => resolve(null);
+            req.onblocked = () => resolve(null);
+        });
+        return this._dbPromise;
+    },
+    async _idbGet() {
+        const db = await this._openDB(); if (!db) return null;
+        return new Promise(resolve => {
+            try {
+                const tx = db.transaction(this.STORE, 'readonly');
+                const req = tx.objectStore(this.STORE).get(this.KEY);
+                req.onsuccess = () => resolve(req.result != null ? req.result : null);
+                req.onerror = () => resolve(null);
+            } catch (e) { resolve(null); }
+        });
+    },
+    async _idbPut(value) {
+        const db = await this._openDB(); if (!db) return false;
+        return new Promise(resolve => {
+            try {
+                const tx = db.transaction(this.STORE, 'readwrite');
+                tx.objectStore(this.STORE).put(value, this.KEY);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+                tx.onabort = () => resolve(false);
+            } catch (e) { resolve(false); }
+        });
+    },
+    async _idbDelete() {
+        const db = await this._openDB(); if (!db) return false;
+        return new Promise(resolve => {
+            try {
+                const tx = db.transaction(this.STORE, 'readwrite');
+                tx.objectStore(this.STORE).delete(this.KEY);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            } catch (e) { resolve(false); }
+        });
+    },
+    _legacyRead() {
+        try { const raw = localStorage.getItem(this.LEGACY_KEY); return raw ? JSON.parse(raw) : null; }
+        catch (e) { return null; }
+    },
+    _legacyWrite(state) {
+        try { localStorage.setItem(this.LEGACY_KEY, JSON.stringify(state)); return true; }
+        catch (e) { return false; }
+    },
+    _legacyClear() {
+        try { localStorage.removeItem(this.LEGACY_KEY); } catch (e) { /* ignore */ }
+    },
+
+    // ---- public API ----
+
+    // Fire-and-forget from the caller's point of view: updates the in-memory
+    // "latest state" immediately and (re)schedules a debounced write, so bursts
+    // of saves (several actions in a row) collapse into one actual disk write.
+    saveGame(state) {
+        this._dirty = state;
+        clearTimeout(this._flushTimer);
+        this._flushTimer = setTimeout(() => { this.flush(); }, this.FLUSH_DELAY_MS);
+    },
+    // Force the pending save through right now (advance-week completing,
+    // the app being backgrounded, an explicit save point). Safe to call with
+    // nothing pending — it's a no-op then.
+    async flush() {
+        if (this._flushPromise) return this._flushPromise;
+        if (this._dirty == null) return;
+        clearTimeout(this._flushTimer);
+        const state = this._dirty;
+        this._flushPromise = (async () => {
+            const ok = await this._idbPut(state);
+            if (ok) { this._dirty = null; this._legacyClear(); }
+            else { this._legacyWrite(state); this._dirty = null; }
+        })();
+        try { await this._flushPromise; } finally { this._flushPromise = null; }
+    },
+    async loadGame() {
+        // an unflushed save is more current than whatever's on disk
+        if (this._dirty != null) return this._dirty;
+        const fromIdb = await this._idbGet();
+        if (fromIdb) return fromIdb;
+        return this._legacyRead();
+    },
+    async deleteSave() {
+        this._dirty = null;
+        clearTimeout(this._flushTimer);
+        await this._idbDelete();
+        this._legacyClear();
+    },
+    async hasSave() {
+        if (this._dirty != null) return true;
+        const fromIdb = await this._idbGet();
+        if (fromIdb) return true;
+        return this._legacyRead() != null;
+    },
+    // One-time first-run step: if IndexedDB is empty but an old localStorage
+    // save exists, copy it over, confirm it reads back, then drop the legacy copy.
+    async migrateLegacy() {
+        const already = await this._idbGet();
+        if (already) return;
+        const legacy = this._legacyRead();
+        if (!legacy) return;
+        const ok = await this._idbPut(legacy);
+        if (ok) {
+            const verify = await this._idbGet();
+            if (verify) this._legacyClear();
+        }
+    }
+};
+
+// Flush on backgrounding — the two events mobile WebViews actually fire
+// reliably when the app is switched away from or the OS reclaims it.
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') Storage.flush();
+    });
+    window.addEventListener('pagehide', () => { Storage.flush(); });
+}

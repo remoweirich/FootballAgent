@@ -17,10 +17,14 @@ const ClientDetail = {
         if (!p) { el.innerHTML = '<div class="empty">Player not found.</div>'; return; }
         const mine = p.agentId === 'me';
         const ctx = this.ctx(id);
+        // a genuine (re-)entry into this player's screen always lands on Overview — no
+        // memory of whatever tab was open last time; Router.refresh() (staying put after
+        // an in-screen action) is not a re-entry and leaves the active tab alone
+        if (Router.isFreshNav) ctx.tab = 'overview';
         const tabs = mine ? ['overview', 'potential', 'morale', 'injuries', 'contract', 'development', 'history']
             : ['overview', 'potential', 'development', 'history'];
         if (!tabs.includes(ctx.tab)) ctx.tab = 'overview';
-        const club = Clubs.getClubById(p.clubId);
+        const curr = p.clubId ? UI.currentClubInfo(p) : null;
         const labels = { overview: 'Overview', potential: 'Potential', morale: 'Morale', injuries: 'Injuries', contract: 'Contract', development: 'Development', history: 'History' };
 
         let body = '';
@@ -37,7 +41,7 @@ const ClientDetail = {
             <div style="flex:1;min-width:0">
                 <div class="flex-row" style="gap:8px"><span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${p.name}</span>${p.retired ? '<span class="pill" style="padding:2px 8px">Retired</span>' : p.retiringThisSeason ? '<span class="pill pill--gold" style="padding:2px 8px">Retiring</span>' : ''}</div>
                 <div class="cl-sub" style="margin-top:5px">${UI.flag(p.nationality)} ${p.nationality} <span style="color:var(--text-chevron)">·</span> ${p.position} <span style="color:var(--text-chevron)">·</span> ${p.age}y</div>
-                <div class="cl-sub" style="margin-top:4px">${club ? `${UI.crest(club)}<a href="${Router.link('clubs', club.id)}" style="color:var(--text-secondary)">${club.name}</a> <span style="color:var(--text-chevron)">·</span> ${club.divisionName}` : (p.freeAgent ? 'Free agent' : (p.joiningClubId ? 'Joining ' + UI.clubName(p.joiningClubId) : '—'))}</div>
+                <div class="cl-sub" style="margin-top:4px">${curr ? `${curr.club ? UI.crest(curr.club) : ''}${curr.club ? `<a href="${Router.link('clubs', curr.club.id)}" style="color:${curr.tag ? 'var(--info-text)' : 'var(--text-secondary)'}">${curr.name}</a>` : `<span style="color:var(--info-text)">${curr.name}</span>`}${curr.tag ? ` <span style="color:var(--info-text)">(${curr.tag})</span>` : ''} <span style="color:var(--text-chevron)">·</span> ${curr.club ? curr.club.divisionName : ''}` : (p.freeAgent ? 'Free agent' : (p.joiningClubId ? 'Joining ' + UI.clubName(p.joiningClubId) : '—'))}</div>
             </div>
             ${UI.abilityBadge(p.ability, true)}
         </div>
@@ -374,6 +378,12 @@ const ClientDetail = {
     },
 
     // ---------------- History ----------------
+    // Club-first hierarchy: the club is the large, primary line (it's what you actually
+    // scan for in a career history), the season is the small subtitle underneath — the
+    // reverse of showing the season as the headline. Open (expanded) rows and their
+    // nested per-competition detail get progressively lighter/darker shades of the same
+    // surface tokens .screen already uses, so "which level am I looking at" is legible
+    // without introducing new colours.
     tabHistory(p) {
         const years = Object.keys(p.stats || {}).map(Number).sort((a, b) => b - a);
         if (!years.length) return '<p class="muted">No matches played yet.</p>';
@@ -384,20 +394,20 @@ const ClientDetail = {
         const seasonBlocks = years.map(y => {
             const stints = seasonStints(p, y), t = seasonTotals(p, y), open = ctx.expanded[y];
             const troph = (p.trophies || []).filter(tr => tr.year === y);
-            const totLine = `${t.apps} apps · ${gOrCs(t)} · ${t.assists} a · ${t.yellow}🟨 ${t.red}🟥 · ${t.avg ? t.avg.toFixed(2) : '—'}`;
+            const totLine = `${t.apps} apps · ${gOrCs(t)} · ${t.assists} a · <span class="hist-sym">${t.yellow}🟨 ${t.red}🟥</span> · ${t.avg ? t.avg.toFixed(2) : '—'}`;
             const endStint = stints[stints.length - 1];
             const endClub = endStint ? Clubs.getClubById(endStint.clubId) : null;
-            const endLabel = endStint ? `${this.clubLink(endStint.clubId, UI.clubName(endStint.clubId))}${endClub ? ', ' + endClub.divisionName : ''}` : '';
+            const endLabel = endStint ? `${this.clubLink(endStint.clubId, UI.clubName(endStint.clubId))}${endClub ? ', ' + endClub.divisionName : ''}` : GameState.seasonLabelFor(y);
             let inner = '';
             if (open) {
                 inner = '<div class="season-body">' + stints.slice().reverse().map(st => {
                     const head = `<div class="frow"><span class="frow__k">${this.clubLink(st.clubId, UI.clubLabel(st.clubId, st.loan, st.youth))}</span><span class="frow__v">${st.totals.apps} apps · ${gOrCs(st.totals)} · ${st.totals.assists} a</span></div>`;
-                    const comps = Object.entries(st.comps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} apps · ${gk ? (c.cs || 0) + ' cs' : c.goals + ' g'} · ${c.assists} a</span></div>`).join('');
+                    const comps = `<div class="stint-comps">${Object.entries(st.comps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} apps · ${gk ? (c.cs || 0) + ' cs' : c.goals + ' g'} · ${c.assists} a</span></div>`).join('')}</div>`;
                     return head + comps;
-                }).join('') + (troph.length ? `<div class="comp-row" style="color:var(--gold)">🏆 ${troph.map(tr => compName(tr.compId)).join(', ')}</div>` : '') + '</div>';
+                }).join('') + (troph.length ? `<div class="comp-row" style="color:var(--gold)"><span class="hist-sym">🏆</span> ${troph.map(tr => compName(tr.compId)).join(', ')}</div>` : '') + '</div>';
             }
-            return `<div class="season-row" onclick="ClientDetail.toggleSeason('${p.id}',${y})">
-                <div class="season-top"><div><span class="season-name">${GameState.seasonLabelFor(y)} ${troph.length ? '🏆' : ''}</span>${endLabel ? `<div class="season-club">${endLabel}</div>` : ''}</div><span class="season-stat">${totLine}<br><i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>${inner}</div>`;
+            return `<div class="season-row ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}',${y})">
+                <div class="season-top"><div><span class="season-name">${endLabel}</span><div class="season-club">${GameState.seasonLabelFor(y)} ${troph.length ? '<span class="hist-sym">🏆</span>' : ''}</div></div><span class="season-stat">${totLine}<br><i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>${inner}</div>`;
         }).join('');
 
         const ct = careerTotal(p), careerOpen = ctx.careerOpen, mode = ctx.careerMode;
@@ -414,14 +424,14 @@ const ClientDetail = {
             }
             careerInner = toggle + rows;
         }
-        const careerBlock = `<div class="season-row" onclick="ClientDetail.toggleCareer('${p.id}')">
+        const careerBlock = `<div class="season-row ${careerOpen ? 'is-open' : ''}" onclick="ClientDetail.toggleCareer('${p.id}')">
             <div class="season-top"><span class="season-name">Career total <span class="muted">(senior)</span></span><span class="season-stat">${ct.apps} apps · ${gOrCs(ct)} · ${ct.assists} a<br><i class="ti ${careerOpen ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>
             ${careerOpen ? `<div class="season-body">${careerInner}</div>` : ''}</div>`;
         return honours + `<div class="fcard">${seasonBlocks}${careerBlock}</div><p class="hint">Youth (U21) games are shown but excluded from senior totals.</p>`;
     },
     clubLink(clubId, html) {
         if (!Clubs.getClubById(clubId)) return html;
-        return `<a href="${Router.link('clubs', clubId)}" onclick="event.stopPropagation()" style="color:var(--text);text-decoration:underline dotted">${html}</a>`;
+        return `<a href="${Router.link('clubs', clubId)}" onclick="event.stopPropagation()" class="hist-link">${html}</a>`;
     },
     honoursLine(p) {
         const parts = [];

@@ -111,6 +111,19 @@ const UI = {
     },
     clubLabel(clubId, loan, youth) { const n = this.clubName(clubId); if (youth) return n; return loan ? `${n} <span class="muted">(loan)</span>` : n; },
 
+    // Where a player is actually playing RIGHT NOW — the loan destination (including a
+    // virtual U21/reserve loan with no real club entry, e.g. "u21:ajax") if he's away,
+    // otherwise his contracted club. Distinct from tabHistory()'s past stints. Assumes
+    // p.clubId is set — guard for free agents at the call site, same as the existing
+    // `club ? … : 'Free agent'` pattern.
+    currentClubInfo(p) {
+        const effId = effectiveClubId(p);
+        const youth = (p.onLoanAt && isU21Loan(p)) || isReserveClub(effId);
+        const tag = youth ? 'youth' : (p.onLoanAt ? 'loan' : null);
+        const club = Clubs.getClubById(effId) || (p.onLoanAt ? Clubs.getClubById(p.clubId) : null);
+        return { club, name: this.clubName(effId), tag };
+    },
+
     niceStep(hi) {
         const targets = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000];
         for (const t of targets) if (hi / t <= 5) return t;

@@ -10,6 +10,10 @@
    whole document the scroller, which pushed the fixed bottom nav out of
    reach on real mobile viewports — that model is gone. */
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); }
+/* Same reasoning as .tab-bar in components.css: .screen restricts to pan-y for the
+   tab-swipe gesture, so anything that scrolls itself sideways (the standings table
+   wrapper) needs to explicitly opt back into native horizontal panning. */
+[style*="overflow-x"] { touch-action: pan-x pan-y; }
 body { font-family: var(--font); overflow: hidden; }
 * { box-sizing: border-box; }
 #app {
@@ -81,8 +85,13 @@ button { font-family: inherit; }
 .fx-home { text-align: right; }
 .fx-away { text-align: left; }
 .fx-home.fx-win, .fx-away.fx-win { color: var(--text); font-weight: var(--weight-semibold); }
+.fx-home.fx-adv, .fx-away.fx-adv { color: var(--accent); font-weight: var(--weight-semibold); }
 .fx-score { flex: none; min-width: 40px; text-align: center; font-weight: var(--weight-semibold); color: var(--text); }
 .fixture--labeled .fx-label { flex: none; width: 40px; font-size: 11px; color: var(--text-faint); }
+/* Groups the 1-3 .fixture rows that make up a single tie so different ties in the
+   same round get one clear separator, instead of every leg bordering the next. */
+.tie-block .fixture { border-bottom: none; }
+.tie-block:not(:last-child) { border-bottom: .5px solid var(--line-faint); margin-bottom: 6px; padding-bottom: 6px; }
 
 /* ---------- Fact card: label/value rows inside a bordered card (contract, club profile) ---------- */
 .fcard { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 2px var(--card-pad); margin-bottom: var(--space-4); }
@@ -108,13 +117,13 @@ button { font-family: inherit; }
 
 /* ---------- Bottom sheet (quick confirmations / pickers) ---------- */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
-.sheet { width: 100%; max-width: 480px; background: var(--surface); border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); padding: var(--space-6) var(--screen-pad) calc(var(--space-6) + env(safe-area-inset-bottom)); max-height: 82vh; max-height: 82dvh; overflow-y: auto; }
+.sheet { width: 100%; max-width: 480px; background: var(--surface); color: var(--text); border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); padding: var(--space-6) var(--screen-pad) calc(var(--space-6) + env(safe-area-inset-bottom)); max-height: 82vh; max-height: 82dvh; overflow-y: auto; }
 .sheet__handle { width: 36px; height: 4px; border-radius: var(--radius-round); background: var(--line-strong); margin: 0 auto var(--space-5); }
 .sheet__title { font-size: var(--fs-xl); font-weight: var(--weight-semibold); margin-bottom: var(--space-4); }
 
 /* ---------- Modal (used sparingly, for full result confirmations) ---------- */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: center; justify-content: center; z-index: 60; padding: var(--space-6); }
-.modal-card { width: 100%; max-width: 380px; background: var(--surface); border: .5px solid var(--line-strong); border-radius: var(--radius-lg); padding: var(--space-6); }
+.modal-card { width: 100%; max-width: 380px; background: var(--surface); color: var(--text); border: .5px solid var(--line-strong); border-radius: var(--radius-lg); padding: var(--space-6); }
 
 /* ---------- Native range input, themed to match the mockup slider ---------- */
 .range { -webkit-appearance: none; appearance: none; width: 100%; height: var(--slider-track); border-radius: 5px; background: var(--track); margin: var(--space-2) 0 3px; accent-color: var(--accent); }
@@ -185,15 +194,25 @@ button { font-family: inherit; }
 .chart-svg .grid-line { stroke: var(--grid); }
 .chart-svg .axis-line { stroke: var(--line-strong); }
 
-/* ---------- Season / expandable rows (History tab) ---------- */
+/* ---------- Season / expandable rows (History tab) ----------
+   Club-first hierarchy: .season-name is the club (large/primary), .season-club is
+   the season (small/secondary) — named for historical reasons, not for what they
+   currently hold. Shade ladder for depth: closed rows sit on the .fcard's own
+   --surface; an open row brightens to --surface-raised (it's "active"); its nested
+   per-competition detail recedes to --surface-sunken (it's a level deeper). */
 .season-row { padding: 9px 0; border-bottom: .5px solid var(--line-faint); cursor: pointer; }
 .season-row:last-child { border-bottom: none; }
+.season-row.is-open { background: var(--surface-raised); border-radius: var(--radius-sm); }
 .season-top { display: flex; align-items: center; justify-content: space-between; }
-.season-name { font-weight: var(--weight-semibold); }
+.season-name { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); color: var(--text); }
 .season-club { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
 .season-stat { font-size: 11.5px; color: var(--text-secondary); text-align: right; }
-.season-body { padding: var(--space-3) 0 2px 0; }
+.season-stat .ti { font-size: 12px; }
+.season-body { padding: var(--space-3) var(--space-3) var(--space-2); background: var(--surface-sunken); border-radius: var(--radius-sm); margin-top: var(--space-2); }
 .comp-row { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-sm); padding: 7px 2px; border-top: 1px dashed var(--line-strong); color: var(--text-secondary); }
+.stint-comps .comp-row { padding-left: var(--space-5); }
+.hist-sym { font-size: 10px; }
+.hist-link { color: var(--text-bright); text-decoration: none; }
 
 /* ---------- Toggle chip row (career mode, position filter) ---------- */
 .chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
@@ -201,21 +220,45 @@ button { font-family: inherit; }
 .htog.is-on { background: var(--accent-tint); color: var(--accent-text); border-color: var(--accent-border); }
 
 /* ---------- How-to / setup screen ----------
-   Own scroll region (there's no .screen here). margin:auto on the card
-   centres it AND stays scrollable when content is taller than the viewport
-   (flex centering alone clips the top). */
-.setup-wrap { height: 100vh; height: 100dvh; overflow-y: auto; display: flex; padding: var(--space-6); }
-.setup-card { width: 100%; max-width: 420px; margin: auto; }
-.setup-card h1 { font-size: var(--fs-2xl); text-align: center; margin: 0 0 var(--space-6); }
-.howto { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6); text-align: center; }
-.howto-icon { font-size: 32px; margin-bottom: var(--space-2); }
-.howto h3 { font-size: var(--fs-lg); margin: 0 0 var(--space-2); }
-.howto p { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.5; margin: 0; min-height: 62px; }
+   Own scroll region (there's no .screen here, so nothing inherits var(--text)
+   from it — set colour explicitly or headings/paragraphs fall back to the
+   browser default (near-black), invisible on var(--bg)).
+   margin-top:0 + margin-bottom:auto anchors the card near the top instead of
+   dead-centering it in tall viewports (which read as a huge empty band above
+   the title); overflow-y:auto still lets it scroll on short ones. */
+.setup-wrap {
+  height: 100vh; height: 100dvh; overflow-y: auto; display: flex; color: var(--text);
+  padding: var(--space-6) var(--space-6) calc(var(--cta-dock-h) + var(--space-6) + env(safe-area-inset-bottom));
+}
+.setup-card { width: 100%; max-width: 420px; margin: 0 auto auto; }
+
+/* ---- Wordmark lockup: the one expressive element on this screen ---- */
+.setup-brand { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: var(--space-6); }
+.setup-crest { width: 30px; height: 30px; margin-bottom: var(--space-3); }
+.setup-brand__title { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); color: var(--text); }
+.setup-brand__tag { font-size: var(--fs-sm); color: var(--text-faint); margin-top: 3px; }
+
+.howto { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6); text-align: center; touch-action: pan-y; user-select: none; }
+.howto-icon { width: 54px; height: 54px; margin: 0 auto var(--space-3); border-radius: var(--radius-round); background: var(--surface-raised); border: .5px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--accent); }
+.howto h3 { font-size: var(--fs-lg); color: var(--text); margin: 0 0 var(--space-2); }
+.howto p { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.5; margin: 0 auto; max-width: 40ch; }
 .howto-nav { display: flex; align-items: center; justify-content: center; gap: var(--space-4); margin-top: var(--space-4); }
-.howto-btn { background: var(--surface-raised); border: .5px solid var(--line-strong); color: var(--text-bright); width: 30px; height: 30px; border-radius: var(--radius-round); cursor: pointer; }
+.howto-btn { background: var(--surface-raised); border: .5px solid var(--line-strong); color: var(--text-bright); width: 30px; height: 30px; border-radius: var(--radius-round); cursor: pointer; flex: none; }
+.howto-btn:disabled { opacity: .35; cursor: default; }
 .howto-dots { display: flex; gap: 6px; }
-.ht-dot { width: 6px; height: 6px; border-radius: var(--radius-round); background: var(--line-strong); cursor: pointer; }
+.ht-dot { width: 6px; height: 6px; border-radius: var(--radius-round); background: var(--line-strong); cursor: pointer; border: 0; padding: 0; }
 .ht-dot.on { background: var(--accent); }
+
+/* ---- Select with a fake dropdown chevron (appearance:none hides the native one) ---- */
+.select-wrap { position: relative; }
+.select-wrap .select-input { padding-right: 34px; }
+.select-wrap__chevron { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 16px; pointer-events: none; }
+
+/* ---- Fixed CTA footer (mirrors .cta-dock; no bottom-nav on this screen, so
+   it sits flush with the safe-area bottom instead of --nav-h above it) ---- */
+.setup-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: var(--space-3) var(--screen-pad) calc(var(--space-4) + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 78%, transparent); }
+.setup-cta .btn--primary { border-radius: var(--radius-lg); max-width: 420px; margin: 0 auto; }
+.setup-cta .btn--primary:disabled { opacity: .45; cursor: default; }
 
 /* ---------- Client card (Clients screen) ---------- */
 .cl-card { display: block; background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 10px 11px; margin-bottom: var(--space-3); }

@@ -128,6 +128,7 @@ const Sim = {
         this._expireMail(events);
 
         GameState.save();
+        Storage.flush();   // a completed week is a meaningful checkpoint — don't leave it debounced
         return { events, spotlights, rolledSeason, seasonFinished };
     },
 

@@ -1,5 +1,7 @@
 /* flag-icons (lipis/flag-icons), trimmed to the ~76 nationalities this game actually uses, self-hosted so it never depends on a CDN. Full set/license: https://github.com/lipis/flag-icons */
-.fi{background-size:contain;background-position:50%;background-repeat:no-repeat;display:inline-block;width:1.333333em;line-height:1em;border-radius:2px;box-shadow:0 0 0 .5px rgba(255,255,255,.18)}
+/* explicit height (not the upstream line-height+:before trick) — an empty inline-block with
+   no text content collapses to zero height, so the background-image never became visible */
+.fi{background-size:contain;background-position:50%;background-repeat:no-repeat;display:inline-block;width:1.333333em;height:1em;vertical-align:-0.1em;border-radius:2px;box-shadow:0 0 0 .5px rgba(255,255,255,.18)}
 .fi-al{background-image:url(flags/4x3/al.svg)}
 .fi-dz{background-image:url(flags/4x3/dz.svg)}
 .fi-ar{background-image:url(flags/4x3/ar.svg)}

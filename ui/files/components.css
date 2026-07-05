@@ -20,6 +20,11 @@
      itself between any hoisted bars */
   flex:1 1 auto; min-height:0;
   overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain;
+  /* Declarative backup for the swipe-to-switch-tab handler in ui-helpers.js: tells
+     the browser up front that only vertical panning is native here, so it doesn't
+     need to guess whether an early diagonal touch-move is "really" a vertical scroll
+     before our (non-passive) JS gets a chance to claim a horizontal one. */
+  touch-action: pan-y;
   padding-left:var(--screen-pad); padding-right:var(--screen-pad);
   /* leave room for the fixed bottom nav */
   padding-bottom:calc(var(--nav-clear) + env(safe-area-inset-bottom));
@@ -82,6 +87,10 @@
    "more over here" (edge fade) instead of looking cut off. */
 .tab-bar{
   display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch;
+  /* opts back into native horizontal scrolling for the tab strip itself, since the
+     .screen ancestor now restricts to pan-y — the swipe handler already ignores
+     drags starting here anyway (see startsInHorizontalScroller in ui-helpers.js) */
+  touch-action: pan-x pan-y;
   border-bottom:.5px solid var(--line-strong); scrollbar-width:none;
   --fade-l:0px; --fade-r:0px;
   -webkit-mask-image:linear-gradient(90deg,

@@ -1,5 +1,5 @@
 // Entry point
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('⚽ Football Agent Manager — booting…');
 
     Clubs.init();          // build club list from league data
@@ -14,10 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.COMPETITIONS = COMPETITIONS;
     window.UI = UI;
 
-    if (!GameState.hasSave()) {
+    await Storage.migrateLegacy();   // one-time: pull in a pre-IndexedDB localStorage save, if any
+    if (!(await GameState.hasSave())) {
         UI.showSetup();    // first run: choose home country + agency name, then generate + render
     } else {
-        GameState.init();  // load existing save
+        await GameState.init();  // load existing save
         UI.init();         // render
     }
 

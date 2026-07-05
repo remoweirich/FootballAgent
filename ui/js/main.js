@@ -3,10 +3,11 @@
 //  off to the Router instead of the old modal-based UI.
 // ============================================================
 const Main = {
-    boot() {
+    async boot() {
         Clubs.init();
-        if (!GameState.hasSave()) { Setup.show(); return; }
-        GameState.init();
+        await Storage.migrateLegacy();   // one-time: pull in a pre-IndexedDB localStorage save, if any
+        if (!(await GameState.hasSave())) { Setup.show(); return; }
+        await GameState.init();
         this.afterLoad();
     },
     afterLoad() {

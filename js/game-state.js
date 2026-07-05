@@ -48,9 +48,12 @@ const GameState = {
     seasonLabel() { return this.seasonLabelFor(this.seasonStartYear); },
 
     // ---- init ----
-    hasSave() { try { return !!localStorage.getItem(this.STORAGE_KEY); } catch (e) { return false; } },
-    init() {
-        if (!this.load()) {
+    // async now (IndexedDB has no synchronous read) — the only call sites are the two
+    // app boot sequences (js/main.js, ui/js/main.js) and the old UI's reset button,
+    // all of which already need to await this before deciding setup-vs-load anyway.
+    async hasSave() { return Storage.hasSave(); },
+    async init() {
+        if (!(await this.load())) {
             // no save: generate a default game (the live app shows the setup screen first and calls startNewGame)
             this.startNewGame(this.homeCountry || 'Netherlands', (this.agency && this.agency.name) || 'Your Agency');
         }
@@ -92,21 +95,24 @@ const GameState = {
     removeMail(id) { this.inbox = this.inbox.filter(m => m.id !== id); },
 
     // ---- persistence ----
+    // Fire-and-forget on purpose: every one of the ~80 call sites across the engine and
+    // both UIs just calls GameState.save() synchronously, same as always. Storage.saveGame()
+    // itself debounces the actual IndexedDB write (see js/storage.js) — advanceWeek() forces
+    // an immediate flush (js/simulation.js), as does the app being backgrounded.
     save() {
         try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+            Storage.saveGame({
                 week: this.week, seasonStartYear: this.seasonStartYear, homeCountry: this.homeCountry,
                 players: this.players, inbox: this.inbox, log: this.log,
                 agency: this.agency, league: this.league, clubHistory: this.clubHistory,
                 lastSeasonReport: this.lastSeasonReport
-            }));
+            });
         } catch (e) { console.warn('Save failed', e); }
     },
-    load() {
-        const raw = localStorage.getItem(this.STORAGE_KEY);
-        if (!raw) return false;
+    async load() {
+        const d = await Storage.loadGame();
+        if (!d) return false;
         try {
-            const d = JSON.parse(raw);
             this.week = d.week; this.seasonStartYear = d.seasonStartYear;
             this.homeCountry = d.homeCountry || (d.agency && d.agency.homeCountry) || 'Netherlands';
             this.players = d.players || []; this.inbox = d.inbox || [];
@@ -116,10 +122,15 @@ const GameState = {
             return this.players.length > 0 && this.agency != null;
         } catch (e) { console.warn('Load failed', e); return false; }
     },
-    reset() {
-        if (confirm('Reset the game? All progress will be lost.')) {
-            localStorage.removeItem(this.STORAGE_KEY);
-            location.reload();
-        }
+    // native-dialog version, kept for the old desktop UI's plain reset button
+    async reset() {
+        if (!confirm('Reset the game? All progress will be lost.')) return;
+        await this.hardReset();
+    },
+    // no confirmation of its own — the caller (e.g. the mobile UI's "Reset save"
+    // bottom sheet) is expected to have already confirmed with the player
+    async hardReset() {
+        await Storage.deleteSave();
+        location.reload();
     }
 };

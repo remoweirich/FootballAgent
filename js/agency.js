@@ -353,12 +353,20 @@ const Agency = {
         return { ok: true, message: `${club.name} are open to talks — proposal in your inbox.` };
     },
 
+    // How much a raw ability-to-potential gap should move a price, scaled down for low-ability
+    // players. An ability-24 kid with a 30-point gap to his cap is a hopeful punt — nobody has
+    // seen him do anything yet — while an ability-60 player with the same gap has already shown
+    // he can perform; the same gap shouldn't buy the same premium. Full weight from ability 60 up
+    // (roughly "good enough to matter" on the game's own ability bands), tapering below that.
+    potentialConfidence(ability) {
+        return Math.max(0.3, Math.min(1, ability / 60));
+    },
     // a wonderkid worth a huge fee should command a wage to match, not just one set by his current ability:
     // the same potential-gap/age logic behind playerValue(), scaled down to a sane wage multiplier
     wagePotentialFactor(p) {
         const potGap = Math.max(0, (p.potential || p.ability) - p.ability);
         const potWeight = p.age <= 21 ? 1.3 : p.age <= 25 ? 0.8 : p.age <= 28 ? 0.4 : 0.15;
-        return 1 + potGap * 0.06 * potWeight;
+        return 1 + potGap * 0.06 * potWeight * this.potentialConfidence(p.ability);
     },
     // club willingness to pay wage (for renewal/transfer negotiation)
     maxClubWage(p, club) {
@@ -746,7 +754,7 @@ const Agency = {
         let v = 380 * Math.pow(1.15, p.ability);                       // steep in current ability
         const potGap = Math.max(0, (p.potential || p.ability) - p.ability);
         const potWeight = p.age <= 21 ? 1.3 : p.age <= 25 ? 0.8 : p.age <= 28 ? 0.4 : 0.15;
-        v *= 1 + potGap * 0.045 * potWeight;                           // upside is worth most in the young
+        v *= 1 + potGap * 0.045 * potWeight * this.potentialConfidence(p.ability);   // upside is worth most in the young — but muted for unproven low-ability players, see potentialConfidence()
         const ageMult = p.age <= 19 ? 1.35 : p.age <= 21 ? 1.25 : p.age <= 23 ? 1.12 : p.age <= 26 ? 1.0 : p.age <= 29 ? 0.82 : p.age <= 31 ? 0.58 : 0.38;
         v *= ageMult;
         const yrsLeft = Math.max(0, (p.contractUntilSeason || GameState.seasonStartYear) - GameState.seasonStartYear);

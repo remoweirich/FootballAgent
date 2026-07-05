@@ -10,6 +10,11 @@
       .standings th and .tab-bar--sticky pin exactly under the header.
    3. Toggles .is-scrolled on .app-bar / .push-bar once content has
       scrolled underneath (shows the hairline shadow).
+   4. Swipe left/right anywhere on a screen to step to the next/previous
+      .tab in whatever .tab-bar it contains — works on every tabbed
+      screen (client detail, leagues, scouting, …) with no per-screen
+      wiring, since it only ever simulates a click on the neighbouring
+      .tab button and lets that screen's own click handler do the rest.
 
    Load AFTER shim.js and BEFORE the screen modules in index.html.
    ============================================================ */
@@ -80,6 +85,76 @@
       var bar = screen.querySelector('.app-bar, .push-bar');
       if (bar) bar.classList.toggle('is-scrolled', screen.scrollTop > 4);
     }, { passive: true });
+    wireTabSwipe(screen);
+  }
+
+  /* ---------- 4. Swipe left/right between tabs ---------- */
+
+  // A drag starting inside something that already scrolls sideways (the tab strip
+  // itself, a wide table, a chip row) should scroll that thing, not flip the page's
+  // tab — walk up from the touch target looking for one before treating this as a
+  // tab-swipe.
+  function startsInHorizontalScroller(target, screen) {
+    var node = target;
+    while (node && node !== screen) {
+      if (node.classList && (node.classList.contains('tab-bar') || node.classList.contains('chip-row'))) return true;
+      if (node.scrollWidth > node.clientWidth + 2) {
+        var cs = window.getComputedStyle(node);
+        if (cs.overflowX === 'auto' || cs.overflowX === 'scroll') return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function stepTab(screen, dir) {
+    var bar = screen.querySelector('.tab-bar');
+    if (!bar) return;
+    var tabs = Array.prototype.slice.call(bar.querySelectorAll('.tab'));
+    var i = tabs.findIndex(function (t) { return t.classList.contains('is-active'); });
+    if (i === -1) return;
+    var next = tabs[i + dir];
+    if (next) next.click();
+  }
+
+  function wireTabSwipe(screen) {
+    var sx = 0, sy = 0, tracking = false, decided = false, horizontal = false;
+    screen.addEventListener('pointerdown', function (e) {
+      // touch/pen only: a mouse-drag starting on a link or selectable text kicks off
+      // the browser's native drag-link/select-text gesture instead of a plain drag,
+      // which breaks a simple start/end threshold check. Real devices only ever swipe
+      // with a finger, so there's nothing lost by leaving mouse-drag alone here.
+      if (e.pointerType === 'mouse') return;
+      if (startsInHorizontalScroller(e.target, screen)) return;
+      tracking = true; decided = false; horizontal = false;
+      sx = e.clientX; sy = e.clientY;
+    }, { passive: true });
+    // A real finger drag is rarely dead straight — if the very first few pixels have
+    // any vertical component, the browser's native vertical scroll (the screen's own
+    // overflow-y) can commit to handling the whole gesture before a plain pointerup
+    // threshold check ever runs, so the "swipe" silently does nothing. Deciding the
+    // direction early on a small move and calling preventDefault() the moment it looks
+    // horizontal is what actually stops that — which needs a non-passive listener,
+    // since a passive one can't preventDefault at all.
+    screen.addEventListener('pointermove', function (e) {
+      if (!tracking) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!decided) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        decided = true;
+        horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
+        if (!horizontal) { tracking = false; return; } // let native vertical scroll proceed
+      }
+      if (horizontal && e.cancelable) e.preventDefault();
+    }, { passive: false });
+    screen.addEventListener('pointerup', function (e) {
+      if (!tracking) return;
+      tracking = false;
+      if (!horizontal) return;
+      var dx = e.clientX - sx;
+      if (Math.abs(dx) > 40) stepTab(screen, dx < 0 ? 1 : -1);
+    }, { passive: true });
+    screen.addEventListener('pointercancel', function () { tracking = false; }, { passive: true });
   }
 
   /* ---------- Wiring: rescan on every render ---------- */

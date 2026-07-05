@@ -84,9 +84,21 @@ const AgencyScreen = {
         <div class="gap-3" style="display:flex;flex-direction:column;margin-bottom:var(--space-5)">${this.equipCards()}</div>
 
         <div class="section-label">Staff</div>
-        <div class="gap-3" style="display:flex;flex-direction:column">${this.staffCards()}</div>
+        <div class="gap-3" style="display:flex;flex-direction:column;margin-bottom:var(--space-6)">${this.staffCards()}</div>
+
+        <div class="section-label">Danger zone</div>
+        <button class="btn btn--danger" onclick="AgencyScreen.confirmReset()"><i class="ti ti-trash"></i>Reset save</button>
         <div id="actionResult"></div>`;
     },
+    confirmReset() {
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Reset your save?</div>
+            <p class="hint">This permanently deletes your agency, clients, scouts and every season played. There's no undo.</p>
+            <div class="flex-row" style="margin-top:var(--space-5)">
+                <button class="btn btn--ghost" onclick="Router.closeSheet()">Cancel</button>
+                <button class="btn btn--danger" onclick="AgencyScreen.doReset()"><i class="ti ti-trash"></i>Delete everything</button>
+            </div>`);
+    },
+    doReset() { GameState.hardReset(); },
 
     equipCards() {
         return EQUIPMENT.map(e => {
