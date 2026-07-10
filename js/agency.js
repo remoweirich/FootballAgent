@@ -682,7 +682,8 @@ const Agency = {
             const target = Math.round(Math.max(20, Math.min(95, anchor + boost)));
             if (target > toClub.reputation) toClub.reputation = target;
         }
-        if (movingUp) p.morale.club = Math.min(100, p.morale.club + 12);
+        // he had to agree to sign, so he's happy at the club he just joined — club morale resets high
+        p.morale.club = MORALE.CLUB_RESET_ON_MOVE;
         // a move — any move — is a fresh start for how he feels about playing time
         p.morale.time = MORALE.TIME_RESET_ON_MOVE; p._playStreak = 0; p._benchStreak = 0;
         if (!pkg.credited) {
@@ -728,7 +729,7 @@ const Agency = {
         if (role && ROLE_ORDER.includes(role)) p.squadRole = role;
         recordWagePoint(p);
         this.changeRelationship(club.id, +2);
-        p.morale.wage = Math.min(100, p.morale.wage + 10); p.morale.club = Math.min(100, p.morale.club + 4);
+        p.morale.wage = Math.min(100, p.morale.wage + 10); p.morale.club = Math.min(100, p.morale.club + MORALE.CLUB_RENEW_BOOST);
         this._checkPromiseKept(p, ['newContract', 'renegotiateRep']);
         this._creditAgentAction(p, MORALE.AGENT_DEAL_BONUS);
         GameState.removeMail(mail.id);

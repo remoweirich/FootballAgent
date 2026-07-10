@@ -391,14 +391,14 @@ const League = {
         if (week === 47 || F.remaining.length <= 1) F.winner = F.remaining[0];
     },
 
-    // ---------------- Lower Leagues Cup (England: National League..Championship) ----------------
+    // ---------------- Lower Leagues Cup (England: National League group stage + League One/Two) ----------------
+    // The 24 National League clubs contest 8 groups of 3; the top two of each group (16) join the
+    // 48 League One + League Two clubs for a 64-team knockout. The Championship is not involved.
     _buildLLC() {
-        const pool = this.shuffle(
-            ['CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), [])
-        ); // 96 teams
+        const nat = this.shuffle(Clubs.getClubsByDivision('Natleague').map(c => c.id)); // 24
         const groups = [];
-        for (let g = 0; g < 32 && pool.length >= 3; g++) {
-            const teams = [pool.pop(), pool.pop(), pool.pop()];
+        for (let g = 0; g < 8 && nat.length >= 3; g++) {
+            const teams = [nat.pop(), nat.pop(), nat.pop()];
             groups.push({
                 teams,
                 table: teams.map(id => ({ clubId: id, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, Pts: 0, cards: 0 })),
@@ -406,7 +406,9 @@ const League = {
                 md: 0
             });
         }
-        return { groups, results: [], remaining: [], groupDone: false, winner: null };
+        // League One + League Two enter directly at the first knockout round (48 clubs)
+        const direct = ['LEAGUE1', 'LEAGUE2'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);
+        return { groups, direct, results: [], remaining: [], groupDone: false, winner: null };
     },
     _llcPlayFixture(grp) {
         if (grp.md >= grp.fixtures.length) return;
@@ -424,23 +426,25 @@ const League = {
         if (week === 4) { C.groups.forEach(grp => { this._llcPlayFixture(grp); this._llcPlayFixture(grp); }); }   // two of the three group games
         else if (week === 7) {
             C.groups.forEach(grp => this._llcPlayFixture(grp));                                                  // final group game
-            C.remaining = this.shuffle(C.groups.map(grp => this._kSort(grp.table)[0].clubId));                   // 32 group winners -> R32
+            // top two of each group (8×2 = 16) join the 48 League One/Two clubs -> 64-team knockout
+            const qualifiers = C.groups.reduce((a, grp) => { const s = this._kSort(grp.table); return a.concat([s[0].clubId, s[1].clubId]); }, []);
+            C.remaining = this.shuffle(qualifiers.concat(C.direct || []));
             C.groupDone = true;
         }
     },
-    _llcRoundName(week) { return ({ 15: 'Round of 32', 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 46: 'Final' })[week] || 'Round'; },
+    _llcRoundName(week) { return ({ 11: 'Round of 64', 15: 'Round of 32', 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 47: 'Final' })[week] || 'Round'; },
     llcKOStep(week) {
         const C = GameState.league.llc; if (!C || C.winner || !C.groupDone) return;
         const pairs = this._pairUp(this.shuffle(C.remaining));
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); return; }
-            const t = this.playCupTie(h, a, 'LLC', week === 46);
+            const t = this.playCupTie(h, a, 'LLC', week === 47);
             ties.push(t); winners.push(t.winner);
         });
         C.remaining = winners;
         C.results.push({ week, round: this._llcRoundName(week), ties });
-        if (week === 46 || C.remaining.length <= 1) C.winner = C.remaining[0];
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
     },
     clubPosition(clubId) {
         const club = Clubs.getClubById(clubId);
@@ -1487,7 +1491,7 @@ const League = {
         // English cups (run in parallel with the Dutch ones)
         if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.facup) this.facupStep(week);
         if ((week === 4 || week === 7) && L.llc) this.llcGroupStep(week);
-        else if ([15, 26, 32, 38, 46].includes(week) && L.llc) this.llcKOStep(week);
+        else if ([11, 15, 26, 32, 38, 47].includes(week) && L.llc) this.llcKOStep(week);
 
         // German cups (same rounds/weeks as the others)
         if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.dfb) this.dfbStep(week);

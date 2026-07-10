@@ -36,6 +36,8 @@ const MORALE = {
     BENCH_TICK: { base: -1, mid: -2.5, long: -5 },  // streak 1-2 / 3-5 / 6-25+ weeks NOT played (halved: was -2/-5/-10)
     TIME_STREAK_MID_FROM: 3, TIME_STREAK_LONG_FROM: 6,
     TIME_RESET_ON_MOVE: 70,
+    CLUB_RESET_ON_MOVE: 90,      // he has to agree to sign, so he starts happy at a club he just joined
+    CLUB_RENEW_BOOST: 20,        // re-signing a contract at a club he's already at lifts club morale
     // no "didn't play" penalty in weeks where matches aren't really available: the off-season
     // (48-52 + 1) and the international-break weeks (no league fixtures - league.js NO_LEAGUE).
     // Streaks are frozen in these weeks, not reset.
@@ -293,12 +295,13 @@ const Sim = {
             if (Math.random() < 0.0055 * ((typeof Upgrades !== 'undefined') ? Upgrades.injuryRiskMult() : 1)) {
                 const weeks = 1 + Math.floor(Math.random() * 11);
                 p.injury = { type: INJURY_TYPES[Math.floor(Math.random() * INJURY_TYPES.length)], weeksOut: weeks, total: weeks };
-                p._playStreak = 0; p._benchStreak = 0;   // an injury wipes the playing-time streak; time morale freezes while he's out
+                // an injury HALTS the playing-time streak — it's frozen (not reset) while he's out, and
+                // no weekly tick runs during injury (see _morale). Being injured therefore neither decays
+                // his playing-time morale nor erases the run he was on; he picks it back up on his return.
                 if (p.agentId === 'me') {
                     const t = `${p.name} picked up a ${p.injury.type} — out ~${weeks} week(s).`;
                     GameState.addLog(t, 'warn'); events.push({ type: 'warn', text: t });
                     GameState.addMail({ kind: 'news', cat: 'injury', subject: `Injury: ${p.name}`, body: t, ttl: 4 });
-                    p.morale.time = Math.max(0, p.morale.time - 8);
                 }
             }
         });
@@ -350,9 +353,9 @@ const Sim = {
 
             // ---- time: discrete streak-based ticks. Playing always counts in his favour;
             // NOT playing only counts against him when matches were actually possible -
-            // off-season and international-break weeks freeze the clock (no penalty, streaks
-            // preserved), and an injured player is frozen too (his streaks were already reset
-            // the week the injury struck - see Sim._injuries) ----
+            // off-season and international-break weeks freeze the clock (no penalty, streak
+            // preserved), and an injured player is frozen too: any week with no club games for
+            // him simply halts his current streak rather than decaying it (see Sim._injuries) ----
             if (!p.injury) {
                 const played = (p._weekApps || 0) > 0;
                 const tierOf = (streak, table) => streak >= MORALE.TIME_STREAK_LONG_FROM ? table.long : streak >= MORALE.TIME_STREAK_MID_FROM ? table.mid : table.base;

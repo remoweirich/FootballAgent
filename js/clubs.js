@@ -998,10 +998,12 @@ const REGIONS_EN = [
 // ---- Regions (Germany) ----
 const REGIONS_DE = [
     { id: 'bayern', name: 'Bayern', blurb: 'Bavaria' },
-    { id: 'nordoster', name: 'Nordosten', blurb: 'Northeast Germany' },
-    { id: 'westen', name: 'Westen', blurb: 'Western Germany' },
-    { id: 'sudwesten', name: 'Südwesten', blurb: 'Southwest Germany' },
-    { id: 'nord', name: 'Norden', blurb: 'Northern Germany' }
+    { id: 'nordosten', name: 'Nordosten', blurb: 'Mecklenburg-Vorpommern, Berlin, and Brandenburg' },
+    { id: 'ostdeutschland', name: 'Ostdeutschland', blurb: 'Sachsen, Thüringen, and Sachsen-Anhalt' },
+    { id: 'nrw', name: 'NRW', blurb: 'North Rhine-Westphalia' },
+    { id: 'sudwesten', name: 'Südwesten', blurb: 'Baden-Württemberg, Rheinland-Pfalz, and Saarland' },
+    { id: 'hessen-niedersachsen', name: 'Hessen & Niedersachsen', blurb: 'Hessen and Niedersachsen' },
+    { id: 'norddeutschland', name: 'Norddeutschland', blurb: 'Bremen, Hamburg, and Schleswig-Holstein' }
 ];
 // ---- Regions (Spain) ----
 const REGIONS_ES = [
@@ -1014,7 +1016,9 @@ const REGIONS_ES = [
 ];
 // ---- Regions (Switzerland) ----
 const REGIONS_CH = [
-    { id: 'westschweiz', name: 'Suisse romande', blurb: 'Western Switzerland' },
+    { id: 'westschweiz', name: 'Suisse romande', blurb: 'Jura, Neuchâtel, and Fribourg' },
+    { id: 'vaud', name: 'Vaud', blurb: 'Canton de Vaud' },
+    { id: 'genève', name: 'Genève', blurb: 'Canton de Genève' },
     { id: 'nordwestschweiz', name: 'Nordwestschweiz', blurb: 'Basel, Solothurn, and Aargau' },
     { id: 'nordostschweiz', name: 'Nordostschweiz', blurb: 'Zürich, Schaffhausen, and Thurgau' },
     { id: 'ostschweiz', name: 'Ostschweiz', blurb: 'St. Gallen, Appenzell, Glarus, and Graubünden' },
@@ -1058,11 +1062,20 @@ const CITY_REGION = {
     "Bristol":"south-west","Exeter":"south-west","Plymouth":"south-west","Swindon":"south-west","Cheltenham":"south-west","Forest Green":"south-west","Yeovil":"south-west","Bournemouth":"south-west","Cardiff":"south-west","Swansea":"south-west","Newport":"south-west",
     "Ipswich":"east-england","Norwich":"east-england","Peterborough":"east-england","Cambridge":"east-england","Colchester":"east-england","Southend-on-Sea":"east-england","Braintree":"east-england","Stevenage":"east-england","Watford":"east-england","Luton":"east-england","Borehamwood":"east-england",
     // ---- Germany ----
+    // bayern (Bavaria)
     "Munich":"bayern","Augsburg":"bayern","Nuremberg":"bayern","Fürth":"bayern","Regensburg":"bayern","Ingolstadt":"bayern","Unterhaching":"bayern","Illertissen":"bayern","Vilzing":"bayern","Würzburg":"bayern","Schweinfurt":"bayern","Bayreuth":"bayern","Landsberg":"bayern","Eltersdorf":"bayern","Aubstadt":"bayern","Eichstätt":"bayern","Burghausen":"bayern","Buchbach":"bayern","Memmingen":"bayern",
-    "Berlin":"nordoster","Leipzig":"nordoster","Dresden":"nordoster","Magdeburg":"nordoster","Cottbus":"nordoster","Chemnitz":"nordoster","Potsdam":"nordoster","Jena":"nordoster","Zwickau":"nordoster","Halle":"nordoster","Erfurt":"nordoster","Greifswald":"nordoster","Aue":"nordoster",
-    "Dortmund":"westen","Gelsenkirchen":"westen","Cologne":"westen","Leverkusen":"westen","Mönchengladbach":"westen","Düsseldorf":"westen","Essen":"westen","Duisburg":"westen","Bochum":"westen","Bielefeld":"westen","Münster":"westen","Paderborn":"westen","Aachen":"westen","Verl":"westen","Oberhausen":"westen","Gütersloh":"westen","Siegen":"westen","Bergisch Gladbach":"westen","Wiedenbrück":"westen","Rödinghausen":"westen","Bocholt":"westen","Lotte":"westen","Bonn":"westen",
-    "Stuttgart":"sudwesten","Freiburg":"sudwesten","Hoffenheim":"sudwesten","Mainz":"sudwesten","Kaiserslautern":"sudwesten","Karlsruhe":"sudwesten","Heidenheim":"sudwesten","Darmstadt":"sudwesten","Frankfurt":"sudwesten","Mannheim":"sudwesten","Saarbrücken":"sudwesten","Elversberg":"sudwesten","Homburg":"sudwesten","Trier":"sudwesten","Walldorf":"sudwesten","Sandhausen":"sudwesten","Aalen":"sudwesten","Ulm":"sudwesten","Freiberg":"sudwesten","Kassel":"sudwesten","Wiesbaden":"sudwesten","Offenbach":"sudwesten","Fulda":"sudwesten","Steinbach":"sudwesten","Aspach":"sudwesten",
-    "Hamburg":"nord","Bremen":"nord","Hanover":"nord","Hannover":"nord","Kiel":"nord","Wolfsburg":"nord","Braunschweig":"nord","Osnabrück":"nord","Oldenburg":"nord","Meppen":"nord","Emden":"nord","Norderstedt":"nord","Flensburg":"nord","Lübeck":"nord","Todesfelde":"nord","Drochtersen":"nord","Jeddeloh":"nord","Garbsen":"nord","Schöningen":"nord","Rostock":"nord",
+    // nordosten (Mecklenburg-Vorpommern, Berlin, Brandenburg)
+    "Berlin":"nordosten","Cottbus":"nordosten","Potsdam":"nordosten","Greifswald":"nordosten","Rostock":"nordosten",
+    // ostdeutschland (Sachsen, Thüringen, Sachsen-Anhalt)
+    "Leipzig":"ostdeutschland","Dresden":"ostdeutschland","Chemnitz":"ostdeutschland","Zwickau":"ostdeutschland","Aue":"ostdeutschland","Jena":"ostdeutschland","Erfurt":"ostdeutschland","Magdeburg":"ostdeutschland","Halle":"ostdeutschland",
+    // nrw (North Rhine-Westphalia)
+    "Dortmund":"nrw","Gelsenkirchen":"nrw","Cologne":"nrw","Leverkusen":"nrw","Mönchengladbach":"nrw","Düsseldorf":"nrw","Essen":"nrw","Duisburg":"nrw","Bochum":"nrw","Bielefeld":"nrw","Münster":"nrw","Paderborn":"nrw","Aachen":"nrw","Verl":"nrw","Oberhausen":"nrw","Gütersloh":"nrw","Siegen":"nrw","Bergisch Gladbach":"nrw","Wiedenbrück":"nrw","Rödinghausen":"nrw","Bocholt":"nrw","Lotte":"nrw","Bonn":"nrw",
+    // sudwesten (Baden-Württemberg, Rheinland-Pfalz, Saarland)
+    "Stuttgart":"sudwesten","Freiburg":"sudwesten","Hoffenheim":"sudwesten","Mainz":"sudwesten","Kaiserslautern":"sudwesten","Karlsruhe":"sudwesten","Heidenheim":"sudwesten","Mannheim":"sudwesten","Saarbrücken":"sudwesten","Elversberg":"sudwesten","Homburg":"sudwesten","Trier":"sudwesten","Walldorf":"sudwesten","Sandhausen":"sudwesten","Aalen":"sudwesten","Ulm":"sudwesten","Freiberg":"sudwesten","Aspach":"sudwesten",
+    // hessen-niedersachsen (Hessen + Niedersachsen)
+    "Darmstadt":"hessen-niedersachsen","Frankfurt":"hessen-niedersachsen","Kassel":"hessen-niedersachsen","Wiesbaden":"hessen-niedersachsen","Offenbach":"hessen-niedersachsen","Fulda":"hessen-niedersachsen","Steinbach":"hessen-niedersachsen","Hanover":"hessen-niedersachsen","Hannover":"hessen-niedersachsen","Wolfsburg":"hessen-niedersachsen","Braunschweig":"hessen-niedersachsen","Osnabrück":"hessen-niedersachsen","Oldenburg":"hessen-niedersachsen","Meppen":"hessen-niedersachsen","Emden":"hessen-niedersachsen","Drochtersen":"hessen-niedersachsen","Jeddeloh":"hessen-niedersachsen","Garbsen":"hessen-niedersachsen","Schöningen":"hessen-niedersachsen",
+    // norddeutschland (Bremen, Hamburg, Schleswig-Holstein)
+    "Hamburg":"norddeutschland","Bremen":"norddeutschland","Kiel":"norddeutschland","Norderstedt":"norddeutschland","Flensburg":"norddeutschland","Lübeck":"norddeutschland","Todesfelde":"norddeutschland",
     // ---- Spain ----
     "Seville":"sur de españa","Sevilla":"sur de españa","Málaga":"sur de españa","Córdoba":"sur de españa","Granada":"sur de españa","Cádiz":"sur de españa","Almería":"sur de españa","Huelva":"sur de españa","Jerez de la Frontera":"sur de españa","Marbella":"sur de españa","Lucena":"sur de españa","Sanlúcar de Barrameda":"sur de españa","Murcia":"sur de españa","Cartagena":"sur de españa","Antequera":"sur de españa","Algeciras":"sur de españa","Águilas":"sur de españa","Jaén":"sur de españa","Ceuta":"sur de españa","Torremolinos":"sur de españa",
     "Madrid":"españa central","Getafe":"españa central","Leganés":"españa central","Alcorcón":"españa central","Majadahonda":"españa central","Guadalajara":"españa central","Mérida":"españa central","Cáceres":"españa central","Almendralejo":"españa central","Don Benito":"españa central","Coria":"españa central","Albacete":"españa central",
@@ -1071,7 +1084,14 @@ const CITY_REGION = {
     "Bilbao":"nor de españa","San Sebastián":"nor de españa","Vitoria-Gasteiz":"nor de españa","Pamplona":"nor de españa","Santander":"nor de españa","Eibar":"nor de españa","Barakaldo":"nor de españa","Getxo":"nor de españa","Sestao":"nor de españa","Irun":"nor de españa","Logroño":"nor de españa","Tafalla":"nor de españa","Torrelavega":"nor de españa",
     "Palma de Mallorca":"islas","Las Palmas":"islas","Santa Cruz de Tenerife":"islas","Ibiza":"islas","Las Palmas de Gran Canaria":"islas",
     // ---- Switzerland ----
-    "Genève":"westschweiz","Lausanne":"westschweiz","Yverden-les-Bains":"westschweiz","Neuchâtel":"westschweiz","Carouge":"westschweiz","Nyon":"westschweiz","Bavois":"westschweiz","Le Grand-Saconnex":"westschweiz","Saint-Prex":"westschweiz","Vevey":"westschweiz","Thônex":"westschweiz","Coffrane":"westschweiz","La Chaux-de-Fonds":"westschweiz","Lancy":"westschweiz","Courtételle":"westschweiz","Bassecourt":"westschweiz","Delémont":"westschweiz","Monthey":"westschweiz","Delley-Portalban":"westschweiz","Echallens":"westschweiz","Payerne":"westschweiz","Meyrin":"westschweiz","Châtelaine":"westschweiz","Bulle":"westschweiz",
+    // Suisse romande (Jura, Neuchâtel, Fribourg)
+    "Neuchâtel":"westschweiz","Saint-Prex":"westschweiz","Coffrane":"westschweiz","La Chaux-de-Fonds":"westschweiz","Courtételle":"westschweiz","Bassecourt":"westschweiz","Delémont":"westschweiz","Delley-Portalban":"westschweiz","Bulle":"westschweiz",
+    // Vaud
+    "Lausanne":"vaud","Yverden-les-Bains":"vaud","Bavois":"vaud","Nyon":"vaud","Vevey":"vaud","Echallens":"vaud","Payerne":"vaud",
+    // Genève
+    "Genève":"genève","Carouge":"genève","Le Grand-Saconnex":"genève","Thônex":"genève","Lancy":"genève","Meyrin":"genève","Châtelaine":"genève",
+    // Monthey is in Valais → Ticino/Valais region
+    "Monthey":"ticinovalais",
     "Basel":"nordwestschweiz","Aarau":"nordwestschweiz","Baden":"nordwestschweiz","Solothurn":"nordwestschweiz","Muttenz":"nordwestschweiz","Wohlen":"nordwestschweiz",
     "Zürich":"nordostschweiz","Winterthur":"nordostschweiz","Schaffhausen":"nordostschweiz","Dietikon":"nordostschweiz","Thalwil":"nordostschweiz","Kreuzlingen":"nordostschweiz","Marthalen":"nordostschweiz","Wettswil-Bonstetten":"nordostschweiz",
     "St. Gallen":"ostschweiz","Rapperswil-Jona":"ostschweiz","Wil":"ostschweiz","Gossau SG":"ostschweiz","Widnau":"ostschweiz","Vaduz":"ostschweiz","Eschen/Mauren":"ostschweiz",

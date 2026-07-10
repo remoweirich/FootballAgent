@@ -140,24 +140,49 @@ const LeaguesScreen = {
         const hw = t.winner === t.h, aw = t.winner === t.a;
         return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
+    // brief English explanation shown at the top of every cup view, keyed by competition
+    CUP_BLURB: {
+        beker: 'Clubs from tiers 2–4 (56 in all) start in round one; the 18 Eredivisie clubs join at the Round of 32. Every tie is a single match with the lower-ranked side at home. Rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
+        kbek: 'The lower-division clubs are split into twelve mixed groups of three (group games in weeks 4, 7 and 16). The twelve group winners plus the four best runners-up form the last 16, then a straight knockout to the final in week 47.',
+        facup: 'All 116 English league clubs plus 12 non-league guest clubs — 128 in total — are drawn together from round one. Single-match knockout (lower-ranked side at home), with rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
+        llc: 'The 24 National League clubs are drawn into eight groups of three and play each other once (weeks 4 & 7). The top two of each group — 16 clubs — join the 48 League One and League Two clubs for a 64-team knockout: Round of 64 in week 11, then weeks 15, 26, 32, 38 and the final in week 47.',
+        dfb: 'All 128 German clubs enter in round one. Bundesliga, 2. Bundesliga and 3. Liga sides are seeded — drawn away and kept apart in round one. Single-match rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
+        lpokal: 'The 48 clubs of the 1st and 2nd Regionalliga play two qualifying rounds (weeks 4 & 7); the 12 survivors join the 20 clubs of the 3. Liga at the Round of 32 (week 15). Further rounds in weeks 26, 32, 38 and 47.',
+        cdr: 'All 64 clubs from the top three divisions enter round one. La Liga clubs are seeded — drawn away and kept apart in round one. Single-match rounds in weeks 4, 7, 15, 26, 38 and 47.',
+        cfed: 'The 64 clubs from the bottom three divisions contest this cup. Primera Superior clubs are seeded — drawn away and kept apart in round one. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
+        schwcup: 'Round one pits the 1. Liga (drawn away) against the 2. Liga; the 24 winners then meet the Super League (seeded, away), Challenge League and Promotion League — 64 clubs in all. Reserve teams, Vaduz and Eschen/Mauren are replaced by virtual amateur sides. Rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
+        cupabass: '64 clubs from the Promotion League, 1. Liga and 2. Liga (minus Eschen/Mauren and one random reserve side). Promotion League clubs are seeded and drawn away. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
+        lichcup: 'Vaduz, Eschen/Mauren and six Liechtenstein amateur clubs. The quarter-finals and semi-finals are two-legged; the final is a single match. Played in weeks 32, 38 and 47.',
+        coppaitalia: 'All 64 clubs from Serie A, B and C enter round one. Serie A clubs are seeded — drawn away and kept apart in round one. Single-match rounds in weeks 4, 7, 15, 26, 38 and 47.',
+        coppacompagno: 'The 64 clubs from Serie B, C and D. Serie B clubs are seeded — drawn away and kept apart in round one. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
+        coupefrance: '128 entrants — the 100 clubs of Ligue 1 to 5 plus 28 amateur guest clubs — are drawn together from round one. The higher-division side is always drawn away. Single-match rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
+        coupenational: 'The 64 clubs of Ligue 3, 4 and 5, drawn together from round one. The higher-division side is always drawn away. Rounds in weeks 4, 7, 15, 26, 38 and 47.'
+    },
+    cupBlurb(key) {
+        const b = this.CUP_BLURB[key];
+        return b ? `<p class="hint" style="margin-bottom:var(--space-4)">${b}</p>` : '';
+    },
     knockoutCup(key, label) {
         const C = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
-        if (!C || !C.results || !C.results.length) return `<p class="hint">${label} hasn't kicked off yet.</p>`;
+        const blurb = this.cupBlurb(key);
+        if (!C || !C.results || !C.results.length) return `${blurb}<p class="hint">${label} hasn't kicked off yet.</p>`;
         const winner = C.winner ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(C.winner)}</strong></div>` : '';
         const rounds = C.results.slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· wk ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
-        return `${winner}${rounds}`;
+        return `${blurb}${winner}${rounds}`;
     },
     groupCup(key, label) {
         const K = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
-        if (!K || !K.groups) return `<p class="hint">${label} hasn't started yet.</p>`;
+        const blurb = this.cupBlurb(key);
+        if (!K || !K.groups) return `${blurb}<p class="hint">${label} hasn't started yet.</p>`;
+        const qual = key === 'llc' ? 2 : 1;   // how many per group are highlighted as qualifiers
         const winner = K.winner ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(K.winner)}</strong></div>` : '';
         const groups = K.groups.map((g, i) => {
             const t = League._kSort(g.table);
-            const rows = t.map((r, j) => `<div class="frow" style="${j === 0 ? 'color:var(--state-good)' : ''}"><span class="frow__k">${UI.clubName(r.clubId)}</span><span class="frow__v">${r.P}p · ${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA} · ${r.Pts}pts</span></div>`).join('');
+            const rows = t.map((r, j) => `<div class="frow" style="${j < qual ? 'color:var(--state-good)' : ''}"><span class="frow__k">${UI.clubName(r.clubId)}</span><span class="frow__v">${r.P}p · ${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA} · ${r.Pts}pts</span></div>`).join('');
             return `<div class="fcard" style="padding:8px 12px"><div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);padding:4px 0">Group ${i + 1}</div>${rows}</div>`;
         }).join('');
         const ko = (K.results || []).slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· wk ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
-        return `${winner}<div class="section-label">Group stage</div>${groups}${ko ? `<div class="section-label" style="margin-top:var(--space-5)">Knockout</div>${ko}` : ''}`;
+        return `${blurb}${winner}<div class="section-label">Group stage</div>${groups}${ko ? `<div class="section-label" style="margin-top:var(--space-5)">Knockout</div>${ko}` : ''}`;
     },
 
     // ---- play-offs (this season's own only — never a stale prior-season carryover) ----

@@ -74,17 +74,28 @@ const Scouts = {
         return s ? s.maxTalentAge : null;
     },
 
-    // cost charged PER report, scaled by region prestige (within the home country): cheapest €600, dearest €2600
+    // fixed per-report cost per region (from clubs_by_region.xlsx, row 13). Scout discount still applies.
+    REGION_REPORT_COST: {
+        // Netherlands
+        'noord': 1240, 'oost': 2070, 'noord-holland': 3560, 'middelland': 600, 'zuid': 3830, 'zuid-holland': 1960,
+        // England
+        'greater-london': 4000, 'north-west': 2910, 'south-east': 970, 'west-midlands': 2320, 'north-east': 2100, 'yorkshire': 1180, 'east-midlands': 1030, 'south-west': 1150, 'east-england': 600,
+        // Germany
+        'bayern': 2690, 'nordosten': 700, 'ostdeutschland': 2900, 'nrw': 3170, 'sudwesten': 3040, 'hessen-niedersachsen': 2220, 'norddeutschland': 1020,
+        // Spain
+        'sur de españa': 600, 'españa central': 2790, 'noreste de españa': 4000, 'noroeste de españa': 1140, 'nor de españa': 1130, 'islas': 1530,
+        // Switzerland
+        'westschweiz': 500, 'vaud': 2320, 'genève': 2780, 'nordwestschweiz': 3050, 'nordostschweiz': 2190, 'ostschweiz': 2780, 'innerschweiz': 600, 'bern': 3750, 'ticinovalais': 1910,
+        // Italy
+        'nordovest italia': 4000, 'nordest italia': 2310, 'italia centrale': 1450, 'sud italia': 600, 'isole': 1120,
+        // France
+        'N-O France': 2620, 'N-E France': 2370, 'centre France': 2960, 'S-O France': 1340, 'S-E France': 1910, 'Îles': 600
+    },
+    // cost charged PER report for a region (fixed price, then scout discount applied)
     regionReportCost(regionId) {
-        const avg = id => { const cs = Clubs.getClubsByRegion(id); return cs.length ? cs.reduce((s, c) => s + c.reputation, 0) / cs.length : 40; };
-        const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
-        const vals = regionsForCountry(hc).map(r => avg(r.id));
-        const lo = Math.min(...vals), hi = Math.max(...vals);
-        const me = avg(regionId);
-        const t = hi > lo ? (me - lo) / (hi - lo) : 0;
-        const base = 600 + t * (2600 - 600);
+        const base = this.REGION_REPORT_COST[regionId] != null ? this.REGION_REPORT_COST[regionId] : 600;
         const disc = (typeof Upgrades !== 'undefined') ? Upgrades.scoutDiscount() : 0;
-        return Math.round((base * (1 - disc)) / 50) * 50;
+        return Math.round((base * (1 - disc)) / 10) * 10;
     },
     // the dearest home region sets the baseline for international travel costs
     homeRegionMaxCost() {

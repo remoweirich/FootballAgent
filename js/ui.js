@@ -1391,11 +1391,11 @@ const UI = {
         const winner = C.winner ? `<div class="cup-winner">🏆 Winner: <strong>${this.clubName(C.winner)}</strong></div>` : '';
         const groups = C.groups.map((g, i) => {
             const t = League._kSort(g.table);
-            const rows = t.map((r, j) => `<tr class="${j === 0 ? 'zone-promote' : ''}" onclick="UI.openClub('${r.clubId}')" style="cursor:pointer"><td class="club">${this.clubName(r.clubId)}</td><td>${r.P}</td><td>${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA}</td><td class="pts">${r.Pts}</td></tr>`).join('');
+            const rows = t.map((r, j) => `<tr class="${j < 2 ? 'zone-promote' : ''}" onclick="UI.openClub('${r.clubId}')" style="cursor:pointer"><td class="club">${this.clubName(r.clubId)}</td><td>${r.P}</td><td>${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA}</td><td class="pts">${r.Pts}</td></tr>`).join('');
             return `<div class="kgroup"><h4>Group ${i + 1}</h4><table class="standings mini"><thead><tr><th>Club</th><th>P</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         }).join('');
         const ko = (C.results || []).slice().reverse().map(r => `<div class="cup-round"><h4>${r.round} <span class="muted">· wk ${r.week}</span></h4>${r.ties.map(t => this._tie(t)).join('')}</div>`).join('');
-        return `<div class="panel">${winner}<h3>Group stage <span class="muted">(32 groups of 3 — National League to Championship)</span></h3><p class="hint">Each club plays the other two once (weeks 4 & 7); the 32 group winners go into a drawn knockout (R32 wk15, then 26/32/38, final wk46).</p><div class="kgroups">${groups}</div>${ko ? `<h3>Knockout</h3>${ko}` : ''}</div>`;
+        return `<div class="panel">${winner}<h3>Group stage <span class="muted">(8 groups of 3 — National League)</span></h3><p class="hint">The 24 National League clubs play each other once in eight groups (weeks 4 & 7); the top two of each group — 16 clubs — join the 48 League One and League Two clubs for a 64-team knockout (Round of 64 wk11, then 15/26/32/38, final wk47).</p><div class="kgroups">${groups}</div>${ko ? `<h3>Knockout</h3>${ko}` : ''}</div>`;
     },
     cupKleineView() {
         const K = (GameState.league && GameState.league.kbek) || (GameState.lastSeasonReport && GameState.lastSeasonReport.kbek);
