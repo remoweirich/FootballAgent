@@ -29,7 +29,7 @@ const UI = {
             { icon: '✍️', title: 'Sign your clients', text: "Approach a prospect to represent him, then negotiate his move and contract: the club, the role, the wage. From then on you collect commission on his wage and sponsorships every single week." },
             { icon: '📈', title: 'Game time makes them grow', text: "Players improve mainly by playing. Steer your youngsters to the right club and role — or out on loan — so they get regular minutes and approach their potential. Rising ability means bigger contracts, bigger fees and a bigger cut for you." },
             { icon: '🏢', title: 'Grow your agency', text: "Wins and big moves build your reputation, which unlocks bigger clients, more scouts and better facilities. Reinvest your commission in Agency upgrades to develop players faster and scout further afield." },
-            { icon: '🗓️', title: 'Play week by week', text: "Hit “Advance week” to roll matches, offers, development and scouting forward. Deals happen in the transfer windows (weeks 1–6 and 21–25). Keep an eye on your inbox for offers, scout reports and the end-of-season review." }
+            { icon: '🗓️', title: 'Play week by week', text: "Hit “Advance week” to roll matches, offers, development and scouting forward. Deals happen in the transfer windows (weeks 1–6 and 28–33). Keep an eye on your inbox for offers, scout reports and the end-of-season review." }
         ];
         const el = document.createElement('div');
         el.id = 'setupOverlay'; el.className = 'setup-overlay';
@@ -620,11 +620,11 @@ const UI = {
     },
     negRenewWage(clubId) {
         const club = Clubs.getClubById(clubId), m = GameState.inbox.find(x => x.id === this._ctx.mailId), p = GameState.getPlayer(m.offer.playerId);
-        const req = +document.getElementById('wgSlider').value, r = Agency.negotiateWage(p, club, req, this._ctx.wageRound++);
+        const req = +document.getElementById('wgSlider').value, r = Agency.negotiateWage(p, club, req, this._ctx.wageRound++, this._ctx.lastWageCounter);
         const msg = document.getElementById('wgMsg');
         const setWage = w => { document.getElementById('wgSlider').value = w; document.getElementById('wgVal').textContent = '€' + this.money(w) + '/wk'; document.getElementById('wgCut').textContent = this.money(Math.round(w * p.wageCommission / 100)); };
         if (r.status === 'accept') { this._ctx.agreedWage = req; msg.innerHTML = `<span class="ok-text">“${r.message}”</span>`; }
-        else if (r.status === 'counter') { this._ctx.agreedWage = r.counter; setWage(r.counter); msg.innerHTML = `<span class="bad-text">“${r.message}”</span>`; }
+        else if (r.status === 'counter') { this._ctx.agreedWage = r.counter; this._ctx.lastWageCounter = r.counter; setWage(r.counter); msg.innerHTML = `<span class="bad-text">“${r.message}”</span>`; }
         else { msg.innerHTML = `<span class="bad-text">“${r.message}”</span>`; }
     },
     doAcceptRenewal(mailId) {
@@ -644,7 +644,7 @@ const UI = {
         const inWindow = durOpts.length > 0;
         const durBlock = inWindow
             ? `<div class="slider-block"><label>Loan duration</label><select id="durSel" class="filter-select wide">${durOpts.map((d, i) => `<option value="${d.code}" ${i === 0 ? 'selected' : ''}>${d.label}</option>`).join('')}</select></div>`
-            : `<div class="result info">Loans can only be completed during a transfer window (weeks 1–6 or 21–25).</div>`;
+            : `<div class="result info">Loans can only be completed during a transfer window (weeks 1–6 or 28–33).</div>`;
         const acceptBtn = inWindow ? `<button class="btn-primary" onclick="UI.doAcceptLoan('${m.id}')">Accept loan</button>` : '';
         this.openModal(`<h2>🔁 Loan — ${p.name}</h2>
             <p class="greet">“${Agency.greetingFor(to.id)}”</p>

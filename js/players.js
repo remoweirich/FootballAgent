@@ -117,16 +117,6 @@ const PlayerGen = {
         return players;
     },
 
-    // turn a retired NPC back into a fresh youngster at the same club (keeps the world populated)
-    rejuvenate(p) {
-        const club = Clubs.getClubById(p.clubId) || { reputation: 45, country: 'Netherlands' };
-        const fresh = this.makeProspect(club, { position: p.position });
-        ['name', 'nationality', 'nationalityFlag', 'age', 'ability', 'potential', 'birthWeek', 'retireAge',
-            'styleRole', 'report', 'scoutQuality'].forEach(k => { p[k] = fresh[k]; });
-        p.stats = {}; p.injury = null; p.injuryHistory = []; p.history = { ability: [], wage: [], fees: [] };
-        p.retireDelays = 0; p.retiringThisSeason = false; p.squadRole = 'rotation'; p.morale = fresh.morale;
-        p.wage = fresh.wage; p.sponsorIncome = 0; p.contractUntilSeason = GameState.seasonStartYear + 2 + Math.floor(Math.random() * 3);
-    },
     // how far a talent has typically progressed toward his ceiling at a given age
     ageFracFor(age) {
         const t = { 15: 0.72, 16: 0.76, 17: 0.81, 18: 0.86, 19: 0.90, 20: 0.93, 21: 0.96, 22: 0.98 };
@@ -205,7 +195,8 @@ const PlayerDev = {
             // organic week-to-week randomness
             const rnd = 0.7 + Math.random() * 0.6;
             const up = (typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1;
-            let pts = DEV_BASE * play * this.youthBoost(p.age) * gapF * highEnd * form * rnd * up;
+            const moraleMult = (typeof moraleDevMult === 'function') ? moraleDevMult(moraleAvg(p)) : 1;
+            let pts = DEV_BASE * play * this.youthBoost(p.age) * gapF * highEnd * form * rnd * up * moraleMult;
             pts = Math.min(pts, 0.40);                          // weekly ceiling: no single week causes a visible jump
             p._dev = (p._dev || 0) + pts;
             while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 11) {
@@ -226,6 +217,10 @@ const PlayerDev = {
 function clubTierOf(p) { const c = Clubs.getClubById(p.clubId); return c ? c.tier : 4; }
 function getRegionForClub(club) { return getRegionBasedNationality(club.country || 'Netherlands'); }
 function effectiveClubId(p) { return p.onLoanAt || p.clubId; }
+// World model: only players the user can ever see or interact with are simulated individually
+// (aging, development, injuries, match stats). Everyone else is a frozen background extra —
+// club results come from the club's own reputation/seasonDelta, not from squad averages.
+function isSimRelevant(p) { return !p.archived && (p.agentId === 'me' || p.everClient === true || p.knownToAgent === true); }
 function isU21Loan(p) { return typeof p.onLoanAt === 'string' && p.onLoanAt.indexOf('u21') === 0; }
 function u21ParentId(idOrPlayer) { const v = typeof idOrPlayer === 'string' ? idOrPlayer : idOrPlayer.onLoanAt; return (v && v.indexOf('u21') === 0) ? (v.split(':')[1] || null) : null; }
 

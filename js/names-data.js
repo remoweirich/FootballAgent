@@ -245,7 +245,7 @@ const NAMES_DATABASE = {
         "Mohamed", "Ahmed", "Ali", "Omar", "Youssef", "Adam", "Ibrahim", "Hassan", "Amine", "Bilal",
         "Hamza", "Ismael", "Karim", "Rayan", "Sofiane", "Mehdi", "Ayoub", "Imran", "Tariq", "Nabil",
         "Alexandru", "Andrei", "Stefan", "Gabriel", "Cristian", "Mihai", "Adrian", "Ionut", "Marius", "Bogdan",
-        "Florin", "Daniel", "Nicolae, George", "Radu", "Vasile", "Constantin", "Sorin", "Valentin", "Laurentiu",
+        "Florin", "Daniel", "Nicolae", "George", "Radu", "Vasile", "Constantin", "Sorin", "Valentin", "Laurentiu",
         "Chen", "Wei", "Ming", "Jun", "Hao", "Yang", "Jian", "Lei", "Li", "Feng",
         "Emmanuel", "Samuel", "Joseph", "Michael", "David", "Daniel", "Isaac", "Abraham", "Joshua", "Benjamin",
         "Marco", "Luka", "Nikola", "Ivan", "Petar", "Marko", "Mateo", "Luka", "Filip", "Josip",
@@ -836,19 +836,17 @@ const FALLBACK_NAMES = {
     lastNames: ["Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis", "Garcia", "Martinez", "Rodriguez"]
 };
 
-// Function to get weighted random nationality
+// Function to get weighted random nationality.
+// Normalized against the actual weight total (rather than assuming the weights sum to
+// exactly 100) so no single country silently absorbs any rounding remainder.
+const NATIONALITY_WEIGHT_TOTAL = Object.values(NATIONALITY_DISTRIBUTION).reduce((s, w) => s + w, 0);
 function getRandomNationality() {
-    const rand = Math.random() * 100;
-    let cumulative = 0;
-    
+    let rand = Math.random() * NATIONALITY_WEIGHT_TOTAL;
     for (const [nationality, weight] of Object.entries(NATIONALITY_DISTRIBUTION)) {
-        cumulative += weight;
-        if (rand <= cumulative) {
-            return nationality;
-        }
+        rand -= weight;
+        if (rand <= 0) return nationality;
     }
-    
-    return "Brazil"; // Fallback
+    return "Brazil"; // unreachable in practice (floating-point safety net)
 }
 
 // Function to get nationality based on scouting region

@@ -711,7 +711,264 @@ const LEAGUES_DATA = {
                 ]
             }
         ]
-    }
+    },
+    "Italy": {
+        country: "Italy",
+        tiers: [
+            { 
+                id: "SerieA", 
+                name: "Serie A", 
+                tier: 1,
+                clubs: [
+                    { id: "Inter Milan", name: "Inter", city: "Milan", colors: { primary: "#0B1560", secondary: "#000000" }, reputation: 88 },
+                    { id: "Napoli", name: "SSC Napoli", city: "Napoli", colors: { primary: "#0E7DC2", secondary: "#FFFFFF" }, reputation: 86 },
+                    { id: "Juventus", name: "Juventus", city: "Torino", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 85 },
+                    { id: "AC Milan", name: "AC Milan", city: "Milan", colors: { primary: "#FB090B", secondary: "#000000" }, reputation: 85 },
+                    { id: "AS Roma", name: "AS Roma", city: "Rome", colors: { primary: "#8E1F2F", secondary: "#F0BC42" }, reputation: 81 },
+                    { id: "Atalanta", name: "Atalanta", city: "Bergamo", colors: { primary: "#1961AE", secondary: "#000000" }, reputation: 79 },
+                    { id: "Lazio", name: "Lazio", city: "Rome", colors: { primary: "#6CACE4", secondary: "#FFFFFF" }, reputation: 78 },
+                    { id: "FC Bologna", name: "FC Bologna", city: "Bologna", colors: { primary: "#A5122A", secondary: "#1C2B7F" }, reputation: 78 },
+                    { id: "Fiorentina", name: "AC Fiorentina", city: "Florence", colors: { primary: "#592C82", secondary: "#FFFFFF" }, reputation: 77 },
+                    { id: "Como", name: "Como 1907", city: "Como", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "Udinese", name: "Udinese", city: "Udine", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "US Sassuolo", name: "US Sassuolo", city: "Sassuolo", colors: { primary: "#00A752", secondary: "#000000" }, reputation: 75 },
+                    { id: "FC Torino", name: "FC Torino", city: "Torino", colors: { primary: "#7A1E28", secondary: "#FFFFFF" }, reputation: 75 },
+                    { id: "Parma Calcio", name: "Parma Calcio", city: "Parma", colors: { primary: "#FFD100", secondary: "#1C4E9D" }, reputation: 74 },
+                    { id: "Cagliari", name: "Cagliari", city: "Cagliari", colors: { primary: "#A3122E", secondary: "#1B3A6B" }, reputation: 74 },
+                    { id: "Genua CFC", name: "Genua CFC", city: "Genua", colors: { primary: "#A5122A", secondary: "#1C2B7F" }, reputation: 73 },
+                    { id: "Lecce", name: "US Lecce", city: "Lecce", colors: { primary: "#FCD200", secondary: "#E30613" }, reputation: 73 },
+                    { id: "Venezia FC", name: "Venezia FC", city: "Venice", colors: { primary: "#000000", secondary: "#FF7A00" }, reputation: 73 },
+                    { id: "Frosinone", name: "Frosinone", city: "Frosinone", colors: { primary: "#F4C40E", secondary: "#12326E" }, reputation: 72 },
+                    { id: "Monza", name: "AC Monza", city: "Monza", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 72 }
+                ]
+            },
+            {
+                id: "SerieB", 
+                name: "Serie B",
+                tier: 2,
+                clubs: [
+                    { id: "Pisa SC", name: "Pisa SC", city: "Pisa", colors: { primary: "#DA291C", secondary: "#000000" }, reputation: 72 },
+                    { id: "Hellas Verona", name: "Hellas Verona", city: "Verona", colors: { primary: "#143A85", secondary: "#FCD200" }, reputation: 73 },
+                    { id: "Cremonese", name: "US Cremonese", city: "Cremona", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 71 },
+                    { id: "Palermo", name: "Palermo", city: "Palermo", colors: { primary: "#F6A9C7", secondary: "#000000" }, reputation: 71 },
+                    { id: "Catanzaro", name: "Catanzaro", city: "Catanzaro", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 69 },
+                    { id: "Modena FC", name: "Modena FC", city: "Modena", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 69 },
+                    { id: "Avellino", name: "US Avellino", city: "Avellino", colors: { primary: "#00934A", secondary: "#FCD200" }, reputation: 68 },
+                    { id: "Calcio Padova", name: "Calcio Padova", city: "Padova", colors: { primary: "#9F1E3C", secondary: "#005BAC" }, reputation: 69 },
+                    { id: "Cesena", name: "Cesena", city: "Cesena", colors: { primary: "#DA291C", secondary: "#FFFFFF" }, reputation: 67 },
+                    { id: "Mantova", name: "Mantova 1911", city: "Mantova", colors: { primary: "#007A33", secondary: "#FFFFFF" }, reputation: 66 },
+                    { id: "Carrarese", name: "Carrarese", city: "Carrara", colors: { primary: "#6A1B9A", secondary: "#000000" }, reputation: 66 },
+                    { id: "Sampdoria", name: "Sampdoria", city: "Genua", colors: { primary: "#1B398E", secondary: "#FFFFFF" }, reputation: 68 },
+                    { id: "Virtus Entella", name: "Virtus Entella", city: "Chiavari", colors: { primary: "#FFD500", secondary: "#003DA5" }, reputation: 65 },
+                    { id: "FC Empoli", name: "FC Empoli", city: "Empoli", colors: { primary: "#0066B3", secondary: "#FFFFFF" }, reputation: 69 },
+                    { id: "Südtirol", name: "FC Südtirol", city: "Bozen", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 66 },
+                    { id: "Benevento", name: "Benevento", city: "Benevento", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 65 },
+                    { id: "LR Vicenza", name: "LR Vicenza", city: "Vicenza", colors: { primary: "#5C2D91", secondary: "#FFFFFF" }, reputation: 63 },
+                    { id: "Arezzo", name: "Arezzo", city: "Arezzo", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 62 },
+                    { id: "Ascoli", name: "Ascoli", city: "Ascoli", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 62 },
+                    { id: "Juve Stabia", name: "Juve Stabia", city: "Castellammare di Stabia", colors: { primary: "#C8102E", secondary: "#000000" }, reputation: 61 }
+                ]
+            },
+            {
+                id: "SerieC",
+                name: "Serie C",
+                tier: 3,
+                clubs: [
+                    { id: "Reggiana", name: "Reggiana", city: "Reggiana", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 60 },
+                    { id: "Spezia Calcio", name: "Spezia Calcio", city: "La Spezia", colors: { primary: "#0057A8", secondary: "#FCD200" }, reputation: 61 },
+                    { id: "Ravenna", name: "Ravenna", city: "Ravenna", colors: { primary: "#DA291C", secondary: "#FFFFFF" }, reputation: 59 },
+                    { id: "Campobasso", name: "Campobasso", city: "Campobasso", colors: { primary: "#DA291C", secondary: "#000000" }, reputation: 56 },
+                    { id: "Pianese", name: "Pianese", city: "Piancastagnaio", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 54 },
+                    { id: "Pineto", name: "Pineto", city: "Pineto", colors: { primary: "#FCD200", secondary: "#000000" }, reputation: 53 },
+                    { id: "AS Gubbio", name: "AS Gubbio", city: "Gubbio", colors: { primary: "#6B2737", secondary: "#FFFFFF" }, reputation: 52 },
+                    { id: "Vis Pesaro", name: "Vis Pesaro", city: "Pesaro", colors: { primary: "#009640", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "SSC Bari", name: "SSC Bari", city: "Bari", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 61 },
+                    { id: "Catania", name: "Catania", city: "Catania", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 60 },
+                    { id: "US Salernitana", name: "US Salernitana", city: "Salerno", colors: { primary: "#7A1E3C", secondary: "#FFFFFF" }, reputation: 61 },
+                    { id: "Cosenza", name: "Cosenza", city: "Cosenza", colors: { primary: "#F58220", secondary: "#000000" }, reputation: 58 },
+                    { id: "Casertana", name: "Casertana", city: "Caserta", colors: { primary: "#009B48", secondary: "#FFFFFF" }, reputation: 56 },
+                    { id: "FC Crotone", name: "FC Crotone", city: "Crotone", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 58 },
+                    { id: "Casarano", name: "Casarano", city: "Casarano", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 52 },
+                    { id: "Monopoli", name: "Monopoli", city: "Monopoli", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "Union Brescia", name: "Union Brescia", city: "Brescia", colors: { primary: "#6A1B9A", secondary: "#FFFFFF" }, reputation: 59 },
+                    { id: "Renate", name: "AC Renate", city: "Renate", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 57 },
+                    { id: "Lecco", name: "Lecco", city: "Lecco", colors: { primary: "#00A19A", secondary: "#000000" }, reputation: 56 },
+                    { id: "AC Trento", name: "AC Trento", city: "Trento", colors: { primary: "#1C3F94", secondary: "#FCD200" }, reputation: 55 },
+                    { id: "AS Cittadella", name: "AS Cittadella", city: "Cittadella", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 55 },
+                    { id: "Lumezzane", name: "Lumezzane", city: "Lumezzane", colors: { primary: "#7A1E3C", secondary: "#FFFFFF" }, reputation: 53 },
+                    { id: "Alcione", name: "Alcione", city: "Milan", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 51 },
+                    { id: "Arzignano", name: "Arzignano", city: "Arzignano", colors: { primary: "#7A1E3C", secondary: "#FFFFFF" }, reputation: 49 }
+                ]
+            },
+            {
+                id: "SerieD",
+                name: "Serie D",
+                tier: 4,
+                clubs: [
+                    { id: "Team Altamura", name: "Team Altamura", city: "Altamura", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "Giana Erminio", name: "Giana Erminio", city: "Gorgonzola", colors: { primary: "#6AADE4", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "AlbinoLeffe", name: "AlbinoLeffe", city: "Bergamo", colors: { primary: "#6AADE4", secondary: "#0F1B5F" }, reputation: 47 },
+                    { id: "Dolomiti Bellunesi", name: "Dolomiti Bellunesi", city: "Feltre", colors: { primary: "#E5007E", secondary: "#009640" }, reputation: 44 },
+                    { id: "Novara FC", name: "Novara FC", city: "Novara", colors: { primary: "#6AADE4", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "Pro Vercelli", name: "Pro Vercelli", city: "Vercelli", colors: { primary: "#FFFFFF", secondary: "#E30613" }, reputation: 43 },
+                    { id: "Ospitaletto", name: "Ospitaletto", city: "Ospitaletto", colors: { primary: "#E30613", secondary: "#0F1B5F" }, reputation: 41 },
+                    { id: "Livorno", name: "Livorno", city: "Livorno", colors: { primary: "#7A1E3C", secondary: "#FCD200" }, reputation: 47 },
+                    { id: "Forli", name: "Forlì FC", city: "Forli", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "Carpi", name: "Carpi", city: "Carpi", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "AC Perugia", name: "AC Perugia", city: "Perugia", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 42 },
+                    { id: "Guidonia", name: "Guidonia", city: "Guidonia Montecelio", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 43 },
+                    { id: "US Sambenedettese", name: "US Sambenedettese", city: "San Benedetto del Tronto", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 41 },
+                    { id: "SEF Torres 1903", name: "SEF Torres 1903", city: "Sassari", colors: { primary: "#E30613", secondary: "#0F1B5F" }, reputation: 40 },
+                    { id: "Barletta", name: "Barletta", city: "Barletta", colors: { primary: "#FFFFFF", secondary: "#E30613" }, reputation: 39 },
+                    { id: "Cavese", name: "Cavese", city: "Cava dei Tirreni", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "Giugliano", name: "Giugliano", city: "Giugliano in Campania", colors: { primary: "#0F1B5F", secondary: "#FCD200" }, reputation: 39 },
+                    { id: "Picerno", name: "Picerno", city: "Picerno", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 38 },
+                    { id: "Potenza", name: "Potenza", city: "Potenza", colors: { primary: "#A50044", secondary: "#005BAC" }, reputation: 38 },
+                    { id: "US Savoia", name: "US Savoia", city: "Torre Annunziata", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 38 }
+                ]
+            }
+        ]
+    },
+    "France": {
+        country: "France",
+        tiers: [
+            { 
+                id: "Ligue1", 
+                name: "Ligue 1", 
+                tier: 1,
+                clubs: [
+                    { id: "PSG", name: "PSG", city: "Paris", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 90 },
+                    { id: "Olympique Lyon", name: "Olympique Lyon", city: "Lyon", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 81 },
+                    { id: "Lens", name: "RC Lens", city: "Lens", colors: { primary: "#E30613", secondary: "#FCD200" }, reputation: 79 },
+                    { id: "LOSC Lille", name: "LOSC Lille", city: "Lille", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 79 },
+                    { id: "Marseille", name: "Marseille", city: "Marseille", colors: { primary: "#6AADE4", secondary: "#FFFFFF" }, reputation: 79 },
+                    { id: "Stade Rennes", name: "Stade Rennes", city: "Rennes", colors: { primary: "#000000", secondary: "#E30613" }, reputation: 77 },
+                    { id: "AS Monaco", name: "AS Monaco", city: "Monaco", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 80 },
+                    { id: "RC Strasbourg", name: "RC Strasbourg", city: "Strasbourg", colors: { primary: "#6AADE4", secondary: "#E30613" }, reputation: 76 },
+                    { id: "FC Lorient", name: "FC Lorient", city: "Lorient", colors: { primary: "#E30613", secondary: "#F58220" }, reputation: 73 },
+                    { id: "FC Toulouse", name: "FC Toulouse", city: "Toulouse", colors: { primary: "#6A1B9A", secondary: "#E30613" }, reputation: 74 },
+                    { id: "Paris FC", name: "Paris FC", city: "Paris", colors: { primary: "#0F1B5F", secondary: "#005BAC" }, reputation: 75 },
+                    { id: "Stade Brest", name: "Stade Brest", city: "Brest", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "Angers SCO", name: "Angers SCO", city: "Angers", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 74 },
+                    { id: "Le Havre AC", name: "Le Havre AC", city: "Le Havre", colors: { primary: "#6AADE4", secondary: "#0F1B5F" }, reputation: 73 },
+                    { id: "AJ Auxerre", name: "AJ Auxerre", city: "Auxerre", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 72 },
+                    { id: "OGC Nice", name: "OGC Nice", city: "Nice", colors: { primary: "#E30613", secondary: "#000000" }, reputation: 76 },
+                    { id: "Troyes", name: "ESTAC Troyes", city: "Troyes", colors: { primary: "#005BAC", secondary: "#005BAC" }, reputation: 71 },
+                    { id: "Le Mans FC", name: "Le Mans FC", city: "Le Mans", colors: { primary: "#E30613", secondary: "#FCD200" }, reputation: 70 }
+                ]
+            },
+            {
+                id: "Ligue2", 
+                name: "Ligue 2",
+                tier: 2,
+                clubs: [
+                    { id: "FC Nantes", name: "FC Nantes", city: "Nantes", colors: { primary: "#D4AF37", secondary: "#FFFFFF" }, reputation: 72 },
+                    { id: "Saint-Étienne", name: "Saint-Étienne", city: "Saint-Étienne", colors: { primary: "#009640", secondary: "#FFFFFF" }, reputation: 71 },
+                    { id: "Stade Reims", name: "Stade Reims", city: "Reims", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "FC Metz", name: "FC Metz", city: "Metz", colors: { primary: "#8E1F2F", secondary: "#FFFFFF" }, reputation: 69 },
+                    { id: "Montpellier HSC", name: "Montpellier HSC", city: "Montpellier", colors: { primary: "#F58220", secondary: "#005BAC" }, reputation: 70 },
+                    { id: "Rodez AF", name: "Rodez AF", city: "Rodez", colors: { primary: "#E30613", secondary: "#FCD200" }, reputation: 67 },
+                    { id: "Pau FC", name: "Pau FC", city: "Pau", colors: { primary: "#0F1B5F", secondary: "#FCD200" }, reputation: 68 },
+                    { id: "Clermont Foot 63", name: "Clermont Foot 63", city: "Clermont", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 69 },
+                    { id: "Red Star FC", name: "Red Star FC", city: "Paris", colors: { primary: "#00593C", secondary: "#E30613" }, reputation: 66 },
+                    { id: "Grenoble Foot 38", name: "Grenoble Foot 38", city: "Grenoble", colors: { primary: "#6AADE4", secondary: "#FFFFFF" }, reputation: 68 },
+                    { id: "USL Dunkerque", name: "USL Dunkerque", city: "Dunkerque", colors: { primary: "#0F1B5F", secondary: "#D4AF37" }, reputation: 65 },
+                    { id: "AS Nancy", name: "AS Nancy", city: "Nancy", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 66 },
+                    { id: "Stade Lavallois", name: "Stade Lavallois", city: "Laval", colors: { primary: "#000000", secondary: "#F58220" }, reputation: 64 },
+                    { id: "EA Guingamp", name: "EA Guingamp", city: "Guingamp", colors: { primary: "#E30613", secondary: "#000000" }, reputation: 66 },
+                    { id: "FC Annecy", name: "FC Annecy", city: "Annecy", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 64 },
+                    { id: "US Boulogne", name: "US Boulogne", city: "Boulogne", colors: { primary: "#E30613", secondary: "#000000" }, reputation: 63 },
+                    { id: "FC Sochaux-Montbéliard", name: "Sochaux-Montbéliard", city: "Sochaux-Montbéliard", colors: { primary: "#005BAC", secondary: "#FCD200" }, reputation: 62 },
+                    { id: "Dijon FCO", name: "Dijon FCO", city: "Dijon", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 61 }
+                ]
+            },
+            {
+                id: "Ligue3",
+                name: "Ligue 3",
+                tier: 3,
+                clubs: [
+                    { id: "Amiens SC", name: "Amiens SC", city: "Amiens", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 61 },
+                    { id: "SC Bastia", name: "SC Bastia", city: "Bastia", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 61 },
+                    { id: "US Orléans", name: "US Orléans", city: "Orléans", colors: { primary: "#E30613", secondary: "#FCD200" }, reputation: 60 },
+                    { id: "FC Versailles 78", name: "FC Versailles 78", city: "Versailles", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 59 },
+                    { id: "SM Caen", name: "SM Caen", city: "Caen", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 59 },
+                    { id: "FC Valenciennes", name: "FC Valenciennes", city: "Valenciennes", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 58 },
+                    { id: "US Concarneau", name: "US Concarneau", city: "Concarneau", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 55 },
+                    { id: "FC Villefranche-Beaujolais", name: "Villefranche-Beaujolais", city: "Villefranche-sur-Saône", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 56 },
+                    { id: "FC Fleury 91", name: "FC Fleury 91", city: "Bondoufle", colors: { primary: "#E30613", secondary: "#000000" }, reputation: 55 },
+                    { id: "Paris 13 Atletico", name: "Paris 13 Atletico", city: "Paris", colors: { primary: "#39FF14", secondary: "#000000" }, reputation: 55 },
+                    { id: "SC Aubagne Air Bel", name: "SC Aubagne Air Bel", city: "Aubagne", colors: { primary: "#000000", secondary: "#D9CBB2" }, reputation: 54 },
+                    { id: "Le Puy-en-Velay FC", name: "Le Puy-en-Velay FC", city: "Espaly-Saint-Marcel", colors: { primary: "#0F1B5F", secondary: "#6AADE4" }, reputation: 53 },
+                    { id: "FC Rouen", name: "FC Rouen", city: "Rouen", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 52 },
+                    { id: "Quevilly-Rouen Métropole", name: "Quevilly-Rouen Métropole", city: "Le Petit-Quevilly", colors: { primary: "#E30613", secondary: "#FCD200" }, reputation: 51 },
+                    { id: "Football Bourg-en-Bresse Péronnas", name: "Football Bourg-en-Bresse Péronnas", city: "Bourg-en-Bresse", colors: { primary: "#0F1B5F", secondary: "#6AADE4" }, reputation: 50 },
+                    { id: "AS Cannes", name: "AS Cannes", city: "Cannes", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "US Thionville Lusitanos", name: " US Thionville Lusitanos ", city: "Thionville", colors: { primary: "#FFFFFF", secondary: "#D4AF37" }, reputation: 49 },
+                    { id: "VFC La Roche", name: "VFC La Roche", city: "La Roche-sur-Yon", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 49 }
+                ]
+            },
+            {
+                id: "Ligue4",
+                name: "Ligue 4",
+                tier: 4,
+                clubs: [
+                    { id: "Girondins Bordeaux", name: "Girondins Bordeaux", city: "Bordeaux", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 49 },
+                    { id: "Aviron Bayonnais", name: "Aviron Bayonnais", city: "Bayonne", colors: { primary: "#6AADE4", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "US Saint-Malo", name: "US Saint-Malo", city: "Saint-Malo", colors: { primary: "#000000", secondary: "#FCD200" }, reputation: 44 },
+                    { id: "Les Herbiers", name: "Les Herbiers", city: "Les Herbiers", colors: { primary: "#000000", secondary: "#E30613" }, reputation: 42 },
+                    { id: "Angoulême CFC", name: "Angoulême CFC", city: "Angoulême", colors: { primary: "#0F1B5F", secondary: "#6AADE4" }, reputation: 43 },
+                    { id: "Dinan Léhon", name: "Dinan Léhon", city: "Dinan", colors: { primary: "#0F1B5F", secondary: "#FFF3B0" }, reputation: 41 },
+                    { id: "Bourges FC", name: "Bourges FC", city: "Bourges", colors: { primary: "#FFFFFF", secondary: "#E30613" }, reputation: 47 },
+                    { id: "FR Haguenau", name: "FR Haguenau", city: "Haguenau", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 45 },
+                    { id: "Entente Feignies Aulnoye", name: "Entente Feignies Aulnoye", city: "Feignies", colors: { primary: "#005BAC", secondary: "#009640" }, reputation: 44 },
+                    { id: "AS Furiani-Agliani", name: "AS Furiani-Agliani", city: "Bastia", colors: { primary: "#FFFFFF", secondary: "#FCD200" }, reputation: 43 },
+                    { id: "Saint-Pryvé Saint-Hilaire", name: "Saint-Pryvé Saint-Hilaire", city: "Saint-Pryvé-Saint-Mesmin", colors: { primary: "#FFFFFF", secondary: "#005BAC" }, reputation: 42 },
+                    { id: "FC Dieppe", name: "FC Dieppe", city: "Saint-Aubin-sur-Scie", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "FC Borgo", name: "FC Borgo", city: "Borgo", colors: { primary: "#000000", secondary: "#E30613" }, reputation: 38 },
+                    { id: "Nîmes Olympique", name: "Nîmes Olympique", city: "Nîmes", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "US Lusitanos", name: "US Lusitanos", city: "Saint-Maur", colors: { primary: "#009640", secondary: "#E30613" }, reputation: 46 },
+                    { id: "GFA Rumilly Vallières", name: "GFA Rumilly Vallières", city: "Rumilly", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 44 },
+                    { id: "Hyères 83 FC", name: "Hyères 83 FC", city: "Hyères", colors: { primary: "#D4AF37", secondary: "#241033" }, reputation: 43 },
+                    { id: "Andrézieux-Bouthéon FC", name: "Andrézieux-Bouthéon FC", city: "Andrézieux-Bouthéon", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 41 },
+                    { id: "Istres FC", name: "Istres FC", city: "Fos-sur-Mer", colors: { primary: "#6A1B9A", secondary: "#FFFFFF" }, reputation: 41 },
+                    { id: "US Créteil", name: "US Créteil Foot", city: "Créteil", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 39 },
+                    { id: "US Avranches", name: "US Avranches", city: "Avranches", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 38 },
+                    { id: "FC Chauray", name: "FC Chauray", city: "Chauray", colors: { primary: "#6A1B9A", secondary: "#005BAC" }, reputation: 38 }
+                ]
+            },
+            {
+                id: "Ligue5",
+                name: "Ligue 5",
+                tier: 5,
+                clubs: [
+                    { id: "St. Colomban Locminé", name: "St. Colomban Locminé", city: "Locminé", colors: { primary: "#E30613", secondary: "#009640" }, reputation: 38 },
+                    { id: "FC Montlouis", name: "FC Montlouis", city: "Montlouis", colors: { primary: "#000000", secondary: "#FCD200" }, reputation: 37},
+                    { id: "Voltigeurs de Châteaubriant", name: "Châteaubriant", city: "Châteaubriant", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 37 },
+                    { id: "US Granville", name: "US Granville", city: "Granville", colors: { primary: "#6AADE4", secondary: "#0F1B5F" }, reputation: 35 },
+                    { id: "Olympique Saumur", name: "Olympique Saumur", city: "Saumur", colors: { primary: "#E30613", secondary: "#005BAC" }, reputation: 35 },
+                    { id: "Stade Poitevin FC", name: "Stade Poitevin", city: "Poitevin", colors: { primary: "#000000", secondary: "#F2ECDE" }, reputation: 34 },
+                    { id: "SAS Épinal", name: "SAS Épinal", city: "Épinal", colors: { primary: "#005BAC", secondary: "#D4AF37" }, reputation: 31 },
+                    { id: "ASC Biesheim", name: "ASC Biesheim", city: "Biesheim", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 36 },
+                    { id: "SR Colmar", name: "SR Colmar", city: "Colmar", colors: { primary: "#009640", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "AS Beauvais", name: "AS Beauvais", city: "Beauvais", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "Wasquehal FC", name: "Wasquehal FC", city: "Lille", colors: { primary: "#C9A227", secondary: "#000000" }, reputation: 31 },
+                    { id: "FC Chambly", name: "FC Chambly", city: "Chambly", colors: { primary: "#000000", secondary: "#005BAC" }, reputation: 30 },
+                    { id: "US Chantilly", name: "US Chantilly", city: "Chantilly", colors: { primary: "#00593C", secondary: "#8E1F2F" }, reputation: 29 },
+                    { id: "Blois Foot", name: "Blois Foot 41", city: "Blois", colors: { primary: "#E30613", secondary: "#FCD200" }, reputation: 28 },
+                    { id: "GOAL FC", name: "GOAL FC", city: "Lyon", colors: { primary: "#D4AF37", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "RC Grasse", name: "RC Grasse", city: "Grasse", colors: { primary: "#0F1B5F", secondary: "#E30613" }, reputation: 33 },
+                    { id: "Fréjus-St-Raphaël", name: "Fréjus-St-Raphaël", city: "Saint-Raphaël", colors: { primary: "#6AADE4", secondary: "#E30613" }, reputation: 32 },
+                    { id: "FC Limonest", name: "FC Limonest", city: "Limonest", colors: { primary: "#FFFFFF", secondary: "#0F1B5F" }, reputation: 31 },
+                    { id: "FC 92 Bobigny", name: "FC 92 Bobigny", city: "Bobigny", colors: { primary: "#000000", secondary: "#D4AF37" }, reputation: 30 },
+                    { id: "SC Toulon", name: "SC Toulon", city: "Toulon", colors: { primary: "#005BAC", secondary: "#FCD200" }, reputation: 29 },
+                    { id: "AS Saint-Priest", name: "AS Saint-Priest", city: "Saint-Priest", colors: { primary: "#FCD200", secondary: "#E30613" }, reputation: 28 },
+                    { id: "FC Rousset SVO", name: "FC Rousset SVO", city: "Rousset", colors: { primary: "#FCD200", secondary: "#8E1F2F" }, reputation: 27 },
+                    { id: "FC Mulhouse", name: "FC Mulhouse", city: "Mulhouse", colors: { primary: "#6AADE4", secondary: "#E30613" }, reputation: 26 },
+                    { id: "Thonon Évian", name: "Thonon Évian", city: "Évian-les-Bains", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 25 }
+                ]
+            }
+        ]
+    },
 };
 
 
@@ -765,7 +1022,24 @@ const REGIONS_CH = [
     { id: 'bern', name: 'Bern', blurb: 'Bern' },
     { id: 'ticinovalais', name: 'Ticino and Valais', blurb: 'Southern Switzerland' },
 ];
-const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN, Germany: REGIONS_DE, Spain: REGIONS_ES, Switzerland: REGIONS_CH };
+// ---- Regions (Italy) ----
+const REGIONS_IT = [
+    { id: 'nordovest italia', name: "Nord-ovest dell'Italia", blurb: "Valle d'Aosta, Piemonte, Lombardia, and Liguria" },
+    { id: 'nordest italia', name: "Nord-est dell'Italia", blurb: 'Trentino-Südtirol, Friuli-Venezia Giulia, Veneto, and Emilio Romagna' },
+    { id: 'italia centrale', name: 'Italia centrale', blurb: 'Toscana, Marche, Umbria, Lazio, and Abruzzo' },
+    { id: 'sud italia', name: 'Sud Italia', blurb: 'Campania, Molise, Puglia, Basilicata, and Calabria' },
+    { id: 'isole', name: 'Isole', blurb: 'Sicilia and Sardegna' }
+];
+// ---- Regions (France) ----
+const REGIONS_FR = [
+    { id: 'N-O France', name: "Nord-Ouest de la France", blurb: "Bretagne, Normandie, and Pays de la Loire" },
+    { id: 'N-E France', name: "Nord-Est de la France", blurb: 'Grand Est, Hauts-de-France, and Bourgogne-Franche-Compté' },
+    { id: 'centre France', name: 'Centre de la France', blurb: 'Île-de-France and Centre-Val de Loire' },
+    { id: 'S-O France', name: 'Sud-Ouest de la France', blurb: "Auvergne-Rhône-Alpes and Provence-Alpes-Côte d'Azur" },
+    { id: 'S-E France', name: 'Sud-Est de la France', blurb: 'Nouvelle-Aquitaine and Occitanie' },
+    { id: 'Îles', name: 'Îles', blurb: 'Corse and other islands' }
+];
+const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN, Germany: REGIONS_DE, Spain: REGIONS_ES, Switzerland: REGIONS_CH, Italy: REGIONS_IT, France: REGIONS_FR };
 const CITY_REGION = {
     "Groningen":"noord","Leeuwarden":"noord","Heerenveen":"noord","Harkema":"noord","Emmen":"noord","Assen":"noord","Hoogeveen":"noord",
     "Almelo":"oost","Enschede":"oost","Zwolle":"oost","Genemuiden":"oost","Hardenberg":"oost","Haaksbergen":"oost","Raalte":"oost","Rijssen":"oost","Staphorst":"oost","Arnhem":"oost","Nijmegen":"oost","Doetinchem":"oost","Groesbeek":"oost","Ermelo":"oost","Nijkerk":"oost","Tiel":"oost","Scherpenzeel":"oost","Deventer":"oost",
@@ -803,7 +1077,25 @@ const CITY_REGION = {
     "St. Gallen":"ostschweiz","Rapperswil-Jona":"ostschweiz","Wil":"ostschweiz","Gossau SG":"ostschweiz","Widnau":"ostschweiz","Vaduz":"ostschweiz","Eschen/Mauren":"ostschweiz",
     "Luzern":"innerschweiz","Kriens":"innerschweiz","Zug":"innerschweiz","Buochs":"innerschweiz","Freienbach":"innerschweiz","Tuggen":"innerschweiz","Schötz":"innerschweiz","Cham":"innerschweiz",
     "Bern":"bern","Thun":"bern","Biel-Bienne":"bern","Langenthal":"bern","Gümligen":"bern","Münsingen":"bern",
-    "Lugano":"ticinovalais","Bellinzona":"ticinovalais","Naters":"ticinovalais","Mendrisio":"ticinovalais","Collina d'Oro":"ticinovalais","Paradiso":"ticinovalais","Locarno":"ticinovalais","Sion":"ticinovalais","Taverne":"ticinovalais"
+    "Lugano":"ticinovalais","Bellinzona":"ticinovalais","Naters":"ticinovalais","Mendrisio":"ticinovalais","Collina d'Oro":"ticinovalais","Paradiso":"ticinovalais","Locarno":"ticinovalais","Sion":"ticinovalais","Taverne":"ticinovalais",
+    // ---- Italy ----
+    // nordovest = Valle d'Aosta, Piemonte, Lombardia, Liguria
+    "Milan":"nordovest italia","Torino":"nordovest italia","Bergamo":"nordovest italia","Como":"nordovest italia","Monza":"nordovest italia","Cremona":"nordovest italia","Mantova":"nordovest italia","Genua":"nordovest italia","Chiavari":"nordovest italia","La Spezia":"nordovest italia","Brescia":"nordovest italia","Renate":"nordovest italia","Lecco":"nordovest italia","Lumezzane":"nordovest italia","Gorgonzola":"nordovest italia","Novara":"nordovest italia","Vercelli":"nordovest italia","Ospitaletto":"nordovest italia",
+    // nordest = Trentino-Südtirol, Friuli-Venezia Giulia, Veneto, Emilia Romagna
+    "Bologna":"nordest italia","Udine":"nordest italia","Sassuolo":"nordest italia","Parma":"nordest italia","Venice":"nordest italia","Verona":"nordest italia","Modena":"nordest italia","Padova":"nordest italia","Cesena":"nordest italia","Bozen":"nordest italia","Vicenza":"nordest italia","Reggiana":"nordest italia","Ravenna":"nordest italia","Trento":"nordest italia","Cittadella":"nordest italia","Arzignano":"nordest italia","Feltre":"nordest italia","Forli":"nordest italia","Carpi":"nordest italia",
+    // italia centrale = Toscana, Marche, Umbria, Lazio, Abruzzo
+    "Rome":"italia centrale","Florence":"italia centrale","Frosinone":"italia centrale","Pisa":"italia centrale","Carrara":"italia centrale","Empoli":"italia centrale","Arezzo":"italia centrale","Ascoli":"italia centrale","Piancastagnaio":"italia centrale","Pineto":"italia centrale","Gubbio":"italia centrale","Pesaro":"italia centrale","Livorno":"italia centrale","Perugia":"italia centrale","Guidonia Montecelio":"italia centrale","San Benedetto del Tronto":"italia centrale",
+    // sud = Campania, Molise, Puglia, Basilicata, Calabria
+    "Napoli":"sud italia","Lecce":"sud italia","Catanzaro":"sud italia","Avellino":"sud italia","Benevento":"sud italia","Castellammare di Stabia":"sud italia","Campobasso":"sud italia","Bari":"sud italia","Salerno":"sud italia","Cosenza":"sud italia","Caserta":"sud italia","Crotone":"sud italia","Casarano":"sud italia","Monopoli":"sud italia","Altamura":"sud italia","Barletta":"sud italia","Cava dei Tirreni":"sud italia","Giugliano in Campania":"sud italia","Picerno":"sud italia","Potenza":"sud italia","Torre Annunziata":"sud italia",
+    // isole = Sicilia, Sardegna
+    "Cagliari":"isole","Palermo":"isole","Catania":"isole","Sassari":"isole",
+    // ---- France ----
+    "Paris":"centre France","Versailles":"centre France","Bondoufle":"centre France","Saint-Maur":"centre France","Créteil":"centre France","Bobigny":"centre France","Orléans":"centre France","Bourges":"centre France","Saint-Pryvé-Saint-Mesmin":"centre France","Blois":"centre France","Montlouis":"centre France",
+    "Rennes":"N-O France","Lorient":"N-O France","Brest":"N-O France","Guingamp":"N-O France","Concarneau":"N-O France","Saint-Malo":"N-O France","Dinan":"N-O France","Locminé":"N-O France","Angers":"N-O France","Le Mans":"N-O France","Nantes":"N-O France","Laval":"N-O France","Les Herbiers":"N-O France","La Roche-sur-Yon":"N-O France","Châteaubriant":"N-O France","Saumur":"N-O France","Le Havre":"N-O France","Rouen":"N-O France","Le Petit-Quevilly":"N-O France","Caen":"N-O France","Saint-Aubin-sur-Scie":"N-O France","Granville":"N-O France","Avranches":"N-O France",
+    "Strasbourg":"N-E France","Reims":"N-E France","Metz":"N-E France","Nancy":"N-E France","Troyes":"N-E France","Haguenau":"N-E France","Épinal":"N-E France","Biesheim":"N-E France","Colmar":"N-E France","Mulhouse":"N-E France","Thionville":"N-E France","Lens":"N-E France","Lille":"N-E France","Dunkerque":"N-E France","Boulogne":"N-E France","Amiens":"N-E France","Valenciennes":"N-E France","Feignies":"N-E France","Beauvais":"N-E France","Chambly":"N-E France","Chantilly":"N-E France","Auxerre":"N-E France","Dijon":"N-E France","Sochaux-Montbéliard":"N-E France",
+    "Lyon":"S-O France","Saint-Étienne":"S-O France","Clermont":"S-O France","Grenoble":"S-O France","Annecy":"S-O France","Villefranche-sur-Saône":"S-O France","Espaly-Saint-Marcel":"S-O France","Bourg-en-Bresse":"S-O France","Rumilly":"S-O France","Andrézieux-Bouthéon":"S-O France","Limonest":"S-O France","Saint-Priest":"S-O France","Évian-les-Bains":"S-O France","Marseille":"S-O France","Nice":"S-O France","Monaco":"S-O France","Aubagne":"S-O France","Cannes":"S-O France","Hyères":"S-O France","Fos-sur-Mer":"S-O France","Grasse":"S-O France","Saint-Raphaël":"S-O France","Toulon":"S-O France","Rousset":"S-O France",
+    "Toulouse":"S-E France","Montpellier":"S-E France","Rodez":"S-E France","Nîmes":"S-E France","Pau":"S-E France","Bordeaux":"S-E France","Bayonne":"S-E France","Angoulême":"S-E France","Chauray":"S-E France","Poitevin":"S-E France",
+    "Bastia":"Îles","Borgo":"Îles"
 };
 function regionOfCity(city){ return CITY_REGION[city] || 'middelland'; }
 function regionsForCountry(country){ return REGIONS_BY_COUNTRY[country] || REGIONS; }
@@ -836,12 +1128,10 @@ function isReserveClub(idOrClub){
     // only a reserve if a distinct senior club with the base name actually exists
     return Clubs.allClubs.some(o => o.id !== c.id && o.name === base);
 }
-function reserveClubFor(seniorId){ const s = Clubs.getClubById(seniorId); if (!s) return null; return Clubs.allClubs.find(c => c.name === 'Jong ' + s.name) || null; }
-function parentClubForReserve(reserveId){
-    const r = Clubs.getClubById(reserveId); if (!r || !/^Jong\s/i.test(r.name)) return null;
-    const base = r.name.replace(/^Jong\s+/i, '');
-    return Clubs.allClubs.find(c => c.name === base) || Clubs.allClubs.find(c => c.tier < r.tier && c.name.indexOf(base) === 0) || null;
-}
+// reserve<->parent lookups via the registry built in Clubs.init() - covers every naming
+// convention (Jong X, X U21, X II, Spanish B teams), not just the Dutch "Jong" prefix
+function reserveClubFor(seniorId){ const rid = Clubs.parentReserveId ? Clubs.parentReserveId[seniorId] : null; return rid ? Clubs.getClubById(rid) : null; }
+function parentClubForReserve(reserveId){ const pid = Clubs.reserveParentId ? Clubs.reserveParentId[reserveId] : null; return pid ? Clubs.getClubById(pid) : null; }
 
 const Clubs = {
     allClubs: [],
@@ -860,8 +1150,20 @@ const Clubs = {
                         tier: tier.tier,
                         divisionName: tier.name,
                         region: regionOfCity(clubData.city),
-                        squad: [],
-                        finances: this.calculateFinances(clubData.reputation)
+                        // Reputation model: baseRep is the immutable day-one value; anchorRep moves
+                        // only on promotion/relegation (capped at baseRep±10 so divisions can't
+                        // drift arbitrarily far apart). The runtime `reputation` every consumer
+                        // reads (wages, fees, roles, morale) tracks anchor + the boost from the
+                        // agent's clients currently there — rising promptly, but only ever fading
+                        // slowly (-1..-5/season) once they leave (League.normalizeReputations).
+                        baseRep: clubData.reputation,
+                        anchorRep: clubData.reputation,
+                        // seasonal form: rolled once per rollover from performance-vs-expectation
+                        // streaks; match strength = reputation + seasonDelta (+ live client bonus)
+                        // — see League.clubStrength / League.rollSeasonDeltas
+                        seasonDelta: 0,
+                        streakDir: null,   // 'under' | 'over' | null
+                        streakLen: 0
                     });
                 });
             });
@@ -871,22 +1173,25 @@ const Clubs = {
         // reserve/second teams wear their parent club's colours (for consistent emblems)
         const ES_RESERVE_PARENT = { 'Real Sociedad B': 'Real Sociedad', 'Celta Vigo B': 'Celta Vigo', 'Atletico Madrid B': 'Atletico', 'Villareal B': 'Villarreal', 'Real Madrid B': 'Real Madrid', 'Athletic Bilbao B': 'Athletic Bilbao', 'Barcelona B': 'Barcelona', 'Real Oviedo B': 'Oviedo', 'Alavés B': 'Alaves', 'Valencia B': 'Valencia' };
         const CH_RESERVE_PARENT = { 'FC Lugano U21': 'FC Lugano' };   // name doesn't follow the "X U21" pattern ("FC Lugano 2")
+        // this resolution doubles as the canonical reserve<->parent registry (used by
+        // reserveClubFor / parentClubForReserve), so "FC Basel U21", "Bayern Munich II",
+        // "Valencia Mestalla" etc. are recognised exactly like the Dutch "Jong X" sides
+        this.reserveParentId = {}; this.parentReserveId = {};
         this.allClubs.forEach(c => {
             if (!isReserveClub(c.id)) return;
             let parent = null;
             if (c.country === 'Spain' && ES_RESERVE_PARENT[c.id]) parent = this.getClubById(ES_RESERVE_PARENT[c.id]);
             else if (c.country === 'Switzerland' && CH_RESERVE_PARENT[c.id]) parent = this.getClubById(CH_RESERVE_PARENT[c.id]);
             else { const base = c.name.replace(/^Jong\s+/i, '').replace(/\sU21$/, '').replace(/\sII$/, ''); parent = this.allClubs.find(o => o.id !== c.id && o.name === base); }
-            if (parent) c.colors = { primary: parent.colors.primary, secondary: parent.colors.secondary };
+            if (parent) {
+                c.colors = { primary: parent.colors.primary, secondary: parent.colors.secondary };
+                this.reserveParentId[c.id] = parent.id;
+                this.parentReserveId[parent.id] = c.id;
+            }
         });
         return this.allClubs;
     },
-    
-    calculateFinances(reputation) {
-        // Higher reputation = more money
-        return Math.floor(reputation * 100000);
-    },
-    
+
     getClubById(id) {
         return this.allClubs.find(c => c.id === id);
     },
@@ -899,52 +1204,25 @@ const Clubs = {
         return this.allClubs.filter(c => c.region === regionId);
     },
 
-    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga', LaLiga: 'La Liga', LaLiga2: 'La Liga 2', PrimeraSup: 'Primera Superior', PrimeraInf: 'Primera Inferior', Segunda: 'Segunda Federación', SuperLeagueCH: 'Super League', ChallengeLeague: 'Challenge League', PromotionLeague: 'Promotion League', '1.LigaCH': '1. Liga', '2.LigaCH': '2. Liga' },
-    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6, LaLiga: 1, LaLiga2: 2, PrimeraSup: 3, PrimeraInf: 4, Segunda: 5, SuperLeagueCH: 1, ChallengeLeague: 2, PromotionLeague: 3, '1.LigaCH': 4, '2.LigaCH': 5 },
+    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga', LaLiga: 'La Liga', LaLiga2: 'La Liga 2', PrimeraSup: 'Primera Superior', PrimeraInf: 'Primera Inferior', Segunda: 'Segunda Federación', SuperLeagueCH: 'Super League', ChallengeLeague: 'Challenge League', PromotionLeague: 'Promotion League', '1.LigaCH': '1. Liga', '2.LigaCH': '2. Liga', SerieA: 'Serie A', SerieB: 'Serie B', SerieC: 'Serie C', SerieD: 'Serie D', Ligue1: 'Ligue 1', Ligue2: 'Ligue 2', Ligue3: 'Ligue 3', Ligue4: 'Ligue 4', Ligue5: 'Ligue 5' },
+    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6, LaLiga: 1, LaLiga2: 2, PrimeraSup: 3, PrimeraInf: 4, Segunda: 5, SuperLeagueCH: 1, ChallengeLeague: 2, PromotionLeague: 3, '1.LigaCH': 4, '2.LigaCH': 5, SerieA: 1, SerieB: 2, SerieC: 3, SerieD: 4, Ligue1: 1, Ligue2: 2, Ligue3: 3, Ligue4: 4, Ligue5: 5 },
     setDivision(clubId, divId) {
         const c = this.getClubById(clubId); if (!c) return;
         c.division = divId; c.tier = this.DIV_TIERS[divId]; c.divisionName = this.DIV_NAMES[divId];
     },
-    
+    // day-one club count for a division straight from LEAGUES_DATA, ignoring whatever
+    // promotion/relegation has since done to allClubs - used by Sim's post-rollover
+    // guardrail to catch a division drifting the wrong size
+    staticDivSize(divId) {
+        for (const league of Object.values(LEAGUES_DATA)) {
+            const tier = league.tiers.find(t => t.id === divId);
+            if (tier) return tier.clubs.length;
+        }
+        return null;
+    },
+
     getClubsByCountry(country) {
         return this.allClubs.filter(c => c.country === country);
-    },
-    
-    // Distribute players to clubs based on ability and club reputation
-    distributePlayersToClubs(players) {
-        console.log('📊 Distributing players to clubs...');
-        
-        // Sort clubs by reputation (best first)
-        const sortedClubs = [...this.allClubs].sort((a, b) => b.reputation - a.reputation);
-        
-        // Sort players by ability (best first)
-        const sortedPlayers = [...players].sort((a, b) => b.ability - a.ability);
-        
-        // Clear existing squads
-        this.allClubs.forEach(club => club.squad = []);
-        
-        // Distribute players round-robin (best players to best clubs)
-        let clubIndex = 0;
-        sortedPlayers.forEach(player => {
-            const club = sortedClubs[clubIndex % sortedClubs.length];
-            
-            // Assign player to club
-            player.currentClub = club.id;
-            player.clubName = club.name;
-            club.squad.push(player.id);
-            
-            clubIndex++;
-        });
-        
-        console.log('✅ Players distributed to clubs');
-        
-        // Log top 3 clubs
-        const topClubs = sortedClubs.slice(0, 3);
-        topClubs.forEach(club => {
-            const clubPlayers = sortedPlayers.filter(p => p.currentClub === club.id);
-            const avgAbility = clubPlayers.reduce((sum, p) => sum + p.ability, 0) / clubPlayers.length;
-            console.log(`   ${club.name}: ${clubPlayers.length} players, avg ability ${avgAbility.toFixed(1)}`);
-        });
     }
 };
 

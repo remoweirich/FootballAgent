@@ -17,6 +17,18 @@ Home.needsAttention = function () {
         if (p.injury) items.push({ icon: 'ti-bandage', color: 'var(--danger)', title: 'Injured', sub: `${p.name} · out ~${Math.ceil(p.injury.weeksOut)}w`, go: `client/${p.id}` });
         const seasonsLeft = Agency.contractSeasonsLeft(p);
         if (!Agency.isFreeAgent(p) && seasonsLeft <= 0 && !p.repExpired) items.push({ icon: 'ti-file-text', color: 'var(--warning)', title: 'Contract expiring', sub: `${p.name} · ${Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : ''} · expires end of season`, go: `client/${p.id}` });
+        // morale case ladder: new complaint / near-deadline promise / escalation / departure notice
+        const c = p.moraleCase;
+        if (c) {
+            const aw = GameState.absWeek();
+            const dimLabel = (ClientDetail.MORALE_DIM_LABEL[c.dim] || c.dim).toLowerCase();
+            if (aw === c.sinceAbsWeek) {
+                if (c.stage === 1) items.push({ icon: 'ti-flag', color: 'var(--info)', title: 'New complaint', sub: `${p.name} is unhappy about ${dimLabel}`, go: `client/${p.id}` });
+                else items.push({ icon: 'ti-trending-down', color: 'var(--warning)', title: 'Complaint escalated', sub: `${p.name} is taking ${dimLabel} further`, go: `client/${p.id}` });
+            }
+            if (c.promise && c.promise.deadlineAbsWeek - aw <= 2) items.push({ icon: 'ti-calendar', color: 'var(--warning)', title: 'Promise deadline soon', sub: `${p.name} · ${Math.max(0, c.promise.deadlineAbsWeek - aw)}w left`, go: `client/${p.id}` });
+            if (c.dim === 'agent' && c.stage === 3 && p.repExpired) items.push({ icon: 'ti-user-x', color: 'var(--danger)', title: 'Departure notice', sub: `${p.name} will leave your agency soon`, go: `client/${p.id}` });
+        }
     });
     GameState.inbox.filter(m => !m.read && m.kind === 'news' && m.cat === 'injury').slice(0, 3).forEach(m => {
         items.push({ icon: 'ti-bandage', color: 'var(--danger)', title: 'Injury news', sub: m.subject, go: `mail/${m.id}` });

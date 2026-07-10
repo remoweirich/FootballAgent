@@ -75,7 +75,10 @@ const ScoutingScreen = {
                     <label class="field-label">International</label>${intl}
                     <label class="field-label">Max talent age</label>
                     <select class="select-input" onchange="ScoutingScreen.setAge('${s.id}',this.value)">${[15, 16, 17, 18, 19, 20, 21, 22].map(a => `<option value="${a}" ${(s.maxTalentAge || 22) === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
-                    <button class="btn btn--danger btn--sm" style="margin-top:var(--space-3);width:auto" onclick="ScoutingScreen.release('${s.id}')">Release</button>
+                    <div class="flex-row" style="margin-top:var(--space-3)">
+                        ${(s.region || s.league) ? `<button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.setIdle('${s.id}')"><i class="ti ti-x"></i>Set idle</button>` : ''}
+                        <button class="btn btn--danger btn--sm" style="width:auto" onclick="ScoutingScreen.release('${s.id}')">Release</button>
+                    </div>
                 </div>`;
             }).join('') + `<div id="actionResult"></div>`;
     },
@@ -106,6 +109,7 @@ const ScoutingScreen = {
     // deliberately does NOT refresh the screen: a full re-render would snap any *other*
     // pending dropdown (e.g. the region select) back to its last-saved value
     setAge(scoutId, age) { Scouts.setMaxAge(scoutId, +age); GameState.save(); },
+    setIdle(scoutId) { const r = Scouts.setIdle(scoutId); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     release(scoutId) { Scouts.release(scoutId); GameState.save(); Router.refresh(); },
 
     // ---------------- Hiring market ----------------

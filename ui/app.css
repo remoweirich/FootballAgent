@@ -183,6 +183,15 @@ button { font-family: inherit; }
 .text-input, .select-input { width: 100%; box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: 11px 12px; font-size: var(--fs-lg); color: var(--text); font-family: var(--font); }
 .select-input { appearance: none; }
 
+/* ---------- Tap-to-type slider values (ui-helpers.js) ---------- */
+.editable-val { cursor: pointer; border-bottom: 1px dotted var(--text-chevron); }
+.editable-val-input {
+  width: 6.5em; box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--accent-border);
+  border-radius: var(--radius-xs); padding: 1px 6px; font-size: inherit; font-weight: inherit; color: var(--text);
+  font-family: var(--font); -moz-appearance: textfield;
+}
+.editable-val-input::-webkit-outer-spin-button, .editable-val-input::-webkit-inner-spin-button { margin: 0; }
+
 /* ---------- Chart card ---------- */
 .chart-card { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 11px 12px 8px; margin-bottom: var(--space-4); }
 .chart-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
@@ -195,24 +204,33 @@ button { font-family: inherit; }
 .chart-svg .axis-line { stroke: var(--line-strong); }
 
 /* ---------- Season / expandable rows (History tab) ----------
-   Club-first hierarchy: .season-name is the club (large/primary), .season-club is
-   the season (small/secondary) — named for historical reasons, not for what they
-   currently hold. Shade ladder for depth: closed rows sit on the .fcard's own
-   --surface; an open row brightens to --surface-raised (it's "active"); its nested
-   per-competition detail recedes to --surface-sunken (it's a level deeper). */
+   Club-first hierarchy: .season-name is the club (bright, but only ~2pt above the
+   surrounding text - not a giant headline), .season-club is the season+league (small/
+   secondary) — named for historical reasons, not for what they currently hold. Shade
+   ladder for depth, one step brighter throughout than the app's shared card tone (this
+   list gets its own .hist-list override rather than touching --surface itself, which
+   is reused all over the app): closed rows sit on --surface-raised; an open row
+   brightens further still (it's "active"); its nested per-competition detail drops to
+   a custom near-black tone for a starker break from the brighter list around it. */
+.fcard.hist-list { background: var(--surface-raised); }
 .season-row { padding: 9px 0; border-bottom: .5px solid var(--line-faint); cursor: pointer; }
 .season-row:last-child { border-bottom: none; }
-.season-row.is-open { background: var(--surface-raised); border-radius: var(--radius-sm); }
+.season-row.is-open { background: #1E2530; border-radius: var(--radius-sm); }
 .season-top { display: flex; align-items: center; justify-content: space-between; }
-.season-name { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); color: var(--text); }
+.season-name { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text-bright); }
 .season-club { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
 .season-stat { font-size: 11.5px; color: var(--text-secondary); text-align: right; }
 .season-stat .ti { font-size: 12px; }
-.season-body { padding: var(--space-3) var(--space-3) var(--space-2); background: var(--surface-sunken); border-radius: var(--radius-sm); margin-top: var(--space-2); }
+.season-body { padding: var(--space-3) var(--space-3) var(--space-2); background: #0A0C10; border-radius: var(--radius-sm); margin-top: var(--space-2); }
 .comp-row { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-sm); padding: 7px 2px; border-top: 1px dashed var(--line-strong); color: var(--text-secondary); }
 .stint-comps .comp-row { padding-left: var(--space-5); }
 .hist-sym { font-size: 10px; }
 .hist-link { color: var(--text-bright); text-decoration: none; }
+/* small rectangular card indicators (mirroring a real football card's proportions),
+   replacing the old square-emoji stand-ins */
+.card-chip { display: inline-block; width: 7px; height: 10px; border-radius: 1.5px; vertical-align: -1px; margin-right: 1px; }
+.card-chip--yellow { background: #F0B43C; }
+.card-chip--red { background: #F0596A; }
 
 /* ---------- Toggle chip row (career mode, position filter) ---------- */
 .chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }

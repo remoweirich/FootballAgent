@@ -27,6 +27,8 @@ const Router = {
     navStack: [],
     _lastHash: null,
     _backNavigating: false,
+    _scrollMemory: {},        // hash -> scrollTop of the screen when the user navigated away
+
     isFreshNav: false,   // true for a genuine navigation, false for Router.refresh() — lets a
                          // screen (e.g. ClientDetail) reset its own local state only when actually
                          // (re-)entered, not on every in-place refresh after an action
@@ -85,9 +87,21 @@ const Router = {
         const { name, params } = this.parse();
         const def = this.screens[name];
         if (!def) { this.go('home'); return; }
+        let restoreScroll = null;
         if (isNav) {
             const newHash = location.hash.replace(/^#/, '');
-            if (!this._backNavigating && this._lastHash != null && this._lastHash !== newHash) this.navStack.push(this._lastHash);
+            // remember how far the screen we're leaving was scrolled, so backing into it
+            // later (back arrow / hardware back) lands exactly where the user left off -
+            // e.g. cup view -> club -> back should not jump to the top of the bracket
+            if (this._lastHash != null && this._lastHash !== newHash) {
+                const scr = document.querySelector('.screen');
+                if (scr) {
+                    if (Object.keys(this._scrollMemory).length > 50) this._scrollMemory = {};
+                    this._scrollMemory[this._lastHash] = scr.scrollTop;
+                }
+                if (!this._backNavigating) this.navStack.push(this._lastHash);
+            }
+            if (this._backNavigating && this._scrollMemory[newHash] != null) restoreScroll = this._scrollMemory[newHash];
             this._backNavigating = false;
             this._lastHash = newHash;
         }
@@ -95,8 +109,25 @@ const Router = {
         if (def.isMain) { this.lastMain = name; this.navStack.length = 0; }
         this.current = name;
         this.closeSheet(); this.closeModal();
+        // renderShell() tears down and rebuilds the whole .screen subtree on every call,
+        // including a plain in-place refresh (toggling a row, submitting an action) - a
+        // freshly created element always starts at scrollTop 0, which reads as an
+        // unwanted jump back to the top. Only a genuine navigation should land at the
+        // top of the (new) screen; a refresh should leave the reader exactly where they were.
+        const oldScreen = !isNav && document.querySelector('.screen');
+        const prevScroll = oldScreen ? oldScreen.scrollTop : 0;
         this.renderShell(name, def, params);
-        window.scrollTo(0, 0);
+        if (isNav) {
+            if (restoreScroll != null) {
+                const newScreen = document.querySelector('.screen');
+                if (newScreen) newScreen.scrollTop = restoreScroll;
+            } else {
+                window.scrollTo(0, 0);
+            }
+        } else {
+            const newScreen = document.querySelector('.screen');
+            if (newScreen) newScreen.scrollTop = prevScroll;
+        }
     },
 
     title(def, params) { return typeof def.title === 'function' ? def.title(params) : def.title; },

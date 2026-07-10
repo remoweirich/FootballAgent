@@ -70,6 +70,8 @@ const LeaguesScreen = {
             if (country === 'Germany') zoneKey = { 'zone-relegate': 'zone-relegate', 'zone-releg-down': 'zone-releg-down' }[this._raw(country, div, i, n, 'german')] || this._raw(country, div, i, n, 'german');
             else if (country === 'Spain') zoneKey = this._raw(country, div, i, n, 'spanish');
             else if (country === 'Switzerland') zoneKey = this._raw(country, div, i, n, 'swiss');
+            else if (country === 'Italy') zoneKey = this._raw(country, div, i, n, 'italian');
+            else if (country === 'France') zoneKey = this._raw(country, div, i, n, 'french');
             else if (relegate && i >= n - relCount) zoneKey = 'zone-relegate';
             else if (mk.green.includes(r.clubId)) zoneKey = 'zone-promote';
             else if (mk.blue.includes(r.clubId)) zoneKey = 'zone-playoff';
@@ -100,6 +102,19 @@ const LeaguesScreen = {
             if (div === 'PromotionLeague') return pos === 1 ? 'zone-promote' : pos === 2 ? 'zone-releg-up' : pos >= 16 ? 'zone-relegate' : '';
             if (div === '1.LigaCH') return pos <= 2 ? 'zone-promote' : pos <= 6 ? 'zone-releg-up' : pos >= 21 ? 'zone-relegate' : '';
             if (div === '2.LigaCH') return pos <= 3 ? 'zone-promote' : pos <= 7 ? 'zone-releg-up' : '';
+        } else if (kind === 'italian') {
+            // full colour = direct up/down; light green = promotion play-off; light red = relegation play-out
+            if (div === 'SerieA') return pos >= 18 ? 'zone-relegate' : '';
+            if (div === 'SerieB') return pos <= 2 ? 'zone-promote' : pos <= 8 ? 'zone-releg-up' : pos >= 18 ? 'zone-relegate' : (pos === 16 || pos === 17) ? 'zone-releg-down' : '';
+            if (div === 'SerieC') return pos <= 3 ? 'zone-promote' : pos <= 9 ? 'zone-releg-up' : pos >= 22 ? 'zone-relegate' : (pos === 20 || pos === 21) ? 'zone-releg-down' : '';
+            if (div === 'SerieD') return pos <= 3 ? 'zone-promote' : pos <= 9 ? 'zone-releg-up' : '';
+        } else if (kind === 'french') {
+            // full colour = direct up/down; light green = promotion play-off bracket; light red = barrage
+            if (div === 'Ligue1') return pos >= 17 ? 'zone-relegate' : pos === 16 ? 'zone-releg-down' : '';
+            if (div === 'Ligue2') return pos <= 2 ? 'zone-promote' : pos <= 5 ? 'zone-releg-up' : pos >= 17 ? 'zone-relegate' : pos === 16 ? 'zone-releg-down' : '';
+            if (div === 'Ligue3') return pos <= 2 ? 'zone-promote' : pos <= 5 ? 'zone-releg-up' : pos >= 16 ? 'zone-relegate' : pos === 15 ? 'zone-releg-down' : '';
+            if (div === 'Ligue4') return pos <= 3 ? 'zone-promote' : pos <= 6 ? 'zone-releg-up' : pos >= 19 ? 'zone-relegate' : pos === 18 ? 'zone-releg-down' : '';
+            if (div === 'Ligue5') return pos <= 4 ? 'zone-promote' : pos <= 7 ? 'zone-releg-up' : '';
         }
         return '';
     },
@@ -185,6 +200,43 @@ const LeaguesScreen = {
                 return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie2Leg(po.final)}${po.winner ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
             return barBlock + poBlock;
+        }
+        if (country === 'France') {
+            const P = GameState.league && GameState.league.playoffs;
+            const bar = GameState.league && GameState.league.frenchBarrage;
+            const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
+            const brackets = ['Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'].map(div => {
+                const po = P && P[div];
+                const title = `${COMPETITIONS[div].name} — promotion play-off`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
+                return `<div class="section-label">${title}</div><div class="fcard">${hd('Round 1')}${this.tie(po.g1)}${hd('Round 2 (barrage qualifier)')}${this.tie(po.g2)}${po.winner ? `<div class="frow"><span class="frow__k">Into the barrage</span><span class="frow__v" style="color:var(--info-text)">${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+            }).join('');
+            const BAR = [['L1L2', 'Ligue 1 / Ligue 2'], ['L2L3', 'Ligue 2 / Ligue 3'], ['L3L4', 'Ligue 3 / Ligue 4'], ['L4L5', 'Ligue 4 / Ligue 5']];
+            const barrages = BAR.map(([k, label]) => {
+                const t = bar && bar[k];
+                if (!t) return `<div class="section-label">${label} barrage</div><p class="hint">Not yet played (week 46).</p>`;
+                return `<div class="section-label">${label} barrage</div><div class="fcard">${this.relegTie(t)}<p class="hint">Winner plays in the higher division next season.</p></div>`;
+            }).join('');
+            return brackets + barrages;
+        }
+        if (country === 'Italy') {
+            const P = GameState.league && GameState.league.playoffs;
+            const pout = GameState.league && GameState.league.italianPlayout;
+            const promo = ['SerieB', 'SerieC', 'SerieD'].map(div => {
+                const po = P && P[div];
+                const title = `${COMPETITIONS[div].name} — promotion play-off`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
+                const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
+                const qf = po.qf ? `${hd('Qualifiers')}${po.qf.map(t => this.tie(t)).join('')}` : '';
+                return `<div class="section-label">${title}</div><div class="fcard">${qf}${hd('Semi-finals')}${(po.sf || []).map(t => this.tie(t)).join('')}${hd('Final')}${this.tie(po.final)}${po.winner ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+            }).join('');
+            const playout = ['SerieB', 'SerieC'].map(div => {
+                const po = pout && pout[div];
+                const title = `${COMPETITIONS[div].name} — relegation play-out`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
+                return `<div class="section-label">${title}</div><div class="fcard">${this.relegTie(po.tie)}<div class="frow"><span class="frow__k">Relegated</span><span class="frow__v" style="color:var(--state-bad)">▼ ${UI.clubName(po.relegated)}</span></div></div>`;
+            }).join('');
+            return promo + playout;
         }
         const P = GameState.league && GameState.league.playoffs;
         const divs = (COUNTRY_DIVS[country] || []).slice(1);

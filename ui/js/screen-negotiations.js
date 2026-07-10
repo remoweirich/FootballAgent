@@ -106,17 +106,18 @@ Nego.transfer = function (el, m) {
         <div class="fcard">
             <div class="frow"><span class="frow__k">Player's wage</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
             <div class="frow"><span class="frow__k">Current club</span><span class="frow__v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
+            <div class="frow"><span class="frow__k">Current role</span><span class="frow__v">${Agency.isFreeAgent(p) ? '\u2014' : roleLabel(p.squadRole, p.age)}</span></div>
             <div class="frow"><span class="frow__k">Bidding club</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
         </div>
         <p class="hint">${p.ability} OVR · ${p.age}y · ${feeLine}${o.initiatedByAgent ? ' · you pitched this' : ''}</p>
         <p style="color:var(--text-secondary);font-size:var(--fs-sm)">Put your whole proposal on the table — wage, role, length and signing bonus together.</p>
-        <label class="field-label">Wage at ${to.name}: <span id="negoWageVal">${UI.euro(c.wage)}</span>/wk <span class="muted">(your cut <span id="negoCutVal">${UI.euro(cut(c.wage))}</span>/wk)</span></label>
+        <label class="field-label">Wage at ${to.name}: <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">(your cut <span id="negoCutVal">${UI.euro(cut(c.wage))}</span>/wk)</span></label>
         <input class="range" type="range" min="${o.proposedWage}" max="${wageMax}" step="10" value="${c.wage}" oninput="Nego.slide('${m.id}','wage',this.value)">
         <label class="field-label">Squad role</label>
         <select class="select-input" onchange="Nego.slide('${m.id}','role',this.value)">${ROLE_ORDER.map(r => `<option value="${r}" ${r === c.role ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select>
-        <label class="field-label">Contract length: <span id="negoTermVal">${c.term}</span> season(s)${termCap < 6 ? ` <span class="muted">(max ${termCap} at his age, unless he's way too good for this squad)</span>` : ''}</label>
+        <label class="field-label">Contract length: <span id="negoTermVal" class="editable-val">${c.term}</span> season(s)${termCap < 6 ? ` <span class="muted">(max ${termCap} at his age, unless he's way too good for this squad)</span>` : ''}</label>
         <input class="range" type="range" min="1" max="${termCap}" value="${c.term}" oninput="Nego.slide('${m.id}','term',this.value)">
-        <label class="field-label">Your agent's fee: <span id="negoBonusVal">${UI.euro(c.bonus)}</span></label>
+        <label class="field-label">Your agent's fee: <span id="negoBonusVal" class="editable-val">${UI.euro(c.bonus)}</span></label>
         <input class="range" type="range" min="0" max="${bonusMax}" step="${Math.max(10, Math.round(bonusMax / 50))}" value="${c.bonus}" oninput="Nego.slide('${m.id}','bonus',this.value)">
         ${others.length ? `<div class="result info">Competing bids: ${others.map(x => `<a href="${Router.link('mail', x.id)}" style="color:var(--info-text)">${Clubs.getClubById(x.offer.toClubId) ? Clubs.getClubById(x.offer.toClubId).name : ''} · ${roleLabel(x.offer.role || 'rotation', p.age)}</a>`).join(' · ')}</div>` : ''}
         <div class="flex-row" style="margin-top:var(--space-5)">
@@ -180,13 +181,13 @@ Nego.renewal = function (el, m) {
             <div class="frow"><span class="frow__k">Club</span><span class="frow__v">${club.name}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
             <div class="frow"><span class="frow__k">Role · until</span><span class="frow__v">${roleLabel(p.squadRole, p.age)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
         </div>
-        <label class="field-label">Wage: <span id="negoWageVal">${UI.euro(c.wage)}</span>/wk <span class="muted">(your cut <span id="negoCutVal">${UI.euro(cut(c.wage))}</span>/wk, ${p.wageCommission}%)</span></label>
+        <label class="field-label">Wage: <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">(your cut <span id="negoCutVal">${UI.euro(cut(c.wage))}</span>/wk, ${p.wageCommission}%)</span></label>
         <input class="range" type="range" min="${o.proposedWage}" max="${wageMax}" step="10" value="${c.wage}" oninput="Nego.slide('${m.id}','wage',this.value)">
         <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-4);width:auto" onclick="Nego.negRenewWage('${m.id}')"><i class="ti ti-send"></i>Put it to the club</button>
         <div id="wageMsg"></div>
         <label class="field-label">Squad role at ${club.name}</label>
         <select class="select-input" onchange="Nego.slide('${m.id}','role',this.value)">${ROLE_ORDER.map(r => `<option value="${r}" ${r === c.role ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select>
-        <label class="field-label">Contract length: <span id="negoTermVal">${c.term}</span> season(s)${termCap < 6 ? ` <span class="muted">(max ${termCap} at his age, unless he's way too good for this squad)</span>` : ''}</label>
+        <label class="field-label">Contract length: <span id="negoTermVal" class="editable-val">${c.term}</span> season(s)${termCap < 6 ? ` <span class="muted">(max ${termCap} at his age, unless he's way too good for this squad)</span>` : ''}</label>
         <input class="range" type="range" min="1" max="${termCap}" value="${c.term}" oninput="Nego.slide('${m.id}','term',this.value)">
         <div class="flex-row" style="margin-top:var(--space-5)">
             <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>Decline</button>
@@ -197,8 +198,8 @@ Nego.renewal = function (el, m) {
 Nego.negRenewWage = function (mailId) {
     const m = GameState.inbox.find(x => x.id === mailId), p = GameState.getPlayer(m.offer.playerId), club = Clubs.getClubById(m.offer.clubId);
     const c = this.ctxFor(mailId);
-    const r = Agency.negotiateWage(p, club, c.wage, c.wageRound++);
-    if (r.status === 'counter') c.wage = r.counter;
+    const r = Agency.negotiateWage(p, club, c.wage, c.wageRound++, c.lastWageCounter);
+    if (r.status === 'counter') { c.wage = r.counter; c.lastWageCounter = r.counter; }
     Router.refresh();
     document.getElementById('wageMsg').innerHTML = `<div class="hint" style="margin:-8px 0 var(--space-3)">"${r.message}"</div>`;
 };
@@ -216,8 +217,11 @@ Nego.loan = function (el, m) {
     if (!p || !to) { this.dismiss(m.id); return; }
     const c = this.ctxFor(m.id); if (!c.loanRole) { c.loanRole = o.role || 'starter'; c.loanRound = 1; }
     const others = GameState.inbox.filter(x => x.kind === 'loan' && x.offer.playerId === p.id && x.id !== m.id);
-    const durOpts = Agency.loanDurationOptions();
+    const durOpts = Agency.loanDurationOptions(p);
     const inWindow = durOpts.length > 0;
+    // his own contract with the current club is too short for any loan length at all - distinct
+    // from "no window open" (which loanDurationOptions() always has *some* answer for)
+    const contractTooShort = durOpts.length === 0 && Agency.loanDurationOptions().length > 0;
     if (inWindow && !c.duration) c.duration = durOpts[0].code;
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
         <div class="fcard">
@@ -231,7 +235,7 @@ Nego.loan = function (el, m) {
         <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-4);width:auto" onclick="Nego.negLoanRole('${m.id}')"><i class="ti ti-send"></i>Put it to the club</button>
         <div id="loanMsg"></div>
         ${others.length ? `<div class="result info">Other clubs after ${p.name}: ${others.map(x => `<a href="${Router.link('mail', x.id)}" style="color:var(--info-text)">${Clubs.getClubById(x.offer.toClubId) ? Clubs.getClubById(x.offer.toClubId).name : ''}</a>`).join(' · ')}</div>` : ''}
-        ${inWindow ? `<label class="field-label">Loan duration</label><select class="select-input" onchange="Nego.slide('${m.id}','duration',this.value)">${durOpts.map((d, i) => `<option value="${d.code}" ${d.code === c.duration ? 'selected' : ''}>${d.label}</option>`).join('')}</select>` : `<div class="result info">Loans can only be completed during a transfer window (weeks 1–6 or 21–25).</div>`}
+        ${inWindow ? `<label class="field-label">Loan duration</label><select class="select-input" onchange="Nego.slide('${m.id}','duration',this.value)">${durOpts.map((d, i) => `<option value="${d.code}" ${d.code === c.duration ? 'selected' : ''}>${d.label}</option>`).join('')}</select>` : contractTooShort ? `<div class="result info">${p.name}'s contract with ${Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : 'his club'} doesn't leave room for a loan of any length.</div>` : `<div class="result info">Loans can only be completed during a transfer window (weeks 1–6 or 28–33).</div>`}
         <div class="flex-row" style="margin-top:var(--space-5)">
             <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>Decline</button>
             ${inWindow ? `<button class="btn btn--primary" onclick="Nego.acceptLoan('${m.id}')"><i class="ti ti-check"></i>Accept loan</button>` : ''}

@@ -4,7 +4,7 @@
 // ============================================================
 const ClientsScreen = {
     state: { filter: 'all', sort: 'ability', dir: 'desc' },
-    SORTS: [['ability', 'Ability'], ['age', 'Age'], ['apps', 'Appearances'], ['avg', 'Avg rating'], ['contract', 'Contract left'], ['wage', 'Wage']],
+    SORTS: [['ability', 'Ability'], ['age', 'Age'], ['apps', 'Appearances'], ['avg', 'Avg rating'], ['contract', 'Contract left'], ['morale', 'Morale'], ['wage', 'Wage'], ['repterm', 'Rep. term left']],
 
     rows() {
         const year = GameState.seasonStartYear;
@@ -13,7 +13,10 @@ const ClientsScreen = {
             const tot = seasonTotals(p, year);
             const hasOffer = GameState.inbox.some(m => m.offer && m.offer.playerId === p.id && ['transfer', 'loan', 'renewal'].includes(m.kind));
             const hasSponsor = GameState.inbox.some(m => m.kind === 'sponsor' && m.offer && m.offer.playerId === p.id);
-            return { p, club, tot, hasOffer, hasSponsor, contractLeft: Agency.contractSeasonsLeft(p) };
+            // expired reps sort as the most urgent (lowest) value - the deal has already run out
+            const repLeft = p.repExpired ? -1 : (p.repUntilSeason != null ? p.repUntilSeason - GameState.seasonStartYear : 0);
+            const mor = (typeof moraleAvg === 'function' && p.morale) ? moraleAvg(p) : 0;
+            return { p, club, tot, hasOffer, hasSponsor, contractLeft: Agency.contractSeasonsLeft(p), repLeft, mor };
         });
     },
     filtered() {
@@ -25,7 +28,7 @@ const ClientsScreen = {
     },
     sorted() {
         const rows = this.filtered(), key = this.state.sort, dir = this.state.dir === 'asc' ? 1 : -1;
-        const val = r => ({ ability: r.p.ability, age: r.p.age, apps: r.tot.apps, avg: r.tot.avg, contract: r.contractLeft, wage: r.p.wage })[key];
+        const val = r => ({ ability: r.p.ability, age: r.p.age, apps: r.tot.apps, avg: r.tot.avg, contract: r.contractLeft, wage: r.p.wage, repterm: r.repLeft, morale: r.mor })[key];
         return rows.sort((a, b) => (val(a) - val(b)) * dir);
     },
 
@@ -72,7 +75,9 @@ const ClientsScreen = {
             <div class="cl-stats">
                 <div class="cl-st"><b>${r.tot.apps}</b><span>apps</span></div>
                 <div class="cl-st"><b style="color:var(${UI.ratingVar(r.tot.avg)})">${r.tot.avg ? r.tot.avg.toFixed(1) : '—'}</b><span>rating</span></div>
-                <div class="cl-st"><b>${p.retiringThisSeason ? 'Retiring' : Agency.isFreeAgent(p) ? 'Free' : r.contractLeft <= 0 ? 'Final yr' : r.contractLeft + 1 + 'y'}</b><span>contract</span></div>
+                ${this.state.sort === 'repterm'
+                ? `<div class="cl-st"><b style="${p.repExpired ? 'color:var(--danger)' : ''}">${p.repExpired ? 'Expired' : r.repLeft <= 0 ? 'Final yr' : r.repLeft + 1 + 'y'}</b><span>rep. left</span></div>`
+                : `<div class="cl-st"><b>${p.retiringThisSeason ? 'Retiring' : Agency.isFreeAgent(p) ? 'Free' : r.contractLeft <= 0 ? 'Final yr' : r.contractLeft + 1 + 'y'}</b><span>contract</span></div>`}
                 <div class="cl-st"><b>${Agency.isFreeAgent(p) ? '—' : '€' + (p.wage / 1000).toFixed(p.wage >= 10000 ? 0 : 1) + 'k'}</b><span>wage</span></div>
             </div>
         </a>`;
@@ -141,7 +146,7 @@ const ClientHistory = {
     // scanning for discipline stats while goals/assists sit there unrelated is noisy
     row(r) {
         const disc = ['yellow', 'red'].includes(this.state.sort);
-        const line2 = disc ? `${r.yellow}🟨 ${r.red}🟥` : `${r.p.position === 'GK' ? r.cs + ' cs' : r.goals + ' g'} · ${r.assists} a`;
+        const line2 = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${r.p.position === 'GK' ? r.cs + ' cs' : r.goals + ' g'} · ${r.assists} a`;
         return `<a href="#client/${r.p.id}" class="list-row" style="cursor:pointer">
             <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${r.p.name}</div><div class="row-sub">${r.p.position} · ${r.seasons} season(s) · <span class="pill" style="padding:1px 7px;font-size:10.5px">${r.status}</span>${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
             <div style="text-align:right;font-size:12px;color:var(--text-muted)">${r.apps} apps · ${line2}<br>${UI.ratingText(r.avg)}</div>

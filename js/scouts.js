@@ -23,6 +23,14 @@ const SCOUT_NAMES = {
     Switzerland: {
         first: ['Lukas', 'Simon', 'Fabian', 'Marco', 'Jonas', 'Sandro', 'Manuel', 'Adrian', 'Reto', 'Beat', 'Urs', 'Christian', 'Thomas', 'Daniel', 'Stefan', 'Martin', 'Jean', 'Pierre', 'Luc', 'Mathieu', 'Guillaume', 'Bastien', 'Alessandro', 'Diego', 'Francesco', 'Pietro', 'Andreas', 'Florian', 'Patrick', 'Hans'],
         last: ['Müller', 'Meier', 'Schmid', 'Keller', 'Weber', 'Huber', 'Steiner', 'Fischer', 'Gerber', 'Brunner', 'Baumann', 'Moser', 'Zimmermann', 'Frei', 'Widmer', 'Graf', 'Favre', 'Dubois', 'Girard', 'Richard', 'Bernasconi', 'Bianchi', 'Fontana', 'Ferrari', 'Rossi', 'Sutter', 'Studer', 'Wyss', 'Egli', 'Vogel']
+    },
+    Italy: {
+        first: ['Alessandro', 'Andrea', 'Marco', 'Francesco', 'Giuseppe', 'Antonio', 'Giovanni', 'Roberto', 'Stefano', 'Paolo', 'Fabio', 'Luca', 'Matteo', 'Lorenzo', 'Davide', 'Simone', 'Riccardo', 'Massimo', 'Claudio', 'Sergio', 'Maurizio', 'Gianluca', 'Vincenzo', 'Salvatore', 'Domenico', 'Michele', 'Bruno', 'Franco', 'Carlo', 'Enrico'],
+        last: ['Rossi', 'Russo', 'Ferrari', 'Esposito', 'Bianchi', 'Romano', 'Colombo', 'Ricci', 'Marino', 'Greco', 'Bruno', 'Gallo', 'Conti', 'De Luca', 'Mancini', 'Costa', 'Giordano', 'Rizzo', 'Lombardi', 'Moretti', 'Barbieri', 'Fontana', 'Santoro', 'Mariani', 'Rinaldi', 'Caruso', 'Ferrara', 'Galli', 'Martini', 'Leone']
+    },
+    France: {
+        first: ['Jean', 'Pierre', 'Michel', 'Philippe', 'Alain', 'Nicolas', 'Christophe', 'Laurent', 'Olivier', 'Thierry', 'David', 'Julien', 'Sébastien', 'Stéphane', 'Pascal', 'Frédéric', 'Antoine', 'Guillaume', 'Maxime', 'Alexandre', 'Romain', 'Vincent', 'Bernard', 'Patrick', 'Gérard', 'Didier', 'Franck', 'Bruno', 'Yannick', 'Florian'],
+        last: ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel', 'Girard', 'André', 'Lefèvre', 'Mercier', 'Dupont', 'Lambert', 'Bonnet', 'Rousseau', 'Blanc']
     }
 };
 
@@ -169,6 +177,18 @@ const Scouts = {
         const ag = GameState.agency;
         const idx = ag.scouts.findIndex(s => s.id === scoutId);
         if (idx >= 0) { const s = ag.scouts[idx]; ag.scouts.splice(idx, 1); GameState.addLog(`Released scout ${s.name}.`, 'scout'); }
+    },
+    // pull a scout off his region/league without releasing him — still on the payroll,
+    // still worth the occasional stray domestic find (see tick()'s idle branch), just
+    // not burning report fees until reassigned
+    setIdle(scoutId) {
+        const ag = GameState.agency;
+        const s = ag.scouts.find(x => x.id === scoutId);
+        if (!s) return { ok: false, message: 'Unknown scout.' };
+        if (!s.region && !s.league) return { ok: false, message: `${s.name} is already idle.` };
+        s.region = null; s.league = null; s.country = null;
+        GameState.addLog(`${s.name} set to idle.`, 'scout');
+        return { ok: true, message: `${s.name} is idle — no more report fees until you reassign him, though he'll still turn up the occasional find on his own.` };
     },
 
     // reports arrive every 6-7 weeks

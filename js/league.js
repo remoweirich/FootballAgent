@@ -37,6 +37,19 @@ const COMPETITIONS = {
     CUPABASS: { name: 'Cupa Bass', short: 'Cupa Bass', type: 'cup' },
     LICHCUP: { name: 'Liechtensteiner Cup', short: 'Lie. Cup', type: 'cup' },
     CHBAR: { name: 'Barrage', short: 'Barrage', type: 'playoff' },
+    SerieA: { name: 'Serie A', short: 'Serie A', type: 'league' },
+    SerieB: { name: 'Serie B', short: 'Serie B', type: 'league' },
+    SerieC: { name: 'Serie C', short: 'Serie C', type: 'league' },
+    SerieD: { name: 'Serie D', short: 'Serie D', type: 'league' },
+    COPPA: { name: 'Coppa Italia', short: 'Coppa', type: 'cup' },
+    COPPACOMP: { name: 'Coppa Compagno', short: 'C. Compagno', type: 'cup' },
+    Ligue1: { name: 'Ligue 1', short: 'L1', type: 'league' },
+    Ligue2: { name: 'Ligue 2', short: 'L2', type: 'league' },
+    Ligue3: { name: 'Ligue 3', short: 'L3', type: 'league' },
+    Ligue4: { name: 'Ligue 4', short: 'L4', type: 'league' },
+    Ligue5: { name: 'Ligue 5', short: 'L5', type: 'league' },
+    COUPEFR: { name: 'Coupe de France', short: 'Coupe', type: 'cup' },
+    COUPENAT: { name: 'Coupe National', short: 'C. Nat', type: 'cup' },
     BEKER: { name: 'KNVB Beker', short: 'Beker', type: 'cup' },
     KBEK: { name: 'De kleine Beker', short: 'kl. Beker', type: 'cup' },
     FACUP: { name: 'FA Cup', short: 'FA Cup', type: 'cup' },
@@ -51,11 +64,79 @@ function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : (Clubs
 const DIV_ORDER = ['ERE', 'EED', 'TWD', 'DRD'];
 const DIV_TIER = { ERE: 1, EED: 2, TWD: 3, DRD: 4 };
 // every country's league ladder, top tier first
-const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'], Switzerland: ['SuperLeagueCH', 'ChallengeLeague', 'PromotionLeague', '1.LigaCH', '2.LigaCH'] };
+const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'], Switzerland: ['SuperLeagueCH', 'ChallengeLeague', 'PromotionLeague', '1.LigaCH', '2.LigaCH'], Italy: ['SerieA', 'SerieB', 'SerieC', 'SerieD'], France: ['Ligue1', 'Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'] };
 const ALL_LEAGUE_DIVS = Object.values(COUNTRY_DIVS).reduce((a, b) => a.concat(b), []);
 // cups shown per country in the Leagues tab (extend this when adding more countries)
-const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Schweizer Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']] };
+const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Schweizer Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']], Italy: [['coppaitalia', 'Coppa Italia'], ['coppacompagno', 'Coppa Compagno']], France: [['coupefrance', 'Coupe de France'], ['coupenational', 'Coupe National']] };
 function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
+
+// ---- weekly squad index (world model) ----
+// Squad lists are only needed for clubs employing a sim-relevant player (the agent's clients,
+// ex-clients, scouted prospects — ~dozens of people, a handful of clubs). Built lazily once per
+// week from a single pass over the player pool, instead of the old per-match full-pool filter
+// that scanned ~10k players ~53,000 times a season (measured: 89% of all simulation time).
+let __sqCache = null, __sqCacheWeek = -1;
+function relevantSquads() {
+    const wk = GameState.seasonStartYear * 52 + GameState.week;
+    if (__sqCacheWeek !== wk) {
+        __sqCacheWeek = wk;
+        __sqCache = new Map();
+        const hostClubs = new Set();
+        for (const p of GameState.players) {
+            if (isSimRelevant(p)) { const cid = effectiveClubId(p); if (cid) hostClubs.add(cid); }
+        }
+        for (const p of GameState.players) {
+            if (p.archived || p.injury) continue;
+            const cid = effectiveClubId(p);
+            if (cid && hostClubs.has(cid)) {
+                let arr = __sqCache.get(cid);
+                if (!arr) __sqCache.set(cid, arr = []);
+                arr.push(p);
+            }
+        }
+    }
+    return __sqCache;
+}
+// Live extra strength from the agent's clients: the roster-justified level is
+// anchor + Σ max(0, ability − anchor)/11 (the "replace n of 11 anchor-rated players with your
+// actual clients" formula). The club's stored reputation converges to that level seasonally
+// (rising promptly, fading slowly after departures — League.normalizeReputations), so only the
+// part NOT yet reflected in reputation is added here: mid-season signings and talents whose
+// ability grew since the last rollover count immediately, with no double-counting.
+function clientStrengthBonus(clubId, currentRep) {
+    const c = Clubs.getClubById(clubId);
+    if (!c) return 0;
+    const sq = relevantSquads().get(clubId);
+    if (!sq) return 0;
+    const anchor = c.anchorRep != null ? c.anchorRep : c.reputation;
+    let boost = 0;
+    for (const p of sq) if (p.agentId === 'me') boost += Math.max(0, p.ability - anchor) / 11;
+    return Math.max(0, anchor + boost - currentRep);
+}
+
+// ---- seasonal form rolls (world model) ----
+// Once per rollover every club rolls a seasonDelta (ability offset vs reputation, bounded ±5)
+// from one of these tables, chosen by how long it has finished below/above its expected
+// position (= its reputation rank inside its country's ladder). The tables are deliberately
+// mean-reverting: sustained underperformers drift back up, sustained overperformers back down,
+// and after 5 (under) / 6 (over) straight seasons the delta resets outright.
+const SEASON_ROLL_TABLES = [
+    [[-2, 20], [-1, 20], [0, 20], [1, 20], [2, 20]],
+    [[-3, 10], [-2, 15], [-1, 15], [0, 15], [1, 15], [2, 20], [3, 10]],
+    [[-4, 10], [-3, 10], [-2, 10], [-1, 10], [1, 15], [2, 15], [3, 15], [4, 15]],
+    [[-5, 5], [-4, 10], [-3, 10], [-2, 5], [-1, 5], [1, 10], [2, 15], [3, 20], [4, 15], [5, 5]],
+    [[-5, 5], [-4, 5], [-3, 5], [-2, 5], [-1, 5], [0, 15], [1, 10], [2, 15], [3, 15], [4, 15], [5, 5]]
+];
+function rollFromTable(tableIdx, inverted) {
+    const table = SEASON_ROLL_TABLES[tableIdx];
+    const total = table.reduce((s, [, w]) => s + w, 0);
+    let r = Math.random() * total;
+    for (const [delta, w] of table) {
+        r -= w;
+        if (r <= 0) return inverted ? -delta : delta;
+    }
+    return 0;
+}
 
 // 12 non-league "virtual" clubs that only ever appear in the FA Cup (no squads, no transfers)
 const FACUP_VIRTUAL = [
@@ -104,7 +185,51 @@ const LICHCUP_VIRTUAL = [
     { id: 'vli_schellenberg', name: 'FC Schellenberg', reputation: 5 },
 ];
 const LICHCUP_VIRTUAL_MAP = LICHCUP_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
-function findVirtualClub(id) { return FACUP_VIRTUAL_MAP[id] || SWISSCUP_VIRTUAL_MAP[id] || LICHCUP_VIRTUAL_MAP[id] || null; }
+// 39 overseas French "virtual" clubs (rep 16). Each season 28 are drawn into the Coupe
+// de France's first round alongside the 100 league clubs, for 128 entrants total (a clean 2^7).
+const COUPEFR_VIRTUAL = [
+    { id: "vfr_as_pirae", name: "AS Pirae", reputation: 16 },
+    { id: "vfr_as_rosador", name: "AS Rosador", reputation: 16 },
+    { id: "vfr_hiengh_ne_sport", name: "Hienghène Sport", reputation: 16 },
+    { id: "vfr_asc_le_geldar", name: "ASC Le Geldar", reputation: 16 },
+    { id: "vfr_asc_agouado", name: "ASC Agouado", reputation: 16 },
+    { id: "vfr_la_tamponnaise", name: "La Tamponnaise", reputation: 16 },
+    { id: "vfr_saint_denis_fc", name: "Saint-Denis FC", reputation: 16 },
+    { id: "vfr_as_samaritaine", name: "AS Samaritaine", reputation: 16 },
+    { id: "vfr_golden_lion_fc", name: "Golden Lion FC", reputation: 16 },
+    { id: "vfr_cs_moulien", name: "CS Moulien", reputation: 16 },
+    { id: "vfr_sc_baie_mahault", name: "SC Baie-Mahault", reputation: 16 },
+    { id: "vfr_asu_grand_santi", name: "ASU Grand Santi", reputation: 16 },
+    { id: "vfr_l_toile_de_morne_l_eau", name: "L'Étoile de Morne-à-l'Eau", reputation: 16 },
+    { id: "vfr_aiglon_du_lamentin_fc", name: "Aiglon du Lamentin FC", reputation: 16 },
+    { id: "vfr_as_v_nus", name: "AS Vénus", reputation: 16 },
+    { id: "vfr_diables_noirs", name: "Diables Noirs", reputation: 16 },
+    { id: "vfr_as_jumeaux_de_m_zouazia", name: "AS Jumeaux de M'zouazia", reputation: 16 },
+    { id: "vfr_csc_cayenne", name: "CSC Cayenne", reputation: 16 },
+    { id: "vfr_solidarit_scolaire", name: "Solidarité-Scolaire", reputation: 16 },
+    { id: "vfr_club_franciscain", name: "Club Franciscain", reputation: 16 },
+    { id: "vfr_as_saint_pierraise", name: "AS Saint Pierraise", reputation: 16 },
+    { id: "vfr_js_saint_pierroise", name: "JS Saint-Pierroise", reputation: 16 },
+    { id: "vfr_fc_mtsap_r", name: "FC Mtsapéré", reputation: 16 },
+    { id: "vfr_phrae_du_canal", name: "Phrae du Canal", reputation: 16 },
+    { id: "vfr_us_sinnamary", name: "US Sinnamary", reputation: 16 },
+    { id: "vfr_pamandzi_sc", name: "Pamandzi SC", reputation: 16 },
+    { id: "vfr_unit_sainte_rosienne", name: "Unité Sainte Rosienne", reputation: 16 },
+    { id: "vfr_as_llienne_amateur", name: "AS Îllienne Amateur", reputation: 16 },
+    { id: "vfr_golden_star", name: "Golden Star", reputation: 16 },
+    { id: "vfr_an_jeunesse_volution", name: "AN Jeunesse Évolution", reputation: 16 },
+    { id: "vfr_aj_saint_georges", name: "AJ Saint-Georges", reputation: 16 },
+    { id: "vfr_ss_jeanne_d_arc", name: "SS Jeanne d'Arc", reputation: 16 },
+    { id: "vfr_as_magenta", name: "AS Magenta", reputation: 16 },
+    { id: "vfr_usr_sainte_rose", name: "USR Sainte-Rose", reputation: 16 },
+    { id: "vfr_ase_de_matoury", name: "ASE de Matoury", reputation: 16 },
+    { id: "vfr_js_vieux_habitants", name: "JS Vieux-Habitants", reputation: 16 },
+    { id: "vfr_us_de_matoury", name: "US de Matoury", reputation: 16 },
+    { id: "vfr_as_dragon", name: "AS Dragon", reputation: 16 },
+    { id: "vfr_as_sainte_suzanne", name: "AS Sainte-Suzanne", reputation: 16 },
+];
+const COUPEFR_VIRTUAL_MAP = COUPEFR_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
+function findVirtualClub(id) { return FACUP_VIRTUAL_MAP[id] || SWISSCUP_VIRTUAL_MAP[id] || LICHCUP_VIRTUAL_MAP[id] || COUPEFR_VIRTUAL_MAP[id] || null; }
 
 const League = {
     roundRobin(ids) {
@@ -149,9 +274,15 @@ const League = {
             schwcup: this._buildSchweizerCup(),
             cupabass: this._buildCupaBass(),
             lichcup: this._buildLichCup(),
-            playoffs: { EED: null, TWD: null, DRD: null, CHAMP: null, LEAGUE1: null, LEAGUE2: null, Natleague: null, LaLiga2: null, PrimeraSup: null, PrimeraInf: null, Segunda: null, '1.LigaCH': null, '2.LigaCH': null, _done: false },
+            coppaitalia: this._buildSpanishCup(['SerieA'], ['SerieB', 'SerieC']),
+            coppacompagno: this._buildSpanishCup(['SerieB'], ['SerieC', 'SerieD']),
+            coupefrance: this._buildCoupeFrance(),
+            coupenational: this._buildCoupeNational(),
+            playoffs: { EED: null, TWD: null, DRD: null, CHAMP: null, LEAGUE1: null, LEAGUE2: null, Natleague: null, LaLiga2: null, PrimeraSup: null, PrimeraInf: null, Segunda: null, '1.LigaCH': null, '2.LigaCH': null, SerieB: null, SerieC: null, SerieD: null, Ligue2: null, Ligue3: null, Ligue4: null, Ligue5: null, _done: false },
             germanReleg: null,
             swissBarrage: null,
+            italianPlayout: null,
+            frenchBarrage: null,
             prorel: null,
             champions: {},
             finished: false
@@ -176,9 +307,9 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
-            const r = this.playMatch(h, a, 'BEKER', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner });
-            winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'BEKER', week === 47);
+            ties.push(t);
+            winners.push(t.winner);
         });
         B.remaining = winners;
         B.results.push({ week, round: this._bekerRoundName(week), ties });
@@ -194,6 +325,18 @@ const League = {
         return pairs;
     },
     _pairUp(arr) { const pairs = []; for (let i = 0; i < arr.length; i += 2) pairs.push([arr[i], arr[i + 1] ?? null]); return pairs; },
+    // One-legged cup tie: the lower-division side always hosts (the bigger club is drawn
+    // away - proper cup atmosphere), and the FINAL is on neutral ground: original order is
+    // kept and neither side gets the home bonus.
+    playCupTie(h, a, compId, isFinal) {
+        let home = h, away = a;
+        if (!isFinal) {
+            const tierOf = id => { const c = Clubs.getClubById(id); return c ? c.tier : 99; };   // virtual minnows always host
+            if (tierOf(h) < tierOf(a)) { home = a; away = h; }
+        }
+        const r = this.playMatch(home, away, compId, !isFinal);
+        return { h: home, a: away, hg: r.hg, ag: r.ag, winner: r.winner };
+    },
 
     // ---------------- De kleine Beker ----------------
     _buildKleine() {
@@ -240,8 +383,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
-            const r = this.playMatch(h, a, 'FACUP', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'FACUP', week === 47);
+            ties.push(t); winners.push(t.winner);
         });
         F.remaining = winners;
         F.results.push({ week, round: this._facupRoundName(week), ties });
@@ -292,8 +435,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); return; }
-            const r = this.playMatch(h, a, 'LLC', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'LLC', week === 46);
+            ties.push(t); winners.push(t.winner);
         });
         C.remaining = winners;
         C.results.push({ week, round: this._llcRoundName(week), ties });
@@ -327,8 +470,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); return; }
-            const r = this.playMatch(h, a, 'KBEK', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'KBEK', week === 47);
+            ties.push(t); winners.push(t.winner);
         });
         K.remaining = winners;
         K.results.push({ week, round: this._kleineRoundName(week), ties });
@@ -408,11 +551,23 @@ const League = {
             notes
         };
     },
-    // promoted clubs edge up in prestige, relegated clubs edge down — gently, so standings stay coherent
-    // season to season instead of the same clubs yo-yoing at random
+    // promoted clubs edge up in prestige, relegated clubs edge down — gently, so standings stay
+    // coherent season to season. This is the ONLY thing that moves the anchor reputation, and
+    // total anchor drift is capped at baseRep±10 so serial yo-yo clubs can't run away from their
+    // division's reputation band (runtime reputation = anchor + fading client legacy).
     _repDrift(ups, downs) {
-        (ups || []).forEach(id => { const c = Clubs.getClubById(id); if (c) c.reputation = Math.min(95, c.reputation + 2); });
-        (downs || []).forEach(id => { const c = Clubs.getClubById(id); if (c) c.reputation = Math.max(20, c.reputation - 2); });
+        const nudge = (id, dir) => {
+            const c = Clubs.getClubById(id); if (!c) return;
+            if (c.anchorRep == null) c.anchorRep = c.reputation;
+            if (c.baseRep == null) c.baseRep = c.anchorRep;
+            const lo = Math.max(20, c.baseRep - 10), hi = Math.min(95, c.baseRep + 10);
+            const before = c.anchorRep;
+            c.anchorRep = Math.max(lo, Math.min(hi, c.anchorRep + dir * 2));
+            // the moving reputation shifts by the same amount, preserving any client-earned excess
+            c.reputation = Math.max(20, Math.min(95, c.reputation + (c.anchorRep - before)));
+        };
+        (ups || []).forEach(id => nudge(id, +1));
+        (downs || []).forEach(id => nudge(id, -1));
     },
     applyPromotionRelegation() {
         const c = this.computeProRel();
@@ -427,6 +582,8 @@ const League = {
         this.applyPromotionRelegationGermany();
         this.applyPromotionRelegationSpain();
         this.applyPromotionRelegationSwiss();
+        this.applyPromotionRelegationItaly();
+        this.applyPromotionRelegationFrance();
         return c;
     },
 
@@ -522,8 +679,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
-            const r = this.playMatch(h, a, 'DFB', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'DFB', week === 47);
+            ties.push(t); winners.push(t.winner);
         });
         D.remaining = winners;
         D.results.push({ week, round: this._dfbRoundName(week), ties });
@@ -549,8 +706,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
-            const r = this.playMatch(h, a, 'LPOKAL', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'LPOKAL', week === 47);
+            ties.push(t); winners.push(t.winner);
         });
         P.remaining = winners;
         P.results.push({ week, round: this._lpokalRoundName(week), ties });
@@ -675,8 +832,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
-            const r = this.playMatch(h, a, comp, true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, comp, week === 47);
+            ties.push(t); winners.push(t.winner);
         });
         C.remaining = winners;
         C.results.push({ week, round: this._spanishCupRoundName(week), ties });
@@ -800,8 +957,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
-            const r = this.playMatch(h, a, 'SCHWCUP', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'SCHWCUP', week === 47);
+            ties.push(t); winners.push(t.winner);
         });
         C.results.push({ week, round: this._schweizerCupRoundName(week), ties });
         if (week === 4) { C._r1Winners = winners; return; }
@@ -842,8 +999,8 @@ const League = {
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
-            const r = this.playMatch(h, a, 'CUPABASS', true);
-            ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+            const t = this.playCupTie(h, a, 'CUPABASS', week === 47);
+            ties.push(t); winners.push(t.winner);
         });
         C.remaining = winners;
         C.results.push({ week, round: this._cupaBassRoundName(week), ties });
@@ -868,8 +1025,8 @@ const League = {
                 const t = this._twoLeggedTie(h, a, 'LICHCUP');
                 ties.push(t); winners.push(t.winner);
             } else {
-                const r = this.playMatch(h, a, 'LICHCUP', true);
-                ties.push({ h, a, hg: r.hg, ag: r.ag, winner: r.winner }); winners.push(r.winner);
+                const t = this.playCupTie(h, a, 'LICHCUP', true);
+                ties.push(t); winners.push(t.winner);
             }
         });
         C.remaining = winners;
@@ -952,13 +1109,327 @@ const League = {
         return L.prorelSwiss;
     },
 
+    // ================= ITALY =================
+    // Coppa Italia (Serie A/B/C, 64 clubs) & Coppa Compagno (Serie B/C/D, 64 clubs): built with the
+    // generic seeded-away cup builder (top-tier seeded, drawn away, kept apart in round 1; everyone
+    // else drawn at random), then a standard single-leg knockout bracket. Same 6-round schedule as
+    // the Spanish cups (64 clubs -> one fewer round than the 128-ish cups, so week 32 is skipped).
+    _italianCupRoundName(week) {
+        return ({ 4: 'Primo turno', 7: 'Secondo turno', 15: 'Ottavi di finale', 26: 'Quarti di finale', 38: 'Semifinali', 47: 'Finale' })[week] || 'Turno';
+    },
+    italianCupStep(key, week) {
+        const C = GameState.league[key]; if (!C || C.winner) return;
+        let pairs;
+        if (C.remaining === null) {
+            const seeded = this.shuffle(C.seeded.slice()), lower = this.shuffle(C.lower.slice());
+            pairs = [];
+            seeded.forEach(s => { const h = lower.pop(); pairs.push(h != null ? [h, s] : [s, null]); });   // seeded drawn away
+            while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
+            if (lower.length) pairs.push([lower.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        const comp = key === 'coppaitalia' ? 'COPPA' : 'COPPACOMP';
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const t = this.playCupTie(h, a, comp, week === 47);
+            ties.push(t); winners.push(t.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._italianCupRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // ---- Italian promotion play-off: two single-leg qualifiers feed two two-legged semi-finals
+    // (each hosted by a directly-seeded regular-season finisher), then a two-legged final decided on
+    // penalties if level. cfg gives 0-indexed final regular-season positions: sf1/sf2 are the seeded
+    // semi-final hosts; qf1/qf2 are the [higher, lower] pairs whose winner meets sf1/sf2 respectively. ----
+    _italianPromoSeries(div, cfg) {
+        const order = this.sortedTable(div).map(r => r.clubId);
+        const need = Math.max(cfg.sf1, cfg.sf2, cfg.qf1[0], cfg.qf1[1], cfg.qf2[0], cfg.qf2[1]) + 1;
+        if (order.length < need) return null;
+        const qf = (a, b) => { const r = this.playMatch(order[a], order[b], 'PO', true); return { h: order[a], a: order[b], hg: r.hg, ag: r.ag, winner: r.winner }; };   // higher seed hosts the single leg
+        const qf1 = qf(cfg.qf1[0], cfg.qf1[1]);
+        const qf2 = qf(cfg.qf2[0], cfg.qf2[1]);
+        const sf1 = this._twoLeggedTie(order[cfg.sf1], qf1.winner, 'PO');   // seeded finisher hosts leg 2
+        const sf2 = this._twoLeggedTie(order[cfg.sf2], qf2.winner, 'PO');
+        const seed = id => order.indexOf(id);
+        const a = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;   // higher regular-season finisher hosts final leg 2
+        const b = a === sf1.winner ? sf2.winner : sf1.winner;
+        const final = this._twoLeggedTie(a, b, 'PO');
+        return { qf: [qf1, qf2], sf: [sf1, sf2], final, winner: final.winner };
+    },
+    playPlayoffsItaly() {
+        const L = GameState.league;
+        if (!L.tables.SerieA) return;
+        // Serie B: 1-2 auto up; play-off among 3rd-8th (3rd/4th seeded into the semis, 6v7 & 5v8 qualifiers)
+        L.playoffs.SerieB = this._italianPromoSeries('SerieB', { sf1: 2, qf1: [5, 6], sf2: 3, qf2: [4, 7] });
+        // Serie C: 1-3 auto up; play-off among 4th-9th (4th/5th seeded, 7v8 & 6v9 qualifiers)
+        L.playoffs.SerieC = this._italianPromoSeries('SerieC', { sf1: 3, qf1: [6, 7], sf2: 4, qf2: [5, 8] });
+        // Serie D: 1-3 auto up; identical play-off shape to Serie C
+        L.playoffs.SerieD = this._italianPromoSeries('SerieD', { sf1: 3, qf1: [6, 7], sf2: 4, qf2: [5, 8] });
+    },
+    // ---- Italian relegation play-out: two-legged, penalties if level, the loser is relegated ----
+    _italianPlayout(div, aIdx, bIdx) {
+        const order = this.sortedTable(div).map(r => r.clubId);
+        if (order.length <= bIdx) return null;
+        const tie = this._twoLeggedTie(order[aIdx], order[bIdx], 'PO');
+        const relegated = tie.winner === order[aIdx] ? order[bIdx] : order[aIdx];
+        return { tie, relegated };
+    },
+    playItalianPlayouts() {
+        const L = GameState.league;
+        if (!L.tables.SerieA) { L.italianPlayout = null; return; }
+        L.italianPlayout = {
+            SerieB: this._italianPlayout('SerieB', 15, 16),   // 16th v 17th (20-team table)
+            SerieC: this._italianPlayout('SerieC', 19, 20)    // 20th v 21st (24-team table)
+        };
+    },
+
+    applyPromotionRelegationItaly() {
+        const L = GameState.league;
+        if (!L.tables.SerieA) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const A = ord('SerieA'), B = ord('SerieB'), C = ord('SerieC'), D = ord('SerieD');
+        const poW = d => (L.playoffs && L.playoffs[d]) ? L.playoffs[d].winner : null;
+        const pout = d => (L.italianPlayout && L.italianPlayout[d]) ? L.italianPlayout[d].relegated : null;
+
+        // Serie A: bottom 3 relegated directly (no Italian reserve sides exist, so no caps needed anywhere)
+        const aDown = A.slice(-3);
+        // Serie B: 2 auto + play-off winner up (3, matching A's 3 down); bottom 3 + play-out loser down (4)
+        const bUp = [B[0], B[1], poW('SerieB')].filter(Boolean);
+        const bDown = [...B.slice(-3), pout('SerieB')].filter(Boolean);
+        // Serie C: 3 auto + play-off winner up (4, matching B's 4 down); bottom 3 + play-out loser down (4)
+        const cUp = [C[0], C[1], C[2], poW('SerieC')].filter(Boolean);
+        const cDown = [...C.slice(-3), pout('SerieC')].filter(Boolean);
+        // Serie D: 3 auto + play-off winner up (4, matching C's 4 down); bottom rung — no relegation
+        const dUp = [D[0], D[1], D[2], poW('SerieD')].filter(Boolean);
+
+        const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
+        move(aDown, 'SerieB'); move(bUp, 'SerieA');
+        move(bDown, 'SerieC'); move(cUp, 'SerieB');
+        move(cDown, 'SerieD'); move(dUp, 'SerieC');
+
+        this._repDrift([...bUp, ...cUp, ...dUp], [...aDown, ...bDown, ...cDown]);
+        L.prorelIta = { aDown, bUp, bDown, cUp, cDown, dUp };
+        return L.prorelIta;
+    },
+
+    // ---- seasonal form rolls: called at rollover BEFORE promotion/relegation is applied, so
+    // expected/actual positions both refer to the season just finished. Expected position =
+    // the club's reputation rank inside its country's full ladder (Bayern 1st in Germany, a
+    // mid 2.Bundesliga side ~30th); actual = ladder position (higher divisions stacked on top,
+    // then finishing position). Streaks of under/over-performing shift the roll tables. ----
+    rollSeasonDeltas() {
+        Object.entries(COUNTRY_DIVS).forEach(([country, divs]) => {
+            if (!GameState.league || !GameState.league.tables[divs[0]]) return;
+            // actual ladder position per club: division offset + table position
+            const actualRank = {};
+            let offset = 0;
+            divs.forEach(div => {
+                const table = this.sortedTable(div);
+                table.forEach((row, i) => { actualRank[row.clubId] = offset + i + 1; });
+                offset += table.length;
+            });
+            // expected position: reputation rank across the same set of clubs
+            const clubs = Object.keys(actualRank).map(id => Clubs.getClubById(id)).filter(Boolean);
+            const byRep = clubs.slice().sort((a, b) => b.reputation - a.reputation);
+            const expectedRank = {};
+            byRep.forEach((c, i) => { expectedRank[c.id] = i + 1; });
+
+            clubs.forEach(c => {
+                const under = actualRank[c.id] > expectedRank[c.id];   // finished below expectation
+                const dir = under ? 'under' : 'over';
+                c.streakLen = (c.streakDir === dir) ? (c.streakLen || 0) + 1 : 1;
+                c.streakDir = dir;
+                if (under) {
+                    // 1st..5th under-season -> tables 1..5; the 6th resets to par and restarts
+                    if (c.streakLen >= 6) { c.seasonDelta = 0; c.streakLen = 0; }
+                    else c.seasonDelta = rollFromTable(c.streakLen - 1, false);
+                } else {
+                    // over-performing rolls only from the 2nd season on (inverted tables); the
+                    // 7th consecutive over-season resets to par and restarts
+                    if (c.streakLen === 1) c.seasonDelta = 0;
+                    else if (c.streakLen >= 7) { c.seasonDelta = 0; c.streakLen = 0; }
+                    else c.seasonDelta = rollFromTable(c.streakLen - 2, true);
+                }
+            });
+        });
+    },
+
+    // ---- rollover reputation upkeep. Each club's roster-justified level is
+    // anchor + Σ max(0, clientAbility − anchor)/11 over the agent's clients currently there
+    // (current ability — talents growing at the club keep raising it, uncapped). Reputation
+    // rises to that level promptly, but when the justified level drops (players left or
+    // declined) it only fades by 1–5 points a season, never snapping down. ----
+    normalizeReputations() {
+        const boost = new Map();
+        GameState.players.forEach(p => {
+            if (p.agentId !== 'me' || p.archived) return;
+            const cid = effectiveClubId(p); if (!cid) return;
+            const c = Clubs.getClubById(cid); if (!c) return;
+            const anchor = c.anchorRep != null ? c.anchorRep : c.reputation;
+            boost.set(cid, (boost.get(cid) || 0) + Math.max(0, p.ability - anchor) / 11);
+        });
+        Clubs.allClubs.forEach(c => {
+            if (c.anchorRep == null) c.anchorRep = c.reputation;
+            const target = Math.round(Math.max(20, Math.min(95, c.anchorRep + (boost.get(c.id) || 0))));
+            if (c.reputation < target) c.reputation = target;
+            else if (c.reputation > target) c.reputation = Math.max(target, Math.round(c.reputation - (1 + Math.random() * 4)));
+        });
+    },
+
+    // Match strength (world model): the club's moving reputation, plus this season's rolled
+    // form delta, plus the live boost from any of the agent's clients in the squad. Direct —
+    // no squad-average blending; NPC squads no longer factor into results at all.
+
+    // ================= FRANCE =================
+    // Coupe de France (128 entrants: all 100 league clubs + 28 random overseas virtual clubs).
+    // 128 = 2^7, so the bracket runs cleanly to a 2-team final with no byes. All enter round 1;
+    // Ligue 1 clubs are seeded so they can't meet each other in R1; in every round the
+    // higher-division side is drawn away (playCupTie), and the final is on neutral ground.
+    _buildCoupeFrance() {
+        const league = ['Ligue1', 'Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);
+        const virt = this.shuffle(COUPEFR_VIRTUAL.map(v => v.id)).slice(0, 28);
+        return { entrants: league.concat(virt), remaining: null, results: [], winner: null };
+    },
+    _coupeFranceRoundName(week) {
+        return ({ 4: 'Premier tour', 7: 'Trente-deuxièmes de finale', 15: 'Seizièmes de finale', 26: 'Huitièmes de finale', 32: 'Quarts de finale', 38: 'Demi-finales', 47: 'Finale' })[week] || 'Tour';
+    },
+    coupeFranceStep(week) {
+        const C = GameState.league.coupefrance; if (!C || C.winner) return;
+        let pairs;
+        if (C.remaining === null) {
+            const l1 = new Set(Clubs.getClubsByDivision('Ligue1').map(c => c.id));
+            const seeded = this.shuffle(C.entrants.filter(id => l1.has(id)));   // Ligue 1: kept apart
+            const lower = this.shuffle(C.entrants.filter(id => !l1.has(id)));
+            pairs = [];
+            seeded.forEach(s => { const h = lower.pop(); pairs.push(h != null ? [h, s] : [s, null]); });
+            while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
+            if (lower.length) pairs.push([lower.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        const isFinal = week === 47;
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const t = this.playCupTie(h, a, 'COUPEFR', isFinal);
+            ties.push(t); winners.push(t.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._coupeFranceRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // Coupe National (64 clubs: all of Ligue 3, 4 and 5). No seeding; higher-division side away;
+    // neutral final. A clean 64-team knockout over 6 rounds (skips week 32).
+    _buildCoupeNational() { return { remaining: null, results: [], winner: null }; },
+    _coupeNationalRoundName(week) {
+        return ({ 4: 'Trente-deuxièmes', 7: 'Seizièmes', 15: 'Huitièmes', 26: 'Quarts', 38: 'Demi-finales', 47: 'Finale' })[week] || 'Tour';
+    },
+    coupeNationalStep(week) {
+        const C = GameState.league.coupenational; if (!C || C.winner) return;
+        let pairs;
+        if (C.remaining === null) {
+            const all = ['Ligue3', 'Ligue4', 'Ligue5'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);
+            pairs = this._pairUp(this.shuffle(all));
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        const isFinal = week === 47;
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const t = this.playCupTie(h, a, 'COUPENAT', isFinal);
+            ties.push(t); winners.push(t.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._coupeNationalRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // ---- French promotion mini-bracket: two single-leg games (higher-placed side hosts each)
+    // feed the "Ligue X / Ligue Y" barrage. cfg.g1 = [higherIdx, lowerIdx] first game; its winner
+    // then visits cfg.seed (the higher regular-season finisher, who hosts). ----
+    _frenchPromoBracket(div, cfg) {
+        const order = this.sortedTable(div).map(r => r.clubId);
+        const need = Math.max(cfg.g1[0], cfg.g1[1], cfg.seed) + 1;
+        if (order.length < need) return null;
+        const leg = (homeId, awayId) => { const r = this.playMatch(homeId, awayId, 'PO', true); return { h: homeId, a: awayId, hg: r.hg, ag: r.ag, winner: r.winner }; };
+        const g1 = leg(order[cfg.g1[0]], order[cfg.g1[1]]);
+        const g2 = leg(order[cfg.seed], g1.winner);
+        return { g1, g2, winner: g2.winner };
+    },
+    // ---- the barrage itself: two-legged (higher-division side hosts leg 2), penalties if level.
+    // Winner plays in the higher division next season. ----
+    _frenchBarrage(higherId, challengerId) { return this._twoLeggedTie(higherId, challengerId, 'PO'); },
+    playPlayoffsFrance() {
+        const L = GameState.league;
+        if (!L.tables.Ligue1) return;
+        L.playoffs.Ligue2 = this._frenchPromoBracket('Ligue2', { g1: [3, 4], seed: 2 });   // 5v4 -> v3
+        L.playoffs.Ligue3 = this._frenchPromoBracket('Ligue3', { g1: [3, 4], seed: 2 });
+        L.playoffs.Ligue4 = this._frenchPromoBracket('Ligue4', { g1: [4, 5], seed: 3 });   // 6v5 -> v4
+        L.playoffs.Ligue5 = this._frenchPromoBracket('Ligue5', { g1: [5, 6], seed: 4 });   // 7v6 -> v5
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const L1 = ord('Ligue1'), L2 = ord('Ligue2'), L3 = ord('Ligue3'), L4 = ord('Ligue4');
+        const bw = d => (L.playoffs[d] ? L.playoffs[d].winner : null);
+        const bar = (defenderId, ch) => (defenderId && ch) ? this._frenchBarrage(defenderId, ch) : null;
+        L.frenchBarrage = {
+            L1L2: bar(L1[15], bw('Ligue2')),   // Ligue 1's 16th vs Ligue 2 bracket winner
+            L2L3: bar(L2[15], bw('Ligue3')),   // Ligue 2's 16th vs Ligue 3 bracket winner
+            L3L4: bar(L3[14], bw('Ligue4')),   // Ligue 3's 15th vs Ligue 4 bracket winner
+            L4L5: bar(L4[17], bw('Ligue5')),   // Ligue 4's 18th vs Ligue 5 bracket winner
+        };
+    },
+
+    applyPromotionRelegationFrance() {
+        const L = GameState.league;
+        if (!L.tables.Ligue1) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const L1 = ord('Ligue1'), L2 = ord('Ligue2'), L3 = ord('Ligue3'), L4 = ord('Ligue4'), L5 = ord('Ligue5');
+        const bar = L.frenchBarrage || {};
+        const bw = d => (L.playoffs && L.playoffs[d]) ? L.playoffs[d].winner : null;
+
+        // direct movements
+        const l1Down = [L1[16], L1[17]];
+        const l2Up = [L2[0], L2[1]];
+        const l2Down = [L2[16], L2[17]];
+        const l3Up = [L3[0], L3[1]];
+        const l3Down = [L3[15], L3[16], L3[17]];
+        const l4Up = [L4[0], L4[1], L4[2]];
+        const l4Down = [L4[18], L4[19], L4[20], L4[21]];
+        const l5Up = [L5[0], L5[1], L5[2], L5[3]];
+
+        // barrage crossings: the lower-division challenger only goes up (and the higher-division
+        // defender down) when the challenger actually wins the two-legged tie
+        const cross = (barTie, challengerId, defenderId) => (barTie && challengerId && barTie.winner === challengerId)
+            ? { up: [challengerId], down: [defenderId] } : { up: [], down: [] };
+        const c1 = cross(bar.L1L2, bw('Ligue2'), L1[15]);
+        const c2 = cross(bar.L2L3, bw('Ligue3'), L2[15]);
+        const c3 = cross(bar.L3L4, bw('Ligue4'), L3[14]);
+        const c4 = cross(bar.L4L5, bw('Ligue5'), L4[17]);
+
+        const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
+        move([...l1Down, ...c1.down], 'Ligue2'); move([...l2Up, ...c1.up], 'Ligue1');
+        move([...l2Down, ...c2.down], 'Ligue3'); move([...l3Up, ...c2.up], 'Ligue2');
+        move([...l3Down, ...c3.down], 'Ligue4'); move([...l4Up, ...c3.up], 'Ligue3');
+        move([...l4Down, ...c4.down], 'Ligue5'); move([...l5Up, ...c4.up], 'Ligue4');
+
+        this._repDrift(
+            [...l2Up, ...c1.up, ...l3Up, ...c2.up, ...l4Up, ...c3.up, ...l5Up, ...c4.up],
+            [...l1Down, ...c1.down, ...l2Down, ...c2.down, ...l3Down, ...c3.down, ...l4Down, ...c4.down]);
+        L.prorelFra = { l1Down, l2Up, l2Down, l3Up, l3Down, l4Up, l4Down, l5Up,
+            barrageUp: [...c1.up, ...c2.up, ...c3.up, ...c4.up], barrageDown: [...c1.down, ...c2.down, ...c3.down, ...c4.down] };
+        return L.prorelFra;
+    },
+
     clubStrength(clubId) {
         const c = Clubs.getClubById(clubId);
         if (!c) { const v = findVirtualClub(clubId); return v ? v.reputation : 50; }
-        const squad = GameState.players.filter(p => effectiveClubId(p) === clubId && !p.injury);
-        const top = squad.sort((a, b) => b.ability - a.ability).slice(0, 11);
-        const avg = top.length ? top.reduce((s, p) => s + p.ability, 0) / top.length : c.reputation;
-        return c.reputation * 0.5 + avg * 0.5;
+        const base = c.reputation + (c.seasonDelta || 0);
+        return base + clientStrengthBonus(clubId, base);
     },
     teamName(id) {
         const c = Clubs.getClubById(id);
@@ -1032,7 +1503,16 @@ const League = {
         if ([4, 7, 15, 26, 38, 47].includes(week) && L.cupabass) this.cupaBassStep(week);
         if ([32, 38, 47].includes(week) && L.lichcup) this.lichCupStep(week);
 
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); L.playoffs._done = true; }
+        // Italian cups: both are 64 clubs, so 6 rounds skipping week 32 like the Spanish/Cupa Bass cups
+        if ([4, 7, 15, 26, 38, 47].includes(week) && L.coppaitalia) this.italianCupStep('coppaitalia', week);
+        if ([4, 7, 15, 26, 38, 47].includes(week) && L.coppacompagno) this.italianCupStep('coppacompagno', week);
+
+        // French cups: Coupe de France is 124 clubs -> 7 rounds (uses week 32); Coupe National
+        // is a clean 64 -> 6 rounds (skips week 32)
+        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.coupefrance) this.coupeFranceStep(week);
+        if ([4, 7, 15, 26, 38, 47].includes(week) && L.coupenational) this.coupeNationalStep(week);
+
+        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); L.playoffs._done = true; }
     },
 
     playLeagueMatch(div, homeId, awayId) {
@@ -1047,7 +1527,9 @@ const League = {
     },
 
     playMatch(homeId, awayId, compId, homeAdv = false) {
-        const sh = this.clubStrength(homeId) + (homeAdv ? 4 : 0);
+        // home edge: +6 in leagues/play-offs, +8 in cups (one-off knockout nights swing harder)
+        const advSize = (COMPETITIONS[compId] && COMPETITIONS[compId].type === 'cup') ? 8 : 6;
+        const sh = this.clubStrength(homeId) + (homeAdv ? advSize : 0);
         const sa = this.clubStrength(awayId);
         const hg = this.scoreGoals(sh, sa);
         const ag = this.scoreGoals(sa, sh);
@@ -1068,8 +1550,11 @@ const League = {
 
     assignStats(clubId, compId, scored, conceded) {
         const year = GameState.seasonStartYear;
-        const squad = GameState.players.filter(p => effectiveClubId(p) === clubId && !p.injury);
-        if (!squad.length) return;
+        // world model: only clubs hosting a sim-relevant player (client / ex-client / scouted
+        // prospect) get their match dressed in player detail — for everyone else the result is
+        // enough, and NPC stat buckets (which nobody could ever view) stop accumulating
+        const squad = relevantSquads().get(clubId);
+        if (!squad || !squad.length) return;
 
         // serve suspensions: a banned player sits this one out (no appearance) and his ban ticks down
         const available = [];
@@ -1160,6 +1645,7 @@ const League = {
             if (conceded === 0 && (p.position === 'GK' || p.position === 'CB' || p.position === 'LB' || p.position === 'RB')) rating += 0.6;
             if (conceded >= 3 && (p.position === 'GK' || p.position === 'CB')) rating -= 0.45;
             rating += PlayerGen.gauss(0, 0.4);
+            rating += moraleRatingMod(moraleAvg(p));   // derived from avg morale only — never a single dimension
             c.ratingSum += Math.max(4.0, Math.min(10, rating));
         });
     },
@@ -1188,6 +1674,10 @@ const League = {
         if (L.schwcup && L.schwcup.winner) this.awardTrophy(L.schwcup.winner, 'SCHWCUP', year, awarded);
         if (L.cupabass && L.cupabass.winner) this.awardTrophy(L.cupabass.winner, 'CUPABASS', year, awarded);
         if (L.lichcup && L.lichcup.winner) this.awardTrophy(L.lichcup.winner, 'LICHCUP', year, awarded);
+        if (L.coppaitalia && L.coppaitalia.winner) this.awardTrophy(L.coppaitalia.winner, 'COPPA', year, awarded);
+        if (L.coppacompagno && L.coppacompagno.winner) this.awardTrophy(L.coppacompagno.winner, 'COPPACOMP', year, awarded);
+        if (L.coupefrance && L.coupefrance.winner) this.awardTrophy(L.coupefrance.winner, 'COUPEFR', year, awarded);
+        if (L.coupenational && L.coupenational.winner) this.awardTrophy(L.coupenational.winner, 'COUPENAT', year, awarded);
         L.finished = true;
         return awarded;
     },
@@ -1198,7 +1688,13 @@ const League = {
             return Object.values(s).some(st => st.clubId === clubId && !st.youth);
         });
         const clientWinners = [];
-        winners.forEach(p => { p.trophies.push({ year, compId, clubId }); if (p.agentId === 'me') clientWinners.push(p.id); });
+        winners.forEach(p => {
+            p.trophies.push({ year, compId, clubId });
+            if (p.agentId === 'me') {
+                clientWinners.push(p.id);
+                if (p.morale) { p.morale.club = Math.min(100, p.morale.club + MORALE.TROPHY_CLUB); p.morale.agent = Math.min(100, p.morale.agent + MORALE.TROPHY_AGENT); }
+            }
+        });
         awarded.push({ clubId, compId, clients: clientWinners });
     }
 };

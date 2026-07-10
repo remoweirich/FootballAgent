@@ -1,0 +1,9 @@
+The Fairphone (FP6), Android 16
+
+debug build: 
+PS C:\Users\Jens\Documents\fussball-agent-app\FootballAgent> git rev-parse --short HEAD
+2c1e289
+
+Exact scenario: Season 8, simulating 20 weeks, some contract, transfer and loan deals, some players left (morale). 1 Season rollover. Netherlands as home country, initially 11 clients, now 9.
+
+device plugged into pc for usb Debugging.

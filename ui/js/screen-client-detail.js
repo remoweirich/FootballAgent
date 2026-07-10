@@ -205,9 +205,9 @@ const ClientDetail = {
         const p = GameState.getPlayer(id), s = this.ctx(id).sign;
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Offer representation — ${p.name}</div>
             <p class="hint">Agree your cut of his wage and sponsorships, and how many seasons you'll represent him.</p>
-            <label class="field-label">Your wage cut: <span id="signWageVal">${s.wage}</span>%</label><input class="range" type="range" min="1" max="25" value="${s.wage}" oninput="ClientDetail.signSlide('${id}','wage',this.value)">
-            <label class="field-label">Your sponsor cut: <span id="signSponsorVal">${s.sponsor}</span>%</label><input class="range" type="range" min="1" max="25" value="${s.sponsor}" oninput="ClientDetail.signSlide('${id}','sponsor',this.value)">
-            <label class="field-label">Representation length: <span id="signTermVal">${s.term}</span> season(s)</label><input class="range" type="range" min="1" max="10" value="${s.term}" oninput="ClientDetail.signSlide('${id}','term',this.value)">
+            <label class="field-label">Your wage cut: <span id="signWageVal" class="editable-val">${s.wage}</span>%</label><input class="range" type="range" min="1" max="25" value="${s.wage}" oninput="ClientDetail.signSlide('${id}','wage',this.value)">
+            <label class="field-label">Your sponsor cut: <span id="signSponsorVal" class="editable-val">${s.sponsor}</span>%</label><input class="range" type="range" min="1" max="25" value="${s.sponsor}" oninput="ClientDetail.signSlide('${id}','sponsor',this.value)">
+            <label class="field-label">Representation length: <span id="signTermVal" class="editable-val">${s.term}</span> season(s)</label><input class="range" type="range" min="1" max="10" value="${s.term}" oninput="ClientDetail.signSlide('${id}','term',this.value)">
             <button class="btn btn--primary" style="margin-top:var(--space-5)" onclick="ClientDetail.proposeSign('${id}')"><i class="ti ti-send"></i>Propose terms</button>
             <div id="actionResult"></div>`);
     },
@@ -257,19 +257,91 @@ const ClientDetail = {
     },
 
     // ---------------- Morale ----------------
+    MORALE_DIM_LABEL: { club: 'Club', time: 'Playing time', wage: 'Wage', agent: 'You (agent)' },
     tabMorale(p) {
         const m = p.morale || {};
+        const hist = p._moraleHist || [];
         const rows = [['club', 'Club', 'Happiness at the club (low if the club is below his level)'],
         ['time', 'Playing time', 'Satisfaction with minutes played'], ['wage', 'Wage', 'How fairly paid he feels'],
         ['agent', 'You (agent)', 'How he feels about your representation']];
-        return rows.map(([k, label, hint]) => {
+        const trend = (k, v) => {
+            if (!hist.length) return '';
+            const then = hist[0][k];
+            const d = v - then;
+            if (Math.abs(d) < 2) return '';   // steady - no icon rather than a borrowed one that doesn't fit
+            const up = d > 0;
+            return `<i class="ti ${up ? 'ti-trending-up' : 'ti-trending-down'}" style="color:var(${up ? '--state-good' : '--state-bad'});font-size:13px" title="${up ? '+' : ''}${Math.round(d)} vs 4 weeks ago"></i>`;
+        };
+        const bars = rows.map(([k, label, hint]) => {
             const v = Math.round(m[k] || 0);
             return `<div style="margin-bottom:15px">
-                <div class="flex-row" style="justify-content:space-between;margin-bottom:6px"><span style="font-size:13.5px;font-weight:var(--weight-semibold)">${label}</span><span style="font-size:12.5px;font-weight:var(--weight-semibold);color:var(${UI.moraleVar(v)})">${v}</span></div>
+                <div class="flex-row" style="justify-content:space-between;margin-bottom:6px"><span style="font-size:13.5px;font-weight:var(--weight-semibold)">${label}</span><span class="flex-row" style="gap:5px"><span style="font-size:12.5px;font-weight:var(--weight-semibold);color:var(${UI.moraleVar(v)})">${v}</span>${trend(k, v)}</span></div>
                 <div class="bar"><div class="bar__fill" style="width:${v}%;background:var(${UI.moraleVar(v)})"></div></div>
                 <div class="hint" style="margin-top:6px">${hint}</div>
             </div>`;
-        }).join('') + `<div class="fcard" style="padding:11px 12px;font-size:var(--fs-sm);color:var(--text-muted);line-height:1.5">Overall morale is a weighted average of the four. Low playing-time morale often comes before a transfer request.</div>`;
+        }).join('');
+        return bars + this.moraleCaseCard(p) + `<div class="fcard" style="padding:11px 12px;font-size:var(--fs-sm);color:var(--text-muted);line-height:1.5;margin-bottom:var(--space-5)">Overall morale is the average of the four. Arrows compare against 4 weeks ago. Low playing-time morale often comes before a transfer request.</div>` + this.moraleAgentBlock(p);
+    },
+    moraleCaseCard(p) {
+        const c = p.moraleCase; if (!c) return '';
+        const aw = GameState.absWeek();
+        const stageLabel = { 1: 'Private complaint', 2: 'Demanding action', 3: 'Breaking point' }[c.stage] || `Stage ${c.stage}`;
+        const stageColor = c.stage >= 3 ? 'var(--danger)' : c.stage === 2 ? 'var(--warning)' : 'var(--info)';
+        let body = `<div class="hint">${p.name} is unhappy about <b>${(this.MORALE_DIM_LABEL[c.dim] || c.dim).toLowerCase()}</b>.</div>`;
+        if (c.promise) {
+            const weeksLeft = Math.max(0, Math.ceil((c.promise.deadlineAbsWeek - aw)));
+            const typeLabel = { move: 'find him a move', newContract: 'get him a new contract', playingTime: 'sort out his playing time', renegotiateRep: 'renegotiate your terms' }[c.promise.type] || c.promise.type;
+            body += `<div class="frow"><span class="frow__k"><i class="ti ti-signature"></i>Promise</span><span class="frow__v">You'll ${typeLabel}</span></div>
+                <div class="frow"><span class="frow__k"><i class="ti ti-calendar"></i>Deadline</span><span class="frow__v" style="${weeksLeft <= 2 ? 'color:var(--danger)' : ''}">${weeksLeft} week${weeksLeft === 1 ? '' : 's'} left</span></div>`;
+        }
+        if (c.stage === 1) {
+            const cd = p._talkCooldownAbs != null ? Math.max(0, MORALE.TALK_COOLDOWN_WEEKS - (aw - p._talkCooldownAbs)) : 0;
+            body += `<div class="flex-row" style="margin-top:var(--space-3)">
+                <button class="btn btn--ghost btn--sm" ${cd > 0 ? 'disabled' : ''} onclick="ClientDetail.talkToClient('${p.id}')"><i class="ti ti-mail"></i>${cd > 0 ? `Talked recently (${Math.ceil(cd)}w)` : 'Talk to him'}</button>
+                ${!c.promise ? `<button class="btn btn--accent-outline btn--sm" onclick="ClientDetail.openPromiseSheet('${p.id}')"><i class="ti ti-signature"></i>Make a promise</button>` : ''}
+            </div>`;
+        } else if (!c.promise) {
+            body += `<div class="hint" style="margin-top:4px">He's taken this further — see your inbox for what's changed.</div>`;
+        }
+        return `<div class="section-label" style="margin-top:var(--space-2)">Open case</div>
+            <div class="fcard" style="margin-bottom:var(--space-5)">
+                <div class="frow"><span class="frow__k"><i class="ti ti-flag" style="color:${stageColor}"></i>Status</span><span class="frow__v" style="color:${stageColor}">${stageLabel}</span></div>
+                ${body}
+            </div>`;
+    },
+    talkToClient(id) { const r = Agency.talkToClient(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
+    openPromiseSheet(id) {
+        const p = GameState.getPlayer(id);
+        const types = Agency.validPromiseTypes(p);
+        const labels = { move: ['Find him a move', 'Promise to get him transferred out before the deadline.'], newContract: ['Get him a new contract', 'Promise to renew his deal with the club.'], playingTime: ['Sort out his playing time', 'Promise a loan or move that gets him regular football.'], renegotiateRep: ['Renegotiate your terms', 'Promise to revisit your representation agreement.'] };
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Promise ${p.name}</div>
+            <p class="hint">Miss the deadline and it'll cost you — agent morale drops and the case escalates.</p>
+            ${types.length ? types.map(t => `<button class="btn btn--ghost" style="width:100%;justify-content:flex-start;text-align:left;margin-bottom:8px" onclick="ClientDetail.doPromise('${id}','${t}')"><div><div style="font-weight:var(--weight-semibold)">${(labels[t] || [t])[0]}</div><div class="hint">${(labels[t] || ['', ''])[1]}</div></div></button>`).join('') : '<p class="muted">No promise fits this situation right now.</p>'}
+            <button class="btn btn--ghost" onclick="Router.closeSheet()">Cancel</button>`);
+    },
+    doPromise(id, type) {
+        const r = Agency.makePromise(GameState.getPlayer(id), type);
+        GameState.save(); Router.closeSheet(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
+    // gifts + agent relationship actions live here (moved off the Contract tab, which is
+    // facts-only) since they're all levers against the same morale.agent dimension
+    moraleAgentBlock(p) {
+        const refusing = p.moraleCase && p.moraleCase.dim === 'agent' && p.moraleCase.stage >= 3;
+        const tierBtn = (tier, label) => {
+            const cost = Agency.giftCost(tier, p);
+            const ready = Agency.giftTierReady(p, tier);
+            const disabled = refusing || !ready;
+            let note = '';
+            if (refusing) note = 'refuses gifts';
+            else if (!ready) note = 'on cooldown';
+            return `<button class="btn btn--ghost btn--sm" ${disabled ? 'disabled' : ''} onclick="ClientDetail.gift('${p.id}','${tier}')"><i class="ti ti-gift"></i>${label} · ${UI.euro(cost)}${note ? ` (${note})` : ''}</button>`;
+        };
+        return `<div class="section-label">Agent relationship</div>
+            <div class="flex-row" style="margin-bottom:var(--space-4);flex-wrap:wrap">
+                ${tierBtn('small', 'Small gift')}
+                ${tierBtn('medium', 'Medium gift')}
+                ${tierBtn('large', 'Large gift')}
+            </div>`;
     },
 
     // ---------------- Injuries ----------------
@@ -313,13 +385,7 @@ const ClientDetail = {
             </div>
             <button class="btn btn--accent-outline" onclick="ClientDetail.reqRenewal('${p.id}')"><i class="ti ti-file-pencil"></i>Request renewal with club</button>
             <div class="section-label" style="margin-top:var(--space-5)">Active sponsor deals</div>
-            <div class="fcard">${sponsors.length ? sponsors.map(d => `<div class="frow"><span class="frow__k">${d.company}</span><span class="frow__v">${UI.euro(d.weekly)}/wk · to ${GameState.seasonLabelFor(d.untilSeason)}</span></div>`).join('') : `<div class="empty empty--inline"><div class="empty__icon"><i class="ti ti-tag"></i></div><div class="empty__hint">No active sponsor deals.</div></div>`}</div>
-            <div class="section-label">Agent morale</div>
-            <div class="flex-row" style="margin-bottom:var(--space-4)">
-                <button class="btn btn--ghost btn--sm" onclick="ClientDetail.gift('${p.id}','small')"><i class="ti ti-gift"></i>Small gift</button>
-                <button class="btn btn--ghost btn--sm" onclick="ClientDetail.gift('${p.id}','medium')"><i class="ti ti-gift"></i>Medium gift</button>
-                <button class="btn btn--ghost btn--sm" onclick="ClientDetail.gift('${p.id}','large')"><i class="ti ti-gift"></i>Large gift</button>
-            </div>
+            <div class="fcard" style="margin-bottom:var(--space-5)">${sponsors.length ? sponsors.map(d => `<div class="frow"><span class="frow__k">${d.company}</span><span class="frow__v">${UI.euro(d.weekly)}/wk · to ${GameState.seasonLabelFor(d.untilSeason)}</span></div>`).join('') : `<div class="empty empty--inline"><div class="empty__icon"><i class="ti ti-tag"></i></div><div class="empty__hint">No active sponsor deals.</div></div>`}</div>
             <button class="btn btn--danger" onclick="ClientDetail.release('${p.id}')"><i class="ti ti-user-x"></i>End representation · release (${UI.euro(releaseFee)})</button>`;
     },
     gift(id, tier) { const r = Agency.giveGift(GameState.getPlayer(id), tier); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
@@ -391,23 +457,34 @@ const ClientDetail = {
         const gOrCs = o => gk ? `${o.cs || 0} cs` : `${o.goals} g`;
         const ctx = this.ctx(p.id);
         const honours = this.honoursLine(p);
-        const seasonBlocks = years.map(y => {
-            const stints = seasonStints(p, y), t = seasonTotals(p, y), open = ctx.expanded[y];
-            const troph = (p.trophies || []).filter(tr => tr.year === y);
-            const totLine = `${t.apps} apps · ${gOrCs(t)} · ${t.assists} a · <span class="hist-sym">${t.yellow}🟨 ${t.red}🟥</span> · ${t.avg ? t.avg.toFixed(2) : '—'}`;
-            const endStint = stints[stints.length - 1];
-            const endClub = endStint ? Clubs.getClubById(endStint.clubId) : null;
-            const endLabel = endStint ? `${this.clubLink(endStint.clubId, UI.clubName(endStint.clubId))}${endClub ? ', ' + endClub.divisionName : ''}` : GameState.seasonLabelFor(y);
+
+        // One row per (season, club) STINT, not one merged row per season — a
+        // mid-season transfer means two clubs played for in the same season, and each
+        // gets its own entry (e.g. "Manchester United 26/27" and "Real Madrid 26/27")
+        // rather than being silently combined under whichever club he ended up at.
+        const rows = [];
+        years.forEach(y => { seasonStints(p, y).forEach(st => rows.push({ y, st })); });
+        rows.sort((a, b) => b.y - a.y || (b.st.order || 0) - (a.st.order || 0));
+        const seasonBlocks = rows.map(({ y, st }) => {
+            const rowKey = `${y}:${st.clubId}${st.loan ? '#L' : ''}`;
+            const open = ctx.expanded[rowKey];
+            // trophies carry a clubId, so a title is only shown on the stint that
+            // actually earned it, not just whichever stint happens to end the season
+            const troph = (p.trophies || []).filter(tr => tr.year === y && tr.clubId === st.clubId);
+            const t = st.totals;
+            const cards = `<span class="card-chip card-chip--yellow"></span>${t.yellow} <span class="card-chip card-chip--red"></span>${t.red}`;
+            const totLine = `${t.apps} apps · ${gOrCs(t)} · ${t.assists} a · ${cards} · ${UI.ratingText(t.avg)}`;
+            const club = Clubs.getClubById(st.clubId);
+            // club name stands alone on its own line; the league moves down next to the season
+            const nameLabel = this.clubLink(st.clubId, UI.clubLabel(st.clubId, st.loan, st.youth));
+            const seasonLine = `${GameState.seasonLabelFor(y)}${club ? ' · ' + club.divisionName : ''}`;
             let inner = '';
             if (open) {
-                inner = '<div class="season-body">' + stints.slice().reverse().map(st => {
-                    const head = `<div class="frow"><span class="frow__k">${this.clubLink(st.clubId, UI.clubLabel(st.clubId, st.loan, st.youth))}</span><span class="frow__v">${st.totals.apps} apps · ${gOrCs(st.totals)} · ${st.totals.assists} a</span></div>`;
-                    const comps = `<div class="stint-comps">${Object.entries(st.comps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} apps · ${gk ? (c.cs || 0) + ' cs' : c.goals + ' g'} · ${c.assists} a</span></div>`).join('')}</div>`;
-                    return head + comps;
-                }).join('') + (troph.length ? `<div class="comp-row" style="color:var(--gold)"><span class="hist-sym">🏆</span> ${troph.map(tr => compName(tr.compId)).join(', ')}</div>` : '') + '</div>';
+                const comps = `<div class="stint-comps">${Object.entries(st.comps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} apps · ${gk ? (c.cs || 0) + ' cs' : c.goals + ' g'} · ${c.assists} a</span></div>`).join('')}</div>`;
+                inner = '<div class="season-body">' + comps + (troph.length ? `<div class="comp-row" style="color:var(--gold)"><span class="hist-sym">🏆</span> ${troph.map(tr => compName(tr.compId)).join(', ')}</div>` : '') + '</div>';
             }
-            return `<div class="season-row ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}',${y})">
-                <div class="season-top"><div><span class="season-name">${endLabel}</span><div class="season-club">${GameState.seasonLabelFor(y)} ${troph.length ? '<span class="hist-sym">🏆</span>' : ''}</div></div><span class="season-stat">${totLine}<br><i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>${inner}</div>`;
+            return `<div class="season-row ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','${rowKey}')">
+                <div class="season-top"><div><span class="season-name">${nameLabel}</span><div class="season-club">${seasonLine} ${troph.length ? '<span class="hist-sym">🏆</span>' : ''}</div></div><span class="season-stat">${totLine}<br><i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>${inner}</div>`;
         }).join('');
 
         const ct = careerTotal(p), careerOpen = ctx.careerOpen, mode = ctx.careerMode;
@@ -427,7 +504,7 @@ const ClientDetail = {
         const careerBlock = `<div class="season-row ${careerOpen ? 'is-open' : ''}" onclick="ClientDetail.toggleCareer('${p.id}')">
             <div class="season-top"><span class="season-name">Career total <span class="muted">(senior)</span></span><span class="season-stat">${ct.apps} apps · ${gOrCs(ct)} · ${ct.assists} a<br><i class="ti ${careerOpen ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>
             ${careerOpen ? `<div class="season-body">${careerInner}</div>` : ''}</div>`;
-        return honours + `<div class="fcard">${seasonBlocks}${careerBlock}</div><p class="hint">Youth (U21) games are shown but excluded from senior totals.</p>`;
+        return honours + `<div class="fcard hist-list">${seasonBlocks}${careerBlock}</div><p class="hint">Youth (U21) games are shown but excluded from senior totals.</p>`;
     },
     clubLink(clubId, html) {
         if (!Clubs.getClubById(clubId)) return html;
@@ -446,7 +523,7 @@ const ClientDetail = {
         });
         return parts.length ? `<div class="chip-row" style="margin-bottom:var(--space-4)">${parts.join('')}</div>` : '';
     },
-    toggleSeason(id, y) { const c = this.ctx(id); c.expanded[y] = !c.expanded[y]; Router.refresh(); },
+    toggleSeason(id, rowKey) { const c = this.ctx(id); c.expanded[rowKey] = !c.expanded[rowKey]; Router.refresh(); },
     toggleCareer(id) { this.ctx(id).careerOpen = !this.ctx(id).careerOpen; Router.refresh(); },
     setCareerMode(id, m) { const c = this.ctx(id); c.careerMode = m; c.careerOpen = true; Router.refresh(); }
 };
