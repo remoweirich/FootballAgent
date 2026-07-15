@@ -969,6 +969,232 @@ const LEAGUES_DATA = {
             }
         ]
     },
+    "Portugal": {
+        country: "Portugal",
+        tiers: [
+            {
+                id: "LigaPortugal",
+                name: "Primeira Liga",
+                tier: 1,
+                clubs: [
+                    { id: "porto", name: "FC Porto", city: "Porto", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 80 },
+                    { id: "sporting", name: "Sporting", city: "Lisbon", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 82 },
+                    { id: "benfica", name: "Benfica", city: "Lisbon", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 82 },
+                    { id: "sc braga", name: "SC Braga", city: "Braga", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 77 },
+                    { id: "famalicão", name: "Famalicão", city: "Vila Nova de Famalicão", colors: { primary: "#D4AF37", secondary: "#12245C" }, reputation: 74 },
+                    { id: "gil vicente", name: "Gil Vicente", city: "Barcelos", colors: { primary: "#1E4FCB", secondary: "#F1636B" }, reputation: 74 },
+                    { id: "moreirense FC", name: "Moreirense FC", city: "Moreira de Cónegos", colors: { primary: "#1E9E4A", secondary: "#D4AF37" }, reputation: 72 },
+                    { id: "fc arouca", name: "FC Arouca", city: "Arouca", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 71 },
+                    { id: "V. Guimarães", name: "Vitória Guimarães", city: "Guimarães", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 73 },
+                    { id: "Estoril", name: "GD Estoril Praia", city: "Estoril", colors: { primary: "#1E4FCB", secondary: "#F5D310" }, reputation: 71 },
+                    { id: "fc alverca", name: "FC Alverca", city: "Alverca do Ribatejo", colors: { primary: "#1E4FCB", secondary: "#D01317" }, reputation: 70 },
+                    { id: "rio ave", name: "Rio Ave FC", city: "Vila do Conde", colors: { primary: "#F07A17", secondary: "#111111" }, reputation: 70 },
+                    { id: "cd santa clara", name: "CD Santa Clara", city: "Ponta Delgada", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 68 },
+                    { id: "cd nacional", name: "CD Nacional", city: "Funchal", colors: { primary: "#F07A17", secondary: "#7A3CA6" }, reputation: 68 },
+                    { id: "estrela amadora", name: "Estrela Amadora", city: "Amadora", colors: { primary: "#D01317", secondary: "#1E9E4A" }, reputation: 65 },
+                    { id: "casa pia", name: "Casa Pia AC", city: "Lisbon", colors: { primary: "#111111", secondary: "#D01317" }, reputation: 64 },
+                    { id: "cs marítimo", name: "CS Marítimo", city: "Funchal", colors: { primary: "#1E9E4A", secondary: "#D01317" }, reputation: 64 },
+                    { id: "viseu", name: "Académico de Viseu", city: "Viseu", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 63 }
+                ]
+            },
+            {
+                id: "LigaPortugal2",
+                name: "Liga Portugal 2",
+                tier: 2,
+                clubs: [
+                    { id: "cd tondela", name: "CD Tondela", city: "Tondela", colors: { primary: "#1E9E4A", secondary: "#F5D310" }, reputation: 63 },
+                    { id: "afs", name: "AFS", city: "Vila das Aves", colors: { primary: "#6E1327", secondary: "#FFFFFF" }, reputation: 63 },
+                    { id: "torreense", name: "Torreense", city: "Torres Vedras", colors: { primary: "#8E1414", secondary: "#12245C" }, reputation: 61 },
+                    { id: "vizela", name: "Vizela", city: "Vizela", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 60 },
+                    { id: "Porto U21", name: "Porto B", city: "Porto", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 57 },
+                    { id: "leiria", name: "UD Leiria", city: "Leiria", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 59 },
+                    { id: "leixões", name: "Leixões", city: "Matosinhos", colors: { primary: "#6B4423", secondary: "#D01317" }, reputation: 55 },
+                    { id: "feirense", name: "Feirense", city: "Santa Maria da Feira", colors: { primary: "#FFFFFF", secondary: "#2038A8" }, reputation: 59 },
+                    { id: "chaves", name: "GD Chaves", city: "Chaves", colors: { primary: "#1E4FCB", secondary: "#1E9E4A" }, reputation: 58 },
+                    { id: "Benfica U21", name: "Benfica B", city: "Lisbon", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 56 },
+                    { id: "felgueiras", name: "Felgueiras", city: "Felgueiras", colors: { primary: "#1E4FCB", secondary: "#D01317" }, reputation: 53 },
+                    { id: "lusitânia lourosa", name: "Lusitânia Lourosa", city: "Lourosa", colors: { primary: "#111111", secondary: "#F5D310" }, reputation: 55 },
+                    { id: "Sporting U21", name: "Sporting B", city: "Lisbon", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 55 },
+                    { id: "penafiel", name: "Penafiel", city: "Penafiel", colors: { primary: "#E4181C", secondary: "#B8860B" }, reputation: 54 },                    
+                    { id: "portimonense", name: "Portimonense", city: "Portimão", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 54 },
+                    { id: "farense", name: "Farense", city: "Faro", colors: { primary: "#FFFFFF", secondary: "#111111" }, reputation: 54 },
+                    { id: "amarante", name: "Amarante", city: "Amarante", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 52 },
+                    { id: "académica coimbra", name: "Académica Coimbra", city: "Coimbra", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 50 }
+                ]
+            },
+	    {
+                id: "Liga3",
+                name: "Liga 3",
+                tier: 3,
+                clubs: [
+                    { id: "ad fafe", name: "AD Fafe", city: "Fafe", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 41 },
+                    { id: "Paços de Ferreira", name: "Paços de Ferreira", city: "Paços de Ferreira", colors: { primary: "#1E9E4A", secondary: "#D01317" }, reputation: 50 },
+                    { id: "oliveirense", name: "Oliveirense", city: "Oliveira de Azeméis", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "os belenenses", name: "OS Belenenses", city: "Lisbon", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 50 },
+                    { id: "vitória guimarães U21", name: "V. Guimarães B", city: "Guimarães", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "mafra", name: "Mafra", city: "Mafra", colors: { primary: "#1E9E4A", secondary: "#F5D310" }, reputation: 46 },
+                    { id: "varzim", name: "Varzim", city: "Póvoa de Varzim", colors: { primary: "#D01317", secondary: "#F5D310" }, reputation: 46 },
+                    { id: "ud Santarém", name: "UD Santarém", city: "Santarém", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "trofense", name: "Trofense", city: "Trofa", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 44 },
+                    { id: "São João de Ver", name: "São João de Ver", city: "Santa Maria da Feira", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 43 },
+                    { id: "Atlético CP", name: "Atlético CP", city: "Lisbon", colors: { primary: "#F5D310", secondary: "#D01317" }, reputation: 44 },
+                    { id: "Lusitano Évora", name: "Lusitano Évora", city: "Évora", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 42 },
+                    { id: "Paredes", name: "Paredes", city: "Paredes", colors: { primary: "#FFFFFF", secondary: "#1E4FCB" }, reputation: 42 },
+                    { id: "caldas", name: "Caldas", city: "Caldas da Rainha", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "marco 09", name: "Marco 09", city: "Caldas da Rainha", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 39 },
+                    { id: "sc covilhã", name: "SC Covilhã", city: "Covilhã", colors: { primary: "#1E9E4A", secondary: "#F5D310" }, reputation: 38 },
+                    { id: "leça fc", name: "Leça FC", city: "Leça da Palmeira", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 37 },
+                    { id: "vianense", name: "Vianense", city: "Viana do Castelo", colors: { primary: "#8E1414", secondary: "#F5D310" }, reputation: 37 },
+                    { id: "louletano", name: "Louletano", city: "Loulé", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 37 },
+                    { id: "vitória sernache", name: "Vitória Sernache", city: "Cernache do Bonjardim", colors: { primary: "#F5D310", secondary: "#D01317" }, reputation: 36 }
+                ]
+            },
+            {
+                id: "Liga4",
+                name: "Liga 4",
+                tier: 4,
+                clubs: [
+                    { id: "CF Marialvas", name: "CF Marialvas", city: "Cantanhede", colors: { primary: "#D01317", secondary: "#F5D310" }, reputation: 22 },
+                    { id: "gd bragança", name: "GD Bragança", city: "Bragança", colors: { primary: "#C9A400", secondary: "#1E4FCB" }, reputation: 36 },
+                    { id: "Rebordosa", name: "Rebordosa", city: "Paredes", colors: { primary: "#7A3CA6", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "AD Sanjoanense", name: "AD Sanjoanense", city: "São João da Madeira", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "1º Dezembro", name: "1º Dezembro", city: "Sintra", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 33 },
+                    { id: "amora fc", name: "Amora FC", city: "Amora", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 33 },
+                    { id: "oliveira do hospital", name: "Oliveira do Hospital", city: "Oliveira do Hospital", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 32 },
+                    { id: "ac malveira", name: "AC Malveira", city: "Mafra", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "brito sc", name: "Brito SC", city: "Brito", colors: { primary: "#FFFFFF", secondary: "#8A8F98" }, reputation: 31 },
+                    { id: "ad limianos", name: "AD Limianos", city: "Ponte de Lima", colors: { primary: "#F5D310", secondary: "#7A3CA6" }, reputation: 30 },
+                    { id: "tirsense", name: "Tirsense", city: "Santo Tirso", colors: { primary: "#D4AF37", secondary: "#111111" }, reputation: 29 },
+                    { id: "ad camacha", name: "AD Camacha", city: "Santa Cruz", colors: { primary: "#5FA8E0", secondary: "#FFFFFF" }, reputation: 29 },
+                    { id: "ad machico", name: "AD Machico", city: "Machico", colors: { primary: "#FFFFFF", secondary: "#57B5E8" }, reputation: 28 },
+                    { id: "cinfães", name: "Cinfães", city: "Cinfães", colors: { primary: "#6A2C91", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "sc Beira-Mar", name: "SC Beira-Mar", city: "Aveiro", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 27 },
+                    { id: "fc Alpendorada", name: "FC Alpendorada", city: "Alpendorada", colors: { primary: "#6A2C91", secondary: "#FFFFFF" }, reputation: 27 },
+                    { id: "Naval 1893", name: "Naval 1893", city: "Figueira da Foz", colors: { primary: "#FFFFFF", secondary: "#1E9E4A" }, reputation: 26 },
+                    { id: "ud Serra", name: "UD Serra", city: "Santa Catarina da Serra", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 25 },
+                    { id: "Mortágua fc", name: "Mortágua FC", city: "Mortágua", colors: { primary: "#1E4FCB", secondary: "#F5D310" }, reputation: 24 },
+                    { id: "Juventude sc", name: "Juventude SC", city: "Évora", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 24 },
+                    { id: "gd Alcochetense", name: "GD Alcochetense", city: "Alcochete", colors: { primary: "#14532D", secondary: "#FFFFFF" }, reputation: 23 },
+                    { id: "su Sintrense", name: "SU Sintrense", city: "Sintra", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 22 },
+                    { id: "O Elvas", name: "O Elvas", city: "Elvas", colors: { primary: "#1E4FCB", secondary: "#F5D310" }, reputation: 22 },
+                    { id: "cd Fátima", name: "CD Fátima", city: "Fátima", colors: { primary: "#7A1F3D", secondary: "#FFFFFF" }, reputation: 21 }
+                ]
+            }
+        ]
+    },
+    "Belgium": {
+        country: "Belgium",
+        tiers: [
+            {
+                id: "JupilerProLeague",
+                name: "Jupiler Pro League",
+                tier: 1,
+                clubs: [
+                    { id: "club brugge", name: "Club Brugge", city: "Bruges", colors: { primary: "#1E4FCB", secondary: "#111111" }, reputation: 81 },
+                    { id: "union sg", name: "Union Saint-Gilloise", city: "Brussels", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 80 },
+                    { id: "anderlecht", name: "RSC Anderlecht", city: "Brussels", colors: { primary: "#6A2C91", secondary: "#FFFFFF" }, reputation: 79 },
+                    { id: "genk", name: "KRC Genk", city: "Genk", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 77 },
+                    { id: "gent", name: "KAA Gent", city: "Ghent", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "antwerp", name: "Royal Antwerp FC", city: "Antwerp", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 76 },
+                    { id: "standard", name: "Standard Liège", city: "Liège", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 75 },
+                    { id: "sint-truiden", name: "Sint-Truiden", city: "Sint-Truiden", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 74 },
+                    { id: "mechelen", name: "KV Mechelen", city: "Mechelen", colors: { primary: "#D01317", secondary: "#F5D310" }, reputation: 72 },
+                    { id: "cercle brugge", name: "Cercle Brugge", city: "Bruges", colors: { primary: "#1E9E4A", secondary: "#111111" }, reputation: 71 },
+                    { id: "charleroi", name: "Sporting Charleroi", city: "Charleroi", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 70 },
+                    { id: "westerlo", name: "KVC Westerlo", city: "Westerlo", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 69 },
+                    { id: "oh leuven", name: "OH Leuven", city: "Leuven", colors: { primary: "#FFFFFF", secondary: "#1E4FCB" }, reputation: 68 },
+                    { id: "zulte waregem", name: "Zulte Waregem", city: "Waregem", colors: { primary: "#D01317", secondary: "#1E9E4A" }, reputation: 67 },
+                    { id: "beveren", name: "SK Beveren", city: "Beveren", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 66 },
+                    { id: "la louvière", name: "RAAL La Louvière", city: "La Louvière", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 65 },
+                    { id: "kortrijk", name: "KV Kortrijk", city: "Kortrijk", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 64 },
+                    { id: "lommel", name: "Lommel SK", city: "Lommel", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 63 }
+                ]
+            },
+            {
+                id: "ChallengerProLeague",
+                name: "Challenger Pro League",
+                tier: 2,
+                clubs: [
+                    { id: "beerschot", name: "K Beerschot VA", city: "Antwerp", colors: { primary: "#6A2C91", secondary: "#FFFFFF" }, reputation: 63 },
+                    { id: "dender", name: "FCV Dender EH", city: "Denderleeuw", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 62 },
+                    { id: "rfc liège", name: "RFC Liège", city: "Liège", colors: { primary: "#D01317", secondary: "#1E4FCB" }, reputation: 61 },
+                    { id: "eupen", name: "KAS Eupen", city: "Eupen", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 60 },
+                    { id: "patro eisden", name: "Patro Eisden", city: "Maasmechelen", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 59 },
+                    { id: "lokeren", name: "KSC Lokeren", city: "Lokeren", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 58 },
+                    { id: "seraing", name: "RFC Seraing", city: "Seraing", colors: { primary: "#D01317", secondary: "#111111" }, reputation: 57 },
+                    { id: "lierse", name: "Lierse SK", city: "Lier", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 56 },
+                    { id: "virton", name: "RE Virton", city: "Virton", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 54 },
+                    { id: "francs borains", name: "Francs Borains", city: "Boussu", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 55 },
+                    { id: "roeselare", name: "SK Roeselare", city: "Roeselare", colors: { primary: "#FFFFFF", secondary: "#D01317" }, reputation: 51 },
+                    { id: "Gent U21", name: "Jong KAA Gent", city: "Ghent", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 54 },
+                    { id: "Anderlecht U21", name: "RSCA Futures", city: "Brussels", colors: { primary: "#6A2C91", secondary: "#FFFFFF" }, reputation: 53 },
+                    { id: "Genk U21", name: "Jong Genk", city: "Genk", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 53 },
+                    { id: "hasselt", name: "Sporting Hasselt", city: "Hasselt", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 52 },
+                    { id: "Club Brugge U21", name: "Club NXT", city: "Bruges", colors: { primary: "#1E4FCB", secondary: "#111111" }, reputation: 53 },
+                    { id: "mons", name: "RAEC Mons", city: "Mons", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 51 },
+                    { id: "knokke", name: "Royal Knokke FC", city: "Knokke-Heist", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 50 }
+                ]
+            },
+            {
+                id: "BelgianDivision1",
+                name: "Belgian Division 1",
+                tier: 3,
+                clubs: [
+                    { id: "tubize-braine", name: "Tubize-Braine", city: "Tubize", colors: { primary: "#D01317", secondary: "#D4AF37" }, reputation: 50 },
+                    { id: "belisia", name: "SV Belisia Bilzen", city: "Bilzen", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 50 },
+                    { id: "hoogstraten", name: "Hoogstraten VV", city: "Hoogstraten", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 49 },
+                    { id: "thes sport", name: "Thes Sport", city: "Tessenderlo", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 47 },
+                    { id: "meux", name: "RFC Meux", city: "La Bruyère", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 48 },
+                    { id: "lyra-lierse", name: "Lyra-Lierse Berlaar", city: "Berlaar", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 46 },
+                    { id: "habay-la-neuve", name: "RSC Habay", city: "Habay-la-Neuve", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 45 },
+                    { id: "dessel", name: "KFC Dessel Sport", city: "Dessel", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 44 },
+                    { id: "Charleroi U21", name: "Zébra Élites", city: "Charleroi", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 41 },
+                    { id: "rochefort", name: "Union Rochefortoise", city: "Rochefort", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 43 },
+                    { id: "tienen", name: "KVK Tienen-Hageland", city: "Tienen", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 40 },
+                    { id: "Union SG U21", name: "Union SG B", city: "Brussels", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 42 },
+                    { id: "Cercle Brugge U21", name: "Jong Cercle", city: "Bruges", colors: { primary: "#1E9E4A", secondary: "#111111" }, reputation: 41 },
+                    { id: "Standard U21", name: "SL16 FC", city: "Liège", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "merelbeke", name: "KFC Merelbeke", city: "Merelbeke", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 40 },
+                    { id: "zelzate", name: "KVV Zelzate", city: "Zelzate", colors: { primary: "#1E4FCB", secondary: "#F5D310" }, reputation: 39 },
+                    { id: "OH Leuven U21", name: "OH Leuven U23", city: "Leuven", colors: { primary: "#FFFFFF", secondary: "#1E4FCB" }, reputation: 37 },
+                    { id: "harelbeke", name: "KRC Harelbeke", city: "Harelbeke", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 35 },
+                    { id: "heist", name: "KSK Heist", city: "Heist-op-den-Berg", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 36 },
+                    { id: "mandel united", name: "Mandel United", city: "Izegem", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 36 },
+                ]
+            },
+            {
+                id: "BelgianDivision2",
+                name: "Belgian Division 2",
+                tier: 4,
+                clubs: [
+		            { id: "stockay", name: "Royal Stockay", city: "Saint-Georges-sur-Meuse", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 36 },
+		            { id: "union namur", name: "Union Namur", city: "Namur", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 35 },
+		            { id: "crossing schaerbeek", name: "Crossing Schaerbeek", city: "Schaerbeek", colors: { primary: "#111111", secondary: "#1E9E4A" }, reputation: 36 },
+                    { id: "onhaye", name: "Onhaye", city: "Onhaye", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 37 },
+                    { id: "houtvenne", name: "KFC Houtvenne", city: "Hulshout", colors: { primary: "#1E9E4A", secondary: "#8E1414" }, reputation: 36 },
+                    { id: "diksmuide-oostende", name: "KV Diksmuide-Oostende", city: "Diksmuide", colors: { primary: "#F5D310", secondary: "#D01317" }, reputation: 34 },
+                    { id: "diegem", name: "Diegem Sport", city: "Machelen", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 34 },
+                    { id: "flénu", name: "FC Flénu", city: "Mons", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 36 },
+                    { id: "londerzeel", name: "K Londerzeel SK", city: "Londerzeel", colors: { primary: "#D01317", secondary: "#1E4FCB" }, reputation: 32 },
+                    { id: "ninove", name: "KVK Ninove", city: "Ninove", colors: { primary: "#D01317", secondary: "#111111" }, reputation: 32 },
+                    { id: "Antwerp U21", name: "Young Reds Antwerp", city: "Antwerp", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "cappellen", name: "Royal Cappellen", city: "Kapellen", colors: { primary: "#D01317", secondary: "#F5D310" }, reputation: 22 },
+                    { id: "verviers", name: "Stade Verviétois", city: "Verviers", colors: { primary: "#111111", secondary: "#FFFFFF" }, reputation: 30 },
+                    { id: "termien", name: "Termien", city: "Genk", colors: { primary: "#1E4FCB", secondary: "#F5D310" }, reputation: 30 },
+                    { id: "rupel boom", name: "K Rupel Boom FC", city: "Boom", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 31 },
+                    { id: "braine", name: "RCS Brainois", city: "Braine-le-Comte", colors: { primary: "#1E4FCB", secondary: "#F5D310" }, reputation: 29 },
+                    { id: "lebbeke", name: "FC Lebbeke", city: "Lebbeke", colors: { primary: "#F5D310", secondary: "#1E4FCB" }, reputation: 25 },
+                    { id: "union hutoise", name: "Union Hutoise", city: "Huy", colors: { primary: "#F5D310", secondary: "#D01317" }, reputation: 27 },
+                    { id: "wetteren", name: "RFC Wetteren", city: "Wetteren", colors: { primary: "#1E9E4A", secondary: "#D01317" }, reputation: 26 },
+                    { id: "petegem", name: "SV Petegem", city: "Petegem-aan-de-Leie", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 25 },
+                    { id: "bocholt", name: "K Bocholter VV", city: "Bocholt", colors: { primary: "#FFFFFF", secondary: "#111111" }, reputation: 23 },
+                    { id: "oostkamp", name: "KSV Oostkamp", city: "Oostkamp", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 22 },
+                    { id: "ostiches-ath", name: "Ostiches-Ath", city: "Ath", colors: { primary: "#1E9E4A", secondary: "#D01317" }, reputation: 21 },
+                    { id: "torhout", name: "Torhout 1992", city: "Torhout", colors: { primary: "#1E9E4A", secondary: "#FFFFFF" }, reputation: 21 }
+                ]
+            }
+        ]
+    }
 };
 
 
@@ -1034,6 +1260,24 @@ const REGIONS_IT = [
     { id: 'sud italia', name: 'Sud Italia', blurb: 'Campania, Molise, Puglia, Basilicata, and Calabria' },
     { id: 'isole', name: 'Isole', blurb: 'Sicilia and Sardegna' }
 ];
+// ---- Regions (Portugal) ----
+const REGIONS_PT = [
+    { id: 'Norte', name: "Norte", blurb: "Northern Portugal" },
+    { id: 'Centro', name: "Centro", blurb: 'Central Portugal' },
+    { id: 'Alejento', name: 'Alejento', blurb: 'Alejento region with Évora, Setúbal, Portalegre, and Beja' },
+    { id: 'Lisbon', name: 'Lisbon', blurb: "Lisbon region" },
+    { id: 'Algarve', name: 'Algarve', blurb: 'Algarve region, Faro' },
+    { id: 'Ilhas', name: 'Ilhas', blurb: 'Madeira and Açores' }
+];
+// ---- Regions (France) ----
+const REGIONS_BE = [
+    { id: 'N-W Belgium', name: "Noordwest-België", blurb: "West and East Flanders" },
+    { id: 'N-E Belgium', name: "Noordoost-België", blurb: 'Flemish Brabant, Antwerp and Limburg' },
+    { id: 'brussels', name: 'Bruxelles', blurb: 'Brussels' },
+    { id: 'S-O Belgique', name: 'Sud-Ouest de la Belgique', blurb: "Hainaut and Walloon Brabant" },
+    { id: 'E-Belgique', name: 'Est de la Belgique', blurb: 'Namur and Liège' },
+    { id: 'Sud Belgique', name: 'sud de la Belgique', blurb: 'Luxembourg region' }
+];
 // ---- Regions (France) ----
 const REGIONS_FR = [
     { id: 'N-O France', name: "Nord-Ouest de la France", blurb: "Bretagne, Normandie, and Pays de la Loire" },
@@ -1043,7 +1287,7 @@ const REGIONS_FR = [
     { id: 'S-E France', name: 'Sud-Est de la France', blurb: 'Nouvelle-Aquitaine and Occitanie' },
     { id: 'Îles', name: 'Îles', blurb: 'Corse and other islands' }
 ];
-const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN, Germany: REGIONS_DE, Spain: REGIONS_ES, Switzerland: REGIONS_CH, Italy: REGIONS_IT, France: REGIONS_FR };
+const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN, Germany: REGIONS_DE, Spain: REGIONS_ES, Switzerland: REGIONS_CH, Italy: REGIONS_IT, Portugal: REGIONS_PT, France: REGIONS_FR, Belgium: REGIONS_BE };
 const CITY_REGION = {
     "Groningen":"noord","Leeuwarden":"noord","Heerenveen":"noord","Harkema":"noord","Emmen":"noord","Assen":"noord","Hoogeveen":"noord",
     "Almelo":"oost","Enschede":"oost","Zwolle":"oost","Genemuiden":"oost","Hardenberg":"oost","Haaksbergen":"oost","Raalte":"oost","Rijssen":"oost","Staphorst":"oost","Arnhem":"oost","Nijmegen":"oost","Doetinchem":"oost","Groesbeek":"oost","Ermelo":"oost","Nijkerk":"oost","Tiel":"oost","Scherpenzeel":"oost","Deventer":"oost",
@@ -1115,7 +1359,33 @@ const CITY_REGION = {
     "Strasbourg":"N-E France","Reims":"N-E France","Metz":"N-E France","Nancy":"N-E France","Troyes":"N-E France","Haguenau":"N-E France","Épinal":"N-E France","Biesheim":"N-E France","Colmar":"N-E France","Mulhouse":"N-E France","Thionville":"N-E France","Lens":"N-E France","Lille":"N-E France","Dunkerque":"N-E France","Boulogne":"N-E France","Amiens":"N-E France","Valenciennes":"N-E France","Feignies":"N-E France","Beauvais":"N-E France","Chambly":"N-E France","Chantilly":"N-E France","Auxerre":"N-E France","Dijon":"N-E France","Sochaux-Montbéliard":"N-E France",
     "Lyon":"S-O France","Saint-Étienne":"S-O France","Clermont":"S-O France","Grenoble":"S-O France","Annecy":"S-O France","Villefranche-sur-Saône":"S-O France","Espaly-Saint-Marcel":"S-O France","Bourg-en-Bresse":"S-O France","Rumilly":"S-O France","Andrézieux-Bouthéon":"S-O France","Limonest":"S-O France","Saint-Priest":"S-O France","Évian-les-Bains":"S-O France","Marseille":"S-O France","Nice":"S-O France","Monaco":"S-O France","Aubagne":"S-O France","Cannes":"S-O France","Hyères":"S-O France","Fos-sur-Mer":"S-O France","Grasse":"S-O France","Saint-Raphaël":"S-O France","Toulon":"S-O France","Rousset":"S-O France",
     "Toulouse":"S-E France","Montpellier":"S-E France","Rodez":"S-E France","Nîmes":"S-E France","Pau":"S-E France","Bordeaux":"S-E France","Bayonne":"S-E France","Angoulême":"S-E France","Chauray":"S-E France","Poitevin":"S-E France",
-    "Bastia":"Îles","Borgo":"Îles"
+    "Bastia":"Îles","Borgo":"Îles",
+    // ---- Portugal ----
+    // Norte: Minho, Douro Litoral, Trás-os-Montes and Grande Porto
+    "Porto":"Norte","Braga":"Norte","Vila Nova de Famalicão":"Norte","Barcelos":"Norte","Moreira de Cónegos":"Norte","Arouca":"Norte","Guimarães":"Norte","Vila do Conde":"Norte","Vila das Aves":"Norte","Vizela":"Norte","Matosinhos":"Norte","Santa Maria da Feira":"Norte","Chaves":"Norte","Felgueiras":"Norte","Lourosa":"Norte","Penafiel":"Norte","Amarante":"Norte","Fafe":"Norte","Paços de Ferreira":"Norte","Oliveira de Azeméis":"Norte","Póvoa de Varzim":"Norte","Trofa":"Norte","Paredes":"Norte","Leça da Palmeira":"Norte","Viana do Castelo":"Norte","Bragança":"Norte","São João da Madeira":"Norte","Brito":"Norte","Ponte de Lima":"Norte","Santo Tirso":"Norte","Cinfães":"Norte","Alpendorada":"Norte",
+    // Centro: Beira Litoral, Beira Alta/Baixa and Leiria
+    "Viseu":"Centro","Tondela":"Centro","Leiria":"Centro","Coimbra":"Centro","Caldas da Rainha":"Centro","Covilhã":"Centro","Cernache do Bonjardim":"Centro","Cantanhede":"Centro","Oliveira do Hospital":"Centro","Aveiro":"Centro","Figueira da Foz":"Centro","Santa Catarina da Serra":"Centro","Mortágua":"Centro","Fátima":"Centro",
+    // Lisbon: Grande Lisboa and Vale do Tejo
+    "Lisbon":"Lisbon","Estoril":"Lisbon","Alverca do Ribatejo":"Lisbon","Amadora":"Lisbon","Torres Vedras":"Lisbon","Mafra":"Lisbon","Santarém":"Lisbon","Sintra":"Lisbon",
+    // Alentejo (incl. Setúbal peninsula)
+    "Évora":"Alejento","Amora":"Alejento","Alcochete":"Alejento","Elvas":"Alejento",
+    // Algarve
+    "Portimão":"Algarve","Faro":"Algarve","Loulé":"Algarve",
+    // Ilhas: Madeira and Açores
+    "Ponta Delgada":"Ilhas","Funchal":"Ilhas","Santa Cruz":"Ilhas","Machico":"Ilhas",
+    // ---- Belgium ----
+    // N-W Belgium: West and East Flanders
+    "Bruges":"N-W Belgium","Ghent":"N-W Belgium","Waregem":"N-W Belgium","Beveren":"N-W Belgium","Kortrijk":"N-W Belgium","Denderleeuw":"N-W Belgium","Lokeren":"N-W Belgium","Roeselare":"N-W Belgium","Knokke-Heist":"N-W Belgium","Merelbeke":"N-W Belgium","Zelzate":"N-W Belgium","Harelbeke":"N-W Belgium","Izegem":"N-W Belgium","Diksmuide":"N-W Belgium","Ninove":"N-W Belgium","Lebbeke":"N-W Belgium","Wetteren":"N-W Belgium","Petegem-aan-de-Leie":"N-W Belgium","Oostkamp":"N-W Belgium","Torhout":"N-W Belgium",
+    // N-E Belgium: Flemish Brabant, Antwerp and Limburg
+    "Genk":"N-E Belgium","Antwerp":"N-E Belgium","Sint-Truiden":"N-E Belgium","Mechelen":"N-E Belgium","Westerlo":"N-E Belgium","Leuven":"N-E Belgium","Lommel":"N-E Belgium","Maasmechelen":"N-E Belgium","Lier":"N-E Belgium","Hasselt":"N-E Belgium","Bilzen":"N-E Belgium","Hoogstraten":"N-E Belgium","Tessenderlo":"N-E Belgium","Berlaar":"N-E Belgium","Dessel":"N-E Belgium","Tienen":"N-E Belgium","Heist-op-den-Berg":"N-E Belgium","Hulshout":"N-E Belgium","Machelen":"N-E Belgium","Londerzeel":"N-E Belgium","Kapellen":"N-E Belgium","Boom":"N-E Belgium","Bocholt":"N-E Belgium",
+    // Brussels
+    "Brussels":"brussels","Schaerbeek":"brussels",
+    // S-O Belgique: Hainaut and Walloon Brabant
+    "Charleroi":"S-O Belgique","La Louvière":"S-O Belgique","Mons":"S-O Belgique","Boussu":"S-O Belgique","Tubize":"S-O Belgique","Braine-le-Comte":"S-O Belgique","Ath":"S-O Belgique",
+    // E-Belgique: Namur and Liège
+    "Liège":"E-Belgique","Eupen":"E-Belgique","Seraing":"E-Belgique","La Bruyère":"E-Belgique","Rochefort":"E-Belgique","Saint-Georges-sur-Meuse":"E-Belgique","Namur":"E-Belgique","Onhaye":"E-Belgique","Verviers":"E-Belgique","Huy":"E-Belgique",
+    // Sud Belgique: Luxembourg province
+    "Virton":"Sud Belgique","Habay-la-Neuve":"Sud Belgique"
 };
 function regionOfCity(city){ return CITY_REGION[city] || 'middelland'; }
 function regionsForCountry(country){ return REGIONS_BY_COUNTRY[country] || REGIONS; }
@@ -1140,6 +1410,10 @@ function isReserveClub(idOrClub){
     if (c.country === 'Spain' && / B$/.test(c.id)) return true;
     // Swiss reserve/U21 sides are always tagged with "U21" in the id, but not always in the name
     if (c.country === 'Switzerland') return /U21/i.test(c.id);
+    // Portuguese B sides carry "U21" in the id (their name is "X B")
+    if (c.country === 'Portugal') return /U21/i.test(c.id);
+    // Belgian B sides carry "U21" in the id (their names vary: "RSCA Futures", "Jong Genk", "Club NXT"…)
+    if (c.country === 'Belgium') return /U21/i.test(c.id);
     let base = null;
     if (/^Jong\s/i.test(c.name)) base = c.name.replace(/^Jong\s+/i, '');
     else if (/\sU21$/.test(c.name)) base = c.name.replace(/\sU21$/, '');
@@ -1193,6 +1467,10 @@ const Clubs = {
         // reserve/second teams wear their parent club's colours (for consistent emblems)
         const ES_RESERVE_PARENT = { 'Real Sociedad B': 'Real Sociedad', 'Celta Vigo B': 'Celta Vigo', 'Atletico Madrid B': 'Atletico', 'Villareal B': 'Villarreal', 'Real Madrid B': 'Real Madrid', 'Athletic Bilbao B': 'Athletic Bilbao', 'Barcelona B': 'Barcelona', 'Real Oviedo B': 'Oviedo', 'Alavés B': 'Alaves', 'Valencia B': 'Valencia' };
         const CH_RESERVE_PARENT = { 'FC Lugano U21': 'FC Lugano' };   // name doesn't follow the "X U21" pattern ("FC Lugano 2")
+        // Portuguese B sides ("X B", id "... U21") -> parent club id
+        const PT_RESERVE_PARENT = { 'Porto U21': 'porto', 'Benfica U21': 'benfica', 'Sporting U21': 'sporting', 'vitória guimarães U21': 'V. Guimarães' };
+        // Belgian B sides ("Jong X" / "X Futures" / "Club NXT"…, id "... U21") -> parent club id
+        const BE_RESERVE_PARENT = { 'Gent U21': 'gent', 'Anderlecht U21': 'anderlecht', 'Genk U21': 'genk', 'Club Brugge U21': 'club brugge', 'Charleroi U21': 'charleroi', 'Union SG U21': 'union sg', 'Cercle Brugge U21': 'cercle brugge', 'Standard U21': 'standard', 'OH Leuven U21': 'oh leuven', 'Antwerp U21': 'antwerp' };
         // this resolution doubles as the canonical reserve<->parent registry (used by
         // reserveClubFor / parentClubForReserve), so "FC Basel U21", "Bayern Munich II",
         // "Valencia Mestalla" etc. are recognised exactly like the Dutch "Jong X" sides
@@ -1202,6 +1480,8 @@ const Clubs = {
             let parent = null;
             if (c.country === 'Spain' && ES_RESERVE_PARENT[c.id]) parent = this.getClubById(ES_RESERVE_PARENT[c.id]);
             else if (c.country === 'Switzerland' && CH_RESERVE_PARENT[c.id]) parent = this.getClubById(CH_RESERVE_PARENT[c.id]);
+            else if (c.country === 'Portugal' && PT_RESERVE_PARENT[c.id]) parent = this.getClubById(PT_RESERVE_PARENT[c.id]);
+            else if (c.country === 'Belgium' && BE_RESERVE_PARENT[c.id]) parent = this.getClubById(BE_RESERVE_PARENT[c.id]);
             else { const base = c.name.replace(/^Jong\s+/i, '').replace(/\sU21$/, '').replace(/\sII$/, ''); parent = this.allClubs.find(o => o.id !== c.id && o.name === base); }
             if (parent) {
                 c.colors = { primary: parent.colors.primary, secondary: parent.colors.secondary };
@@ -1224,8 +1504,8 @@ const Clubs = {
         return this.allClubs.filter(c => c.region === regionId);
     },
 
-    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga', LaLiga: 'La Liga', LaLiga2: 'La Liga 2', PrimeraSup: 'Primera Superior', PrimeraInf: 'Primera Inferior', Segunda: 'Segunda Federación', SuperLeagueCH: 'Super League', ChallengeLeague: 'Challenge League', PromotionLeague: 'Promotion League', '1.LigaCH': '1. Liga', '2.LigaCH': '2. Liga', SerieA: 'Serie A', SerieB: 'Serie B', SerieC: 'Serie C', SerieD: 'Serie D', Ligue1: 'Ligue 1', Ligue2: 'Ligue 2', Ligue3: 'Ligue 3', Ligue4: 'Ligue 4', Ligue5: 'Ligue 5' },
-    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6, LaLiga: 1, LaLiga2: 2, PrimeraSup: 3, PrimeraInf: 4, Segunda: 5, SuperLeagueCH: 1, ChallengeLeague: 2, PromotionLeague: 3, '1.LigaCH': 4, '2.LigaCH': 5, SerieA: 1, SerieB: 2, SerieC: 3, SerieD: 4, Ligue1: 1, Ligue2: 2, Ligue3: 3, Ligue4: 4, Ligue5: 5 },
+    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga', LaLiga: 'La Liga', LaLiga2: 'La Liga 2', PrimeraSup: 'Primera Superior', PrimeraInf: 'Primera Inferior', Segunda: 'Segunda Federación', SuperLeagueCH: 'Super League', ChallengeLeague: 'Challenge League', PromotionLeague: 'Promotion League', '1.LigaCH': '1. Liga', '2.LigaCH': '2. Liga', SerieA: 'Serie A', SerieB: 'Serie B', SerieC: 'Serie C', SerieD: 'Serie D', Ligue1: 'Ligue 1', Ligue2: 'Ligue 2', Ligue3: 'Ligue 3', Ligue4: 'Ligue 4', Ligue5: 'Ligue 5', LigaPortugal: 'Primeira Liga', LigaPortugal2: 'Liga Portugal 2', Liga3: 'Liga 3', Liga4: 'Liga 4', JupilerProLeague: 'Jupiler Pro League', ChallengerProLeague: 'Challenger Pro League', BelgianDivision1: 'Belgian Division 1', BelgianDivision2: 'Belgian Division 2' },
+    DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6, LaLiga: 1, LaLiga2: 2, PrimeraSup: 3, PrimeraInf: 4, Segunda: 5, SuperLeagueCH: 1, ChallengeLeague: 2, PromotionLeague: 3, '1.LigaCH': 4, '2.LigaCH': 5, SerieA: 1, SerieB: 2, SerieC: 3, SerieD: 4, Ligue1: 1, Ligue2: 2, Ligue3: 3, Ligue4: 4, Ligue5: 5, LigaPortugal: 1, LigaPortugal2: 2, Liga3: 3, Liga4: 4, JupilerProLeague: 1, ChallengerProLeague: 2, BelgianDivision1: 3, BelgianDivision2: 4 },
     setDivision(clubId, divId) {
         const c = this.getClubById(clubId); if (!c) return;
         c.division = divId; c.tier = this.DIV_TIERS[divId]; c.divisionName = this.DIV_NAMES[divId];

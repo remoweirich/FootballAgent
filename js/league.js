@@ -50,12 +50,26 @@ const COMPETITIONS = {
     Ligue5: { name: 'Ligue 5', short: 'L5', type: 'league' },
     COUPEFR: { name: 'Coupe de France', short: 'Coupe', type: 'cup' },
     COUPENAT: { name: 'Coupe National', short: 'C. Nat', type: 'cup' },
+    LigaPortugal: { name: 'Primeira Liga', short: 'Liga PT', type: 'league' },
+    LigaPortugal2: { name: 'Liga Portugal 2', short: 'Liga 2', type: 'league' },
+    Liga3: { name: 'Liga 3', short: 'Liga 3', type: 'league' },
+    Liga4: { name: 'Liga 4', short: 'Liga 4', type: 'league' },
+    TACAPT: { name: 'Taça de Portugal', short: 'Taça', type: 'cup' },
+    SEGTACA: { name: 'Segunda Taça', short: 'Seg. Taça', type: 'cup' },
+    JupilerProLeague: { name: 'Jupiler Pro League', short: 'JPL', type: 'league' },
+    ChallengerProLeague: { name: 'Challenger Pro League', short: 'CPL', type: 'league' },
+    BelgianDivision1: { name: 'Belgian Division 1', short: 'BD1', type: 'league' },
+    BelgianDivision2: { name: 'Belgian Division 2', short: 'BD2', type: 'league' },
+    BELCUP: { name: 'Belgian Cup', short: 'Cup', type: 'cup' },
+    NOTRECOUPE: { name: 'Notre Coupe', short: 'N. Coupe', type: 'cup' },
     BEKER: { name: 'KNVB Beker', short: 'Beker', type: 'cup' },
     KBEK: { name: 'De kleine Beker', short: 'kl. Beker', type: 'cup' },
     FACUP: { name: 'FA Cup', short: 'FA Cup', type: 'cup' },
     LLC: { name: 'Lower Leagues Cup', short: 'LLC', type: 'cup' },
     PO: { name: 'Promotion Play-off', short: 'PO', type: 'playoff' },
     UCL: { name: 'Champions League', short: 'UCL', type: 'cont' },
+    UEL: { name: 'Europa League', short: 'UEL', type: 'cont' },
+    UECL: { name: 'Conference League', short: 'UECL', type: 'cont' },
     JCS: { name: 'Johan Cruijff Schaal', short: 'JCS', type: 'super' },
     U21: { name: 'U21 League', short: 'U21', type: 'youth', youth: true }
 };
@@ -64,10 +78,10 @@ function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : (Clubs
 const DIV_ORDER = ['ERE', 'EED', 'TWD', 'DRD'];
 const DIV_TIER = { ERE: 1, EED: 2, TWD: 3, DRD: 4 };
 // every country's league ladder, top tier first
-const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'], Switzerland: ['SuperLeagueCH', 'ChallengeLeague', 'PromotionLeague', '1.LigaCH', '2.LigaCH'], Italy: ['SerieA', 'SerieB', 'SerieC', 'SerieD'], France: ['Ligue1', 'Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'] };
+const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'], Switzerland: ['SuperLeagueCH', 'ChallengeLeague', 'PromotionLeague', '1.LigaCH', '2.LigaCH'], Italy: ['SerieA', 'SerieB', 'SerieC', 'SerieD'], Portugal: ['LigaPortugal', 'LigaPortugal2', 'Liga3', 'Liga4'], Belgium: ['JupilerProLeague', 'ChallengerProLeague', 'BelgianDivision1', 'BelgianDivision2'], France: ['Ligue1', 'Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'] };
 const ALL_LEAGUE_DIVS = Object.values(COUNTRY_DIVS).reduce((a, b) => a.concat(b), []);
 // cups shown per country in the Leagues tab (extend this when adding more countries)
-const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Schweizer Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']], Italy: [['coppaitalia', 'Coppa Italia'], ['coppacompagno', 'Coppa Compagno']], France: [['coupefrance', 'Coupe de France'], ['coupenational', 'Coupe National']] };
+const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Schweizer Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']], Italy: [['coppaitalia', 'Coppa Italia'], ['coppacompagno', 'Coppa Compagno']], Portugal: [['tacaportugal', 'Taça de Portugal'], ['segundataca', 'Segunda Taça']], Belgium: [['belgiancup', 'Belgian Cup'], ['notrecoupe', 'Notre Coupe']], France: [['coupefrance', 'Coupe de France'], ['coupenational', 'Coupe National']] };
 function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
 
 // ---- weekly squad index (world model) ----
@@ -229,7 +243,31 @@ const COUPEFR_VIRTUAL = [
     { id: "vfr_as_sainte_suzanne", name: "AS Sainte-Suzanne", reputation: 16 },
 ];
 const COUPEFR_VIRTUAL_MAP = COUPEFR_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
-function findVirtualClub(id) { return FACUP_VIRTUAL_MAP[id] || SWISSCUP_VIRTUAL_MAP[id] || LICHCUP_VIRTUAL_MAP[id] || COUPEFR_VIRTUAL_MAP[id] || null; }
+// 7 Portuguese amateur "virtual" clubs (rep 18); each season 2 are drawn into the Segunda Taça to
+// round the field of 62 (divisions 2-4) up to a clean 64.
+const SEGTACA_VIRTUAL = [
+    { id: 'vpt_vila_mea', name: 'AC Vila Meã', reputation: 18 },
+    { id: 'vpt_maia_lidador', name: 'FC Maia Lidador', reputation: 18 },
+    { id: 'vpt_maria_da_fonte', name: 'SC Maria da Fonte', reputation: 18 },
+    { id: 'vpt_nazarenos', name: 'GD Nazarenos', reputation: 18 },
+    { id: 'vpt_nogueirense', name: 'AD Nogueirense', reputation: 18 },
+    { id: 'vpt_florgrade', name: 'Florgrade FC', reputation: 18 },
+    { id: 'vpt_uniao_lamas', name: 'União Lamas', reputation: 18 },
+];
+const SEGTACA_VIRTUAL_MAP = SEGTACA_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
+// 7 Belgian amateur "virtual" clubs (rep 18); each season 2 are drawn into Notre Coupe to round the
+// field of 62 (divisions 2-4) up to a clean 64.
+const NOTRECOUPE_VIRTUAL = [
+    { id: 'vbe_oudenaarde', name: 'KSV Oudenaarde', reputation: 18 },
+    { id: 'vbe_racing_gent', name: 'Racing Gent', reputation: 18 },
+    { id: 'vbe_vw_hamme', name: 'VW Hamme', reputation: 18 },
+    { id: 'vbe_gullegem', name: 'FC Gullegem', reputation: 18 },
+    { id: 'vbe_berchem', name: 'Berchem Sport', reputation: 18 },
+    { id: 'vbe_hades', name: 'Hades', reputation: 18 },
+    { id: 'vbe_sporting_bruxelles', name: 'Sporting Bruxelles', reputation: 18 },
+];
+const NOTRECOUPE_VIRTUAL_MAP = NOTRECOUPE_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
+function findVirtualClub(id) { return FACUP_VIRTUAL_MAP[id] || SWISSCUP_VIRTUAL_MAP[id] || LICHCUP_VIRTUAL_MAP[id] || COUPEFR_VIRTUAL_MAP[id] || SEGTACA_VIRTUAL_MAP[id] || NOTRECOUPE_VIRTUAL_MAP[id] || (typeof EUROPE_VIRTUAL_MAP !== 'undefined' && EUROPE_VIRTUAL_MAP[id]) || null; }
 
 const League = {
     roundRobin(ids) {
@@ -278,11 +316,18 @@ const League = {
             coppacompagno: this._buildSpanishCup(['SerieB'], ['SerieC', 'SerieD']),
             coupefrance: this._buildCoupeFrance(),
             coupenational: this._buildCoupeNational(),
+            tacaportugal: this._buildTacaPortugal(),
+            segundataca: this._buildSegundaTaca(),
+            belgiancup: this._buildBelgianCup(),
+            notrecoupe: this._buildNotreCoupe(),
             playoffs: { EED: null, TWD: null, DRD: null, CHAMP: null, LEAGUE1: null, LEAGUE2: null, Natleague: null, LaLiga2: null, PrimeraSup: null, PrimeraInf: null, Segunda: null, '1.LigaCH': null, '2.LigaCH': null, SerieB: null, SerieC: null, SerieD: null, Ligue2: null, Ligue3: null, Ligue4: null, Ligue5: null, _done: false },
             germanReleg: null,
             swissBarrage: null,
             italianPlayout: null,
             frenchBarrage: null,
+            ptPlayoffs: null,
+            bePlayoffs: null,
+            europe: null,
             prorel: null,
             champions: {},
             finished: false
@@ -588,6 +633,8 @@ const League = {
         this.applyPromotionRelegationSwiss();
         this.applyPromotionRelegationItaly();
         this.applyPromotionRelegationFrance();
+        this.applyPromotionRelegationPortugal();
+        this.applyPromotionRelegationBelgium();
         return c;
     },
 
@@ -1429,6 +1476,284 @@ const League = {
         return L.prorelFra;
     },
 
+    // ================= PORTUGAL =================
+    // ---- Taça de Portugal ----
+    // Liga 4 (24) play a preliminary round; the 12 winners join the 52 non-reserve clubs of the top
+    // three divisions (56 - 4 B sides) for a 64-team seeded knockout. The 18 Primeira Liga clubs are
+    // seeded in that first main round (drawn away, kept apart); B/U21 sides are excluded entirely.
+    _buildTacaPortugal() {
+        const seeded = Clubs.getClubsByDivision('LigaPortugal').map(c => c.id);   // 18, none reserve
+        const midlower = ['LigaPortugal2', 'Liga3'].reduce((a, d) => a.concat(
+            Clubs.getClubsByDivision(d).filter(c => !isReserveClub(c.id)).map(c => c.id)), []);   // 15 + 19 = 34
+        const liga4 = Clubs.getClubsByDivision('Liga4').map(c => c.id);   // 24
+        return { seeded, midlower, prelim: this.shuffle(liga4), liga4winners: null, remaining: null, results: [], winner: null };
+    },
+    _tacaRoundName(week) {
+        return ({ 4: 'Preliminary round', 7: 'First round', 15: 'Round of 32', 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 47: 'Final' })[week] || 'Round';
+    },
+    tacaPortugalStep(week) {
+        const C = GameState.league.tacaportugal; if (!C || C.winner) return;
+        const play = pairs => {
+            const ties = [], winners = [];
+            pairs.forEach(([h, a]) => {
+                if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+                const t = this.playCupTie(h, a, 'TACAPT', week === 47); ties.push(t); winners.push(t.winner);
+            });
+            C.results.push({ week, round: this._tacaRoundName(week), ties });
+            return winners;
+        };
+        if (week === 4) {
+            // preliminary: the 24 Liga 4 sides among themselves -> 12 winners (held aside for the main draw)
+            C.liga4winners = play(this._pairUp(this.shuffle(C.prelim.slice())));
+            return;
+        }
+        let pairs;
+        if (week === 7) {
+            // first main round of 64: Primeira seeded (drawn away, kept apart) vs everyone else
+            const seeded = this.shuffle(C.seeded.slice());
+            const unseeded = this.shuffle(C.midlower.concat(C.liga4winners || []));
+            pairs = [];
+            seeded.forEach(s => { const h = unseeded.pop(); pairs.push(h != null ? [h, s] : [s, null]); });   // seeded drawn away
+            while (unseeded.length >= 2) pairs.push([unseeded.pop(), unseeded.pop()]);
+            if (unseeded.length) pairs.push([unseeded.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        C.remaining = play(pairs);
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+    // ---- Segunda Taça: the 62 clubs of divisions 2-4 (B sides included) + 2 random virtual amateurs
+    // (rep 18) = a clean 64, played as a straight knockout (no seeding). ----
+    _buildSegundaTaca() {
+        const clubs = ['LigaPortugal2', 'Liga3', 'Liga4'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);   // 62
+        const virtuals = this.shuffle(SEGTACA_VIRTUAL.map(v => v.id)).slice(0, 2);
+        return { remaining: this.shuffle(clubs.concat(virtuals)), results: [], winner: null };
+    },
+    _segundaTacaRoundName(week) {
+        return ({ 4: '1ª Eliminatória', 7: '2ª Eliminatória', 15: 'Oitavos de final', 26: 'Quartos de final', 38: 'Meias-finais', 47: 'Final' })[week] || 'Eliminatória';
+    },
+    segundaTacaStep(week) {
+        const C = GameState.league.segundataca; if (!C || C.winner) return;
+        const pairs = this._pairUp(this.shuffle(C.remaining));
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const t = this.playCupTie(h, a, 'SEGTACA', week === 47); ties.push(t); winners.push(t.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._segundaTacaRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // ---- Portuguese play-offs (computed at week 46, applied at rollover). Each tie is two-legged
+    // (better-placed / higher-division side hosts leg 2), decided on penalties if level:
+    //   · Liga Portugal play-off:   Primeira 16th vs Liga 2's best non-reserve 3rd -> winner in Primeira
+    //   · Liga Portugal 2 play-off: Liga 2 16th   vs Liga 3 3rd                     -> winner in Liga 2
+    //   · Liga 3 play-off (3 rounds): SF-A Liga 4 3rd v 4th, SF-B Liga 3 17th v 18th;
+    //       the loser of SF-B meets the winner of SF-A in a two-legged final        -> winner in Liga 3
+    playPlayoffsPortugal() {
+        const L = GameState.league;
+        if (!L.tables.LigaPortugal) return;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const P1 = ord('LigaPortugal'), P2 = ord('LigaPortugal2'), P3 = ord('Liga3'), P4 = ord('Liga4');
+        const P2prom = P2.filter(id => !isReserveClub(id));   // B sides can't chase a Primeira place
+        const lpPlayoff = (P1.length >= 16 && P2prom.length >= 3) ? this._twoLeggedTie(P1[15], P2prom[2], 'PO') : null;
+        const lp2Playoff = (P2.length >= 16 && P3.length >= 3) ? this._twoLeggedTie(P2[15], P3[2], 'PO') : null;
+        let liga3PO = null;
+        if (P3.length >= 18 && P4.length >= 4) {
+            const sfA = this._twoLeggedTie(P4[2], P4[3], 'PO');     // Liga 4: 3rd (higher) hosts leg 2
+            const sfB = this._twoLeggedTie(P3[16], P3[17], 'PO');   // Liga 3: 17th (higher) hosts leg 2
+            const loserB = sfB.winner === P3[16] ? P3[17] : P3[16];
+            const final = this._twoLeggedTie(loserB, sfA.winner, 'PO');   // Liga 3 side (higher) hosts leg 2
+            liga3PO = { sfA, sfB, winnerA: sfA.winner, loserB, final, winner: final.winner };
+        }
+        L.ptPlayoffs = { lpPlayoff, lp2Playoff, liga3PO, lpChallenger: P2prom[2] || null, lp2Challenger: P3[2] || null };
+    },
+    applyPromotionRelegationPortugal() {
+        const L = GameState.league;
+        if (!L.tables.LigaPortugal) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const P1 = ord('LigaPortugal'), P2 = ord('LigaPortugal2'), P3 = ord('Liga3'), P4 = ord('Liga4');
+        const P2prom = P2.filter(id => !isReserveClub(id));
+        const PO = L.ptPlayoffs || {};
+
+        // Tier 1 <-> Tier 2
+        const p1Down = [P1[16], P1[17]];
+        const p2Up = [P2prom[0], P2prom[1]];
+        const lpW = PO.lpPlayoff ? PO.lpPlayoff.winner : null, lpCh = P2prom[2], lpDef = P1[15];
+        const lp = (lpW && lpW === lpCh) ? { up: [lpCh], down: [lpDef] } : { up: [], down: [] };
+
+        // Tier 2 <-> Tier 3
+        const p2Down = [P2[16], P2[17]];
+        const p3Up = [P3[0], P3[1]];   // B sides may promote here — only a Primeira place is barred
+        const lp2W = PO.lp2Playoff ? PO.lp2Playoff.winner : null, lp2Ch = P3[2], lp2Def = P2[15];
+        const lp2 = (lp2W && lp2W === lp2Ch) ? { up: [lp2Ch], down: [lp2Def] } : { up: [], down: [] };
+
+        // Tier 3 <-> Tier 4
+        const p3Down = [P3[18], P3[19]];
+        const p4Up = [P4[0], P4[1]];
+        const l3po = PO.liga3PO || null;
+        let l3 = { up: [], down: [] };
+        if (l3po && l3po.winner === l3po.winnerA) l3 = { up: [l3po.winnerA], down: [l3po.loserB] };
+
+        const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
+        move([...p1Down, ...lp.down], 'LigaPortugal2'); move([...p2Up, ...lp.up], 'LigaPortugal');
+        move([...p2Down, ...lp2.down], 'Liga3');        move([...p3Up, ...lp2.up], 'LigaPortugal2');
+        move([...p3Down, ...l3.down], 'Liga4');         move([...p4Up, ...l3.up], 'Liga3');
+
+        this._repDrift(
+            [...p2Up, ...lp.up, ...p3Up, ...lp2.up, ...p4Up, ...l3.up],
+            [...p1Down, ...lp.down, ...p2Down, ...lp2.down, ...p3Down, ...l3.down]);
+        L.prorelPt = { p1Down, p2Up, p2Down, p3Up, p3Down, p4Up,
+            lpUp: lp.up, lpDown: lp.down, lp2Up: lp2.up, lp2Down: lp2.down, l3poUp: l3.up, l3poDown: l3.down };
+        return L.prorelPt;
+    },
+
+    // ================= BELGIUM =================
+    // Same ladder shape as Portugal (18/18/20/24, three tiered play-offs), so the pro/rel logic mirrors it.
+    // ---- Belgian Cup ----
+    // The 24 Belgian Division 2 clubs play 8 groups of 3 (single round robin); the 8 group winners join
+    // the 56 clubs of the top three divisions (B sides included) for a 64-team seeded knockout. The 18
+    // Jupiler Pro League clubs are seeded in the first knockout round (drawn away, kept apart).
+    _buildBelgianCup() {
+        const div2 = this.shuffle(Clubs.getClubsByDivision('BelgianDivision2').map(c => c.id));   // 24
+        const groups = [];
+        for (let g = 0; g < 8 && div2.length >= 3; g++) {
+            const teams = [div2.pop(), div2.pop(), div2.pop()];
+            groups.push({ teams, table: teams.map(id => ({ clubId: id, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, Pts: 0, cards: 0 })), fixtures: [[0, 1], [0, 2], [1, 2]], md: 0 });
+        }
+        const seeded = Clubs.getClubsByDivision('JupilerProLeague').map(c => c.id);   // 18
+        const midlower = ['ChallengerProLeague', 'BelgianDivision1'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);   // 18 + 20 = 38
+        return { groups, seeded, midlower, remaining: null, results: [], groupDone: false, winner: null };
+    },
+    _belgianGroupFixture(grp) {
+        if (grp.md >= grp.fixtures.length) return;
+        const [i, j] = grp.fixtures[grp.md];
+        const h = grp.teams[i], a = grp.teams[j];
+        const r = this.playMatch(h, a, 'BELCUP', true);
+        const rh = grp.table.find(x => x.clubId === h), ra = grp.table.find(x => x.clubId === a);
+        rh.P++; ra.P++; rh.GF += r.hg; rh.GA += r.ag; ra.GF += r.ag; ra.GA += r.hg;
+        if (r.hg > r.ag) { rh.W++; ra.L++; rh.Pts += 3; } else if (r.hg < r.ag) { ra.W++; rh.L++; ra.Pts += 3; } else { rh.D++; ra.D++; rh.Pts++; ra.Pts++; }
+        rh.cards += Math.floor(Math.random() * 4); ra.cards += Math.floor(Math.random() * 4);
+        grp.md++;
+    },
+    _belgianCupRoundName(week) {
+        return ({ 4: 'Group stage', 7: 'Round of 64', 15: 'Round of 32', 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 47: 'Final' })[week] || 'Round';
+    },
+    belgianCupStep(week) {
+        const C = GameState.league.belgiancup; if (!C || C.winner) return;
+        if (week === 4) {   // whole group phase (all three fixtures per group) resolved in one weekend
+            C.groups.forEach(grp => { while (grp.md < grp.fixtures.length) this._belgianGroupFixture(grp); });
+            C.groupDone = true;
+            return;
+        }
+        let pairs;
+        if (week === 7) {
+            const winners = C.groups.map(grp => this._kSort(grp.table)[0].clubId);   // 8 group winners
+            const seeded = this.shuffle(C.seeded.slice());
+            const unseeded = this.shuffle(C.midlower.concat(winners));
+            pairs = [];
+            seeded.forEach(s => { const h = unseeded.pop(); pairs.push(h != null ? [h, s] : [s, null]); });   // seeded drawn away
+            while (unseeded.length >= 2) pairs.push([unseeded.pop(), unseeded.pop()]);
+            if (unseeded.length) pairs.push([unseeded.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const t = this.playCupTie(h, a, 'BELCUP', week === 47); ties.push(t); winners.push(t.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._belgianCupRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+    // ---- Notre Coupe: the 62 clubs of divisions 2-4 (B sides included) + 2 random virtual amateurs
+    // (rep 18) = a clean 64, played as a straight knockout (no seeding). ----
+    _buildNotreCoupe() {
+        const clubs = ['ChallengerProLeague', 'BelgianDivision1', 'BelgianDivision2'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);   // 62
+        const virtuals = this.shuffle(NOTRECOUPE_VIRTUAL.map(v => v.id)).slice(0, 2);
+        return { remaining: this.shuffle(clubs.concat(virtuals)), results: [], winner: null };
+    },
+    _notreCoupeRoundName(week) {
+        return ({ 4: '1er Tour', 7: '2e Tour', 15: 'Huitièmes de finale', 26: 'Quarts de finale', 38: 'Demi-finales', 47: 'Finale' })[week] || 'Tour';
+    },
+    notreCoupeStep(week) {
+        const C = GameState.league.notrecoupe; if (!C || C.winner) return;
+        const pairs = this._pairUp(this.shuffle(C.remaining));
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const t = this.playCupTie(h, a, 'NOTRECOUPE', week === 47); ties.push(t); winners.push(t.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._notreCoupeRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
+    // ---- Belgian play-offs (computed at week 46, applied at rollover) — identical structure to Portugal:
+    //   · Pro League play-off:         Pro League 16th vs Challenger's best non-reserve 3rd -> winner in Pro League
+    //   · Challenger Pro League play-off: Challenger 16th vs Division 1 3rd                  -> winner in Challenger
+    //   · Division 1 play-off (3 rounds): SF-A Div 2 3rd v 4th, SF-B Div 1 17th v 18th;
+    //       the loser of SF-B meets the winner of SF-A in a two-legged final                -> winner in Division 1
+    playPlayoffsBelgium() {
+        const L = GameState.league;
+        if (!L.tables.JupilerProLeague) return;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const P1 = ord('JupilerProLeague'), P2 = ord('ChallengerProLeague'), P3 = ord('BelgianDivision1'), P4 = ord('BelgianDivision2');
+        const P2prom = P2.filter(id => !isReserveClub(id));   // B sides can't chase a Pro League place
+        const proPlayoff = (P1.length >= 16 && P2prom.length >= 3) ? this._twoLeggedTie(P1[15], P2prom[2], 'PO') : null;
+        const cplPlayoff = (P2.length >= 16 && P3.length >= 3) ? this._twoLeggedTie(P2[15], P3[2], 'PO') : null;
+        let d1PO = null;
+        if (P3.length >= 18 && P4.length >= 4) {
+            const sfA = this._twoLeggedTie(P4[2], P4[3], 'PO');     // Div 2: 3rd (higher) hosts leg 2
+            const sfB = this._twoLeggedTie(P3[16], P3[17], 'PO');   // Div 1: 17th (higher) hosts leg 2
+            const loserB = sfB.winner === P3[16] ? P3[17] : P3[16];
+            const final = this._twoLeggedTie(loserB, sfA.winner, 'PO');   // Div 1 side (higher) hosts leg 2
+            d1PO = { sfA, sfB, winnerA: sfA.winner, loserB, final, winner: final.winner };
+        }
+        L.bePlayoffs = { proPlayoff, cplPlayoff, d1PO, proChallenger: P2prom[2] || null, cplChallenger: P3[2] || null };
+    },
+    applyPromotionRelegationBelgium() {
+        const L = GameState.league;
+        if (!L.tables.JupilerProLeague) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const P1 = ord('JupilerProLeague'), P2 = ord('ChallengerProLeague'), P3 = ord('BelgianDivision1'), P4 = ord('BelgianDivision2');
+        const P2prom = P2.filter(id => !isReserveClub(id));
+        const PO = L.bePlayoffs || {};
+
+        // Tier 1 <-> Tier 2
+        const p1Down = [P1[16], P1[17]];
+        const p2Up = [P2prom[0], P2prom[1]];
+        const proW = PO.proPlayoff ? PO.proPlayoff.winner : null, proCh = P2prom[2], proDef = P1[15];
+        const pro = (proW && proW === proCh) ? { up: [proCh], down: [proDef] } : { up: [], down: [] };
+
+        // Tier 2 <-> Tier 3
+        const p2Down = [P2[16], P2[17]];
+        const p3Up = [P3[0], P3[1]];   // B sides may promote here — only a Pro League place is barred
+        const cplW = PO.cplPlayoff ? PO.cplPlayoff.winner : null, cplCh = P3[2], cplDef = P2[15];
+        const cpl = (cplW && cplW === cplCh) ? { up: [cplCh], down: [cplDef] } : { up: [], down: [] };
+
+        // Tier 3 <-> Tier 4
+        const p3Down = [P3[18], P3[19]];
+        const p4Up = [P4[0], P4[1]];
+        const d1po = PO.d1PO || null;
+        let d1 = { up: [], down: [] };
+        if (d1po && d1po.winner === d1po.winnerA) d1 = { up: [d1po.winnerA], down: [d1po.loserB] };
+
+        const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
+        move([...p1Down, ...pro.down], 'ChallengerProLeague'); move([...p2Up, ...pro.up], 'JupilerProLeague');
+        move([...p2Down, ...cpl.down], 'BelgianDivision1');    move([...p3Up, ...cpl.up], 'ChallengerProLeague');
+        move([...p3Down, ...d1.down], 'BelgianDivision2');     move([...p4Up, ...d1.up], 'BelgianDivision1');
+
+        this._repDrift(
+            [...p2Up, ...pro.up, ...p3Up, ...cpl.up, ...p4Up, ...d1.up],
+            [...p1Down, ...pro.down, ...p2Down, ...cpl.down, ...p3Down, ...d1.down]);
+        L.prorelBe = { p1Down, p2Up, p2Down, p3Up, p3Down, p4Up,
+            proUp: pro.up, proDown: pro.down, cplUp: cpl.up, cplDown: cpl.down, d1poUp: d1.up, d1poDown: d1.down };
+        return L.prorelBe;
+    },
+
     clubStrength(clubId) {
         const c = Clubs.getClubById(clubId);
         if (!c) { const v = findVirtualClub(clubId); return v ? v.reputation : 50; }
@@ -1516,7 +1841,21 @@ const League = {
         if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.coupefrance) this.coupeFranceStep(week);
         if ([4, 7, 15, 26, 38, 47].includes(week) && L.coupenational) this.coupeNationalStep(week);
 
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); L.playoffs._done = true; }
+        // Portuguese cups: Taça de Portugal has a Liga 4 preliminary (wk4) then a 64-team seeded
+        // knockout using week 32; the Segunda Taça is a clean 64 -> 6 rounds, skipping week 32
+        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.tacaportugal) this.tacaPortugalStep(week);
+        if ([4, 7, 15, 26, 38, 47].includes(week) && L.segundataca) this.segundaTacaStep(week);
+
+        // Belgian cups: the Belgian Cup runs a Division 2 group phase (wk4) then a 64-team seeded
+        // knockout using week 32; Notre Coupe is a clean 64 -> 6 rounds, skipping week 32
+        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.belgiancup) this.belgianCupStep(week);
+        if ([4, 7, 15, 26, 38, 47].includes(week) && L.notrecoupe) this.notreCoupeStep(week);
+
+        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); this.playPlayoffsPortugal(); this.playPlayoffsBelgium(); L.playoffs._done = true; }
+
+        // UEFA club competitions (UCL/UEL/UECL) run in parallel all season — qualifying wk1-6,
+        // league phase wk11-31, knockouts wk34-48. See js/europe.js.
+        if (typeof Europe !== 'undefined' && L.europe) Europe.step(week);
     },
 
     playLeagueMatch(div, homeId, awayId) {
@@ -1682,6 +2021,15 @@ const League = {
         if (L.coppacompagno && L.coppacompagno.winner) this.awardTrophy(L.coppacompagno.winner, 'COPPACOMP', year, awarded);
         if (L.coupefrance && L.coupefrance.winner) this.awardTrophy(L.coupefrance.winner, 'COUPEFR', year, awarded);
         if (L.coupenational && L.coupenational.winner) this.awardTrophy(L.coupenational.winner, 'COUPENAT', year, awarded);
+        if (L.tacaportugal && L.tacaportugal.winner) this.awardTrophy(L.tacaportugal.winner, 'TACAPT', year, awarded);
+        if (L.segundataca && L.segundataca.winner) this.awardTrophy(L.segundataca.winner, 'SEGTACA', year, awarded);
+        if (L.belgiancup && L.belgiancup.winner) this.awardTrophy(L.belgiancup.winner, 'BELCUP', year, awarded);
+        if (L.notrecoupe && L.notrecoupe.winner) this.awardTrophy(L.notrecoupe.winner, 'NOTRECOUPE', year, awarded);
+        // UEFA competitions — the finals are played in week 47, before this runs
+        if (L.europe && L.europe.comps) ['UCL', 'UEL', 'UECL'].forEach(k => {
+            const c = L.europe.comps[k];
+            if (c && c.ko && c.ko.winner) this.awardTrophy(c.ko.winner, k, year, awarded);
+        });
         L.finished = true;
         return awarded;
     },

@@ -31,6 +31,14 @@ const SCOUT_NAMES = {
     France: {
         first: ['Jean', 'Pierre', 'Michel', 'Philippe', 'Alain', 'Nicolas', 'Christophe', 'Laurent', 'Olivier', 'Thierry', 'David', 'Julien', 'Sébastien', 'Stéphane', 'Pascal', 'Frédéric', 'Antoine', 'Guillaume', 'Maxime', 'Alexandre', 'Romain', 'Vincent', 'Bernard', 'Patrick', 'Gérard', 'Didier', 'Franck', 'Bruno', 'Yannick', 'Florian'],
         last: ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel', 'Girard', 'André', 'Lefèvre', 'Mercier', 'Dupont', 'Lambert', 'Bonnet', 'Rousseau', 'Blanc']
+    },
+    Portugal: {
+        first: ['João', 'Francisco', 'Miguel', 'Gonçalo', 'Tomás', 'Rodrigo', 'Pedro', 'Tiago', 'Diogo', 'Rafael', 'André', 'Daniel', 'Bruno', 'Nuno', 'Hugo', 'Rui', 'Ricardo', 'Fábio', 'Sérgio', 'Vítor', 'Luís', 'Paulo', 'Carlos', 'José', 'António', 'Manuel', 'Jorge', 'Filipe', 'Nélson', 'Márcio'],
+        last: ['Silva', 'Santos', 'Ferreira', 'Pereira', 'Oliveira', 'Costa', 'Rodrigues', 'Martins', 'Sousa', 'Fernandes', 'Gonçalves', 'Gomes', 'Lopes', 'Marques', 'Alves', 'Almeida', 'Ribeiro', 'Pinto', 'Carvalho', 'Teixeira', 'Moreira', 'Correia', 'Mendes', 'Nunes', 'Soares', 'Vieira', 'Monteiro', 'Cardoso', 'Rocha', 'Neves']
+    },
+    Belgium: {
+        first: ['Lucas', 'Louis', 'Nathan', 'Thomas', 'Wout', 'Arthur', 'Jules', 'Victor', 'Jan', 'Kevin', 'Thibaut', 'Maxime', 'Simon', 'Robbe', 'Seppe', 'Dries', 'Bram', 'Sander', 'Ruben', 'Bart', 'Koen', 'Tom', 'Nicolas', 'Antoine', 'Guillaume', 'Florian', 'Mathieu', 'Julien', 'Cédric', 'Michel'],
+        last: ['Peeters', 'Janssens', 'Maes', 'Jacobs', 'Willems', 'Mertens', 'Claes', 'Goossens', 'Wouters', 'De Smet', 'Dubois', 'Lambert', 'Dupont', 'Martin', 'Simon', 'Van Damme', 'De Clercq', 'Vermeulen', 'Segers', 'Hermans', 'Michiels', 'Aerts', 'Verstraeten', 'Van Hecke', 'Leroy', 'Renard', 'Lejeune', 'Thys', 'Coppens', 'De Backer']
     }
 };
 

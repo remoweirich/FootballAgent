@@ -5,12 +5,27 @@ const ClubScreen = {
     state: { sort: 'apps', mode: 'season' },
     render(el, clubId) {
         const c = Clubs.getClubById(clubId);
-        if (!c) { el.innerHTML = '<div class="empty">Unknown club.</div>'; return; }
+        if (!c) {
+            // European guest clubs (pooled associations 10-55) exist only in the UEFA competitions,
+            // not in any simulated domestic league — show a minimal card instead of a dead end.
+            const v = (typeof findVirtualClub === 'function' && findVirtualClub(clubId)) || null;
+            if (v) {
+                const vhist = (GameState.clubHistory && GameState.clubHistory[clubId]) || [];
+                const vtitles = {}; vhist.forEach(h => (h.trophies || []).forEach(t => vtitles[t] = (vtitles[t] || 0) + 1));
+                const vhonours = Object.keys(vtitles).length
+                    ? `<div class="section-label">European honours</div><div class="chip-row" style="margin:var(--space-2) 0">${Object.entries(vtitles).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`; }).join('')}</div>` : '';
+                el.innerHTML = `<div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest({ name: v.name, colors: { primary: '#5A626D' } }, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${v.name}</span></div>
+                <p class="hint" style="margin-top:-8px">${v.country || 'Europe'} · reputation ${v.reputation}</p>
+                <p class="muted">A club from ${v.country || 'a UEFA association'} that features only in the European competitions — its domestic league isn't simulated in the game.</p>${vhonours}`;
+                return;
+            }
+            el.innerHTML = '<div class="empty">Unknown club.</div>'; return;
+        }
         const hist = (GameState.clubHistory && GameState.clubHistory[clubId]) || [];
         const titleCount = {};
         hist.forEach(h => (h.trophies || []).forEach(t => titleCount[t] = (titleCount[t] || 0) + 1));
         const honours = Object.keys(titleCount).length
-            ? `<div class="chip-row">${Object.entries(titleCount).map(([t, n]) => `<span class="pill pill--gold"><i class="ti ti-trophy" style="font-size:13px"></i>${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`).join('')}</div>`
+            ? `<div class="chip-row">${Object.entries(titleCount).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`; }).join('')}</div>`
             : '<p class="muted">No major honours recorded yet.</p>';
         const finishes = hist.length ? hist.slice().reverse().slice(0, 8).map(h => `<div class="frow"><span class="frow__k">${GameState.seasonLabelFor(h.year)} · ${(COMPETITIONS[h.division] || {}).short || h.division}</span><span class="frow__v">${h.position === 1 ? '🥇 ' : ''}${UI.ordinal(h.position)}${(h.trophies || []).length ? ' · 🏆 ' + h.trophies.map(t => (COMPETITIONS[t] || {}).short || t).join(', ') : ''}</span></div>`).join('')
             : '<p class="muted">No completed seasons yet.</p>';

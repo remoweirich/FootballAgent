@@ -12,7 +12,7 @@ const OUT = path.join(ROOT, 'dist', 'mobile');
 
 const ENGINE_FILES = [
     'names-data.js', 'clubs.js', 'players.js', 'storage.js', 'game-state.js',
-    'upgrades.js', 'scouting.js', 'league.js', 'scouts.js', 'agency.js', 'simulation.js'
+    'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js'
 ];
 const UI_JS_FILES = [
     'shim.js', 'ui-helpers.js', 'router.js',

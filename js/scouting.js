@@ -198,7 +198,41 @@ const LEAGUE_TIERS = {
             { min: 15, label: '2. Liga Sub'},
             { min: 0, label: 'Amateur Star' },
         ],
-    }
+    },
+    Portugal: {
+        elo: 1000,
+        tiers: [
+            { min: 90, label: 'International Superstar' },
+            { min: 85, label: 'International Regular' },
+            { min: 78, label: 'Primeira Liga Star' },
+            { min: 70, label: 'Primeira Liga Regular' },
+            { min: 65, label: 'Liga Portugal 2 Star' },
+            { min: 58, label: 'Liga Portugal 2 Regular' },
+            { min: 50, label: 'Liga 3 Star' },
+            { min: 43, label: 'Liga 3 Regular' },
+            { min: 35, label: 'Liga 4 Star' },
+            { min: 28, label: 'Liga 4 Regular' },
+            { min: 21, label: 'Liga 4 Sub' },
+            { min: 0, label: 'Amateur Star' },
+        ],
+    },
+    Belgium: {
+        elo: 1000,
+        tiers: [
+            { min: 90, label: 'International Superstar' },
+            { min: 85, label: 'International Regular' },
+            { min: 76, label: 'Pro League Star' },
+            { min: 70, label: 'Pro League Regular' },
+            { min: 64, label: 'Challenger Pro League Star' },
+            { min: 57, label: 'Challenger Pro League Regular' },
+            { min: 49, label: 'Belgian Division 1 Star' },
+            { min: 43, label: 'Belgian Division 1 Regular' },
+            { min: 35, label: 'Belgian Division 2 Star' },
+            { min: 28, label: 'Belgian Division 2 Regular' },
+            { min: 21, label: 'Belgian Division 2 Sub' },
+            { min: 0, label: 'Amateur Star' },
+        ],
+    },
 };
 
 const Scouting = {

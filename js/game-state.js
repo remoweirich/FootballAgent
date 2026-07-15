@@ -67,6 +67,10 @@ const GameState = {
         this.agency.homeCountry = this.homeCountry;
         PlayerGen.seedKnownProspects();
         League.setupSeason();
+        // Season 1 has no finished campaign to seed European entrants from, so the UEFA competitions
+        // don't run in the first season (the Leagues > Europe view shows a disclaimer). They are built
+        // at the first rollover from season 1's final tables + cup winners (see Simulation._rollNewSeason).
+        // (Europe.syntheticStandings() remains available if we ever want to pre-populate season 1 instead.)
         this.needsSetup = false;
         this.save();
     },

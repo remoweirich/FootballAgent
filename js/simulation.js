@@ -661,20 +661,23 @@ const Sim = {
     },
     // which sponsor tier a player can attract, from his division, game time and quality —
     // capped by the agency's office (a Home Office can only land local deals, however good the player is)
+    // Tier-based so it works in every country: tier 1 = top flight, 2 = second tier, … (Clubs.DIV_TIERS).
+    // The thresholds mirror the original Dutch ladder (tier1=Ere, tier2=Eerste, tier3=Tweede, tier4+=Derde…).
     _sponsorLevelFor(p) {
         const club = Clubs.getClubById(p.clubId);
-        const div = club ? club.division : null;       // 'ERE'|'EED'|'TWD'|'DRD'
+        if (!club) return null;
+        const tier = club.tier || (Clubs.DIV_TIERS && Clubs.DIV_TIERS[club.division]) || 99;
         const apps = this._seasonLeagueApps(p, GameState.seasonStartYear);
         const talent = p.potential >= 78 && p.age <= 22;   // promising youngsters punch above their weight
         let level;
         if (p.ability >= 90) level = 'worldwide';
-        else if (div === 'ERE' && p.ability >= 80) level = 'international';
-        else if (div === 'ERE') level = 'national';
-        else if (div === 'EED' && apps > 25) level = 'national';
+        else if (tier === 1 && p.ability >= 80) level = 'international';
+        else if (tier === 1) level = 'national';
+        else if (tier === 2 && apps > 25) level = 'national';
         else if (talent) level = 'national';
-        else if (div === 'EED' && apps > 5) level = 'regional';
-        else if (div === 'TWD' && apps > 25) level = 'regional';
-        else if (div === 'DRD' && apps > 25) level = 'local';
+        else if (tier === 2 && apps > 5) level = 'regional';
+        else if (tier === 3 && apps > 25) level = 'regional';
+        else if (tier >= 4 && apps > 25) level = 'local';
         else return null;
         const cap = SPONSOR_LEVELS.indexOf(Upgrades.sponsorLevel());
         return SPONSOR_LEVELS[Math.min(SPONSOR_LEVELS.indexOf(level), cap)];
@@ -703,8 +706,10 @@ const Sim = {
             if (loyal || hot) base *= 1.4 + Math.random() * 1.1;                        // standout deal
             const annualEquiv = base * 60;                                              // ~€3k/yr at local 50/wk
 
+            const club = Clubs.getClubById(p.clubId);
+            const country = (club && typeof divCountry === 'function') ? divCountry(club.division) : GameState.homeCountry;
             const pool = []; const used = new Set();
-            while (pool.length < 3) { const c = Upgrades.pickSponsor(level); if (!used.has(c)) { used.add(c); pool.push(c); } if (used.size > 30) break; }
+            while (pool.length < 3) { const c = Upgrades.pickSponsor(level, country); if (!used.has(c)) { used.add(c); pool.push(c); } if (used.size > 30) break; }
             // shorter deals usually pay more per week, but occasionally the long deal is the sweetest
             const rk = () => 0.9 + Math.random() * 0.3;
             let m1 = 1.0 * rk(), m2 = 0.8 * rk(), m3 = 0.62 * rk();                      // 1yr, 2yr, 3yr weekly multipliers
@@ -820,6 +825,16 @@ const Sim = {
                 if (GameState.clubHistory[row.clubId].length > 40) GameState.clubHistory[row.clubId].shift();
             });
         });
+        // European winners that live only in the pooled associations (virtual clubs, not in any
+        // domestic division above) still earn an honours entry so their guest card shows the title
+        if (GameState.league.europe && GameState.league.europe.comps) ['UCL', 'UEL', 'UECL'].forEach(k => {
+            const w = GameState.league.europe.comps[k].ko && GameState.league.europe.comps[k].ko.winner;
+            if (w && !Clubs.getClubById(w)) {
+                if (!GameState.clubHistory[w]) GameState.clubHistory[w] = [];
+                GameState.clubHistory[w].push({ year, division: k, position: 1, trophies: [k] });
+                if (GameState.clubHistory[w].length > 40) GameState.clubHistory[w].shift();
+            }
+        });
         // build summary of client trophies (any country)
         const L = GameState.league;
         const hc = GameState.homeCountry || 'Netherlands';
@@ -869,6 +884,11 @@ const Sim = {
             germanReleg: L && L.germanReleg ? { ...L.germanReleg } : null,
             cdr: L && L.cdr ? { winner: L.cdr.winner, results: L.cdr.results } : null,
             cfed: L && L.cfed ? { winner: L.cfed.winner, results: L.cfed.results } : null,
+            tacaportugal: L && L.tacaportugal ? { winner: L.tacaportugal.winner, results: L.tacaportugal.results } : null,
+            segundataca: L && L.segundataca ? { winner: L.segundataca.winner, results: L.segundataca.results } : null,
+            belgiancup: L && L.belgiancup ? { winner: L.belgiancup.winner, results: L.belgiancup.results, groups: L.belgiancup.groups } : null,
+            notrecoupe: L && L.notrecoupe ? { winner: L.notrecoupe.winner, results: L.notrecoupe.results } : null,
+            europe: L && L.europe ? L.europe : null,
             prorel: null
         };
         GameState.addLog(`Season ${GameState.seasonLabel()} finished.`, 'season');
@@ -892,6 +912,9 @@ const Sim = {
 
     _rollNewSeason(events, spotlights) {
         const year = GameState.seasonStartYear;
+        // capture the finished season's final tables + cup winners now — next season's European
+        // entrants are read from them, before promotion/relegation & setupSeason wipe the tables.
+        const euSnap = (typeof Europe !== 'undefined') ? Europe.captureStandings() : null;
         // archive this season's finance ledger and start a fresh one
         GameState.agency.ledgerLast = GameState.agency.ledger || {};
         GameState.agency.ledger = {};
@@ -1017,6 +1040,9 @@ const Sim = {
             }
         });
         League.setupSeason();
+        // build the new season's UEFA competitions from the standings captured above (seasonStartYear
+        // has already advanced to the new season by this point)
+        if (typeof Europe !== 'undefined' && euSnap) Europe.buildEurope(euSnap.standings, euSnap.cups, GameState.seasonStartYear);
         this._assertNoDualDivisionMembership();
         const t = `New season ${GameState.seasonLabel()} begins.`;
         GameState.addLog(t, 'season'); events.push({ type: 'season', text: t });

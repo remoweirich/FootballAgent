@@ -43,7 +43,14 @@ const OFFICES = [
 ];
 
 // ---- Sponsor companies, by country then level. Easy to extend: add a country key, or push names. ----
-// Tokens {place} and {region} get filled with a local town / region name at offer time.
+// Tokens {place} and {region} get filled with a local town / region name (of the player's country) at offer time.
+// The two top tiers are global brand parodies shared by every country; the lower tiers are country-flavoured.
+const SPONSOR_INTL = ['Purello Tires', 'Carwindow', 'WMB', 'Skybus', 'Monohebel', 'SkyFranz', 'Alliance', 'Mercury-Bans'];
+const SPONSOR_WORLD = ['Naik', 'Adadis', 'Popsi', 'Cola Cola', 'Macrohard', 'Pear', 'Stripeify', 'Qatair', 'Soily Arabica',
+    'Jones & Jones', 'ApprenticeCard', 'Nile', 'Interflix', 'Kansasinstruments', 'Amyrates', 'Cheep Automobiles',
+    'Eddyhat', 'Q-Smartphone', 'OIO'];
+// full home-country name -> sponsor-roster key
+const SPONSOR_COUNTRY_KEY = { Netherlands: 'NL', Switzerland: 'CH', England: 'EN', Germany: 'DE', Spain: 'ES', Italy: 'IT', France: 'FR' };
 const SPONSOR_COMPANIES = {
     NL: {
         local: ['Bakker Boris', 'Pizzeria La Neapolitana', 'Tante Emma Winkel', 'Adrian Hijn {place}', 'Doktor Hermans',
@@ -67,6 +74,51 @@ const SPONSOR_COMPANIES = {
         worldwide: ['Naik', 'Adadis', 'Popsi', 'Cola Cola', 'Macrohard', 'Pear', 'Stripeify', 'Qatair', 'Soily Arabica',
             'Jones & Jones', 'ApprenticeCard', 'Nile', 'Interflix', 'Kansasinstruments', 'Amyrates', 'Cheep Automobiles',
             'Eddyhat', 'Q-Smartphone', 'OIO'],
+    },
+    EN: {
+        local: ['Greggson Bakery', 'The Frying Scotsman', 'Poundstretch {place}', 'The Red Lion {place}', 'Chippy McChipface',
+            'Nandoz Grill', 'Cuppa Joe Café', 'Barclues Corner Shop', 'Tikka of Time', 'The Dog & Duck', 'Boots the Chymist', 'Wetherspork', 'Fish & Tips'],
+        regional: ['The {region} Gazette', 'Radio {region}', '{region} Motors', 'Tetleigh Tea', 'Sportz Direkt', 'Curries PC World',
+            'Wickess DIY', 'Halfoots', 'Greene Sods Ales', '{region} Building Society', 'Costalot Coffee', 'B&Quay'],
+        national: ['Tesko', 'Sainsbugs', 'Virjin Media', 'Royal Fail', 'Lords Bank', 'Aviover', 'Marks & Spender', 'BeeTee Sport', 'Greggson National', 'Skye Broadband'],
+        international: SPONSOR_INTL,
+        worldwide: SPONSOR_WORLD,
+    },
+    DE: {
+        local: ['Bäckerei Schmidt', 'Metzgerei Wurstmann', 'Dönerpalast {place}', 'Gasthaus zur Alten Post', 'Currywurst König', 'Kiosk am Eck',
+            'Friseur Haargenau', 'Bratwurst Bernd', 'Apotheke {place}', 'Zum Goldenen Krug', 'Getränke Günther', 'Eiscafé Venezia', 'Pizzeria Bella {place}'],
+        regional: ['Radio {region}', '{region} Anzeiger', 'Sparkasse {region}', 'Autohaus Klein', 'BayWald Baumarkt', 'Möbel Größer',
+            'REWEit Markt', 'Edekant', 'dm-Drögerie', 'Getränke Hoffmann'],
+        national: ['Deutsche Bahnsinn', 'Telefunker', 'Sparfuchs Bank', 'Allianzo', 'Aldé', 'Lidäl', 'Postfix Kurier', 'Siemenz', 'Vollkswagen', 'BundesEnergie'],
+        international: SPONSOR_INTL,
+        worldwide: SPONSOR_WORLD,
+    },
+    ES: {
+        local: ['Panadería Paco', 'Bar Manolo', 'Restaurante El Rincón', 'Tapas Los Amigos', 'Churrería La Dulce', 'Ferretería {place}',
+            'Bodega García', 'Marisquería El Mar', 'Peluquería Estilo', 'Kebab {place}', 'Heladería Sol', 'Farmacia {place}', 'La Tasca de Pepe'],
+        regional: ['Radio {region}', 'Diario de {region}', 'Caja {region}', 'Talleres Ruiz', 'MercaBueno', 'El Corte Poco',
+            'Súper Nocheydía', 'Bar Deportivo', 'Aceites del Sur', 'Cervezas {region}'],
+        national: ['Telefónican', 'Banco Santandino', 'CaixaBonita', 'Iberdruida', 'Movistrella', 'Zarina Moda', 'RenfeYa', 'Cerveza Marou', 'Repsolar', 'El Corte Nacional'],
+        international: SPONSOR_INTL,
+        worldwide: SPONSOR_WORLD,
+    },
+    IT: {
+        local: ['Panificio Rossi', 'Trattoria da Mario', 'Pizzeria Bella Napoli', 'Gelateria Il Cono', 'Bar dello Sport', 'Osteria del Ponte',
+            'Macelleria Bianchi', 'Caffè Corretto', 'Pasticceria Dolce Vita', 'Ferramenta {place}', 'Salumeria Greco', 'Forno {place}', 'Ristorante Nonna'],
+        regional: ['Radio {region}', 'Il Corriere di {region}', 'Banca di {region}', 'Autofficina Conti', 'EsseLungo', 'CoopSù',
+            'Barilli Pasta', 'Vini di {region}', 'Moto Ferri', 'Superconà Market'],
+        national: ['Telecom Italica', 'UniCreduto', 'IntesaSanPolo', 'Poste Italchane', 'Trenitaly', 'Enello Energia', 'Lavazzo Caffè', 'Ferrarossa', 'Fiatto', 'GucciNo'],
+        international: SPONSOR_INTL,
+        worldwide: SPONSOR_WORLD,
+    },
+    FR: {
+        local: ['Boulangerie Dupont', 'Chez Mémé', 'Le Petit Bistrot', 'Brasserie du Coin', 'Boucherie Martin', 'Le Kebab de {place}',
+            'Café des Sports', 'Pâtisserie Sucré', 'Tabac Presse {place}', 'Pizzeria Chez Luigi', 'Fromagerie {place}', 'La Crêperie Bretonne', 'Coiffure Chic'],
+        regional: ['Radio {region}', 'La Dépêche de {region}', 'Crédit {region}', 'Garage Lefèvre', 'Hyper Yu', 'Carrefive',
+            'Le Clairc', 'Bricolorado', 'Vins de {region}', 'Boulangerie Panéra'],
+        national: ['Orangina Télécom', 'BNP Pariboa', 'SNCFou', 'La Poste Presse', 'Renaultre', 'Peugeaut', 'Danonon', 'Décathlonge', 'Crédit Agrocole', 'TotalEnairgie'],
+        international: SPONSOR_INTL,
+        worldwide: SPONSOR_WORLD,
     },
 };
 
@@ -131,24 +183,29 @@ const Upgrades = {
     },
 
     // ---- sponsor company picker ----
-    _fill(name) {
+    // country is the full home-country name (e.g. 'England'); tokens fill from that country's own towns/regions
+    _fill(name, country = 'Netherlands') {
         if (name.includes('{place}')) {
-            const places = Object.keys(typeof CITY_REGION !== 'undefined' ? CITY_REGION : {});
+            let places = [];
+            try { if (typeof Clubs !== 'undefined') places = Clubs.getClubsByCountry(country).map(c => c.city); } catch (e) { }
+            if (!places.length) places = Object.keys(typeof CITY_REGION !== 'undefined' ? CITY_REGION : {});
             name = name.replace('{place}', places.length ? places[Math.floor(Math.random() * places.length)] : 'Almelo');
         }
         if (name.includes('{region}')) {
-            const regs = (typeof REGIONS !== 'undefined' ? REGIONS : []).map(r => r.name.replace(/\s*\(.*\)$/, ''));
+            const src = (typeof REGIONS_BY_COUNTRY !== 'undefined' && REGIONS_BY_COUNTRY[country]) || (typeof REGIONS !== 'undefined' ? REGIONS : []);
+            const regs = src.map(r => r.name.replace(/\s*\(.*\)$/, ''));
             name = name.replace('{region}', regs.length ? regs[Math.floor(Math.random() * regs.length)] : 'Gelderland');
         }
         return name;
     },
-    sponsorPool(level, country = 'NL') {
-        const byCountry = SPONSOR_COMPANIES[country] || SPONSOR_COMPANIES.NL;
+    sponsorPool(level, country = 'Netherlands') {
+        const key = SPONSOR_COUNTRY_KEY[country] || (SPONSOR_COMPANIES[country] ? country : 'NL');
+        const byCountry = SPONSOR_COMPANIES[key] || SPONSOR_COMPANIES.NL;
         return byCountry[level] || byCountry.local;
     },
-    pickSponsor(level, country = 'NL') {
+    pickSponsor(level, country = 'Netherlands') {
         const pool = this.sponsorPool(level, country);
-        return this._fill(pool[Math.floor(Math.random() * pool.length)]);
+        return this._fill(pool[Math.floor(Math.random() * pool.length)], country);
     },
 
     // ---- SVG art (compact, recognisable) ----

@@ -474,14 +474,19 @@ const ClientDetail = {
             const t = st.totals;
             const cards = `<span class="card-chip card-chip--yellow"></span>${t.yellow} <span class="card-chip card-chip--red"></span>${t.red}`;
             const totLine = `${t.apps} apps · ${gOrCs(t)} · ${t.assists} a · ${cards} · ${UI.ratingText(t.avg)}`;
-            const club = Clubs.getClubById(st.clubId);
+            // the division shown must be where the club played THAT season, not its current one:
+            // derive it from the league competition recorded in this stint (a club plays a single
+            // division per season, so there's exactly one league comp among a stint's comps)
+            const leagueCid = Object.keys(st.comps).find(cid => _isLeagueComp(cid));
+            const divLabel = leagueCid ? compName(leagueCid) : '';
             // club name stands alone on its own line; the league moves down next to the season
             const nameLabel = this.clubLink(st.clubId, UI.clubLabel(st.clubId, st.loan, st.youth));
-            const seasonLine = `${GameState.seasonLabelFor(y)}${club ? ' · ' + club.divisionName : ''}`;
+            const seasonLine = `${GameState.seasonLabelFor(y)}${divLabel ? ' · ' + divLabel : ''}`;
             let inner = '';
             if (open) {
                 const comps = `<div class="stint-comps">${Object.entries(st.comps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} apps · ${gk ? (c.cs || 0) + ' cs' : c.goals + ' g'} · ${c.assists} a</span></div>`).join('')}</div>`;
-                inner = '<div class="season-body">' + comps + (troph.length ? `<div class="comp-row" style="color:var(--gold)"><span class="hist-sym">🏆</span> ${troph.map(tr => compName(tr.compId)).join(', ')}</div>` : '') + '</div>';
+                const trophyMark = tr => (typeof europeTrophyIcon === 'function' && europeTrophyIcon(tr.compId)) || '<span class="hist-sym">🏆</span>';
+                inner = '<div class="season-body">' + comps + (troph.length ? `<div class="comp-row" style="color:var(--gold)">${troph.map(tr => `${trophyMark(tr)} ${compName(tr.compId)}`).join(' · ')}</div>` : '') + '</div>';
             }
             return `<div class="season-row ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','${rowKey}')">
                 <div class="season-top"><div><span class="season-name">${nameLabel}</span><div class="season-club">${seasonLine} ${troph.length ? '<span class="hist-sym">🏆</span>' : ''}</div></div><span class="season-stat">${totLine}<br><i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>${inner}</div>`;
@@ -490,7 +495,7 @@ const ClientDetail = {
         const ct = careerTotal(p), careerOpen = ctx.careerOpen, mode = ctx.careerMode;
         let careerInner = '';
         if (careerOpen) {
-            const toggle = `<div class="chip-row" style="margin-bottom:var(--space-3)"><button class="htog ${mode === 'club' ? 'is-on' : ''}" onclick="ClientDetail.setCareerMode('${p.id}','club')">By club</button><button class="htog ${mode === 'comp' ? 'is-on' : ''}" onclick="ClientDetail.setCareerMode('${p.id}','comp')">By competition</button></div>`;
+            const toggle = `<div class="chip-row" style="margin-bottom:var(--space-3)"><button class="htog ${mode === 'club' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','club')">By club</button><button class="htog ${mode === 'comp' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','comp')">By competition</button></div>`;
             let rows;
             if (mode === 'club') {
                 rows = careerByClub(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m =>
@@ -514,7 +519,7 @@ const ClientDetail = {
         const parts = [];
         const tr = {};
         (p.trophies || []).forEach(t => tr[t.compId] = (tr[t.compId] || 0) + 1);
-        Object.keys(tr).forEach(cid => parts.push(`<span class="pill pill--gold"><i class="ti ti-trophy" style="font-size:12px"></i>${compName(cid)}${tr[cid] > 1 ? ' ×' + tr[cid] : ''}</span>`));
+        Object.keys(tr).forEach(cid => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(cid)) || '<i class="ti ti-trophy" style="font-size:12px"></i>'; parts.push(`<span class="pill pill--gold">${ic}${compName(cid)}${tr[cid] > 1 ? ' ×' + tr[cid] : ''}</span>`); });
         const mv = {};
         (p.movements || []).forEach(m => { const k = m.type + ':' + m.division; mv[k] = (mv[k] || 0) + 1; });
         Object.keys(mv).forEach(k => {
