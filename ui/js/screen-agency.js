@@ -37,8 +37,8 @@ const AgencyScreen = {
         el.innerHTML = `
         <div class="info-grid" style="margin-bottom:var(--space-5)">
             <div class="info"><span><i class="ti ti-star"></i>Reputation</span><b>${Math.round(ag.reputation)}<span class="muted" style="font-size:11px">/${Agency.repLimit()}</span></b></div>
-            <div class="info"><span><i class="ti ti-users"></i>Clients</span><b>${Agency.clients().length}<span class="muted" style="font-size:11px">/${Agency.capacity()}</span></b></div>
-            <div class="info"><span><i class="ti ti-zoom-scan"></i>Scouts</span><b>${ag.scouts.length}<span class="muted" style="font-size:11px">/${Upgrades.maxScouts()}</span></b></div>
+            <a class="info" href="#clients" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-users"></i>Clients <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${Agency.clients().length}<span class="muted" style="font-size:11px">/${Agency.capacity()}</span></b></a>
+            <a class="info" href="#scouting" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-zoom-scan"></i>Scouts <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${ag.scouts.length}<span class="muted" style="font-size:11px">/${Upgrades.maxScouts()}</span></b></a>
             <div class="info"><span><i class="ti ti-broadcast"></i>Sponsor reach</span><b>${sl}</b></div>
         </div>
         <a class="list-row" href="#finance" style="cursor:pointer;justify-content:space-between;margin-bottom:var(--space-5)">

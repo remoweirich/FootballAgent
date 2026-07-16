@@ -2,7 +2,8 @@
 //  Router — tiny hash router + app shell (app-bar / bottom-nav /
 //  pushed-screen header) + shared sheet/modal helpers.
 //  Screens register with Router.register(name, def) where def is:
-//    { isMain: bool, title: string | (params)=>string, render(el, params) }
+//    { isMain: bool, title: string | (params)=>string, render(el, params),
+//      parent?: hash | (params)=>hash }   // one level up; where back() goes with nothing stacked
 // ============================================================
 const Router = {
     NAV: [
@@ -69,7 +70,20 @@ const Router = {
         if (fallback) { this.navStack.length = 0; this.go(fallback); return; }
         const prev = this.navStack.pop();
         if (prev != null) { this._backNavigating = true; this.go(prev); return; }
+        // Nothing stacked (deep link, or siblings collapsed away): go UP to this screen's declared
+        // parent rather than dumping the user on the last main tab they happened to visit.
+        const up = this.parentHash();
+        if (up != null) { this._backNavigating = true; this.go(up); return; }
         this.go(this.lastMain);
+    },
+    // a screen's logical parent: def.parent is either a hash string or (params) => hash
+    parentHash() {
+        const def = this.screens[this.current];
+        if (!def || def.parent == null) return null;
+        try {
+            const p = typeof def.parent === 'function' ? def.parent(this.parse().params) : def.parent;
+            return p || null;
+        } catch (e) { return null; }
     },
     // Android hardware back button: mirrors the in-app back arrow's hierarchy rather
     // than the WebView's own history.back() (which has the same ping-pong problem —
@@ -99,7 +113,13 @@ const Router = {
                     if (Object.keys(this._scrollMemory).length > 50) this._scrollMemory = {};
                     this._scrollMemory[this._lastHash] = scr.scrollTop;
                 }
-                if (!this._backNavigating) this.navStack.push(this._lastHash);
+                // Moving sideways between screens of the SAME kind (mail -> mail, club -> club) is
+                // browsing siblings, not going a level deeper — don't stack those. Otherwise clicking
+                // through a player's eight loan offers and pressing back rewinds all eight in reverse
+                // instead of returning to the player you opened them from.
+                if (!this._backNavigating && String(this._lastHash).split('/')[0] !== newHash.split('/')[0]) {
+                    this.navStack.push(this._lastHash);
+                }
             }
             if (this._backNavigating && this._scrollMemory[newHash] != null) restoreScroll = this._scrollMemory[newHash];
             this._backNavigating = false;

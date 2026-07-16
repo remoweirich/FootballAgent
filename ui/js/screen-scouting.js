@@ -71,7 +71,10 @@ const ScoutingScreen = {
                     </div>
                     <label class="field-label">Home region</label>
                     <select class="select-input" id="rg_${s.id}">${regionOpts}</select>
-                    <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-3);width:auto" onclick="ScoutingScreen.assignRegion('${s.id}')">${s.region ? 'Reassign' : 'Assign'}</button>
+                    <div class="flex-row" style="margin:var(--space-2) 0 var(--space-3)">
+                        <button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ScoutingScreen.assignRegion('${s.id}')">${s.region ? 'Reassign' : 'Assign'}</button>
+                        <button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.viewSelectedRegion('${s.id}')"><i class="ti ti-eye"></i>View clubs</button>
+                    </div>
                     <label class="field-label">International</label>${intl}
                     <label class="field-label">Max talent age</label>
                     <select class="select-input" onchange="ScoutingScreen.setAge('${s.id}',this.value)">${[15, 16, 17, 18, 19, 20, 21, 22].map(a => `<option value="${a}" ${(s.maxTalentAge || 22) === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
@@ -127,12 +130,24 @@ const ScoutingScreen = {
             <button class="btn btn--primary" onclick='ScoutingScreen.hire(${JSON.stringify(o).replace(/'/g, "&#39;")})'>Hire</button>
         </div>`).join('');
         const hc = GameState.homeCountry || 'Netherlands';
-        const regTable = regionsForCountry(hc).map(r => `<div class="frow"><span class="frow__k">${regionName(r.id)} <span class="muted">${r.blurb || ''}</span></span><span class="frow__v">${UI.euro(Scouts.regionReportCost(r.id))}</span></div>`).join('');
+        const regTable = regionsForCountry(hc).map(r => `<button class="frow" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ScoutingScreen.showRegionClubs('${UI.esc(r.id)}')"><span class="frow__k">${regionName(r.id)} <span class="muted">${r.blurb || ''}</span></span><span class="frow__v flex-row" style="gap:5px">${UI.euro(Scouts.regionReportCost(r.id))} <i class="ti ti-chevron-right" style="color:var(--text-faint);font-size:13px"></i></span></button>`).join('');
         return `<p class="hint" style="margin-bottom:var(--space-4)">Better scouts only take you seriously as your reputation grows. This shortlist refreshes every 2 weeks.</p>
             ${rows}<div id="actionResult"></div>
-            <div class="section-label" style="margin-top:var(--space-5)">${hc} region cost <span class="muted" style="font-weight:400">(per report)</span></div>
+            <div class="section-label" style="margin-top:var(--space-5)">${hc} region cost <span class="muted" style="font-weight:400">(per report · tap to see clubs)</span></div>
             <div class="fcard">${regTable}</div>`;
     },
+    // clubs that live in a scouting region — the pool a scout posted there draws finds from
+    showRegionClubs(regionId) {
+        const clubs = Clubs.getClubsByRegion(regionId).slice().sort((a, b) => b.reputation - a.reputation);
+        const rows = clubs.length
+            ? clubs.map(c => `<a href="${Router.link('clubs', c.id)}" class="frow" style="cursor:pointer" onclick="Router.closeSheet()"><span class="frow__k flex-row" style="gap:8px">${UI.crest(c)}${c.name}</span><span class="frow__v muted">${c.divisionName || ''} · rep ${c.reputation}</span></a>`).join('')
+            : '<p class="muted">No clubs are based in this region.</p>';
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${regionName(regionId)}</div>
+            <p class="hint">${clubs.length} club${clubs.length === 1 ? '' : 's'} · ${UI.euro(Scouts.regionReportCost(regionId))} per scouting report</p>
+            <div style="max-height:60vh;overflow-y:auto">${rows}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">Close</button>`);
+    },
+    viewSelectedRegion(scoutId) { const sel = document.getElementById('rg_' + scoutId); if (sel) this.showRegionClubs(sel.value); },
     hire(o) { const r = Scouts.hire(o); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }
 };
 Router.register('scouting', { isMain: true, title: 'Scouting', render(el) { ScoutingScreen.render(el); } });

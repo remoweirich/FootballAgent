@@ -16,7 +16,7 @@ const ClubScreen = {
                     ? `<div class="section-label">European honours</div><div class="chip-row" style="margin:var(--space-2) 0">${Object.entries(vtitles).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`; }).join('')}</div>` : '';
                 el.innerHTML = `<div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest({ name: v.name, colors: { primary: '#5A626D' } }, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${v.name}</span></div>
                 <p class="hint" style="margin-top:-8px">${v.country || 'Europe'} · reputation ${v.reputation}</p>
-                <p class="muted">A club from ${v.country || 'a UEFA association'} that features only in the European competitions — its domestic league isn't simulated in the game.</p>${vhonours}`;
+                <p class="muted">A club from ${v.country || 'a UEFA association'} that features only in the European competitions — its domestic league isn't simulated in the game.</p>${vhonours}${this.europeBestHTML(clubId)}`;
                 return;
             }
             el.innerHTML = '<div class="empty">Unknown club.</div>'; return;
@@ -27,8 +27,10 @@ const ClubScreen = {
         const honours = Object.keys(titleCount).length
             ? `<div class="chip-row">${Object.entries(titleCount).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`; }).join('')}</div>`
             : '<p class="muted">No major honours recorded yet.</p>';
-        const finishes = hist.length ? hist.slice().reverse().slice(0, 8).map(h => `<div class="frow"><span class="frow__k">${GameState.seasonLabelFor(h.year)} · ${(COMPETITIONS[h.division] || {}).short || h.division}</span><span class="frow__v">${h.position === 1 ? '🥇 ' : ''}${UI.ordinal(h.position)}${(h.trophies || []).length ? ' · 🏆 ' + h.trophies.map(t => (COMPETITIONS[t] || {}).short || t).join(', ') : ''}</span></div>`).join('')
+        // all finishes, newest first — the container scrolls, so ~8 show and the deeper past is a scroll away
+        const finishes = hist.length ? hist.slice().reverse().map(h => `<div class="frow"><span class="frow__k">${GameState.seasonLabelFor(h.year)} · ${(COMPETITIONS[h.division] || {}).short || h.division}</span><span class="frow__v">${h.position === 1 ? '🥇 ' : ''}${UI.ordinal(h.position)}${(h.trophies || []).length ? ' · 🏆 ' + h.trophies.map(t => (COMPETITIONS[t] || {}).short || t).join(', ') : ''}</span></div>`).join('')
             : '<p class="muted">No completed seasons yet.</p>';
+        const euBestHTML = this.europeBestHTML(clubId);
 
         const mode = this.state.mode, year = GameState.seasonStartYear;
         // every player who has EVER been a client is kept — including retired/released ones, since
@@ -65,11 +67,13 @@ const ClubScreen = {
 
         el.innerHTML = `
         <div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest(c, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${c.name}</span></div>
-        <p class="hint" style="margin-top:-8px">${c.divisionName} · reputation ${c.reputation}</p>
+        <p class="hint" style="margin-top:-8px"><a href="#leagues" onclick="LeaguesScreen.openFor('${c.division}');return false" style="color:var(--info-text);text-decoration:underline;text-underline-offset:2px">${c.divisionName}</a> · reputation ${c.reputation}</p>
         <div class="section-label">Honours</div>
         <div style="margin:var(--space-2) 0 var(--space-4)">${honours}</div>
         <div class="section-label">Recent finishes</div>
-        <div class="fcard" style="margin-top:var(--space-2)">${finishes}</div>
+        <div class="fcard" style="margin-top:var(--space-2);max-height:300px;overflow-y:auto">${finishes}</div>
+        ${euBestHTML}
+        <a class="gbtn" style="margin-top:var(--space-3)" href="${Router.link('comphist', c.division)}"><i class="ti ti-history"></i>${c.divisionName} history</a>
         <div class="section-label">Your clients, past &amp; present</div>
         <div class="chip-row" style="margin:var(--space-2) 0 var(--space-3)">
             <button class="htog ${mode === 'season' ? 'is-on' : ''}" onclick="ClubScreen.setMode('${clubId}','season')">Current season</button>
@@ -80,7 +84,22 @@ const ClubScreen = {
         </div>
         <div class="fcard">${clientRows}</div>`;
     },
+    // Best-ever run in each European competition (UCL/UEL/UECL), if the club has ever qualified.
+    europeBestHTML(clubId) {
+        const eb = (GameState.clubEuropeBest && GameState.clubEuropeBest[clubId]) || null;
+        if (!eb) return '';
+        const labels = (typeof Europe !== 'undefined' && Europe.STAGE_LABELS) || [];
+        const rows = ['UCL', 'UEL', 'UECL'].filter(k => eb[k]).map(k => {
+            const b = eb[k];
+            const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(k)) || '';
+            const stage = labels[b.stage] || 'Reached';
+            const won = b.stage >= 7;
+            return `<div class="frow"><span class="frow__k">${ic}${compName(k)}</span><span class="frow__v"${won ? ' style="color:var(--gold)"' : ''}>${stage}${b.year != null ? ` <span class="muted">· ${GameState.seasonLabelFor(b.year)}</span>` : ''}</span></div>`;
+        }).join('');
+        if (!rows) return '';
+        return `<div class="section-label">Best in Europe</div><div class="fcard" style="margin-top:var(--space-2)">${rows}</div>`;
+    },
     setSort(clubId, k) { this.state.sort = k; Router.refresh(); },
     setMode(clubId, m) { this.state.mode = m; Router.refresh(); }
 };
-Router.register('clubs', { isMain: false, title: 'Club', render(el, params) { ClubScreen.render(el, params[0]); } });
+Router.register('clubs', { isMain: false, parent: 'leagues', title: 'Club', render(el, params) { ClubScreen.render(el, params[0]); } });

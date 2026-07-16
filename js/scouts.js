@@ -97,7 +97,11 @@ const Scouts = {
         // Italy
         'nordovest italia': 4000, 'nordest italia': 2310, 'italia centrale': 1450, 'sud italia': 600, 'isole': 1120,
         // France
-        'N-O France': 2620, 'N-E France': 2370, 'centre France': 2960, 'S-O France': 1340, 'S-E France': 1910, 'Îles': 600
+        'N-O France': 2620, 'N-E France': 2370, 'centre France': 2960, 'S-O France': 1340, 'S-E France': 1910, 'Îles': 600,
+        // Portugal
+        'Noroeste': 3550, 'Norte': 2330, 'Centro': 850, 'Lisbon': 3750, 'Sul': 600, 'Ilhas': 1770,
+        // Belgium
+        'N-W Belgium': 2400, 'Noord België': 1850, 'N-E Belgium': 2120, 'brussels': 3850, 'S-O Belgique': 610, 'S-E Belgique': 1370
     },
     // cost charged PER report for a region (fixed price, then scout discount applied)
     regionReportCost(regionId) {

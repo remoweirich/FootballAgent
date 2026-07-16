@@ -1262,21 +1262,21 @@ const REGIONS_IT = [
 ];
 // ---- Regions (Portugal) ----
 const REGIONS_PT = [
-    { id: 'Norte', name: "Norte", blurb: "Northern Portugal" },
+    { id: 'Noroeste', name: "Noroeste", blurb: "Viana do Castelo & Braga" },
+    { id: 'Norte', name: "Norte", blurb: "Porto, Vila Real & Bragança" },
     { id: 'Centro', name: "Centro", blurb: 'Central Portugal' },
-    { id: 'Alejento', name: 'Alejento', blurb: 'Alejento region with Évora, Setúbal, Portalegre, and Beja' },
     { id: 'Lisbon', name: 'Lisbon', blurb: "Lisbon region" },
-    { id: 'Algarve', name: 'Algarve', blurb: 'Algarve region, Faro' },
+    { id: 'Sul', name: 'Sul', blurb: 'Alentejo and Algarve' },
     { id: 'Ilhas', name: 'Ilhas', blurb: 'Madeira and Açores' }
 ];
 // ---- Regions (France) ----
 const REGIONS_BE = [
     { id: 'N-W Belgium', name: "Noordwest-België", blurb: "West and East Flanders" },
-    { id: 'N-E Belgium', name: "Noordoost-België", blurb: 'Flemish Brabant, Antwerp and Limburg' },
+    { id: 'Noord België', name: "Noord-België", blurb: 'Antwerp province' },
+    { id: 'N-E Belgium', name: "Noordoost-België", blurb: 'Flemish Brabant and Limburg' },
     { id: 'brussels', name: 'Bruxelles', blurb: 'Brussels' },
     { id: 'S-O Belgique', name: 'Sud-Ouest de la Belgique', blurb: "Hainaut and Walloon Brabant" },
-    { id: 'E-Belgique', name: 'Est de la Belgique', blurb: 'Namur and Liège' },
-    { id: 'Sud Belgique', name: 'sud de la Belgique', blurb: 'Luxembourg region' }
+    { id: 'S-E Belgique', name: 'Sud-Est de la Belgique', blurb: 'Namur, Liège and Luxembourg' }
 ];
 // ---- Regions (France) ----
 const REGIONS_FR = [
@@ -1361,31 +1361,31 @@ const CITY_REGION = {
     "Toulouse":"S-E France","Montpellier":"S-E France","Rodez":"S-E France","Nîmes":"S-E France","Pau":"S-E France","Bordeaux":"S-E France","Bayonne":"S-E France","Angoulême":"S-E France","Chauray":"S-E France","Poitevin":"S-E France",
     "Bastia":"Îles","Borgo":"Îles",
     // ---- Portugal ----
-    // Norte: Minho, Douro Litoral, Trás-os-Montes and Grande Porto
-    "Porto":"Norte","Braga":"Norte","Vila Nova de Famalicão":"Norte","Barcelos":"Norte","Moreira de Cónegos":"Norte","Arouca":"Norte","Guimarães":"Norte","Vila do Conde":"Norte","Vila das Aves":"Norte","Vizela":"Norte","Matosinhos":"Norte","Santa Maria da Feira":"Norte","Chaves":"Norte","Felgueiras":"Norte","Lourosa":"Norte","Penafiel":"Norte","Amarante":"Norte","Fafe":"Norte","Paços de Ferreira":"Norte","Oliveira de Azeméis":"Norte","Póvoa de Varzim":"Norte","Trofa":"Norte","Paredes":"Norte","Leça da Palmeira":"Norte","Viana do Castelo":"Norte","Bragança":"Norte","São João da Madeira":"Norte","Brito":"Norte","Ponte de Lima":"Norte","Santo Tirso":"Norte","Cinfães":"Norte","Alpendorada":"Norte",
+    // Noroeste: Viana do Castelo & Braga districts (Minho)
+    "Braga":"Noroeste","Vila Nova de Famalicão":"Noroeste","Barcelos":"Noroeste","Moreira de Cónegos":"Noroeste","Guimarães":"Noroeste","Vizela":"Noroeste","Fafe":"Noroeste","Brito":"Noroeste","Viana do Castelo":"Noroeste","Ponte de Lima":"Noroeste",
+    // Norte: Porto, Vila Real & Bragança districts (Grande Porto, Douro Litoral, Trás-os-Montes, Entre Douro e Vouga)
+    "Porto":"Norte","Arouca":"Norte","Vila do Conde":"Norte","Vila das Aves":"Norte","Matosinhos":"Norte","Santa Maria da Feira":"Norte","Chaves":"Norte","Felgueiras":"Norte","Lourosa":"Norte","Penafiel":"Norte","Amarante":"Norte","Paços de Ferreira":"Norte","Oliveira de Azeméis":"Norte","Póvoa de Varzim":"Norte","Trofa":"Norte","Paredes":"Norte","Leça da Palmeira":"Norte","Bragança":"Norte","São João da Madeira":"Norte","Santo Tirso":"Norte","Cinfães":"Norte","Alpendorada":"Norte",
     // Centro: Beira Litoral, Beira Alta/Baixa and Leiria
     "Viseu":"Centro","Tondela":"Centro","Leiria":"Centro","Coimbra":"Centro","Caldas da Rainha":"Centro","Covilhã":"Centro","Cernache do Bonjardim":"Centro","Cantanhede":"Centro","Oliveira do Hospital":"Centro","Aveiro":"Centro","Figueira da Foz":"Centro","Santa Catarina da Serra":"Centro","Mortágua":"Centro","Fátima":"Centro",
     // Lisbon: Grande Lisboa and Vale do Tejo
     "Lisbon":"Lisbon","Estoril":"Lisbon","Alverca do Ribatejo":"Lisbon","Amadora":"Lisbon","Torres Vedras":"Lisbon","Mafra":"Lisbon","Santarém":"Lisbon","Sintra":"Lisbon",
-    // Alentejo (incl. Setúbal peninsula)
-    "Évora":"Alejento","Amora":"Alejento","Alcochete":"Alejento","Elvas":"Alejento",
-    // Algarve
-    "Portimão":"Algarve","Faro":"Algarve","Loulé":"Algarve",
+    // Sul: Alentejo (incl. Setúbal peninsula) & Algarve
+    "Évora":"Sul","Amora":"Sul","Alcochete":"Sul","Elvas":"Sul","Portimão":"Sul","Faro":"Sul","Loulé":"Sul",
     // Ilhas: Madeira and Açores
     "Ponta Delgada":"Ilhas","Funchal":"Ilhas","Santa Cruz":"Ilhas","Machico":"Ilhas",
     // ---- Belgium ----
     // N-W Belgium: West and East Flanders
     "Bruges":"N-W Belgium","Ghent":"N-W Belgium","Waregem":"N-W Belgium","Beveren":"N-W Belgium","Kortrijk":"N-W Belgium","Denderleeuw":"N-W Belgium","Lokeren":"N-W Belgium","Roeselare":"N-W Belgium","Knokke-Heist":"N-W Belgium","Merelbeke":"N-W Belgium","Zelzate":"N-W Belgium","Harelbeke":"N-W Belgium","Izegem":"N-W Belgium","Diksmuide":"N-W Belgium","Ninove":"N-W Belgium","Lebbeke":"N-W Belgium","Wetteren":"N-W Belgium","Petegem-aan-de-Leie":"N-W Belgium","Oostkamp":"N-W Belgium","Torhout":"N-W Belgium",
-    // N-E Belgium: Flemish Brabant, Antwerp and Limburg
-    "Genk":"N-E Belgium","Antwerp":"N-E Belgium","Sint-Truiden":"N-E Belgium","Mechelen":"N-E Belgium","Westerlo":"N-E Belgium","Leuven":"N-E Belgium","Lommel":"N-E Belgium","Maasmechelen":"N-E Belgium","Lier":"N-E Belgium","Hasselt":"N-E Belgium","Bilzen":"N-E Belgium","Hoogstraten":"N-E Belgium","Tessenderlo":"N-E Belgium","Berlaar":"N-E Belgium","Dessel":"N-E Belgium","Tienen":"N-E Belgium","Heist-op-den-Berg":"N-E Belgium","Hulshout":"N-E Belgium","Machelen":"N-E Belgium","Londerzeel":"N-E Belgium","Kapellen":"N-E Belgium","Boom":"N-E Belgium","Bocholt":"N-E Belgium",
+    // Noord-België: Antwerp province
+    "Antwerp":"Noord België","Mechelen":"Noord België","Westerlo":"Noord België","Lier":"Noord België","Hoogstraten":"Noord België","Berlaar":"Noord België","Dessel":"Noord België","Heist-op-den-Berg":"Noord België","Hulshout":"Noord België","Kapellen":"Noord België","Boom":"Noord België",
+    // N-E Belgium: Limburg and Flemish Brabant
+    "Genk":"N-E Belgium","Sint-Truiden":"N-E Belgium","Leuven":"N-E Belgium","Lommel":"N-E Belgium","Maasmechelen":"N-E Belgium","Hasselt":"N-E Belgium","Bilzen":"N-E Belgium","Tessenderlo":"N-E Belgium","Tienen":"N-E Belgium","Machelen":"N-E Belgium","Londerzeel":"N-E Belgium","Bocholt":"N-E Belgium",
     // Brussels
     "Brussels":"brussels","Schaerbeek":"brussels",
     // S-O Belgique: Hainaut and Walloon Brabant
     "Charleroi":"S-O Belgique","La Louvière":"S-O Belgique","Mons":"S-O Belgique","Boussu":"S-O Belgique","Tubize":"S-O Belgique","Braine-le-Comte":"S-O Belgique","Ath":"S-O Belgique",
-    // E-Belgique: Namur and Liège
-    "Liège":"E-Belgique","Eupen":"E-Belgique","Seraing":"E-Belgique","La Bruyère":"E-Belgique","Rochefort":"E-Belgique","Saint-Georges-sur-Meuse":"E-Belgique","Namur":"E-Belgique","Onhaye":"E-Belgique","Verviers":"E-Belgique","Huy":"E-Belgique",
-    // Sud Belgique: Luxembourg province
-    "Virton":"Sud Belgique","Habay-la-Neuve":"Sud Belgique"
+    // S-E Belgique: Namur, Liège & Luxembourg provinces
+    "Liège":"S-E Belgique","Eupen":"S-E Belgique","Seraing":"S-E Belgique","La Bruyère":"S-E Belgique","Rochefort":"S-E Belgique","Saint-Georges-sur-Meuse":"S-E Belgique","Namur":"S-E Belgique","Onhaye":"S-E Belgique","Verviers":"S-E Belgique","Huy":"S-E Belgique","Virton":"S-E Belgique","Habay-la-Neuve":"S-E Belgique"
 };
 function regionOfCity(city){ return CITY_REGION[city] || 'middelland'; }
 function regionsForCountry(country){ return REGIONS_BY_COUNTRY[country] || REGIONS; }

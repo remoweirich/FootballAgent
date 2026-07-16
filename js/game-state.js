@@ -125,6 +125,7 @@ const GameState = {
                 week: this.week, seasonStartYear: this.seasonStartYear, homeCountry: this.homeCountry,
                 players: this.players, inbox: this.inbox, log: this.log,
                 agency: this.agency, league: this.league, clubHistory: this.clubHistory,
+                clubEuropeBest: this.clubEuropeBest, debug: this.debug,
                 lastSeasonReport: this.lastSeasonReport, clubState,
                 worldV: 2   // frozen-NPC world model (see _migrateWorldV2)
             });
@@ -139,10 +140,13 @@ const GameState = {
             this.players = d.players || []; this.inbox = d.inbox || [];
             this.log = d.log || []; this.agency = d.agency; this.league = d.league;
             this.clubHistory = d.clubHistory || {};
+            this.clubEuropeBest = d.clubEuropeBest || {};
+            this.debug = !!d.debug;   // developer/debug mode (off by default)
             this.lastSeasonReport = d.lastSeasonReport || null;
             this._migrateMoraleFields();
             this._restoreClubState(d.clubState);
             this._migrateWorldV2(d);
+            this._migrateScoutRegions();
             return this.players.length > 0 && this.agency != null;
         } catch (e) { console.warn('Load failed', e); return false; }
     },
@@ -224,6 +228,13 @@ const GameState = {
     // only — never overwrites a field that's already there. Sim._ensureMoraleFields does the
     // same thing lazily every week, so this is belt-and-braces for the Morale tab/Home screen
     // being correct on the very first render after loading, before any week has been advanced.
+    // Portugal/Belgium scouting regions were reshaped (Norte split off Noroeste; Alentejo+Algarve
+    // merged into Sul; N-E Belgium split off Noord-België; E-Belgique+Sud Belgique merged into
+    // S-E Belgique). Re-point any scout parked on a removed region id so old saves aren't stranded.
+    _migrateScoutRegions() {
+        const remap = { 'Alejento': 'Sul', 'Algarve': 'Sul', 'E-Belgique': 'S-E Belgique', 'Sud Belgique': 'S-E Belgique' };
+        ((this.agency && this.agency.scouts) || []).forEach(s => { if (s && s.region && remap[s.region]) s.region = remap[s.region]; });
+    },
     _migrateMoraleFields() {
         const aw = this.absWeek();
         (this.players || []).forEach(p => {

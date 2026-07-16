@@ -15,10 +15,10 @@ const MORALE = {
     // ---- Phase 1: passive effects ----
     // match-rating modifier: linear from avg, kinked at the "0" point (55) —
     // NOT one straight line corner-to-corner (see simulation.js moraleRatingMod)
-    RATING_MOD_HI_AVG: 85, RATING_MOD_HI: 0.20,
+    RATING_MOD_HI_AVG: 85, RATING_MOD_HI: 0.10,
     RATING_MOD_ZERO_AVG: 55,
     RATING_MOD_LO_AVG: 25, RATING_MOD_LO: -0.30,
-    RATING_MOD_CAP: 0.3,
+    RATING_MOD_CAP_HI: 0.1, RATING_MOD_CAP: 0.3,
 
     DEV_MULT_GOOD: 1.15, DEV_MULT_MID: 1.0, DEV_MULT_BAD: 0.8,
 
@@ -28,7 +28,7 @@ const MORALE = {
 
     TROPHY_CLUB: 12, TROPHY_AGENT: 8,
     PROMOTION_CLUB: 10, RELEGATION_CLUB: -12,
-    HOT_FORM_AVG_RATING: 7.5, HOT_FORM_MIN_APPS: 10,
+    HOT_FORM_AVG_RATING: 7.5, HOT_FORM_MIN_APPS: 10, HOT_FORM_MSG_MIN_APPS: 30,
     HOT_FORM_TIME: 15, HOT_FORM_WAGE: -10, HOT_FORM_CLUB: 30, HOT_FORM_AGENT: 20,
 
     // playing-time weekly ticks, keyed by how many consecutive weeks he has (not) played
@@ -93,7 +93,8 @@ function moraleRatingMod(avg) {
         const t = Math.max(0, Math.min(1, (M.RATING_MOD_ZERO_AVG - avg) / (M.RATING_MOD_ZERO_AVG - M.RATING_MOD_LO_AVG)));
         mod = t * M.RATING_MOD_LO;
     }
-    return Math.max(-M.RATING_MOD_CAP, Math.min(M.RATING_MOD_CAP, mod));
+    // asymmetric on purpose: a happy player gets a nudge, an unhappy one can genuinely sulk
+    return Math.max(-M.RATING_MOD_CAP, Math.min(M.RATING_MOD_CAP_HI, mod));
 }
 function moraleDevMult(avg) {
     const band = moraleBand(avg);
@@ -707,9 +708,15 @@ const Sim = {
             const annualEquiv = base * 60;                                              // ~€3k/yr at local 50/wk
 
             const club = Clubs.getClubById(p.clubId);
-            const country = (club && typeof divCountry === 'function') ? divCountry(club.division) : GameState.homeCountry;
+            const playCountry = (club && typeof divCountry === 'function') ? divCountry(club.division) : GameState.homeCountry;
+            // Sub-international sponsors come from BOTH where he plays and his home country — a Dutch
+            // player at Brighton can attract Dutch brands and English brands. (At international/worldwide
+            // level the same picker yields big-name brands that read as international sponsors.) Home
+            // country only mixes in if the game has a sponsor pool for that nationality.
+            const homeCountry = (typeof SPONSOR_COUNTRY_KEY !== 'undefined' && SPONSOR_COUNTRY_KEY[p.nationality]) ? p.nationality : null;
+            const srcFor = () => (homeCountry && homeCountry !== playCountry && Math.random() < 0.45) ? homeCountry : playCountry;
             const pool = []; const used = new Set();
-            while (pool.length < 3) { const c = Upgrades.pickSponsor(level, country); if (!used.has(c)) { used.add(c); pool.push(c); } if (used.size > 30) break; }
+            while (pool.length < 3) { const c = Upgrades.pickSponsor(level, srcFor()); if (!used.has(c)) { used.add(c); pool.push(c); } if (used.size > 40) break; }
             // shorter deals usually pay more per week, but occasionally the long deal is the sweetest
             const rk = () => 0.9 + Math.random() * 0.3;
             let m1 = 1.0 * rk(), m2 = 0.8 * rk(), m3 = 0.62 * rk();                      // 1yr, 2yr, 3yr weekly multipliers
@@ -744,7 +751,8 @@ const Sim = {
             if (m.kind === 'transfer' && (m.persistence || 0) > 0) {
                 const p = GameState.getPlayer(m.offer.playerId);
                 const to = Clubs.getClubById(m.offer.toClubId);
-                if (p && to) {
+                // a player who has gone out on loan since the bid landed is off the market: let it lapse
+                if (p && to && !p.onLoanAt) {
                     const improved = { ...m.offer, transferFee: Math.round(m.offer.transferFee * 1.12 / 500) * 500, proposedWage: Math.round(m.offer.proposedWage * 1.1 / 10) * 10 };
                     keep.push({ id: 'm_' + Math.random().toString(36).slice(2, 9), kind: 'transfer', subject: `${to.name} improve bid for ${p.name}`, offer: improved, persistence: m.persistence - 1, ttl: 2, week: GameState.week, season: GameState.seasonLabel(), read: false });
                     events.push({ type: 'offer', text: `${to.name} came back with an improved bid for ${p.name}.` });
@@ -785,6 +793,9 @@ const Sim = {
             p.morale.wage = Math.max(0, p.morale.wage + MORALE.HOT_FORM_WAGE);
             p.morale.club = Math.min(100, p.morale.club + MORALE.HOT_FORM_CLUB);
             p.morale.agent = Math.min(100, p.morale.agent + MORALE.HOT_FORM_AGENT);
+            // the "season to remember" note is reserved for a genuine FULL season of top form — a
+            // handful of brilliant games (10+ apps) still lifts his morale, but doesn't earn the message
+            if (tot.apps < MORALE.HOT_FORM_MSG_MIN_APPS) return;
             GameState.addMail({ kind: 'news', cat: 'morale', subject: `${p.name} — a season to remember`, body: `${p.name} enjoyed a red-hot season (${tot.avg.toFixed(2)} avg over ${tot.apps} apps) — confidence is sky-high, though he's noticed his market value too.`, ttl: 6 });
             events.push({ type: 'morale', text: `${p.name} is buzzing after a red-hot season.` });
         });
@@ -835,6 +846,17 @@ const Sim = {
                 if (GameState.clubHistory[w].length > 40) GameState.clubHistory[w].shift();
             }
         });
+        // remember each club's BEST-EVER run in each of the three European competitions (kept only if
+        // it improves on the previous best) — surfaced on the club page
+        if (GameState.league.europe && typeof Europe !== 'undefined' && Europe.bestStages) {
+            if (!GameState.clubEuropeBest) GameState.clubEuropeBest = {};
+            const bs = Europe.bestStages(GameState.league.europe);
+            Object.entries(bs).forEach(([comp, m]) => Object.entries(m).forEach(([clubId, stage]) => {
+                if (!GameState.clubEuropeBest[clubId]) GameState.clubEuropeBest[clubId] = {};
+                const cur = GameState.clubEuropeBest[clubId][comp];
+                if (cur == null || stage > cur) GameState.clubEuropeBest[clubId][comp] = { stage, year };
+            }));
+        }
         // build summary of client trophies (any country)
         const L = GameState.league;
         const hc = GameState.homeCountry || 'Netherlands';

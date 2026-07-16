@@ -68,25 +68,55 @@ const NegoInbox = {
 // ---------------- Mail detail dispatcher ----------------
 Router.register('mail', {
     isMain: false, title: p => { const m = GameState.inbox.find(x => x.id === p[0]); return m ? m.subject : 'Message'; },
+    // a message about a player belongs UNDER that player: backing out of his offers lands on him
+    parent: params => {
+        const pid = Nego.playerIdOf(GameState.inbox.find(x => x.id === params[0]));
+        return (pid && GameState.getPlayer(pid)) ? 'client/' + encodeURIComponent(pid) : 'inbox';
+    },
     render(el, params) {
         const m = GameState.inbox.find(x => x.id === params[0]);
         if (!m) { el.innerHTML = '<div class="empty">This message is no longer available.</div>'; return; }
         m.read = true;
-        if (m.kind === 'transfer') return Nego.transfer(el, m);
-        if (m.kind === 'renewal') return Nego.renewal(el, m);
-        if (m.kind === 'loan') return Nego.loan(el, m);
-        if (m.kind === 'sponsor') return Nego.sponsor(el, m);
-        Nego.generic(el, m);
+        if (m.kind === 'transfer') Nego.transfer(el, m);
+        else if (m.kind === 'renewal') Nego.renewal(el, m);
+        else if (m.kind === 'loan') Nego.loan(el, m);
+        else if (m.kind === 'sponsor') Nego.sponsor(el, m);
+        else Nego.generic(el, m);
+        Nego.prependPlayerLink(el, m);   // every message about a player opens straight onto him
     }
 });
+// which player a message concerns (offers carry it directly; some news mail names him explicitly)
+Nego.playerIdOf = function (m) { return (m && ((m.offer && m.offer.playerId) || m.playerId)) || null; };
+// A tappable player header on top of any message about a player, so you can always jump to his page.
+Nego.prependPlayerLink = function (el, m) {
+    const pid = this.playerIdOf(m), p = pid && GameState.getPlayer(pid);
+    if (!p || !el.innerHTML) return;
+    const info = p.clubId ? UI.currentClubInfo(p) : null;
+    el.insertAdjacentHTML('afterbegin', `<a class="list-row" href="${Router.link('client', p.id)}" style="cursor:pointer;margin-bottom:var(--space-4)">
+        <div style="flex:1;min-width:0">
+            <div class="row-title">${UI.flag(p.nationality)} ${p.name}</div>
+            <div class="row-sub">${p.position} · ${p.age}y${info ? ' · ' + info.name : ''}</div>
+        </div>${UI.abilityBadge(p.ability)}<i class="ti ti-chevron-right row-chev"></i></a>`);
+};
+// After resolving an offer you almost always want to look at the player it concerned — and it keeps
+// the back button out of the pile of offers you just clicked through.
+Nego.goPlayer = function (playerId) {
+    if (playerId && GameState.getPlayer(playerId)) { Router.navStack.length = 0; Router.go('client/' + encodeURIComponent(playerId)); }
+    else Router.back('inbox');
+};
 Nego.generic = function (el, m) {
     el.innerHTML = `<p class="hint">W${m.week} ${m.season}</p>
         <div style="color:var(--text-secondary);line-height:1.6">${this.linkifyPlayers(m.body || '')}</div>
         <div class="flex-row" style="margin-top:var(--space-6)"><button class="btn btn--ghost" onclick="Nego.dismiss('${m.id}')"><i class="ti ti-trash"></i>Dismiss</button><button class="btn btn--primary" onclick="Router.back('inbox')">Close</button></div>`;
 };
-Nego.dismiss = function (id) { GameState.removeMail(id); GameState.save(); Router.back('inbox'); };
+Nego.dismiss = function (id) {
+    const pid = this.playerIdOf(GameState.inbox.find(m => m.id === id));
+    GameState.removeMail(id); GameState.save(); this.goPlayer(pid);
+};
 Nego.reject = function (id) {
-    Agency.declineMail(GameState.inbox.find(m => m.id === id) || {}); GameState.save(); Router.back('inbox');
+    const m = GameState.inbox.find(x => x.id === id) || {};
+    const pid = this.playerIdOf(m);
+    Agency.declineMail(m); GameState.save(); this.goPlayer(pid);
 };
 
 // ---------------- Transfer ----------------
@@ -156,10 +186,11 @@ Nego.proposePackage = function (mailId) {
     const pkg = { wage: c.wage, role: c.role, term: c.term, bonus: c.bonus, fee: m.offer.transferFee };
     const r = Agency.evaluateTransfer(p, club, pkg, c.pkgRound++);
     if (r.status === 'accept') {
+        const pid = p.id;
         const ar = Agency.acceptTransfer(m, r.counter.wage, r.counter.role, r.counter.term, r.counter.bonus);
         GameState.save();
         Router.result(`${r.message}<br><span class="muted">${ar.message}</span>`, 'ok');
-        setTimeout(() => Router.go('clients'), 900);
+        setTimeout(() => Nego.goPlayer(pid), 900);
     } else {
         const cc = r.counter; c.wage = cc.wage; c.role = cc.role; c.term = cc.term; c.bonus = cc.bonus;
         Router.refresh();
@@ -205,10 +236,11 @@ Nego.negRenewWage = function (mailId) {
 };
 Nego.acceptRenewal = function (mailId) {
     const m = GameState.inbox.find(x => x.id === mailId), c = this.ctxFor(mailId);
+    const pid = this.playerIdOf(m);
     const r = Agency.acceptRenewal(m, c.wage, c.role, c.term);
     GameState.save();
     Router.result(r.message, r.ok ? 'ok' : 'bad');
-    if (r.ok) setTimeout(() => Router.go('inbox'), 900);
+    if (r.ok) setTimeout(() => Nego.goPlayer(pid), 900);
 };
 
 // ---------------- Loan ----------------
@@ -252,10 +284,11 @@ Nego.negLoanRole = function (mailId) {
 };
 Nego.acceptLoan = function (mailId) {
     const m = GameState.inbox.find(x => x.id === mailId), c = this.ctxFor(mailId);
+    const pid = this.playerIdOf(m);
     const r = Agency.acceptLoanOffer(m, c.loanRole, c.duration);
     GameState.save();
     Router.result(r.message, r.ok ? 'ok' : 'bad');
-    if (r.ok) setTimeout(() => Router.go('inbox'), 900);
+    if (r.ok) setTimeout(() => Nego.goPlayer(pid), 900);
 };
 
 // ---------------- Sponsor ----------------
@@ -280,8 +313,9 @@ Nego.sponsor = function (el, m) {
 };
 Nego.acceptSponsor = function (mailId, optionIndex) {
     const m = GameState.inbox.find(x => x.id === mailId);
+    const pid = this.playerIdOf(m);
     const r = Agency.acceptSponsor(m, optionIndex);
     GameState.save();
     Router.result(r.message, r.ok ? 'ok' : 'bad');
-    if (r.ok) setTimeout(() => Router.go('inbox'), 900);
+    if (r.ok) setTimeout(() => Nego.goPlayer(pid), 900);
 };

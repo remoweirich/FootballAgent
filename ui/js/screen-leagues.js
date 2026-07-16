@@ -43,6 +43,24 @@ const LeaguesScreen = {
     setDivision(d) { this.state.division = d; this.renderSection(); },
     setEuComp(k) { this.state.euComp = k; Router.refresh(); },   // phases are synchronised across comps, so keep the current tab
     setEuMd(n) { this.state.euMd = n; this.renderSection(); },
+    // deep-link into this screen for a domestic division (used from the club page's competition link)
+    openFor(div) {
+        const country = (typeof divCountry === 'function') ? divCountry(div) : null;
+        if (country && COUNTRY_DIVS[country]) { this.state.country = country; this.state.division = div; this.state.tab = 'tables'; this.state.euAutoTab = true; }
+        Router.go('leagues');
+    },
+    // lowercase per-country cup key (COUNTRY_CUPS / GameState.league) -> uppercase COMPETITIONS id
+    CUP_KEY_COMP: {
+        beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC', dfb: 'DFB', lpokal: 'LPOKAL',
+        cdr: 'CDR', cfed: 'CFED', schwcup: 'SCHWCUP', cupabass: 'CUPABASS', lichcup: 'LICHCUP',
+        coppaitalia: 'COPPA', coppacompagno: 'COPPACOMP', tacaportugal: 'TACAPT', segundataca: 'SEGTACA',
+        belgiancup: 'BELCUP', notrecoupe: 'NOTRECOUPE', coupefrance: 'COUPEFR', coupenational: 'COUPENAT'
+    },
+    // "<competition> history" button linking to the standalone winners/players history page
+    compHistLink(compId) {
+        if (!compId) return '';
+        return `<a class="gbtn" style="margin-top:var(--space-4)" href="${Router.link('comphist', compId)}"><i class="ti ti-history"></i>${compName(compId)} history</a>`;
+    },
 
     renderSection() {
         const body = document.getElementById('lgSection'); if (!body) return;
@@ -54,13 +72,13 @@ const LeaguesScreen = {
             if (!divs.includes(this.state.division)) this.state.division = divs[0];
             body.innerHTML = `<select class="select-input" style="margin-bottom:var(--space-4)" onchange="LeaguesScreen.setDivision(this.value)">
                 ${divs.map(d => `<option value="${d}" ${this.state.division === d ? 'selected' : ''}>${COMPETITIONS[d].name}</option>`).join('')}</select>
-                <div id="lgStandings">${this.standingsTable(this.state.division)}</div>`;
+                <div id="lgStandings">${this.standingsTable(this.state.division)}</div>${this.compHistLink(this.state.division)}`;
         } else if (tab === 'po') {
             body.innerHTML = this.playoffs(country);
         } else {
             const key = tab, label = (cups => { const f = cups.find(c => c[0] === tab); return f ? f[1] : tab; })(COUNTRY_CUPS[country] || []);
             const comp = GameState.league && GameState.league[key];
-            body.innerHTML = (comp && comp.groups) ? this.groupCup(key, label) : this.knockoutCup(key, label);
+            body.innerHTML = ((comp && comp.groups) ? this.groupCup(key, label) : this.knockoutCup(key, label)) + this.compHistLink(this.CUP_KEY_COMP[key]);
         }
     },
 
@@ -174,10 +192,11 @@ const LeaguesScreen = {
         if (t.bye) return `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${lk(t.h)}</span><span class="fx-score muted">bye</span><span class="fx-away"></span></div></div>`;
         if (t.leg1) {
             const l1 = t.leg1, l2 = t.leg2;
-            const pensPill = t.pens ? ' <span class="pill pill--danger" style="padding:1px 6px;font-size:9.5px;margin-left:4px">pens</span>' : '';
+            // decided on penalties (level on aggregate): show the definitive shootout score in red
+            const penTag = t.pens ? ` <span style="color:var(--danger);font-size:9.5px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
             const leg = (label, l, highlight) => {
                 const hw = highlight && t.winner === l.h, aw = highlight && t.winner === l.a;
-                return `<div class="fixture fixture--labeled"><span class="fx-label">${label}${highlight ? pensPill : ''}</span><span class="fx-home ${hw ? 'fx-adv' : ''}">${lk(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away ${aw ? 'fx-adv' : ''}">${lk(l.a)}</span></div>`;
+                return `<div class="fixture fixture--labeled"><span class="fx-label">${label}${highlight ? penTag : ''}</span><span class="fx-home ${hw ? 'fx-adv' : ''}">${lk(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away ${aw ? 'fx-adv' : ''}">${lk(l.a)}</span></div>`;
             };
             // a European knockout tie can be mid-round: leg 1 played, leg 2 still to come
             if (!l2) {
@@ -187,7 +206,9 @@ const LeaguesScreen = {
             return `<div class="tie-block">${leg('Leg 1', l1, false)}${leg('Leg 2', l2, true)}</div>`;
         }
         const hw = t.winner === t.h, aw = t.winner === t.a;
-        return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
+        // single-match cup tie settled on penalties: definitive score in red, next to the 90' result
+        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.h}–${t.pens.a})</span>` : '';
+        return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}${penTag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
     // brief English explanation shown at the top of every cup view, keyed by competition
     CUP_BLURB: {
@@ -242,10 +263,11 @@ const LeaguesScreen = {
     relegTie(t) {
         if (!t) return '<p class="muted">Not yet played (week 46).</p>';
         const nm = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
-        const l1 = t.leg1, l2 = t.leg2, pens = t.pens ? ' <span class="pill pill--danger">pens</span>' : '';
+        const l1 = t.leg1, l2 = t.leg2;
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
         return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}
-            <div class="frow"><span class="frow__k">Aggregate${pens}</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}</span></div>
+            <div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>
             <div class="frow"><span class="frow__k">Winner</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(t.winner)}</span></div>`;
     },
     playoffs(country) {
@@ -357,9 +379,10 @@ const LeaguesScreen = {
     tie2Leg(t) {
         if (!t) return '';
         const nm = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
-        const l1 = t.leg1, l2 = t.leg2, pens = t.pens ? ' <span class="pill pill--danger">pens</span>' : '';
+        const l1 = t.leg1, l2 = t.leg2;
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
-        return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}<div class="frow"><span class="frow__k">Aggregate${pens}</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}</span></div>`;
+        return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}<div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>`;
     },
 
     // ---- UEFA competitions (UCL / UEL / UECL) — global, not tied to the selected country ----
@@ -397,7 +420,7 @@ const LeaguesScreen = {
         const winner = c.ko && c.ko.winner ? `<div class="result ok" style="text-align:center;margin-bottom:var(--space-3)">${icon} ${(COMPETITIONS[comp] || {}).name} winner: <strong>${UI.clubName(c.ko.winner)}</strong></div>` : '';
         const tabs = this.euTabs(c);
         let stage = this.state.tab; if (!tabs.some(t => t[0] === stage)) stage = this.euDefaultTab(c);
-        return seasonNote + dd + winner + this.euStage(c, comp, stage);
+        return seasonNote + dd + winner + this.euStage(c, comp, stage) + this.compHistLink(comp);
     },
     euTabs(c) {
         const t = [];
@@ -443,7 +466,7 @@ const LeaguesScreen = {
     euFinalView(c) {
         const f = c.ko && c.ko.final;
         if (!f) return '<p class="hint">The final is a single match at a neutral venue in week 47.</p>';
-        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk 47</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner })}</div>`;
+        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk 47</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens })}</div>`;
     },
     // horizontal bracket from the Round of 16 to the final — every club's path, scroll to follow it
     euBracketTree(c) {
@@ -515,3 +538,108 @@ const LeaguesScreen = {
     }
 };
 Router.register('leagues', { isMain: true, title: 'Leagues', render(el) { LeaguesScreen.render(el); } });
+
+// ============================================================
+//  Competition history — one page per competition (league, cup or
+//  European cup): a Winners roll of honour and a sortable list of
+//  every client who has featured in it.
+// ============================================================
+const CompHistory = {
+    state: {},   // per-competition UI state
+    SORTS: [['apps', 'Games'], ['goals', 'Goals'], ['assists', 'Assists'], ['cs', 'Clean sheets'], ['avg', 'Avg rating'], ['titles', 'Trophies'], ['yellow', 'Yellow cards'], ['red', 'Red cards'], ['name', 'Name (A–Z)']],
+    ctx(compId) { if (!this.state[compId]) this.state[compId] = { tab: 'winners', sort: 'apps', dir: 'desc' }; return this.state[compId]; },
+
+    render(el, compId) {
+        const comp = COMPETITIONS[compId];
+        if (!comp) { el.innerHTML = '<div class="empty"><div class="empty__title">Unknown competition</div></div>'; return; }
+        const ctx = this.ctx(compId);
+        if (!['winners', 'players'].includes(ctx.tab)) ctx.tab = 'winners';
+        const isCont = comp.type === 'cont';
+        const icon = (isCont && typeof europeTrophyIcon === 'function' && europeTrophyIcon(compId)) || '<i class="ti ti-trophy" style="color:var(--gold);font-size:20px"></i>';
+        const tabs = [['winners', 'Winners'], ['players', 'Clients']];
+        el.innerHTML = `
+        <div class="flex-row" style="gap:8px;margin-bottom:var(--space-2)">${icon}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${comp.name}</span></div>
+        <p class="hint" style="margin-bottom:var(--space-4)">${this.subtitle(comp.type)}</p>
+        <div class="tab-bar tab-bar--sticky" style="margin-bottom:var(--space-4)">${tabs.map(([k, l]) => `<button class="tab ${ctx.tab === k ? 'is-active' : ''}" onclick="CompHistory.setTab('${compId}','${k}')">${l}</button>`).join('')}</div>
+        <div id="comphistBody">${ctx.tab === 'winners' ? this.winnersHTML(compId) : this.playersHTML(compId)}</div>`;
+    },
+    setTab(compId, t) { this.ctx(compId).tab = t; Router.refresh(); },
+    subtitle(type) {
+        return type === 'cont' ? 'Roll of honour and every client who has featured in the competition.'
+            : type === 'cup' ? 'Past cup winners and every client who has featured in the competition.'
+                : 'Champions and every client who has played in the division.';
+    },
+
+    // ---- winners ----
+    winnersOf(compId) {
+        const isLeague = _isLeagueComp(compId);
+        const out = [];
+        Object.entries(GameState.clubHistory || {}).forEach(([clubId, arr]) => (arr || []).forEach(h => {
+            const win = isLeague ? (h.division === compId && h.position === 1) : ((h.trophies || []).includes(compId) || (h.division === compId && h.position === 1));
+            if (win) out.push({ year: h.year, clubId });
+        }));
+        const seen = new Set(), dedup = [];
+        out.sort((a, b) => b.year - a.year).forEach(w => { const k = w.year + ':' + w.clubId; if (!seen.has(k)) { seen.add(k); dedup.push(w); } });
+        return dedup;
+    },
+    winnersHTML(compId) {
+        const w = this.winnersOf(compId);
+        if (!w.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-trophy"></i></div><div class="empty__title">No winners yet</div><div class="empty__hint">This competition hasn't been decided in a completed season yet.</div></div>`;
+        const tally = {}; w.forEach(x => tally[x.clubId] = (tally[x.clubId] || 0) + 1);
+        const crest = cid => UI.crest(Clubs.getClubById(cid) || { name: UI.clubName(cid), colors: { primary: '#5A626D' } });
+        const most = Object.entries(tally).sort((a, b) => b[1] - a[1] || UI.clubName(a[0]).localeCompare(UI.clubName(b[0]))).slice(0, 6)
+            .map(([cid, n]) => `<a href="${Router.link('clubs', cid)}" class="frow" style="cursor:pointer"><span class="frow__k">${crest(cid)}${UI.clubName(cid)}</span><span class="frow__v">${n} title${n > 1 ? 's' : ''}</span></a>`).join('');
+        const roll = w.map(x => `<a href="${Router.link('clubs', x.clubId)}" class="frow" style="cursor:pointer"><span class="frow__k">${GameState.seasonLabelFor(x.year)}</span><span class="frow__v">${crest(x.clubId)}${UI.clubName(x.clubId)}</span></a>`).join('');
+        return `<div class="section-label">Most titles</div><div class="fcard" style="margin-top:var(--space-2)">${most}</div>
+            <div class="section-label" style="margin-top:var(--space-4)">Roll of honour</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${roll}</div>`;
+    },
+
+    // ---- clients who featured ----
+    playerRows(compId) {
+        return GameState.players.filter(p => p.everClient).map(p => {
+            const m = careerByComp(p).find(x => x.compId === compId);
+            if (!m || !m.agg.apps) return null;
+            const a = m.agg;
+            return { p, name: p.name, apps: a.apps, goals: a.goals, assists: a.assists, cs: a.cs || 0, yellow: a.yellow, red: a.red, avg: a.avg, titles: (p.trophies || []).filter(t => t.compId === compId).length };
+        }).filter(Boolean);
+    },
+    sortedPlayers(compId) {
+        const ctx = this.ctx(compId), dir = ctx.dir === 'asc' ? 1 : -1, rows = this.playerRows(compId);
+        if (ctx.sort === 'name') return rows.sort((a, b) => a.name.localeCompare(b.name) * dir);
+        return rows.sort((a, b) => ((a[ctx.sort] || 0) - (b[ctx.sort] || 0)) * dir);
+    },
+    playersHTML(compId) {
+        const ctx = this.ctx(compId), rows = this.sortedPlayers(compId);
+        const sortBtn = `<button class="gbtn" onclick="CompHistory.pickSort('${compId}')"><i class="ti ti-arrows-sort"></i>${this.SORTS.find(s => s[0] === ctx.sort)[1]}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>`;
+        return `<div class="flex-row" style="justify-content:flex-end;margin-bottom:var(--space-3)">${sortBtn}</div><div id="comphistPlayers">${this.playerListHTML(rows, ctx)}</div>`;
+    },
+    playerListHTML(rows, ctx) {
+        if (!rows.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-users"></i></div><div class="empty__title">No clients yet</div><div class="empty__hint">None of your clients (past or present) have featured in this competition.</div></div>`;
+        const disc = ['yellow', 'red'].includes(ctx.sort);
+        return rows.map(r => {
+            const gk = r.p.position === 'GK';
+            const line = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${gk ? r.cs + ' cs' : r.goals + ' g'} · ${r.assists} a`;
+            return `<a href="${Router.link('client', r.p.id)}" class="list-row" style="cursor:pointer">
+                <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${r.p.name}</div><div class="row-sub">${r.p.position} · ${r.apps} apps${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
+                <div style="text-align:right;font-size:12px;color:var(--text-muted)">${line}<br>${UI.ratingText(r.avg)}</div></a>`;
+        }).join('');
+    },
+    // same "stays open" sort picker used elsewhere (ClientHistory.pickSort)
+    pickSort(compId) {
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Sort clients</div>
+            <div id="sortPickerBody">${this.sortPickerRows(compId)}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">Done</button>`);
+    },
+    sortPickerRows(compId) {
+        const ctx = this.ctx(compId);
+        return this.SORTS.map(([id, label]) => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="CompHistory.setSort('${compId}','${id}')"><span style="flex:1;color:var(--text)">${label}</span>${ctx.sort === id ? `<i class="ti ${ctx.dir === 'asc' ? 'ti-sort-ascending' : 'ti-sort-descending'}" style="color:var(--accent)"></i>` : ''}</button>`).join('');
+    },
+    setSort(compId, id) {
+        const ctx = this.ctx(compId);
+        if (ctx.sort === id) ctx.dir = ctx.dir === 'asc' ? 'desc' : 'asc';
+        else { ctx.sort = id; ctx.dir = id === 'name' ? 'asc' : 'desc'; }
+        const body = document.getElementById('sortPickerBody'); if (body) body.innerHTML = this.sortPickerRows(compId);
+        const list = document.getElementById('comphistPlayers'); if (list) list.innerHTML = this.playerListHTML(this.sortedPlayers(compId), ctx);
+    }
+};
+Router.register('comphist', { isMain: false, parent: 'leagues', title: params => (COMPETITIONS[params[0]] || {}).name || 'Competition', render(el, params) { CompHistory.render(el, params[0]); } });

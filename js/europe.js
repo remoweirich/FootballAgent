@@ -405,7 +405,7 @@ const Europe = {
         t.aggB = t.leg1.hg + l2.ag;   // lower seed
         if (t.aggA > t.aggB) t.winner = t.a;
         else if (t.aggB > t.aggA) t.winner = t.b;
-        else { const sA = League.clubStrength(t.a), sB = League.clubStrength(t.b); t.winner = (Math.random() < sA / (sA + sB)) ? t.a : t.b; t.pens = { winner: t.winner }; }
+        else { const sA = League.clubStrength(t.a), sB = League.clubStrength(t.b); t.winner = (Math.random() < sA / (sA + sB)) ? t.a : t.b; const [w, l] = League._penScore(); t.pens = t.winner === t.a ? { winner: t.winner, a: w, b: l } : { winner: t.winner, a: l, b: w }; }
         return t;
     },
     _koLeg2Round(ed, comp, key) {   // second week of a round: play every leg 2, set winners
@@ -439,6 +439,8 @@ const Europe = {
         const [a, b] = c.ko.sf.winners;
         const r = League.playMatch(a, b, comp, false);   // neutral venue, no home edge
         c.ko.final = { a, b, ag: r.hg, bg: r.ag, winner: r.winner };
+        // a level final is settled on penalties — the final view renders as a single-match tie (h=a, a=b)
+        if (r.hg === r.ag) { const [w, l] = League._penScore(); c.ko.final.pens = r.winner === a ? { h: w, a: l } : { h: l, a: w }; }
         c.ko.winner = r.winner;
     },
 
@@ -450,6 +452,30 @@ const Europe = {
     cupBerthReserved(country, order, cupWinnerId) { return !!this._tierMap(country, order, cupWinnerId, true).cupReserved; },
     assocOf(id) { return euAssoc(id); },   // association (country) of a real or virtual club — for the UI
     repOf(id) { return euRep(id); },
+
+    // furthest stage a club reached in a competition, as an index into STAGE_LABELS (higher = further)
+    STAGE_LABELS: ['Qualifying', 'League phase', 'Knockout play-off', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Winner'],
+    // { compId: { clubId: stageIndex } } for a FINISHED edition — the best result each club achieved
+    bestStages(edition) {
+        const out = {};
+        if (!edition || !edition.comps) return out;
+        for (const k of ['UCL', 'UEL', 'UECL']) {
+            const c = edition.comps[k]; if (!c) continue;
+            const m = {};
+            const set = (id, s) => { if (id && (m[id] == null || s > m[id])) m[id] = s; };
+            if (c.qual && c.qual.rounds) c.qual.rounds.forEach(r => (r.ties || []).forEach(t => { set(t.a, 0); set(t.b, 0); }));
+            (c.table || []).forEach(r => set(r.clubId, 1));   // everyone in the league phase reached the "group stage"
+            if (c.ko) {
+                if (c.ko.po) c.ko.po.ties.forEach(t => { set(t.a, 2); set(t.b, 2); });
+                if (c.ko.r16) c.ko.r16.ties.forEach(t => { set(t.a, 3); set(t.b, 3); });
+                if (c.ko.qf) c.ko.qf.ties.forEach(t => { set(t.a, 4); set(t.b, 4); });
+                if (c.ko.sf) c.ko.sf.ties.forEach(t => { set(t.a, 5); set(t.b, 5); });
+                if (c.ko.final) { set(c.ko.final.a, 6); set(c.ko.final.b, 6); if (c.ko.final.winner) set(c.ko.final.winner, 7); }
+            }
+            out[k] = m;
+        }
+        return out;
+    },
 
     // read the just-finished season's standings + cup winners (call before setupSeason wipes them)
     captureStandings() {

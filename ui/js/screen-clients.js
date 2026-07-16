@@ -16,7 +16,8 @@ const ClientsScreen = {
             // expired reps sort as the most urgent (lowest) value - the deal has already run out
             const repLeft = p.repExpired ? -1 : (p.repUntilSeason != null ? p.repUntilSeason - GameState.seasonStartYear : 0);
             const mor = (typeof moraleAvg === 'function' && p.morale) ? moraleAvg(p) : 0;
-            return { p, club, tot, hasOffer, hasSponsor, contractLeft: Agency.contractSeasonsLeft(p), repLeft, mor };
+            const listed = !!(p.transferListed || p.loanListed);
+            return { p, club, tot, hasOffer, hasSponsor, listed, contractLeft: Agency.contractSeasonsLeft(p), repLeft, mor };
         });
     },
     filtered() {
@@ -24,6 +25,7 @@ const ClientsScreen = {
         if (f === 'offers') return rows.filter(r => r.hasOffer);
         if (f === 'sponsors') return rows.filter(r => r.hasSponsor);
         if (f === 'injury') return rows.filter(r => r.p.injury);
+        if (f === 'listed') return rows.filter(r => r.listed);
         return rows;
     },
     sorted() {
@@ -36,7 +38,8 @@ const ClientsScreen = {
         const rows = this.sorted(), all = this.rows();
         const counts = {
             all: all.length, offers: all.filter(r => r.hasOffer).length,
-            sponsors: all.filter(r => r.hasSponsor).length, injury: all.filter(r => r.p.injury).length
+            sponsors: all.filter(r => r.hasSponsor).length, injury: all.filter(r => r.p.injury).length,
+            listed: all.filter(r => r.listed).length
         };
         const chip = (id, icon, label) => `<button class="cl-chip ${this.state.filter === id ? 'cl-on' : ''}" onclick="ClientsScreen.setFilter('${id}')"><i class="ti ${icon}" style="font-size:13px"></i>${label} <span class="cl-ct">${counts[id]}</span></button>`;
 
@@ -46,7 +49,7 @@ const ClientsScreen = {
             <button class="gbtn" onclick="ClientsScreen.pickSort()"><i class="ti ti-arrows-sort"></i>${this.SORTS.find(s => s[0] === this.state.sort)[1]}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>
         </div>
         <div class="chip-row" style="margin-bottom:var(--space-4)">
-            ${chip('all', 'ti-users', 'All')}${chip('offers', 'ti-currency-euro', 'Offers')}${chip('sponsors', 'ti-tag', 'Sponsors')}${chip('injury', 'ti-bandage', 'Injury')}
+            ${chip('all', 'ti-users', 'All')}${chip('offers', 'ti-currency-euro', 'Offers')}${chip('sponsors', 'ti-tag', 'Sponsors')}${chip('injury', 'ti-bandage', 'Injury')}${chip('listed', 'ti-list-check', 'Listed')}
         </div>
         ${rows.length ? rows.map(r => this.card(r)).join('') : (all.length
             ? `<div class="empty"><div class="empty__icon"><i class="ti ti-filter-off"></i></div><div class="empty__title">No matches</div><div class="empty__hint">No clients match this filter.</div></div>`
@@ -132,7 +135,10 @@ const ClientHistory = {
         const rows = this.sorted();
         const posBtns = [['all', 'All'], ['GK', 'GK'], ['DEF', 'DEF'], ['MID', 'MID'], ['ATT', 'ATT']]
             .map(([id, l]) => `<button class="htog ${this.state.pos === id ? 'is-on' : ''}" onclick="ClientHistory.setPos('${id}')">${l}</button>`).join('');
-        el.innerHTML = `<p class="hint" style="margin-bottom:var(--space-3)">Every player who has been your client — current, released or retired.</p>
+        el.innerHTML = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3);gap:var(--space-2)">
+            <p class="hint" style="margin:0">Every player who has been your client — current, released or retired.</p>
+            <a class="gbtn" href="#records" style="flex:none"><i class="ti ti-award"></i>Records</a>
+        </div>
         <div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4);flex-wrap:wrap;gap:var(--space-2)">
             <div class="chip-row">${posBtns}</div>
             <button class="gbtn" onclick="ClientHistory.pickSort()" style="flex:none"><i class="ti ti-arrows-sort"></i>${this.SORTS.find(s => s[0] === this.state.sort)[1]}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>
@@ -169,4 +175,90 @@ const ClientHistory = {
         const screenBody = document.getElementById('screenBody'); if (screenBody) this.render(screenBody);
     }
 };
-Router.register('clienthist', { isMain: false, title: 'Client History', render(el) { ClientHistory.render(el); } });
+Router.register('clienthist', { isMain: false, parent: 'clients', title: 'Client History', render(el) { ClientHistory.render(el); } });
+
+// ---------------- Client Records ----------------
+// The headline marks set by any of your clients (past or present) — presented as a clean
+// leaderboard of single-best records, each linking to the player who holds it.
+const ClientRecords = {
+    render(el) {
+        const players = GameState.players.filter(p => p.everClient);
+        if (!players.length) { el.innerHTML = `<div class="empty"><div class="empty__icon"><i class="ti ti-award"></i></div><div class="empty__title">No records yet</div><div class="empty__hint">Sign and develop clients and their record-setting marks appear here.</div></div>`; return; }
+        const recs = this.compute(players);
+        el.innerHTML = `<p class="hint" style="margin-bottom:var(--space-4)">The best single marks set by any of your clients — past or present. Tap one to open the holder.</p>
+            <div style="display:grid;grid-template-columns:1fr;gap:var(--space-2)">${recs.map(r => this.card(r)).join('')}</div>`;
+    },
+    card(r) {
+        return `<a href="${Router.link('client', r.p.id)}" class="fcard" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:11px 14px">
+            <div style="min-width:0"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-secondary)">${r.label}</div><div style="font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.flag(r.p.nationality)} ${r.p.name}${r.sub ? ` <span class="muted">· ${r.sub}</span>` : ''}</div></div>
+            <div style="font-size:var(--fs-xl);font-weight:var(--weight-semibold);color:var(--gold);flex:none;margin-left:12px">${r.value}</div></a>`;
+    },
+    compute(players) {
+        const mk = (label, valFn, fmt) => {   // record held by the player with the LARGEST value
+            let bp = null, bv = -Infinity, bex = null;
+            players.forEach(p => { const r = valFn(p); if (r && r.val > bv) { bv = r.val; bp = p; bex = r.extra || null; } });
+            return bp ? { label, p: bp, value: fmt(bv), sub: bex } : null;
+        };
+        const mkMin = (label, valFn, fmt) => {   // record held by the player with the SMALLEST value (e.g. youngest)
+            let bp = null, bv = Infinity, bex = null;
+            players.forEach(p => { const r = valFn(p); if (r && r.val < bv) { bv = r.val; bp = p; bex = r.extra || null; } });
+            return bp ? { label, p: bp, value: fmt(bv), sub: bex } : null;
+        };
+        const seasonMax = key => p => { let v = 0, y = null; Object.keys(p.stats || {}).forEach(yy => { const t = seasonTotals(p, +yy); if (t[key] > v) { v = t[key]; y = +yy; } }); return v > 0 ? { val: v, extra: y != null ? GameState.seasonLabelFor(y) : null } : null; };
+        const careerKey = key => p => { const t = careerTotal(p); return t[key] > 0 ? { val: t[key] } : null; };
+        const moves = (p, type) => { const n = (p.movements || []).filter(m => m.type === type).length; return n > 0 ? { val: n } : null; };
+        // a league title in any non-top division is itself a promotion (the champion goes up) — it isn't
+        // recorded as a promo "movement" (that would double up with the trophy arrow on the player page),
+        // so add those titles to the promotions tally here. Youth-league titles never count (can't go up).
+        const isTopDiv = div => { const c = divCountry(div); return !!(COUNTRY_DIVS[c] && COUNTRY_DIVS[c][0] === div); };
+        const promoCount = p => (p.movements || []).filter(m => m.type === 'promo').length
+            + (p.trophies || []).filter(t => _isLeagueComp(t.compId) && !isYouthComp(t.compId) && !isTopDiv(t.compId)).length;
+        // age in a past season (integer years; ages step by season)
+        const ageIn = (p, y) => (p.age || 0) - (GameState.seasonStartYear - y);
+        const scoringYears = p => Object.keys(p.stats || {}).map(Number).filter(y => seasonTotals(p, y).goals > 0);
+        // senior (non-youth, non-reserve) years with real appearances, grouped by club
+        const seniorYearsByClub = p => {
+            const byClub = {};
+            Object.keys(p.stats || {}).forEach(yy => seasonStints(p, +yy).forEach(st => {
+                if (st.youth || isReserveClub(st.clubId)) return;
+                let apps = 0; Object.values(st.comps).forEach(c => apps += c.apps || 0);
+                if (apps > 0) (byClub[st.clubId] = byClub[st.clubId] || new Set()).add(+yy);
+            }));
+            return byClub;
+        };
+        const num = v => UI.money(v), euro = v => UI.euro(v), yrs = v => v + 'y';
+        return [
+            mk('Most goals in a season', seasonMax('goals'), num),
+            mk('Most assists in a season', seasonMax('assists'), num),
+            mk('Most goal involvements', p => { const t = careerTotal(p); const v = t.goals + t.assists; return v > 0 ? { val: v } : null; }, num),
+            mk('Most trophies', p => { const n = (p.trophies || []).length; return n > 0 ? { val: n } : null; }, num),
+            mk('Most goals', careerKey('goals'), num),
+            mk('Most assists', careerKey('assists'), num),
+            mk('Most appearances', careerKey('apps'), num),
+            mk('Most clean sheets', careerKey('cs'), num),
+            mk('Highest average rating', p => { const t = careerTotal(p); return t.apps >= 20 ? { val: Math.round(t.avg * 100) / 100, extra: t.apps + ' apps' } : null; }, v => v.toFixed(2)),
+            mk('Most yellow cards', careerKey('yellow'), num),
+            mk('Most red cards', careerKey('red'), num),
+            mk('Highest wage', p => { let m = p.wage || 0; ((p.history && p.history.wage) || []).forEach(h => { if (h.value > m) m = h.value; }); return m > 0 ? { val: m } : null; }, euro),
+            mk('Highest sponsor income', p => { const active = (p.sponsorDeals || []).reduce((a, d) => a + (d.weekly || 0), 0); const v = Math.max(p.sponsorIncome || 0, active); return v > 0 ? { val: v } : null; }, v => euro(v) + '/wk'),
+            mk('Highest transfer fee', p => { let m = 0; ((p.history && p.history.fees) || []).forEach(h => { if (h.value > m) m = h.value; }); return m > 0 ? { val: m } : null; }, euro),
+            mk('Most seasons', p => { const n = seasonsActiveLeague(p); return n > 0 ? { val: n } : null; }, num),
+            mk('Most clubs played for', p => { const n = Object.keys(seniorYearsByClub(p)).length; return n > 0 ? { val: n } : null; }, num),
+            mk('Longest spell at one club', p => {
+                let best = 0, club = null;
+                Object.entries(seniorYearsByClub(p)).forEach(([cid, yset]) => {
+                    const ys = Array.from(yset).sort((a, b) => a - b);
+                    let run = ys.length ? 1 : 0, mx = run;
+                    for (let i = 1; i < ys.length; i++) { run = ys[i] === ys[i - 1] + 1 ? run + 1 : 1; if (run > mx) mx = run; }
+                    if (mx > best) { best = mx; club = cid; }
+                });
+                return best > 0 ? { val: best, extra: UI.clubName(club) } : null;
+            }, v => v + (v === 1 ? ' season' : ' seasons')),
+            mk('Most promotions', p => { const n = promoCount(p); return n > 0 ? { val: n } : null; }, num),
+            mk('Most relegations', p => moves(p, 'releg'), num),
+            mkMin('Youngest goalscorer', p => { const ys = scoringYears(p); if (!ys.length) return null; let by = ys[0], ba = ageIn(p, ys[0]); ys.forEach(y => { const a = ageIn(p, y); if (a < ba) { ba = a; by = y; } }); return { val: ba, extra: GameState.seasonLabelFor(by) }; }, yrs),
+            mk('Oldest goalscorer', p => { const ys = scoringYears(p); if (!ys.length) return null; let by = ys[0], ba = ageIn(p, ys[0]); ys.forEach(y => { const a = ageIn(p, y); if (a > ba) { ba = a; by = y; } }); return { val: ba, extra: GameState.seasonLabelFor(by) }; }, yrs),
+        ].filter(Boolean);
+    }
+};
+Router.register('records', { isMain: false, parent: 'clienthist', title: 'Records', render(el) { ClientRecords.render(el); } });

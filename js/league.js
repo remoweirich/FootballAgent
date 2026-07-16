@@ -85,10 +85,54 @@ const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine B
 function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
 
 // ---- weekly squad index (world model) ----
+// How many recent appearances count as "current form" when the manager decides who plays.
+const RECENT_FORM_WINDOW = 12;
+
 // Squad lists are only needed for clubs employing a sim-relevant player (the agent's clients,
 // ex-clients, scouted prospects — ~dozens of people, a handful of clubs). Built lazily once per
 // week from a single pass over the player pool, instead of the old per-match full-pool filter
 // that scanned ~10k players ~53,000 times a season (measured: 89% of all simulation time).
+// Saves made before the frozen-NPC world model let background players age, decline and retire with
+// nothing generated to replace them, so a long-running save can hold clubs with barely a squad left
+// (the V2 migration rejuvenates the survivors but never refills the gaps). A club with almost no
+// modelled team-mates handed its entire goal output to whichever tracked player was on the pitch —
+// full-backs with 40+ goal seasons. Refill any host club that has drifted below a proper squad;
+// lazily, once, and only for the handful of clubs employing someone the game actually tracks.
+function _topUpHostSquads(hostClubs) {
+    if (!hostClubs.size || typeof PlayerGen === 'undefined' || !PlayerGen.makePlayer) return;
+    const have = new Map();
+    for (const p of GameState.players) {
+        if (p.archived || !p.clubId || !hostClubs.has(p.clubId)) continue;
+        const c = have.get(p.clubId) || { gk: 0, out: 0 };
+        if (p.position === 'GK') c.gk++; else c.out++;
+        have.set(p.clubId, c);
+    }
+    const OUT = POS_LIST.filter(x => x !== 'GK');
+    for (const cid of hostClubs) {
+        const club = Clubs.getClubById(cid);
+        if (!club) continue;                                                      // European guest clubs have no roster
+        if (isReserveClub(cid) || String(cid).indexOf('u21:') === 0) continue;    // youth/reserve sides borrow from the seniors
+        const h = have.get(cid) || { gk: 0, out: 0 };
+        const want = PlayerGen.squadSizeByTier(club.tier);
+        const needGK = Math.max(0, 2 - h.gk), needOut = Math.max(0, (want - 2) - h.out);
+        if (!needGK && !needOut) continue;
+        const mk = pos => {
+            const age = PlayerGen.randSquadAge();
+            let ability = PlayerGen.gauss(club.reputation, 7);
+            if (age < 24) ability -= (24 - age) * 1.1;
+            const np = PlayerGen.makePlayer(club, { ability, age, position: pos });
+            np.potential = np.ability;   // background players are frozen: no development curve
+            return np;
+        };
+        const fresh = [];
+        for (let i = 0; i < needGK; i++) fresh.push(mk('GK'));
+        for (let i = 0; i < needOut; i++) fresh.push(mk(OUT[Math.floor(Math.random() * OUT.length)]));
+        GameState.players.push(...fresh);
+        // re-derive roles across the club's background squad (the agent's own players keep theirs)
+        const bg = GameState.players.filter(p => !p.archived && p.clubId === cid && !isSimRelevant(p));
+        if (bg.length) PlayerGen.assignRoles(bg);
+    }
+}
 let __sqCache = null, __sqCacheWeek = -1;
 function relevantSquads() {
     const wk = GameState.seasonStartYear * 52 + GameState.week;
@@ -99,6 +143,7 @@ function relevantSquads() {
         for (const p of GameState.players) {
             if (isSimRelevant(p)) { const cid = effectiveClubId(p); if (cid) hostClubs.add(cid); }
         }
+        _topUpHostSquads(hostClubs);   // repair thin background squads before indexing them
         for (const p of GameState.players) {
             if (p.archived || p.injury) continue;
             const cid = effectiveClubId(p);
@@ -373,6 +418,16 @@ const League = {
     // One-legged cup tie: the lower-division side always hosts (the bigger club is drawn
     // away - proper cup atmosphere), and the FINAL is on neutral ground: original order is
     // kept and neither side gets the home bonus.
+    // A definitive penalty-shootout result (the winner is strictly ahead). Best-of-five with
+    // sudden death, ~75% conversion. Returns [winnerGoals, loserGoals], e.g. [4,3] or [5,4] or [3,1].
+    _penScore() {
+        let a = 0, b = 0;
+        for (let i = 0; i < 5; i++) { if (Math.random() < 0.75) a++; if (Math.random() < 0.75) b++; }
+        let guard = 0;
+        while (a === b && guard++ < 40) { if (Math.random() < 0.72) a++; if (Math.random() < 0.72) b++; }
+        if (a === b) a++;
+        return a > b ? [a, b] : [b, a];
+    },
     playCupTie(h, a, compId, isFinal) {
         let home = h, away = a;
         if (!isFinal) {
@@ -380,7 +435,10 @@ const League = {
             if (tierOf(h) < tierOf(a)) { home = a; away = h; }
         }
         const r = this.playMatch(home, away, compId, !isFinal);
-        return { h: home, a: away, hg: r.hg, ag: r.ag, winner: r.winner };
+        const tie = { h: home, a: away, hg: r.hg, ag: r.ag, winner: r.winner };
+        // a single-match cup tie level after 90' is settled on penalties — record a definitive score
+        if (r.hg === r.ag) { const [w, l] = this._penScore(); tie.pens = (r.winner === home) ? { h: w, a: l } : { h: l, a: w }; }
+        return tie;
     },
 
     // ---------------- De kleine Beker ----------------
@@ -773,7 +831,7 @@ const League = {
         let winner, pens = null;
         if (aggA > aggB) winner = aId;
         else if (aggB > aggA) winner = bId;
-        else { const sA = this.clubStrength(aId), sB = this.clubStrength(bId); winner = (Math.random() < sA / (sA + sB)) ? aId : bId; pens = { winner }; }
+        else { const sA = this.clubStrength(aId), sB = this.clubStrength(bId); winner = (Math.random() < sA / (sA + sB)) ? aId : bId; const [w, l] = this._penScore(); pens = winner === aId ? { winner, a: w, b: l } : { winner, a: l, b: w }; }
         return { a: aId, b: bId, leg1: { h: bId, a: aId, hg: l1.hg, ag: l1.ag }, leg2: { h: aId, a: bId, hg: l2.hg, ag: l2.ag }, aggA, aggB, winner, pens };
     },
     playGermanRelegation() {
@@ -1914,8 +1972,32 @@ const League = {
         guaranteed.splice(5);
         const rest = available.filter(p => !guaranteed.includes(p) && !maybeLoan.includes(p));
         const bestGK = rest.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability)[0];
+
+        // squad role decides how often a player features — but a loaned-in player follows the role his
+        // loan deal guaranteed (a youth prospect loaned out as a star plays like a star at the loan club)
+        const baseRole = pl => (pl.onLoanAt === clubId ? (pl.loanRole || 'starter') : pl.squadRole);
+        // Form beats the depth chart. A squad player on a genuine scoring run (think 10 in 12), or
+        // one simply playing out of his skin, picks himself: no manager leaves him out because of
+        // what the pre-season pecking order said. One step up the ladder only.
+        //
+        // Judged on his last dozen appearances (RECENT_FORM_WINDOW), never on season totals: a run
+        // is a run whether it started in March or September, and a rotation player would need half
+        // a season just to accumulate enough season stats to qualify — then lose it all again in
+        // August. The window also handles the lapse for free, as cold games push the hot ones out.
+        // The scoring bar sits well above what a striker manages simply by being a striker; a goal
+        // every other game is a good season, not a run of form.
+        const HOT_STEP = { youth: 'rotation', fringe: 'rotation', rotation: 'starter', starter: 'key', key: 'key' };
+        const effRole = pl => {
+            const r = baseRole(pl), rec = pl._recent;
+            if (!rec || rec.length < 5) return r;
+            const perGame = rec.reduce((s, x) => s + x.g + x.a * 0.6, 0) / rec.length;
+            // a scoring run speaks for itself quickly; "he's been playing well" needs a real sample
+            const hot = perGame >= 0.75 || (rec.length >= 10 && rec.reduce((s, x) => s + x.r, 0) / rec.length >= 7.6);
+            return hot ? (HOT_STEP[r] || r) : r;
+        };
+
         const outfield = rest.filter(p => p !== bestGK)
-            .map(p => ({ p, w: (ROLE_PLAYTIME[p.squadRole] ?? 0.4) * 3 + p.ability / 80 + Math.random() * 0.8 }))
+            .map(p => ({ p, w: (ROLE_PLAYTIME[effRole(p)] ?? 0.4) * 3 + p.ability / 80 + Math.random() * 0.8 }))
             .sort((a, b) => b.w - a.w).map(x => x.p);
 
         const starters = [];
@@ -1923,10 +2005,7 @@ const League = {
         guaranteed.forEach(p => { if (starters.length < 11) starters.push(p); });
         for (const p of outfield) { if (starters.length >= 11) break; starters.push(p); }
 
-        // squad role decides how often a player features — but a loaned-in player follows the role his
-        // loan deal guaranteed (a youth prospect loaned out as a star plays like a star at the loan club)
         const ATTEND = { key: 0.95, starter: 0.82, rotation: 0.26, fringe: 0.16, youth: 0.08 };
-        const effRole = pl => (pl.onLoanAt === clubId ? (pl.loanRole || 'starter') : pl.squadRole);
         const willPlay = pl => Math.random() < (ATTEND[effRole(pl)] ?? 0.6);
         const benchPool = outfield.filter(p => !starters.includes(p));   // remaining outfielders, best-first
         const finalStarters = [];
@@ -1948,17 +2027,30 @@ const League = {
         const sBias = p => (typeof Scouting !== 'undefined' ? Scouting.styleBias(p) : { goal: 1, assist: 1 });
         const wG = a => (posW[a.p.position] ?? 0.3) * (0.5 + a.p.ability / 100) * sBias(a.p).goal;
         const wA = a => (posWA[a.p.position] ?? 0.3) * (0.5 + a.p.ability / 100) * sBias(a.p).assist;
+        // A club always fields eleven, but only the players this save actually models turn up in
+        // `appear`. Whatever is missing from the XI still scores its share, so give the unmodelled
+        // remainder its own weight in the draw. Without this, a club whose background squad has
+        // thinned out funnels EVERY goal it scores into the one tracked player on the pitch — which
+        // is how full-backs ended up with 40+ goal seasons. A full XI has no ghosts, so healthy
+        // clubs are completely unaffected.
+        const ghostClub = Clubs.getClubById(clubId);
+        const ghostAb = 0.5 + ((ghostClub ? ghostClub.reputation : 45) / 100);
+        const ghosts = Math.max(0, 11 - appear.length);
+        const ghostG = ghosts * 0.45 * ghostAb;   // ~ the average outfielder's goal weight
+        const ghostA = ghosts * 0.50 * ghostAb;   // ~ the average outfielder's assist weight
         for (let i = 0; i < scored; i++) {
-            const total = appear.reduce((s, a) => s + wG(a), 0) || 1;
-            let r = Math.random() * total, pick = appear[0];
+            const total = appear.reduce((s, a) => s + wG(a), 0) + ghostG || 1;
+            let r = Math.random() * total, pick = null;
             for (const a of appear) { r -= wG(a); if (r <= 0) { pick = a; break; } }
+            if (!pick) continue;   // an unmodelled team-mate scored — nothing to record
             pick.g += 1;
             if (Math.random() < 0.7) {
                 const others = appear.filter(a => a !== pick);
-                if (others.length) {
-                    const t2 = others.reduce((s, a) => s + wA(a) + 0.05, 0); let r2 = Math.random() * t2, as = others[0];
+                const t2 = others.reduce((s, a) => s + wA(a) + 0.05, 0) + ghostA;
+                if (t2 > 0) {
+                    let r2 = Math.random() * t2, as = null;
                     for (const a of others) { r2 -= (wA(a) + 0.05); if (r2 <= 0) { as = a; break; } }
-                    as.a += 1;
+                    if (as) as.a += 1;   // otherwise an unmodelled team-mate laid it on
                 }
             }
         }
@@ -1983,13 +2075,24 @@ const League = {
                 p._yellowsSeason = (p._yellowsSeason || 0) + 1;
                 if (p._yellowsSeason % 5 === 0) p._suspended = (p._suspended || 0) + 1;  // 5th, 10th, 15th... yellow -> ban
             }
-            // base ratings sit higher; goals/assists swing them up sharply
-            let rating = 6.7 + (p.ability - 50) * 0.018 + resultBonus + a.g * 1.0 + a.a * 0.55;
+            // A rating measures you against the level you're playing at, not against a fixed
+            // scale: holding your own at your own club's level is an unremarkable 6.6 season, and
+            // a big average is earned by being better than the company you keep (or by scoring).
+            // Keying this off raw ability instead meant anyone halfway decent averaged 7.5
+            // everywhere. A season at your own level can still be exceptional — that's what the
+            // form draw is for — it just isn't the default.
+            let rating = 6.55 + levelGapRating(p.ability - (ghostClub ? ghostClub.reputation : 50)) + resultBonus + a.g * 1.0 + a.a * 0.55;
             if (conceded === 0 && (p.position === 'GK' || p.position === 'CB' || p.position === 'LB' || p.position === 'RB')) rating += 0.6;
             if (conceded >= 3 && (p.position === 'GK' || p.position === 'CB')) rating -= 0.45;
-            rating += PlayerGen.gauss(0, 0.4);
+            rating += PlayerGen.gauss(0, 0.62);        // match to match: some days it just doesn't click
+            rating += formBiasOf(p);                   // this season's form, and his temperament
             rating += moraleRatingMod(moraleAvg(p));   // derived from avg morale only — never a single dimension
-            c.ratingSum += Math.max(4.0, Math.min(10, rating));
+            rating = Math.max(4.0, Math.min(10, rating));
+            c.ratingSum += rating;
+            // rolling recent form (see effRole): the last dozen appearances, oldest dropping off
+            p._recent = p._recent || [];
+            p._recent.push({ g: a.g, a: a.a, r: Math.round(rating * 10) / 10 });
+            if (p._recent.length > RECENT_FORM_WINDOW) p._recent.splice(0, p._recent.length - RECENT_FORM_WINDOW);
         });
     },
 

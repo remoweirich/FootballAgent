@@ -129,6 +129,20 @@ const UI = {
         for (const t of targets) if (hi / t <= 5) return t;
         return 5000000;
     },
+    // a "nice" 1/2/5×10ⁿ step that splits `range` into roughly `ticks` intervals
+    niceSpan(range, ticks = 4) {
+        const raw = Math.max(1e-9, range) / Math.max(1, ticks);
+        const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+        const norm = raw / mag;
+        const s = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+        return s * mag;
+    },
+    // a rounded axis [min,max] with a nice step and ~`ticks` gridlines — keeps labels from crowding
+    niceAxis(lo, hi, ticks = 4) {
+        if (!(hi > lo)) hi = lo + 1;
+        const step = this.niceSpan(hi - lo, ticks);
+        return { min: Math.floor(lo / step) * step, max: Math.ceil(hi / step) * step, step };
+    },
 
     // flexible inline SVG line chart: points [{x,y}]; opts {fmtY,yStep,yMin,yMax,xMin,xMax,xTicks,dotsOnly}
     xyChart(points, color, opts = {}) {

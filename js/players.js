@@ -32,6 +32,15 @@ const PlayerGen = {
         return 26 + Math.floor(Math.random() * 4);
     },
 
+    // Peaking and declining are two different ages: a winger who tops out at 26 doesn't start
+    // losing ability at 27 — he holds that level for years first. A peak lasts 2-7 years, so an
+    // outfielder might be at his best from 26 to 33 and a keeper from 30 to 37. Nobody declines
+    // before 30, and when it starts is individual, not a fixed birthday.
+    declineAgeFor(peakAge) {
+        const peakYears = 2 + Math.floor(Math.random() * 6);
+        return Math.max(30, Math.min(38, (peakAge || 28) + peakYears));
+    },
+
     // pay scales with the club's actual reputation, not its tier label — a Dutch Derde Divisie side
     // (amateur, reputation ~30) pays far less than a similarly-tiered but professional foreign club.
     // Above ability 50 pay accelerates (a great player isn't just "a bit more" than a good one — the gap
@@ -51,6 +60,10 @@ const PlayerGen = {
     },
     freshMorale() { return { club: 70, time: 70, wage: 70, agent: 70 }; },
 
+    // Temperament: roughly one player in thirty is a reliable performer wherever he goes, and
+    // barely has a bad season. Everyone else carries a small permanent lean either way.
+    formTraitRoll() { return Math.random() < 1 / 30 ? this.gauss(0.34, 0.06) : this.gauss(0, 0.09); },
+
     makePlayer(club, { ability, age, position }) {
         const nat = getRegionForClub(club);
         age = age != null ? age : this.randSquadAge();
@@ -63,7 +76,8 @@ const PlayerGen = {
         return {
             id: this._id(),
             name: generateName(nat), nationality: nat, nationalityFlag: getNationalityFlag(nat),
-            age, position, ability, potential, peakAge,
+            age, position, ability, potential, peakAge, declineAge: this.declineAgeFor(peakAge),
+            formTrait: this.formTraitRoll(),
             clubId: club.id, clubTierAtJoin: club.tier,
             wage, sponsorIncome: this.sponsorBaseFor(ability),
             contractUntilSeason: GameState ? GameState.seasonStartYear + 1 + Math.floor(Math.random() * 3) : 2027,
@@ -202,9 +216,9 @@ const PlayerDev = {
             while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 11) {
                 p.ability += 1; p._dev -= 1; p._devGained = (p._devGained || 0) + 1; delta += 1;
             }
-        } else if (p.age > p.peakAge) {
+        } else if (p.age > declineAgeOf(p)) {
             const perYear = p.position === 'GK' ? 0.7 : (MID_POS.includes(p.position) || p.position === 'CB' ? 1.4 : 1.8);
-            const accel = 1 + (p.age - p.peakAge) * 0.12;
+            const accel = 1 + (p.age - declineAgeOf(p)) * 0.12;
             p._dev = (p._dev || 0) - (perYear / 45) * accel;
             while (p._dev <= -1 && p.ability > 20) { p.ability -= 1; p._dev += 1; delta -= 1; }
         }
@@ -214,6 +228,38 @@ const PlayerDev = {
 };
 
 // ---- helpers ----
+// Assigned lazily so players from saves made before decline and peak were separated get one too.
+function declineAgeOf(p) {
+    if (p.declineAge == null) p.declineAge = PlayerGen.declineAgeFor(p.peakAge);
+    return p.declineAge;
+}
+// How well a player performs relative to his ability: a permanent temperament plus a fresh draw
+// every season, so the same player has good and bad campaigns instead of a flat career average.
+// The reliable ones (see formTraitRoll) get a much narrower season draw — that's what makes them
+// reliable. Both are stored, so a season's form doesn't re-roll mid-season.
+//
+// Note the spread: PlayerGen.gauss averages three uniforms, so its real standard deviation is a
+// THIRD of the argument and it can never exceed it. 0.9 here means a typical season lands within
+// ~0.3 of par and the ~5% tails are the genuinely great and genuinely wretched campaigns — which
+// is what lets a player at his own club's level occasionally average 7.5 without it being routine.
+function formBiasOf(p) {
+    if (p.formTrait == null) p.formTrait = PlayerGen.formTraitRoll();
+    const year = GameState.seasonStartYear;
+    if (p._formSeason !== year) {
+        p._formSeason = year;
+        p._formVal = PlayerGen.gauss(0, p.formTrait > 0.2 ? 0.30 : 0.9);
+    }
+    return p.formTrait + p._formVal;
+}
+// How far above (or below) the standard around him a player is, converted into rating. Being
+// clearly better than your club is what earns big averages, and it bites quickly: five points
+// of ability above your team-mates is already a real edge. Beyond about twelve the returns
+// flatten — you can only dominate a league so hard — and being below the level costs you more
+// gently than being above it pays, since the side is built to carry you.
+function levelGapRating(gap) {
+    if (gap <= 0) return gap * 0.045;
+    return gap <= 12 ? gap * 0.0625 : 0.75 + (gap - 12) * 0.022;
+}
 function clubTierOf(p) { const c = Clubs.getClubById(p.clubId); return c ? c.tier : 4; }
 function getRegionForClub(club) { return getRegionBasedNationality(club.country || 'Netherlands'); }
 function effectiveClubId(p) { return p.onLoanAt || p.clubId; }

@@ -1,6 +1,17 @@
 // ============================================================
 //  Agency — negotiations (multi-step), clients, money, deals
 // ============================================================
+// Rough country centroids (lat, lon) for the leagues the game simulates — used to weight where
+// loan interest comes from: mostly domestic, some from neighbours, rarely from a distant league.
+const LOAN_COUNTRY_COORD = {
+    England: [52.5, -1.5], Netherlands: [52.2, 5.3], Belgium: [50.6, 4.5], Germany: [51.0, 10.0],
+    France: [46.6, 2.4], Switzerland: [46.8, 8.2], Italy: [43.0, 12.5], Spain: [40.2, -3.7], Portugal: [39.5, -8.0]
+};
+function loanCountryDist(a, b) {
+    const A = LOAN_COUNTRY_COORD[a], B = LOAN_COUNTRY_COORD[b];
+    if (!A || !B) return 14;   // unknown country -> treat as far away
+    return Math.hypot(A[0] - B[0], A[1] - B[1]);
+}
 const Agency = {
     init() {
         const relationships = {};
@@ -163,6 +174,27 @@ const Agency = {
     },
 
     // ---------- loans: interested clubs come to you ----------
+    // Weight for a loan enquiry coming from `toCountry` given the player's club is in `fromCountry`.
+    // Domestic dominates; neighbours are occasional; distant leagues rare. Better players (higher
+    // ability) draw interest from further afield (flatter decay), but home still makes up the bulk.
+    _loanCountryWeight(fromCountry, toCountry, ability) {
+        if (fromCountry === toCountry) return 100;
+        const d = loanCountryDist(fromCountry, toCountry);
+        const scale = 2.2 + Math.max(0, (ability || 45) - 40) * 0.09;   // ~2.2 (steep) at 40, ~5.8 at 80
+        return 26 * Math.exp(-d / scale);   // neighbour (d~3) -> a few; far league (d~11+) -> a fraction
+    },
+    // weighted sampling without replacement of `n` loan clubs, biased toward home/nearby countries
+    _weightedLoanPicks(cands, fromCountry, ability, n) {
+        const pool = cands.slice(), picks = [];
+        while (pool.length && picks.length < n) {
+            const weights = pool.map(c => Math.max(0.0005, this._loanCountryWeight(fromCountry, c.country || fromCountry, ability)));
+            let total = weights.reduce((s, w) => s + w, 0), r = Math.random() * total, idx = 0;
+            for (; idx < pool.length - 1; idx++) { r -= weights[idx]; if (r <= 0) break; }
+            picks.push(pool[idx]); pool.splice(idx, 1);
+        }
+        return picks;
+    },
+
     requestLoan(p) {
         if (p.pendingTransfer) return { ok: false, message: `${p.name} has already agreed a transfer — no loans until that's done.` };
         if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
@@ -179,11 +211,11 @@ const Agency = {
         if (!cands.length) {
             return { ok: false, message: `No senior club can give ${p.name} regular minutes right now. Send him to your U21 instead to keep developing.` };
         }
-        // spread the picks across the candidates so some weaker clubs (who'd offer a bigger role) are included
-        for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[cands[i], cands[j]] = [cands[j], cands[i]]; }
-        const picks = cands.slice(0, 3 + Math.floor(Math.random() * 2)).map(c => c.id);
         // the parent club must sanction the loan first
         const parent = Clubs.getClubById(p.clubId);
+        // interest is weighted by geography: mostly his own country, some neighbours, rarely far away
+        const parentCountry = (parent && parent.country) || GameState.homeCountry;
+        const picks = this._weightedLoanPicks(cands, parentCountry, p.ability, 3 + Math.floor(Math.random() * 2)).map(c => c.id);
         const rel = this.relationship(p.clubId);
         let sanction = 0.55 + (rel - 55) / 200 + (['youth', 'fringe', 'rotation'].includes(p.squadRole) ? 0.2 : -0.15);
         sanction = Math.max(0.1, Math.min(0.95, sanction));
@@ -193,8 +225,9 @@ const Agency = {
             return { ok: false, message: `${parent ? parent.name : 'His club'} won't sanction a loan for ${p.name} right now.` };
         }
         p._pendingLoan = { from: GameState.absWeek() + 1, picks };
-        GameState.addMail({ kind: 'news', cat: 'general', subject: `${parent ? parent.name : 'His club'} open to loaning ${p.name}`, body: `${parent ? parent.name : 'His club'} are happy to let ${p.name} go out on loan for game time. Interested clubs will be in touch over the coming week.`, ttl: 5 });
-        return { ok: true, message: `${parent ? parent.name : 'His club'} sanction the loan. Loan offers will start arriving next week.` };
+        p._loanOk = true;   // the club has sanctioned a loan — you can now also shop him out on loan to clubs of your choosing
+        GameState.addMail({ kind: 'news', cat: 'general', subject: `${parent ? parent.name : 'His club'} open to loaning ${p.name}`, body: `${parent ? parent.name : 'His club'} are happy to let ${p.name} go out on loan for game time. Interested clubs will be in touch over the coming week — or shop him out to specific clubs yourself.`, ttl: 5 });
+        return { ok: true, message: `${parent ? parent.name : 'His club'} sanction the loan. Offers will start arriving next week — or shop him to clubs of your choosing on loan.` };
     },
     _u21ClubReaction(p, clubName, dest) {
         const lines = [
@@ -312,15 +345,18 @@ const Agency = {
     },
     _findLoanClub(p, parent) {
         // clubs a rung or two below the parent that would actually give him a role; may be none
-        const pool = Clubs.allClubs.filter(c => c.id !== parent.id && c.reputation <= parent.reputation + 2 && ROLE_ORDER.indexOf(this.maxRoleAt(p, c)) >= ROLE_ORDER.indexOf('fringe'))
-            .sort((a, b) => Math.abs(a.reputation - (parent.reputation - 8)) - Math.abs(b.reputation - (parent.reputation - 8)));
+        const pool = Clubs.allClubs.filter(c => c.id !== parent.id && c.reputation <= parent.reputation + 2 && ROLE_ORDER.indexOf(this.maxRoleAt(p, c)) >= ROLE_ORDER.indexOf('fringe'));
         if (!pool.length) return null;
-        return pool[Math.floor(Math.random() * Math.min(5, pool.length))] || null;
+        // weighted toward the parent club's own country and its neighbours (item: domestic loans)
+        const parentCountry = (parent && parent.country) || GameState.homeCountry;
+        return this._weightedLoanPicks(pool, parentCountry, p.ability, 1)[0] || null;
     },
 
     // ---------- shop player to ANY club, in any country ----------
     shopPlayer(p, targetClubId) {
         if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
+        // out on loan (or with the reserves): nobody talks about a permanent move until he's back
+        if (p.onLoanAt) return { ok: false, message: `${p.name} is away on loan at ${UI.clubName ? UI.clubName(p.onLoanAt) : 'another club'} — clubs won't discuss a permanent move until he's back.` };
         const parent = Clubs.getClubById(p.clubId);
         const target = Clubs.getClubById(targetClubId);
         if (!target) return { ok: false, message: 'Unknown club.' };
@@ -345,7 +381,11 @@ const Agency = {
         if (perceived < target.reputation - 6) {
             return { ok: true, interested: false, message: msg + `${target.name} say they don't need a player like ${p.name} right now.` };
         }
-        if (Math.random() >= 0.8) return { ok: true, interested: false, message: msg + `${target.name} didn't bite this time.` };
+        // most clubs pass — only a minority bite on any given pitch. Being persistent (re-shopping
+        // week after week) gives fresh rolls, so a club can still come round; blanket-pitching a whole
+        // division no longer floods you with offers. Transfer-listed players draw a little more interest.
+        const biteChance = p.transferListed ? 0.42 : 0.30;
+        if (Math.random() >= biteChance) return { ok: true, interested: false, message: msg + `${target.name} didn't bite this time.` };
 
         // a stage-2+ club case means he's publicly known to want out — the club's own asking
         // price softens too (a smaller cut than the incoming-bid discount, since this is the
@@ -358,6 +398,34 @@ const Agency = {
         GameState.addMail({ kind: 'transfer', subject: `${target.name} want ${p.name}`, offer, persistence: 1, ttl: 2 });
         GameState.addLog(`${target.name} tabled €${UI.money(fee)} for ${p.name}.`, 'offer');
         return { ok: true, interested: true, message: msg + `${target.name} are interested — offer in your inbox (€${UI.money(fee)}).` };
+    },
+
+    // whether the "loan" mode is available in Shop-to-clubs: the parent club must first have
+    // sanctioned a loan (via requestLoan), and he can't already be out or mid-transfer.
+    canLoanShop(p) { return this.isClient(p) && !p.pendingTransfer && !(p.onLoanAt && !isU21Loan(p)) && !!p._loanOk; },
+
+    // ---------- shop player OUT ON LOAN to a chosen club ----------
+    shopPlayerLoan(p, targetClubId) {
+        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
+        if (p.pendingTransfer) return { ok: false, message: `${p.name} has already agreed a transfer — no loan.` };
+        if (p.onLoanAt && !isU21Loan(p)) return { ok: false, message: `${p.name} is already out on loan.` };
+        if (!p._loanOk) return { ok: false, message: `${Clubs.getClubById(p.clubId)?.name || 'His club'} haven't sanctioned a loan yet — use “Request loan” first.` };
+        const target = Clubs.getClubById(targetClubId);
+        if (!target) return { ok: false, message: 'Unknown club.' };
+        if (target.id === p.clubId) return { ok: true, interested: false, message: `${target.name} already have him.` };
+        if (this.clubHasMyPlayerAtPos(target.id, p.position, p.id)) return { ok: true, interested: false, message: `${target.name} already have one of your players in that position.` };
+        if (this.onCooldown(p, 'loanshop:' + target.id)) return { ok: false, message: `${target.name} already heard your loan pitch for ${p.name} this week — try again next week.` };
+        this.setCooldown(p, 'loanshop:' + target.id);
+        const role = this.maxRoleAt(p, target);
+        if (!(role === 'key' || role === 'starter' || role === 'rotation'))
+            return { ok: true, interested: false, message: `${target.name} can't promise ${p.name} enough game time to take him on loan.` };
+        // loans bite a little more readily than permanent deals (lower commitment), but still selective
+        if (Math.random() >= 0.42) return { ok: true, interested: false, message: `${target.name} passed on a loan for ${p.name} this time.` };
+        if (GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id && m.offer.toClubId === target.id))
+            return { ok: true, interested: false, message: `${target.name} already have a loan offer in for ${p.name}.` };
+        GameState.addMail({ kind: 'loan', subject: `${target.name} want ${p.name} on loan`, offer: { playerId: p.id, fromClubId: p.clubId, toClubId: target.id, role }, persistence: 0, ttl: 3 });
+        GameState.addLog(`${target.name} enquire about ${p.name} on loan.`, 'offer');
+        return { ok: true, interested: true, message: `${target.name} want ${p.name} on loan — offer in your inbox.` };
     },
 
     // ---------- contract renewal request (to parent club) ----------
@@ -628,13 +696,18 @@ const Agency = {
         GameState.agency.balance += reqBonus; GameState.addFinance('Transfer & loan bonuses', reqBonus);
 
         GameState.removeMail(mail.id);
-        GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'transfer' && m.offer.playerId === p.id));
+        // agreeing a move kills every other open approach for him: rival bids AND any contract-renewal
+        // proposal from the club he's leaving (that deal is moot the moment he's agreed to go)
+        GameState.inbox = GameState.inbox.filter(m => !(['transfer', 'renewal'].includes(m.kind) && m.offer && m.offer.playerId === p.id));
 
         if (!windowOpen) {
             // agreed outside a window: park the package, complete it when the window opens
             p.pendingTransfer = pkg;
             p.joiningClubId = toClub.id;   // shows the "Joining X" tag in the UI
-            p.transferListed = false; p.loanListed = false;
+            // the season the move actually completes in (winter window = this season; otherwise next) —
+            // used to label "Joining 26/27" instead of the old undefined -> "NaN/NaN"
+            p._joinSeason = (GameState.week >= 7 && GameState.week <= 27) ? GameState.seasonStartYear : GameState.seasonStartYear + 1;
+            p.transferListed = false; p.loanListed = false; p._loanOk = false;
             // the agent's work ends at the handshake: promises count as kept and the deal
             // credits his standing now (finalize skips both via pkg.credited)
             this._checkPromiseKept(p, ['move', 'renegotiateRep']);
@@ -661,8 +734,8 @@ const Agency = {
         const winKey = GameState.transferWindowKey ? GameState.transferWindowKey() : null;
         if (winKey) p._txWindow = winKey;
         p.wage = pkg.wage; p.contractUntilSeason = GameState.seasonStartYear + pkg.term;
-        p.transferListed = false; p.loanListed = false;
-        delete p.pendingTransfer; delete p.joiningClubId;
+        p.transferListed = false; p.loanListed = false; p._loanOk = false;
+        delete p.pendingTransfer; delete p.joiningClubId; delete p._joinSeason;
         p.squadRole = (pkg.role && ROLE_ORDER.includes(pkg.role)) ? pkg.role : this.maxRoleAt(p, toClub);
         recordWagePoint(p);
 
@@ -733,6 +806,9 @@ const Agency = {
         this._checkPromiseKept(p, ['newContract', 'renegotiateRep']);
         this._creditAgentAction(p, MORALE.AGENT_DEAL_BONUS);
         GameState.removeMail(mail.id);
+        // He has just committed: every bid on the table dies with the signature. Clubs that still
+        // want him have to come back with a fresh (and better) offer.
+        GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'transfer' && m.offer && m.offer.playerId === p.id));
         GameState.addLog(`${p.name} renewed at ${club.name}: €${UI.money(agreedWage)}/wk until ${GameState.seasonLabelFor(p.contractUntilSeason)} (${roleLabel(p.squadRole, p.age)}).`, 'contract');
         return { ok: true, message: `Renewed: €${UI.money(agreedWage)}/wk as ${roleLabel(p.squadRole, p.age)} until end of ${GameState.seasonLabelFor(p.contractUntilSeason)}.` };
     },
@@ -751,7 +827,7 @@ const Agency = {
         // genuine problem, not for a loan that changed nothing he was unhappy about
         const timeWasBelowGood = p.morale && moraleBand(p.morale.time) !== 'GOOD';
         const hadPlayingTimeCase = !!(p.moraleCase && p.moraleCase.promise && p.moraleCase.promise.type === 'playingTime');
-        p.onLoanAt = borrower.id; p.loanUntilSeason = end.until; p.loanMid = end.mid; p.loanListed = false; p.loanRole = r;
+        p.onLoanAt = borrower.id; p.loanUntilSeason = end.until; p.loanMid = end.mid; p.loanListed = false; p.loanRole = r; p._loanOk = false;
         if (p.morale) { p.morale.time = MORALE.TIME_RESET_ON_MOVE; }
         p._playStreak = 0; p._benchStreak = 0;
         this.changeRelationship(borrower.id, +2);

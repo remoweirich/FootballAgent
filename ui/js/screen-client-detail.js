@@ -109,7 +109,7 @@ const ClientDetail = {
         if (p.retired) return 'Retired';
         if (p.retiringThisSeason) return 'Retiring';
         if (Agency.isFreeAgent(p)) return 'Free agent';
-        if (p.joiningClubId) return `Joining ${GameState.seasonLabelFor(p._joinSeason)}`;
+        if (p.joiningClubId) return `Joining ${UI.clubName(p.joiningClubId)}`;
         const left = Agency.contractSeasonsLeft(p);
         return left <= 0 ? 'Final year' : `Until ${GameState.seasonLabelFor(p.contractUntilSeason)}`;
     },
@@ -136,19 +136,32 @@ const ClientDetail = {
     reqRenewal(id) { const r = Agency.requestRenewalTalks(GameState.getPlayer(id)); GameState.save(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
 
     // ---- shop to any club, any country, one or several at once ----
-    openShop(id) { this.ctx(id).shop = { country: (Clubs.getClubById(GameState.getPlayer(id).clubId) || {}).country || GameState.homeCountry || 'Netherlands', selected: new Set() }; this.renderShop(id); },
+    openShop(id) { this.ctx(id).shop = { country: (Clubs.getClubById(GameState.getPlayer(id).clubId) || {}).country || GameState.homeCountry || 'Netherlands', selected: new Set(), mode: 'transfer' }; this.renderShop(id); },
     renderShop(id) {
         const p = GameState.getPlayer(id), shop = this.ctx(id).shop;
+        const canLoan = Agency.canLoanShop(p);
+        if (shop.mode === 'loan' && !canLoan) shop.mode = 'transfer';
         const countries = Object.keys(COUNTRY_DIVS);
         const tabs = countries.map(c => `<button class="htog ${shop.country === c ? 'is-on' : ''}" onclick="ClientDetail.setShopCountry('${id}','${c}')">${c}</button>`).join('');
         const count = shop.selected.size;
+        const loan = shop.mode === 'loan';
+        // transfer / loan segmented toggle — loan only offered once the club has sanctioned a loan
+        const modeToggle = `<div class="chip-row" style="margin:var(--space-3) 0 0">
+            <button class="htog ${!loan ? 'is-on' : ''}" onclick="ClientDetail.setShopMode('${id}','transfer')">Transfer</button>
+            <button class="htog ${loan ? 'is-on' : ''}" ${canLoan ? '' : 'disabled title="Request a loan first — the club must sanction it"'} onclick="ClientDetail.setShopMode('${id}','loan')">Loan</button>
+        </div>`;
+        const hint = loan
+            ? 'Pitch him out on loan to clubs that can give him minutes. Some won\'t need him, some may not respond at all.'
+            : 'Pitch him to any club, any country — pick one or several, or a whole league at once. Some won\'t need him, some can\'t afford him, some may not respond at all.';
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Shop ${p.name}</div>
-            <p class="hint">Pitch him to any club, any country — pick one or several, or a whole league at once. Some won't need him, some can't afford him, some may not respond at all.</p>
-            <div class="chip-row" style="margin:var(--space-3) 0">${tabs}</div>
+            ${modeToggle}
+            <p class="hint" style="margin-top:var(--space-2)">${hint}</p>
+            <div class="chip-row" style="margin:var(--space-2) 0 var(--space-3)">${tabs}</div>
             <div style="max-height:38vh;overflow-y:auto" id="shopClubList">${this.shopClubListHTML(id)}</div>
-            <div class="flex-row" style="margin-top:var(--space-5)"><button class="btn btn--ghost" onclick="Router.closeSheet()">Cancel</button><button class="btn btn--primary" id="shopPitchBtn" ${count ? '' : 'disabled'} onclick="ClientDetail.doShop('${id}')">Pitch to ${count} club${count === 1 ? '' : 's'}</button></div>
+            <div class="flex-row" style="margin-top:var(--space-5)"><button class="btn btn--ghost" onclick="Router.closeSheet()">Cancel</button><button class="btn btn--primary" id="shopPitchBtn" ${count ? '' : 'disabled'} onclick="ClientDetail.doShop('${id}')">${loan ? 'Loan pitch' : 'Pitch'} to ${count} club${count === 1 ? '' : 's'}</button></div>
             <div id="actionResult"></div>`);
     },
+    setShopMode(id, mode) { this.ctx(id).shop.mode = mode; this.renderShop(id); },
     // rendered separately from the sheet chrome so toggling a checkbox / picking "all" only
     // ever replaces this list, never the whole sheet — otherwise every click reset your scroll
     // position back to the top of a potentially long club list
@@ -180,15 +193,16 @@ const ClientDetail = {
         this.updateShopPitchBtn(id);
     },
     updateShopPitchBtn(id) {
-        const count = this.ctx(id).shop.selected.size;
+        const shop = this.ctx(id).shop, count = shop.selected.size;
         const btn = document.getElementById('shopPitchBtn');
-        if (btn) { btn.disabled = !count; btn.textContent = `Pitch to ${count} club${count === 1 ? '' : 's'}`; }
+        if (btn) { btn.disabled = !count; btn.textContent = `${shop.mode === 'loan' ? 'Loan pitch' : 'Pitch'} to ${count} club${count === 1 ? '' : 's'}`; }
     },
     doShop(id) {
         const shop = this.ctx(id).shop, targets = Array.from(shop.selected);
         if (!targets.length) return;
         const p = GameState.getPlayer(id);
-        const lines = targets.map(cid => Agency.shopPlayer(p, cid).message);
+        const loan = shop.mode === 'loan';
+        const lines = targets.map(cid => (loan ? Agency.shopPlayerLoan(p, cid) : Agency.shopPlayer(p, cid)).message);
         GameState.save();
         shop.selected = new Set();
         this.renderShop(id);
@@ -241,11 +255,12 @@ const ClientDetail = {
             <p style="color:var(--text-secondary);line-height:1.5">${r.desc}</p>
             <div class="fcard"><div class="frow"><span class="frow__k">Ceiling</span><span class="frow__v" style="color:var(--state-good)">${r.ceiling}</span></div><div class="frow"><span class="frow__k">Floor</span><span class="frow__v" style="color:var(--danger)">${r.floor}</span></div></div>
             <p class="hint">Estimates are relative to ${r.country}'s pyramid and only as good as the scout — weaker scouts are wider of the mark.</p>
-            <div class="section-label" style="margin-top:var(--space-6)"><i class="ti ti-bug" style="margin-right:4px"></i>Debug</div>
+            ${GameState.debug ? `<div class="section-label" style="margin-top:var(--space-6)"><i class="ti ti-bug" style="margin-right:4px"></i>Debug</div>
             <div class="fcard" style="padding:12px">
                 <label class="field-label" style="margin-top:0">Age <span class="muted">(retires around ${p.retireAge}${p.everClient ? '' : ' — only tracked once he\'s been a client'})</span></label>
                 <div class="flex-row"><input class="text-input" type="number" id="dbgAge" min="15" max="45" value="${p.age}"><button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ClientDetail.setAge('${p.id}')">Set</button></div>
-            </div>`;
+                <div class="frow" style="margin-top:var(--space-3);border-top:1px solid var(--line-strong);padding-top:10px"><span class="frow__k">True potential <span class="muted">(ability cap)</span></span><span class="frow__v" style="color:var(--state-good)">${p.potential}</span></div>
+            </div>` : ''}`;
     },
     setAge(id) {
         const p = GameState.getPlayer(id);
@@ -420,23 +435,27 @@ const ClientDetail = {
             const t = now - (p.age - a) * 52;
             if (t >= xMin - 1 && t <= xMax + 1) yearTicks.push({ v: t, label: a + 'y' });
         }
+        // Every year keeps its gridline, but only every Nth is labelled — a veteran's 18-year
+        // career otherwise prints "16y17y18y..." on top of itself. Strided from the end so the
+        // current age is always the one that's written out.
+        const stride = Math.max(1, Math.ceil(yearTicks.length / 7));
+        yearTicks.forEach((tk, i) => { if ((yearTicks.length - 1 - i) % stride !== 0) tk.label = ''; });
         const aLo = Math.min(...ax.map(d => d.y)), aHi = Math.max(...ax.map(d => d.y));
         let yLo = Math.max(1, Math.floor((aLo - 2) / 5) * 5);
         let yHi = Math.min(99, Math.ceil((aHi + 2) / 5) * 5);
         if (yHi - yLo < 20) yHi = Math.min(99, yLo + 20);
         if (yHi - yLo < 20) yLo = Math.max(1, yHi - 20);
-        const wHi0 = Math.max(...wx.map(d => d.y)), wLo0 = Math.min(...wx.map(d => d.y));
-        const wStep = wHi0 < 5000 ? 500 : wHi0 < 15000 ? 1000 : 5000;
-        const wLo = Math.max(0, Math.floor(wLo0 / wStep) * wStep - wStep);
-        const wHi = Math.ceil((wHi0 + wStep * 0.4) / wStep) * wStep;
+        // Wage: a rounded axis with only ~4 gridlines and compact "€11k" labels — the old fixed
+        // €1,000 step drew a dozen overlapping lines, and the full "€12,000" labels were clipped.
+        const wA = UI.niceAxis(Math.min(...wx.map(d => d.y)), Math.max(...wx.map(d => d.y)), 4);
 
         const abilityChart = UI.xyChart(ax, 'var(--info)', { xMin, xMax, xTicks: yearTicks, yMin: yLo, yMax: yHi, yStep: 5, fmtY: v => Math.round(v) });
-        const wageChart = UI.xyChart(wx, 'var(--warning)', { xMin, xMax, xTicks: yearTicks, yMin: wLo, yMax: wHi, yStep: wStep, fmtY: v => '€' + UI.money(v) });
+        const wageChart = UI.xyChart(wx, 'var(--warning)', { xMin, xMax, xTicks: yearTicks, yMin: wA.min, yMax: wA.max, yStep: wA.step, fmtY: v => UI.eabbr(v) });
         let feeChart = '<p class="muted">No transfers yet.</p>';
         if (fees.length) {
             const fHi0 = Math.max(...fees.map(d => d.y));
-            const fStep = UI.niceStep(fHi0);
-            feeChart = UI.xyChart(fees, 'var(--info-text)', { xMin, xMax, xTicks: yearTicks, yMin: 0, yMax: Math.ceil((fHi0 + fStep * 0.4) / fStep) * fStep, yStep: fStep, fmtY: v => '€' + UI.money(v), dotsOnly: fees.length < 2 });
+            const fA = UI.niceAxis(0, fHi0 || 1, 4);   // fees always start at 0; compact labels so they never clip
+            feeChart = UI.xyChart(fees, 'var(--info-text)', { xMin, xMax, xTicks: yearTicks, yMin: 0, yMax: fA.max, yStep: fA.step, fmtY: v => UI.eabbr(v), dotsOnly: fees.length < 2 });
         }
         return `<div class="chart-card"><div class="chart-head"><span class="chart-title">Ability</span><span class="chart-value" style="color:var(--info)">${p.ability} <span class="chart-unit">now</span></span></div>${abilityChart}</div>
             <div class="chart-card"><div class="chart-head"><span class="chart-title">Wage</span><span class="chart-value" style="color:var(--warning)">${UI.euro(p.wage)} <span class="chart-unit">/w</span></span></div>${wageChart}</div>
@@ -532,4 +551,4 @@ const ClientDetail = {
     toggleCareer(id) { this.ctx(id).careerOpen = !this.ctx(id).careerOpen; Router.refresh(); },
     setCareerMode(id, m) { const c = this.ctx(id); c.careerMode = m; c.careerOpen = true; Router.refresh(); }
 };
-Router.register('client', { isMain: false, title: p => (GameState.getPlayer(p[0]) || {}).name || 'Player', render(el, params) { ClientDetail.render(el, params[0]); } });
+Router.register('client', { isMain: false, parent: 'clients', title: p => (GameState.getPlayer(p[0]) || {}).name || 'Player', render(el, params) { ClientDetail.render(el, params[0]); } });
