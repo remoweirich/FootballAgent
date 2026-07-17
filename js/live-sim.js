@@ -169,11 +169,18 @@ const LiveSim = {
 
     // ---------------------------------------------------------------- text rendering (pure)
     // Placeholders are whole tokens including the parenthetical — "yx (opposition team)", not "yx".
+    // Team placeholders are matched by SHAPE, not exact wording: `xy (…)` is the client's team and
+    // `yx (…)` the opposition, whatever sits inside the brackets — the workbook has "xy (player's
+    // team)", "xy (players team)" and could grow more variants, and every one of them must resolve
+    // or a raw placeholder leaks into the feed. Case-sensitive, so the client token `XY` (always
+    // upper) can never be mistaken for a team token (always lower).
+    PLACEHOLDER_TEAM_RE: /xy\s*\([^)]*\)/g,
+    PLACEHOLDER_OPP_RE: /yx\s*\([^)]*\)/g,
     renderPiece(piece, player, ctx) {
         let t = piece.text;
+        t = t.replace(this.PLACEHOLDER_OPP_RE, ctx.oppName || '');
+        t = t.replace(this.PLACEHOLDER_TEAM_RE, ctx.teamName || '');
         if (player) t = t.split(LIVE_SIM.PLACEHOLDER_CLIENT).join(player.name);
-        t = t.split(LIVE_SIM.PLACEHOLDER_TEAM).join(ctx.teamName || '');
-        t = t.split(LIVE_SIM.PLACEHOLDER_OPP).join(ctx.oppName || '');
         return t;
     },
 

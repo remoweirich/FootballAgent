@@ -48,24 +48,52 @@ const decode = s => s
     .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
     .replace(/&(amp|lt|gt|quot|apos);/g, (_, e) => ENTITIES[e]);
 
-// This workbook has NO xl/sharedStrings.xml — every string is inline (<c t="inlineStr"><is><t>).
-// parse-uefa-xlsx.mjs only handles the shared-string table, hence a separate reader here.
-function readSheet(xml) {
+// The shared-string table, IF the file has one. Excel and LibreOffice pool repeated strings here
+// and reference them by index (<c t="s"><v>10</v>); a bare "Save As" can instead inline every
+// string (<c t="inlineStr"><is><t>). The same workbook flips between the two forms depending on
+// which program last touched it, so the reader below handles BOTH — an all-inline file simply has
+// an empty table and never looks at it.
+function readSharedStrings(xml) {
+    if (!xml) return [];
+    const out = [];
+    for (const si of xml.matchAll(/<si>([\s\S]*?)<\/si>/g)) {
+        let s = '';
+        for (const t of si[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)) s += t[1];
+        out.push(decode(s));
+    }
+    return out;
+}
+
+function readSheet(xml, shared) {
     const cells = new Map();
-    for (const m of xml.matchAll(/<c r="([A-Z]+\d+)"[^>]*(?:\/>|>([\s\S]*?)<\/c>)/g)) {
-        const inner = m[2] || '';
+    // NOTE the non-greedy attrs (`[^>]*?`). This editor writes empty styled cells self-closing
+    // (`<c r="D4" s="10"/>`); a greedy `[^>]*` eats the trailing slash, so the cell matches as an
+    // OPEN tag and swallows every following cell up to the next `</c>` — which quietly ate the
+    // role-code columns. Non-greedy lets the `/>` branch win for self-closing cells.
+    for (const m of xml.matchAll(/<c r="([A-Z]+\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+        const attrs = m[2] || '', inner = m[3] || '';
+        const type = (attrs.match(/\bt="([^"]+)"/) || [])[1];
         let val = '';
-        const is = inner.match(/<is>([\s\S]*?)<\/is>/);
-        if (is) for (const t of is[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)) val += t[1];
-        else { const v = inner.match(/<v>([\s\S]*?)<\/v>/); if (v) val = v[1]; }
-        val = decode(val).trim();
+        if (type === 'inlineStr') {
+            const is = inner.match(/<is>([\s\S]*?)<\/is>/);
+            if (is) for (const t of is[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)) val += t[1];
+            val = decode(val);
+        } else if (type === 's') {
+            const v = inner.match(/<v>([\s\S]*?)<\/v>/);
+            if (v) val = shared[+v[1]] || '';        // already decoded when the table was read
+        } else {
+            const v = inner.match(/<v>([\s\S]*?)<\/v>/);
+            if (v) val = decode(v[1]);               // number, date, or a stray inline <t>
+        }
+        val = val.trim();
         if (val !== '') cells.set(m[1], val);
     }
     return cells;
 }
 
 const zip = readZip(readFileSync(join(ROOT, 'live_sim_events_v3.xlsx')));
-const sheetOf = f => readSheet(zip['xl/worksheets/' + f].toString('utf8'));
+const shared = readSharedStrings(zip['xl/sharedStrings.xml'] ? zip['xl/sharedStrings.xml'].toString('utf8') : '');
+const sheetOf = f => readSheet(zip['xl/worksheets/' + f].toString('utf8'), shared);
 const S1 = sheetOf('sheet1.xml'), S2 = sheetOf('sheet2.xml');
 const at = (cells, col, row) => cells.get(col + row) || '';
 
@@ -108,6 +136,12 @@ const TEXT_FIXES = [
     { was: 'he is completely focused on the as the ref is giving', now: 'he is completely focused on the ball as the ref is giving' },
 ];
 
+// Role-code typos. The Z family (defensive interceptions) lists all three keeper codes; the third
+// was written CKSST for GKSST (shot_stopper) — a G typed as C, sitting right after GKSWK/GKCKE.
+const CODE_FIXES = [
+    { was: 'CKSST', now: 'GKSST' },
+];
+
 const pieces = {};
 for (const [name, b] of Object.entries(BLOCKS)) {
     const out = [];
@@ -120,7 +154,11 @@ for (const [name, b] of Object.entries(BLOCKS)) {
             text = text.split(f.was).join(f.now); f.applied = true;
         }
         if (!key || !text) throw new Error(`${name} row ${r}: has ${key ? 'a key but no text' : 'text but no key'}`);
-        const codes = at(S2, b.codes, r).split(',').map(s => s.trim()).filter(Boolean);
+        const codes = at(S2, b.codes, r).split(',').map(s => s.trim()).filter(Boolean).map(c => {
+            const fix = CODE_FIXES.find(f => f.was === c);
+            if (fix) { fix.applied = true; return fix.now; }
+            return c;
+        });
         const weight = Number(at(S2, b.weight, r));
         if (!codes.length) throw new Error(`${name} row ${r} (${key}): no role codes`);
         if (!Number.isFinite(weight) || weight <= 0) throw new Error(`${name} row ${r} (${key}): bad weight`);
@@ -138,7 +176,7 @@ for (const [name, b] of Object.entries(BLOCKS)) {
 }
 
 // ------------------------------------------------------------------------------- validation
-const unapplied = [...TAG_FIXES, ...TEXT_FIXES].filter(f => !f.applied);
+const unapplied = [...TAG_FIXES, ...TEXT_FIXES, ...CODE_FIXES].filter(f => !f.applied);
 if (unapplied.length) throw new Error('a sheet fix no longer matches any piece (sheet fixed? delete it): ' + unapplied.map(f => f.match || f.was).join(' | '));
 
 // Fail the build rather than ship a workbook edit that silently starves a role of events.
