@@ -17,7 +17,11 @@
 const LIVE_SIM = {
     MAX_MIDDLES: 2,          // start -> middle -> middle -> end at most
     SECOND_MIDDLE_CHANCE: 0.15,
-    PENALTY_MATCH_RATE: 0.25,   // share of watched matches that see a spot kick
+    PENALTY_MATCH_RATE: 0.25,       // share of watched matches that see a spot kick
+    PENALTY_CLIENT_WIN_CHANCE: 0.4, // of those, how often an attending client earns it vs a random award
+    CORNER_BASE: 2, CORNER_SPREAD: 6,   // corners per side: 2..7
+    CORNER_EVENT_CHANCE: 0.22,      // chance a corner is narrated as a client event, not just a tick
+    CORNER_EVENT_MAX: 2,            // at most this many narrated corner events per match
     PLACEHOLDER_CLIENT: 'XY',
     PLACEHOLDER_TEAM: 'xy (player\'s team)',
     PLACEHOLDER_OPP: 'yx (opposition team)',
@@ -25,6 +29,10 @@ const LIVE_SIM = {
 
 const LiveSim = {
     _idx: null,
+
+    // corner cues, matched against a start piece's prose (see init)
+    CORNER_ATTACK_RE: /corner\s+(for|won)|up come the giants|plants the ball in the quadrant/i,
+    CORNER_DEFEND_RE: /corner against/i,
 
     // ---------------------------------------------------------------- data indexing (once)
     // Called lazily; the JSON asset is parsed by the script tag, this just adds lookup structure.
@@ -38,6 +46,9 @@ const LiveSim = {
             codes: new Set(p.c),
             keys: this.parseKey(p.k),
             names: p.t.indexOf(LIVE_SIM.PLACEHOLDER_CLIENT) >= 0,   // does this piece name its player?
+            // corner cue, read from the prose so it survives the author reorganising families:
+            // 'attack' = the client's team has the corner, 'defend' = they are defending one.
+            corner: this.CORNER_ATTACK_RE.test(p.t) ? 'attack' : this.CORNER_DEFEND_RE.test(p.t) ? 'defend' : null,
         }));
         this._idx = {
             roleCodes: D.roleCodes,
@@ -213,9 +224,12 @@ const LiveSim = {
         // already been awarded, so they are only ever reachable by asking for them BY NAME, from
         // _penaltyEvent. Leaving them in the general pool conjured penalties out of nowhere — every
         // match had one.
+        // opts.startFilter further narrows the openers — the corner pass uses it to demand a corner
+        // start piece, so a "corner" event actually reads like one.
         const starts = idx.start.filter(p => p.codes.has(code) &&
             (opts.family ? p.keys.some(k => k.fam === opts.family)
-                : !p.keys.some(k => this.PEN_FAMILIES.includes(k.fam))));
+                : !p.keys.some(k => this.PEN_FAMILIES.includes(k.fam))) &&
+            (!opts.startFilter || opts.startFilter(p)));
         for (let attempt = 0; attempt < 24; attempt++) {
             const start = this.pickWeighted(starts, rnd, p => p.weight * stale(p));
             if (!start) return null;
@@ -495,7 +509,8 @@ const LiveSim = {
                 const c = clients[Math.floor(rnd() * clients.length) % clients.length];
                 if (!c) return;
                 const mates = clients.filter(x => x.side === c.side).map(x => x.player);
-                const ch = this.buildChain(c.player, mates, { allow: neutral, used, usedPieces, rnd });
+                // corners are their own stream (below); keep them out of the core puzzle-event budget
+                const ch = this.buildChain(c.player, mates, { allow: neutral, startFilter: p => !p.corner, used, usedPieces, rnd });
                 if (!ch) continue;
                 const ev = this.resolveTags(ch);
                 if (!this._spend(ev, c.side, ledger)) continue;
@@ -515,22 +530,36 @@ const LiveSim = {
         const cardReqs = required.filter(r => r.need === 'YC' || r.need === 'RC');
         const scoreReqs = required.filter(r => r.need === 'GOAL' || r.need === 'ASSIST');
         cardReqs.forEach(doRequired);
-        // If this match is meant to have a penalty and no card chain happened to award one, ask for
-        // it explicitly — before the filler, so it counts toward the event budget rather than
-        // pushing the match to a tenth event, and before the goals, so the taker's budget is intact
-        // and he can actually convert.
+        // If this match is meant to have a penalty and no card chain happened to award one, award it
+        // here — before the filler, so it counts toward the event budget rather than pushing the
+        // match to a tenth event, and before the goals, so the taker's budget is intact and he can
+        // convert. A penalty need NOT involve a client in how it came about: usually it is just a
+        // clumsy challenge nobody attending caused; occasionally an attending client earns it.
         if (penaltyWanted && !hasPenalty()) {
-            const awards = tags => !!tags && this.parseTags(tags).some(e => e.tag === 'PENWON' || e.tag === 'PENCONC');
-            for (const c of this.shuffled(clients, rnd)) {
-                const mates = clients.filter(x => x.side === c.side).map(x => x.player);
-                const ch = this.buildChain(c.player, mates, { allow: awards, used, usedPieces, rnd });
-                if (!ch) continue;
-                const ev = this.resolveTags(ch);
-                if (!this._spend(ev, c.side, ledger)) continue;
-                noteChain(ch);
-                pushWithPenalty({ kind: 'chain', side: c.side, need: null, client: c.player, chain: ch,
-                    lines: this.chainLines(ch, ctxFor(c.side)), events: ev }, c.side);
-                break;
+            let awarded = false;
+            if (rnd() < LIVE_SIM.PENALTY_CLIENT_WIN_CHANCE) {
+                const awards = tags => !!tags && this.parseTags(tags).some(e => e.tag === 'PENWON' || e.tag === 'PENCONC');
+                for (const c of this.shuffled(clients, rnd)) {
+                    const mates = clients.filter(x => x.side === c.side).map(x => x.player);
+                    const ch = this.buildChain(c.player, mates, { allow: awards, used, usedPieces, rnd });
+                    if (!ch) continue;
+                    const ev = this.resolveTags(ch);
+                    if (!this._spend(ev, c.side, ledger)) continue;
+                    noteChain(ch);
+                    pushWithPenalty({ kind: 'chain', side: c.side, need: null, client: c.player, chain: ch,
+                        lines: this.chainLines(ch, ctxFor(c.side)), events: ev }, c.side);
+                    awarded = true; break;
+                }
+            }
+            if (!awarded) {
+                // a random spot kick: an unnamed player is brought down. The awarded side's client
+                // still steps up to take it if the workbook lets him (see _penaltyEvent).
+                const forSide = rnd() < 0.5 ? 'home' : 'away';
+                units.push([
+                    { kind: 'penalty-award', side: forSide, client: null, events: [],
+                        lines: [`PENALTY to ${nameOf(forSide)}! A clumsy challenge brings a man down in the box.`] },
+                    this._penaltyEvent(forSide, ledger, clients, rnd, ctxFor, statAdjust),
+                ]);
             }
         }
         fillTo(Math.max(0, target - scoreReqs.length));
@@ -545,22 +574,85 @@ const LiveSim = {
             for (let i = 0; i < ledger.anon[side]; i++)
                 units.push([{ kind: 'goal', side, client: null, lines: [`GOAL — ${nameOf(side)}`], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
 
+        // ---- corners: a live stat that ticks up, and now and then the cue for a corner event.
+        // The count must match what the feed shows, so first flag every chain already built that is
+        // ITSELF a corner — a goal straight from a corner opens with "Corner for …" and has to tick
+        // the counter too. `corner` on an event names the team that won it, counted exactly once.
+        const cornerOwner = e => {
+            const cue = e.chain && e.chain.pieces[0].piece.corner;
+            if (!cue) return null;
+            return cue === 'attack' ? e.side : (e.side === 'home' ? 'away' : 'home');
+        };
+        for (const u of units) for (const e of u) { const o = cornerOwner(e); if (o) e.corner = o; }
+
+        // then top each side up to a realistic total with plain ticks, a few of which become a
+        // client puzzle event (an attacker attacking one, or a defender clearing one against his
+        // team) — never a guarantee. Corner events carry no result tags, so they never touch the
+        // score; a header that actually goes in came through the goal path above.
+        let cornerEvents = units.reduce((n, u) => n + u.filter(e => e.corner && e.kind === 'chain').length, 0);
+        const flagged = { home: 0, away: 0 };
+        for (const u of units) for (const e of u) if (e.corner) flagged[e.corner]++;
+        for (const side of ['home', 'away']) {
+            const target = LIVE_SIM.CORNER_BASE + Math.floor(rnd() * LIVE_SIM.CORNER_SPREAD);
+            for (let have = flagged[side]; have < target; have++) {
+                let ev = null;
+                if (cornerEvents < LIVE_SIM.CORNER_EVENT_MAX && rnd() < LIVE_SIM.CORNER_EVENT_CHANCE)
+                    ev = this._cornerEvent(side, clients, rnd, ctxFor, used, usedPieces);
+                if (ev) cornerEvents += 1;
+                units.push([ev || { kind: 'corner', side, client: null, corner: side, events: [],
+                    lines: [`Corner — ${nameOf(side)}`] }]);
+            }
+        }
+        // definitive count: whatever carries a corner flag, so it can never drift from the feed
+        const corners = { home: 0, away: 0 };
+        for (const u of units) for (const e of u) if (e.corner) corners[e.corner]++;
+
         // Shuffle whole units so anonymous goals aren't all last, then stamp a minute per UNIT.
         // A penalty is taken the minute after it is given away, not whenever the next slot happens
         // to fall — so the follow-up takes its parent's minute + 1 rather than a slot of its own.
         const shuffled = this.shuffled(units, rnd);
-        const slots = this.spreadMinutes(shuffled.length, 1, minutes - 1, rnd);
+        // leave room at the end for the longest unit's follow-up, so a penalty drawn late still has
+        // a minute+1 to land its kick on rather than clamping onto the award's minute
+        const maxSpan = shuffled.reduce((m, u) => Math.max(m, u.length), 1);
+        const slots = this.spreadMinutes(shuffled.length, 1, Math.max(1, minutes - maxSpan), rnd);
         const out = [];
         let prev = 0;
         shuffled.forEach((unit, i) => {
-            let m = Math.max(slots[i] != null ? slots[i] : minutes - 1, prev + 1);
+            const span = unit.length - 1;
+            let m = Math.max(slots[i] != null ? slots[i] : minutes - maxSpan, prev + 1);
+            m = Math.min(m, minutes - span);           // keep the whole unit inside the clock
             unit.forEach((e, k) => {
-                e.minute = Math.min(minutes, m + k);   // k=1 is the spot kick: one minute later
+                e.minute = m + k;                      // k=1 is the spot kick: one minute later
                 prev = e.minute;
             });
             out.push(...unit);
         });
-        return { events: out, minutes, statAdjust };
+        return { events: out, minutes, statAdjust, corners };
+    },
+
+    // A corner narrated as a client puzzle event. `won` is the team that has the corner. First try
+    // an attacker on that team attacking it; failing that, a defender on the OTHER team clearing it.
+    // Corner chains are strictly untagged, so they never touch the score. Returns an event, or null
+    // if no eligible client / no corner chain could be built (in which case the caller ticks a plain
+    // corner instead).
+    _cornerEvent(won, clients, rnd, ctxFor, used, usedPieces) {
+        const untagged = tags => !tags;
+        const attempt = (who, cue) => {
+            const side = clients.filter(c => c.side === who);
+            const mates = side.map(c => c.player);
+            for (const c of this.shuffled(side, rnd)) {
+                const ch = this.buildChain(c.player, mates, {
+                    allow: untagged, startFilter: p => p.corner === cue, used, usedPieces, rnd,
+                });
+                if (!ch) continue;
+                used.add(this.chainKey(ch)); ch.pieces.forEach(x => usedPieces.add(x.piece.id));
+                return { kind: 'chain', side: who, need: null, client: ch.pieces[0].player, chain: ch,
+                    corner: won, lines: this.chainLines(ch, ctxFor(who)), events: [] };
+            }
+            return null;
+        };
+        const other = won === 'home' ? 'away' : 'home';
+        return attempt(won, 'attack') || attempt(other, 'defend');
     },
 
     // Try to pay for everything a chain produces out of the ledger. All-or-nothing: on success the
