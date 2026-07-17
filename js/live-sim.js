@@ -17,6 +17,7 @@
 const LIVE_SIM = {
     MAX_MIDDLES: 2,          // start -> middle -> middle -> end at most
     SECOND_MIDDLE_CHANCE: 0.15,
+    PENALTY_MATCH_RATE: 0.25,   // share of watched matches that see a spot kick
     PLACEHOLDER_CLIENT: 'XY',
     PLACEHOLDER_TEAM: 'xy (player\'s team)',
     PLACEHOLDER_OPP: 'yx (opposition team)',
@@ -42,6 +43,18 @@ const LiveSim = {
             roleCodes: D.roleCodes,
             start: prep(D.pieces.start), middle: prep(D.pieces.middle), end: prep(D.pieces.end),
         };
+        // Bucket by family. Chains never cross families, so scanning all 84 middles and 247 ends on
+        // every attempt was ~10x the work needed — and buildTimeline makes thousands of attempts.
+        const bucket = list => {
+            const m = new Map();
+            for (const p of list) for (const k of p.keys) {
+                if (!m.has(k.fam)) m.set(k.fam, []);
+                if (!m.get(k.fam).includes(p)) m.get(k.fam).push(p);
+            }
+            return m;
+        };
+        this._idx.middleByFam = bucket(this._idx.middle);
+        this._idx.endByFam = bucket(this._idx.end);
         return this._idx;
     },
 
@@ -104,8 +117,19 @@ const LiveSim = {
     // "GOAL:E; ASSIST:M" -> [{tag:'GOAL', ref:'E'}, {tag:'ASSIST', ref:'M'}]
     TAGS: ['GOAL', 'ASSIST', 'OG', 'YC', 'Y2C', 'RC', 'PENWON', 'PENCONC', 'PENSAVE', 'PENMISS'],
     REFS: ['S', 'M', 'E', 'O', 'T'],
+    // Memoised: chain assembly runs this over the same few hundred tag strings tens of thousands
+    // of times per match while filtering candidate end pieces, and re-splitting them dominated the
+    // build. The result is treated as immutable — callers read it, never mutate it.
+    _tagCache: new Map(),
     parseTags(str) {
         if (!str) return [];
+        const hit = this._tagCache.get(str);
+        if (hit) return hit;
+        const out = this._parseTags(str);
+        this._tagCache.set(str, out);
+        return out;
+    },
+    _parseTags(str) {
         return String(str).split(';').map(s => s.trim()).filter(Boolean).map(entry => {
             const [tag, ref] = entry.split(':').map(x => (x || '').trim().toUpperCase());
             if (!this.TAGS.includes(tag)) throw new Error(`live-sim: unknown tag "${tag}" in "${str}"`);
@@ -199,13 +223,15 @@ const LiveSim = {
     _growChain(start, trigger, clients, idx, rnd, stale, opts) {
         // Middles/ends only have to be *linkable*; the branch is settled for the whole chain at
         // the end, because pairwise linkage alone would admit A -> A1 -> A2.
+        const fam = start.keys[0].fam;
+        const middlePool = idx.middleByFam.get(fam) || [], endPool0 = idx.endByFam.get(fam) || [];
         const middles = [];
         let cursor = start;
         const wantSecond = rnd() < LIVE_SIM.SECOND_MIDDLE_CHANCE;
         for (let i = 0; i < (wantSecond ? LIVE_SIM.MAX_MIDDLES : 1); i++) {
             // A second middle must be a DIFFERENT piece — several families (N, X, M) carry only one
             // middle per branch, so without this the chain reads the same line twice in a row.
-            const pool = idx.middle.filter(p => middles.indexOf(p) < 0 &&
+            const pool = middlePool.filter(p => middles.indexOf(p) < 0 &&
                 this.keysLink(cursor.keys, p.keys) &&
                 this._eligible(p, trigger, clients) &&
                 this.chainBranch([start, ...middles, p].map(x => x.keys)));
@@ -216,7 +242,7 @@ const LiveSim = {
         }
         if (!middles.length) return null;
 
-        const endPool = idx.end.filter(p => this.keysLink(cursor.keys, p.keys) &&
+        const endPool = endPool0.filter(p => this.keysLink(cursor.keys, p.keys) &&
             this._eligible(p, trigger, clients) &&
             this.chainBranch([start, ...middles, p].map(x => x.keys)) &&
             (!opts.allow || opts.allow(p.tags, p)));
@@ -304,6 +330,12 @@ const LiveSim = {
     // The cost of (b) is that a chain has to be found to fit a required outcome; where none exists
     // the goal still happened and is narrated plainly, so the invariant never bends to the prose.
 
+    shuffled(list, rnd = Math.random) {
+        const a = list.slice();
+        for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+        return a;
+    },
+
     // 3-9 client puzzle events, scaling with how many clients are on the pitch.
     eventBudget(nClients, rnd = Math.random) {
         return Math.min(9, Math.max(3, 1 + nClients * 2 + Math.floor(rnd() * 3)));
@@ -369,16 +401,29 @@ const LiveSim = {
         // indivisible beat: the ordering shuffle below moves whole units, so the kick can never be
         // flung to the far side of the match from the offence that caused it.
         const units = [];
+        const statAdjust = [];
         const used = new Set(), usedPieces = new Set();
         const noteChain = ch => { used.add(this.chainKey(ch)); ch.pieces.forEach(x => usedPieces.add(x.piece.id)); };
         const ctxFor = side => ({ teamName: nameOf(side), oppName: oppOf(side) });
-        // A won or conceded penalty is a promise to the viewer: the kick gets taken, right after the
-        // event that awarded it, and the scoreboard moves (or doesn't) accordingly. Never leave one
-        // hanging — that was the old reason for refusing these chains outright.
+        // Whether this match has a penalty at all is decided ONCE, up front, rather than falling out
+        // of however many card and filler chains happen to carry a PENWON/PENCONC tag. Left to
+        // emerge it was wildly out: every match had one. Deciding it here means the rate is the
+        // rate, whatever the workbook is edited to contain later.
+        let penaltyWanted = rnd() < LIVE_SIM.PENALTY_MATCH_RATE;
+        const hasPenalty = () => units.some(u => u.some(e => e.kind === 'penalty'));
+        // One is plenty: a card chain and a filler chain could otherwise each award one.
+        const penOK = tags => {
+            if (!tags) return true;
+            const pen = this.parseTags(tags).some(e => e.tag === 'PENWON' || e.tag === 'PENCONC');
+            return pen ? (penaltyWanted && !hasPenalty()) : true;
+        };
+        // A won or conceded penalty is a promise to the viewer: the kick gets taken, one minute after
+        // the event that awarded it, and the scoreboard moves (or doesn't) accordingly. Never leave
+        // one hanging — that was the old reason for refusing these chains outright.
         const pushWithPenalty = (ev, side) => {
             const unit = [ev];
             const forSide = this._penaltyFor(ev.events || [], side);
-            if (forSide) unit.push(this._penaltyEvent(forSide, ledger, clients, rnd, ctxFor));
+            if (forSide) unit.push(this._penaltyEvent(forSide, ledger, clients, rnd, ctxFor, statAdjust));
             units.push(unit);
         };
         const chainCount = () => units.reduce((n, u) => n + u.filter(e => e.kind === 'chain').length, 0);
@@ -391,7 +436,7 @@ const LiveSim = {
             // chain that does ONLY what was needed, and settle for the dramatic one if there is no
             // alternative. Without this a booked centre-back conceded a penalty every single time.
             const clean = tags => this._tagsSatisfy(tags, need) && !this.parseTags(tags).some(e => this.PEN_TAGS.includes(e.tag));
-            const any = tags => this._tagsSatisfy(tags, need);
+            const any = tags => this._tagsSatisfy(tags, need) && penOK(tags);
             for (let tries = 0; tries < 16; tries++) {
                 const allow = tries < 10 ? clean : any;
                 const ch = this.buildChain(c.player, mates, { allow, credit, used, usedPieces, rnd });
@@ -435,7 +480,7 @@ const LiveSim = {
         // the engine's to award, not the filler's.
         const neutral = tags => {
             if (!tags) return true;
-            return this.parseTags(tags).every(e => this.PEN_TAGS.includes(e.tag));
+            return this.parseTags(tags).every(e => this.PEN_TAGS.includes(e.tag)) && penOK(tags);
         };
         const fillTo = limit => {
             let guard = 0;
@@ -463,7 +508,28 @@ const LiveSim = {
         const cardReqs = required.filter(r => r.need === 'YC' || r.need === 'RC');
         const scoreReqs = required.filter(r => r.need === 'GOAL' || r.need === 'ASSIST');
         cardReqs.forEach(doRequired);
+        // If this match is meant to have a penalty and no card chain happened to award one, ask for
+        // it explicitly — before the filler, so it counts toward the event budget rather than
+        // pushing the match to a tenth event, and before the goals, so the taker's budget is intact
+        // and he can actually convert.
+        if (penaltyWanted && !hasPenalty()) {
+            const awards = tags => !!tags && this.parseTags(tags).some(e => e.tag === 'PENWON' || e.tag === 'PENCONC');
+            for (const c of this.shuffled(clients, rnd)) {
+                const mates = clients.filter(x => x.side === c.side).map(x => x.player);
+                const ch = this.buildChain(c.player, mates, { allow: awards, used, usedPieces, rnd });
+                if (!ch) continue;
+                const ev = this.resolveTags(ch);
+                if (!this._spend(ev, c.side, ledger)) continue;
+                noteChain(ch);
+                pushWithPenalty({ kind: 'chain', side: c.side, need: null, client: c.player, chain: ch,
+                    lines: this.chainLines(ch, ctxFor(c.side)), events: ev }, c.side);
+                break;
+            }
+        }
         fillTo(Math.max(0, target - scoreReqs.length));
+        // From here the goal budgets start being spent, so a penalty awarded now would likely have
+        // nothing left to convert. Better none than a guaranteed miss.
+        penaltyWanted = false;
         scoreReqs.forEach(doRequired);
         fillTo(target);
         // whatever the scoreline still owes after the chains — a chain may already have spent an
@@ -472,12 +538,22 @@ const LiveSim = {
             for (let i = 0; i < ledger.anon[side]; i++)
                 units.push([{ kind: 'goal', side, client: null, lines: [`GOAL — ${nameOf(side)}`], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
 
-        // shuffle whole units so anonymous goals aren't all last, then stamp minutes in order
-        for (let i = units.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [units[i], units[j]] = [units[j], units[i]]; }
-        const out = units.flat();
-        const slots = this.spreadMinutes(out.length, 1, minutes, rnd);
-        out.forEach((e, i) => { e.minute = slots[i] != null ? slots[i] : minutes; });
-        return { events: out, minutes };
+        // Shuffle whole units so anonymous goals aren't all last, then stamp a minute per UNIT.
+        // A penalty is taken the minute after it is given away, not whenever the next slot happens
+        // to fall — so the follow-up takes its parent's minute + 1 rather than a slot of its own.
+        const shuffled = this.shuffled(units, rnd);
+        const slots = this.spreadMinutes(shuffled.length, 1, minutes - 1, rnd);
+        const out = [];
+        let prev = 0;
+        shuffled.forEach((unit, i) => {
+            let m = Math.max(slots[i] != null ? slots[i] : minutes - 1, prev + 1);
+            unit.forEach((e, k) => {
+                e.minute = Math.min(minutes, m + k);   // k=1 is the spot kick: one minute later
+                prev = e.minute;
+            });
+            out.push(...unit);
+        });
+        return { events: out, minutes, statAdjust };
     },
 
     // Try to pay for everything a chain produces out of the ledger. All-or-nothing: on success the
@@ -547,39 +623,53 @@ const LiveSim = {
     // decide: if the engine gave him a goal he has not yet been shown scoring, this is it; if not,
     // he misses. The kick always resolves, so the scoreboard can never be left hanging.
     PEN_CONVERSION: 0.75,
-    _penaltyEvent(forSide, ledger, clients, rnd, ctx) {
+    // Roughly three in four penalties are scored, and that has to hold for clients too — otherwise
+    // your striker misses almost every spot kick of his career, which is the one thing a viewer
+    // would notice immediately.
+    //
+    // A goal must exist to be scored, though. Usually the engine gave the taker one that has not
+    // been narrated yet and the kick simply IS that goal. When it did not, he takes over one of his
+    // team's anonymous goals instead: the scoreline, the winner and every downstream system see the
+    // same numbers, and one goal moves from a nameless team-mate to the man who actually stepped up.
+    // The transfer is reported in the timeline's `statAdjust` so the caller can bank it, and it is
+    // the only place the live sim adds to a client's tally — the "finals can generate a tad more"
+    // allowance. If the team scored nothing at all there is no goal to take over, and he misses.
+    _penaltyEvent(forSide, ledger, clients, rnd, ctx, statAdjust) {
         const takers = this.penaltyTakers(clients, forSide);
-        const scorer = takers.find(c => (ledger.byClient.get(c.player) || {}).GOAL > 0);
-        const taker = scorer || takers[0];
+        const taker = takers.find(c => (ledger.byClient.get(c.player) || {}).GOAL > 0) || takers[0];
         const mates = clients.filter(x => x.side === forSide).map(x => x.player);
+        const team = ctx(forSide).teamName;
 
         if (taker) {
-            // He can only score if the engine actually awarded him a goal that hasn't been shown
-            // yet — and even then he misses a quarter of the time, like anyone. A missed kick
-            // leaves the goal in the ledger to be narrated in open play instead, so nothing is
-            // lost. Without the roll he would convert every single penalty he ever took.
-            const wantGoal = !!scorer && rnd() < this.PEN_CONVERSION;
+            const bal = ledger.byClient.get(taker.player) || {};
+            const hasOwn = (bal.GOAL || 0) > 0;
+            const wantGoal = (hasOwn || ledger.anon[forSide] > 0) && rnd() < this.PEN_CONVERSION;
+            // borrow an anonymous goal up front so _spend can pay for it like any other; hand it
+            // back untouched if no chain can be built
+            const borrowed = wantGoal && !hasOwn;
+            if (borrowed) { bal.GOAL = (bal.GOAL || 0) + 1; ledger.anon[forSide] -= 1; }
+
             const allow = tags => {
-                const t = this.parseTags(tags);
-                const scores = t.some(e => e.tag === 'GOAL' && e.ref !== 'O');
+                const scores = this.parseTags(tags).some(e => e.tag === 'GOAL' && e.ref !== 'O');
                 return wantGoal ? scores : !scores;
             };
             const credit = wantGoal ? { player: taker.player, tag: 'GOAL' } : null;
-            for (let tries = 0; tries < 10; tries++) {
+            for (let tries = 0; tries < 12; tries++) {
                 const ch = this.buildChain(taker.player, mates, { allow, credit, rnd, family: 'N' });
                 if (!ch) continue;
                 const ev = this.resolveTags(ch);
                 if (wantGoal && !ev.some(e => e.tag === 'GOAL' && e.player === taker.player)) continue;
                 if (!this._spend(ev, forSide, ledger)) continue;
+                if (borrowed) statAdjust.push({ player: taker.player, goals: 1 });
                 return {
                     kind: 'penalty', side: forSide, client: taker.player, chain: ch,
                     lines: this.chainLines(ch, ctx(forSide)), events: ev,
                 };
             }
+            if (borrowed) { bal.GOAL -= 1; ledger.anon[forSide] += 1; }
         }
         // nobody nameable to take it: a short anonymous line, but it still resolves
-        const team = ctx(forSide).teamName;
-        if (ledger.anon[forSide] > 0) {
+        if (rnd() < this.PEN_CONVERSION && ledger.anon[forSide] > 0) {
             ledger.anon[forSide] -= 1;
             return { kind: 'penalty', side: forSide, client: null, chain: null,
                 lines: [`Penalty to ${team}… and it's buried. GOAL — ${team}.`],
