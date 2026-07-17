@@ -1934,12 +1934,14 @@ const League = {
         const sa = this.clubStrength(awayId);
         const hg = this.scoreGoals(sh, sa);
         const ag = this.scoreGoals(sa, sh);
-        this.assignStats(homeId, compId, hg, ag);
-        this.assignStats(awayId, compId, ag, hg);
+        const homeAppear = this.assignStats(homeId, compId, hg, ag);
+        const awayAppear = this.assignStats(awayId, compId, ag, hg);
         let winner = homeId;
         if (ag > hg) winner = awayId;
         else if (hg === ag) winner = (sh + Math.random() * 6) >= (sa + Math.random() * 6) ? homeId : awayId;
-        return { hg, ag, winner };
+        // homeAppear/awayAppear are undefined for clubs this save doesn't model in detail; only the
+        // live sim reads them (see assignStats), every other caller uses hg/ag/winner as before.
+        return { hg, ag, winner, homeAppear, awayAppear };
     },
 
     scoreGoals(att, def) {
@@ -2068,10 +2070,10 @@ const League = {
             const yRate = (yellowRate[p.position] ?? 0.10) * (sBias(p).card || 1), rRate = yRate * 0.06;
             const rr = Math.random();
             if (rr < rRate) {
-                c.red += 1;
+                c.red += 1; a.red = 1;
                 p._suspended = (p._suspended || 0) + 1;                 // straight red -> one-match ban
             } else if (rr < yRate) {
-                c.yellow += 1;
+                c.yellow += 1; a.yellow = 1;
                 p._yellowsSeason = (p._yellowsSeason || 0) + 1;
                 if (p._yellowsSeason % 5 === 0) p._suspended = (p._suspended || 0) + 1;  // 5th, 10th, 15th... yellow -> ban
             }
@@ -2088,12 +2090,17 @@ const League = {
             rating += formBiasOf(p);                   // this season's form, and his temperament
             rating += moraleRatingMod(moraleAvg(p));   // derived from avg morale only — never a single dimension
             rating = Math.max(4.0, Math.min(10, rating));
-            c.ratingSum += rating;
+            c.ratingSum += rating; a.rating = rating;
             // rolling recent form (see effRole): the last dozen appearances, oldest dropping off
             p._recent = p._recent || [];
             p._recent.push({ g: a.g, a: a.a, r: Math.round(rating * 10) / 10 });
             if (p._recent.length > RECENT_FORM_WINDOW) p._recent.splice(0, p._recent.length - RECENT_FORM_WINDOW);
         });
+        // Who played and what they did. The live sim ("Attend the Final") choreographs its
+        // commentary to THIS, rather than deciding anything itself — that is what keeps an
+        // attended match's stats identical to a quick-simmed one, and keeps the position/style
+        // weighting above in charge of who scores. Quick sims ignore the return value.
+        return appear;
     },
 
     sortedTable(div) {

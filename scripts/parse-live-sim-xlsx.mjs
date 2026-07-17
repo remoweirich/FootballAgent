@@ -102,12 +102,23 @@ const TAG_FIXES = [
     { match: /cleverly created by XY/, was: 'GOAL:E; ASSIST:M', now: 'GOAL:T; ASSIST:E' },
 ];
 
+// Typo corrections, same deal: fix the sheet and delete the entry. Each throws if it stops
+// matching, so a corrected cell fails the build loudly instead of being silently patched forever.
+const TEXT_FIXES = [
+    { was: 'he is completely focused on the as the ref is giving', now: 'he is completely focused on the ball as the ref is giving' },
+];
+
 const pieces = {};
 for (const [name, b] of Object.entries(BLOCKS)) {
     const out = [];
     for (let r = 4; r <= 400; r++) {
-        const key = at(S2, b.key, r), text = at(S2, b.text, r);
+        const key = at(S2, b.key, r);
+        let text = at(S2, b.text, r);
         if (!key && !text) continue;
+        for (const f of TEXT_FIXES) {
+            if (text.indexOf(f.was) < 0) continue;
+            text = text.split(f.was).join(f.now); f.applied = true;
+        }
         if (!key || !text) throw new Error(`${name} row ${r}: has ${key ? 'a key but no text' : 'text but no key'}`);
         const codes = at(S2, b.codes, r).split(',').map(s => s.trim()).filter(Boolean);
         const weight = Number(at(S2, b.weight, r));
@@ -127,8 +138,8 @@ for (const [name, b] of Object.entries(BLOCKS)) {
 }
 
 // ------------------------------------------------------------------------------- validation
-const unapplied = TAG_FIXES.filter(f => !f.applied);
-if (unapplied.length) throw new Error('TAG_FIXES no longer match any piece (sheet fixed? delete them): ' + unapplied.map(f => f.match).join(', '));
+const unapplied = [...TAG_FIXES, ...TEXT_FIXES].filter(f => !f.applied);
+if (unapplied.length) throw new Error('a sheet fix no longer matches any piece (sheet fixed? delete it): ' + unapplied.map(f => f.match || f.was).join(' | '));
 
 // Fail the build rather than ship a workbook edit that silently starves a role of events.
 const allCodes = new Set(Object.values(roleCodes).flatMap(m => Object.values(m)));
