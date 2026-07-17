@@ -73,6 +73,36 @@ two letters:
 | `yx (opposition team)` | 27 | opposing team name |
 | `xy (player's team)` | 6 | client's team name |
 
+### Who does XY refer to? — RESOLVED
+
+**XY always names the piece's OWN player**: S in a start piece, M in a middle, E in an end.
+
+This falls straight out of the data. XY appears in 88/89 starts but only 4/84 middles and 52/247
+ends — a chain narrates one continuous action, and later pieces mostly say "he". So:
+
+- a piece **containing XY** must bind to a client whose role code it lists;
+- a piece **without XY** is connective — its actor is simply the previous piece's player.
+
+Exactly one cell contradicted this. The `A1` middles are cut-backs ("he rolls it back gently to the
+top of the box, where a teammate is arriving unmarked"), so the end's actor is a *different* player,
+and the family carries two variants for it:
+
+| End piece (A1) | Tags | Written for |
+|---|---|---|
+| "…Gooaaaal! … Sublime finish, and cleverly created by XY." | ~~`GOAL:E; ASSIST:M`~~ → `GOAL:T; ASSIST:E` | the finisher is **not** a client — so he goes unnamed and the commentary credits the creator |
+| "where XY hits it first time on the half-volley… Goooal!" | `GOAL:E; ASSIST:M` | the finisher **is** a second client — both get named |
+| "…Ooof! … XY will be disappointed that his teammate didn't manage to finish that." | (none) | creator named, no tags to reconcile — already consistent |
+
+The first was tagged as though XY were the scorer, which is the opposite of what it reads as.
+`GOAL:T; ASSIST:E` (a form the workbook already uses) says what the sentence actually means: an
+unnamed team-mate scores, the client gets the assist. It is corrected at import time by `TAG_FIXES`
+in `scripts/parse-live-sim-xlsx.mjs`, which throws if the cell stops matching, so it cannot rot.
+**Fix the cell in the sheet and that entry can be deleted.**
+
+Consequence for the engine: when an end piece has XY *and* its tags name two different refs
+(`GOAL:E; ASSIST:M`), E should bind to a **different** client from M where one is available; with
+only one client in the match it falls back to the same player and the self-assist is suppressed.
+
 ### Result tags (column AD)
 
 86 of 247 end pieces carry tags; the rest are goalless outcomes with nothing to report.
