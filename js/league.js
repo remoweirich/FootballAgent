@@ -444,6 +444,21 @@ const League = {
         if (a === b) a++;   // the guard should never fire; never hand back a drawn shootout
         return a > b ? [a, b] : [b, a];
     },
+
+    // Extra time for a FINAL level after 90'. Two 15-minute halves, low-scoring: ~0.45 goals a side
+    // for an even tie. Returns { hg, ag } — the ET goals only. If they differ the tie is decided in
+    // ET; if not, it goes to penalties. Team-level (the ET goals are not attributed to a player).
+    _extraTime(homeId, awayId) {
+        const sh = this.clubStrength(homeId), sa = this.clubStrength(awayId);
+        const half = (att, def) => {
+            const lam = Math.max(0.06, 0.45 + (att - def) / 40);
+            let g = 0, p = Math.exp(-lam), cum = p, x = Math.random(), term = p, k = 0;
+            while (x > cum && k < 6) { k++; term *= lam / k; cum += term; g = k; }
+            return g;
+        };
+        return { hg: half(sh, sa), ag: half(sa, sh) };
+    },
+
     playCupTie(h, a, compId, isFinal) {
         let home = h, away = a;
         if (!isFinal) {
@@ -452,11 +467,21 @@ const League = {
         }
         const r = this.playMatch(home, away, compId, !isFinal);
         const tie = { h: home, a: away, hg: r.hg, ag: r.ag, winner: r.winner };
-        // a single-match cup tie level after 90' is settled on penalties — record a definitive score
-        if (r.hg === r.ag) { const [w, l] = this._penScore(); tie.pens = (r.winner === home) ? { h: w, a: l } : { h: l, a: w }; }
-        // the final is a match the agent may be invited to attend (see js/attend.js). A final has
-        // extra time (clock to 120) only if it was level and went to pens; a decided final ends at 90.
-        if (isFinal && typeof Attend !== 'undefined') Attend.consider('cup-final', compId, home, away, r, { pens: tie.pens, minutes: tie.pens ? 120 : 90 });
+        // level after 90': a FINAL plays extra time (which may decide it); anything else goes
+        // straight to penalties (no ET for ordinary cup rounds). See _extraTime / _penScore.
+        if (r.hg === r.ag) {
+            const et = isFinal ? this._extraTime(home, away) : { hg: 0, ag: 0 };
+            if (et.hg !== et.ag) {
+                tie.hg += et.hg; tie.ag += et.ag; tie.et = true;
+                tie.winner = et.hg > et.ag ? home : away;
+            } else {
+                const [w, l] = this._penScore(); tie.pens = (r.winner === home) ? { h: w, a: l } : { h: l, a: w };
+            }
+        }
+        // the final is a match the agent may be invited to attend (see js/attend.js). It runs the
+        // clock to 120 whenever it went beyond 90 (extra time and/or pens).
+        if (isFinal && typeof Attend !== 'undefined')
+            Attend.consider('cup-final', compId, home, away, r, { pens: tie.pens, et: tie.et, winner: tie.winner, minutes: (tie.pens || tie.et) ? 120 : 90, score: { hg: tie.hg, ag: tie.ag } });
         return tie;
     },
 

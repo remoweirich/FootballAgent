@@ -246,7 +246,8 @@ const LiveView = {
 
     _renderFullTime() {
         const m = this.match, won = m.winner === (this._inviterId());
-        const pensLine = m.pens ? `<div class="lv-ftpens">Penalties: ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : (m.pens.a + '–' + m.pens.b)}</div>` : '';
+        const pensLine = m.pens ? `<div class="lv-ftpens">Penalties: ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : (m.pens.a + '–' + m.pens.b)}</div>`
+            : m.et ? `<div class="lv-ftpens">After extra time</div>` : '';
         const clientLines = this.match.clients.filter(c => c.played).map(c => {
             const t = this.tally[c.playerId] || {};
             const bits = [t.g ? `${t.g} goal${t.g > 1 ? 's' : ''}` : '', t.a ? `${t.a} assist${t.a > 1 ? 's' : ''}` : '', c.rating != null ? `${c.rating.toFixed(1)} rating` : ''].filter(Boolean).join(', ');

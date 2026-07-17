@@ -206,8 +206,10 @@ const LeaguesScreen = {
             return `<div class="tie-block">${leg('Leg 1', l1, false)}${leg('Leg 2', l2, true)}</div>`;
         }
         const hw = t.winner === t.h, aw = t.winner === t.a;
-        // single-match cup tie settled on penalties: definitive score in red, next to the 90' result
-        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.h}–${t.pens.a})</span>` : '';
+        // single-match cup tie: penalties show the definitive shootout score, extra time a plain (ET)
+        // — both in red, next to the result (the score already includes any ET goals)
+        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.h}–${t.pens.a})</span>`
+            : t.et ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(ET)</span>` : '';
         return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}${penTag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
     // brief English explanation shown at the top of every cup view, keyed by competition
@@ -466,7 +468,7 @@ const LeaguesScreen = {
     euFinalView(c) {
         const f = c.ko && c.ko.final;
         if (!f) return '<p class="hint">The final is a single match at a neutral venue in week 47.</p>';
-        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk 47</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens })}</div>`;
+        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk 47</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens, et: f.et })}</div>`;
     },
     // horizontal bracket from the Round of 16 to the final — every club's path, scroll to follow it
     euBracketTree(c) {

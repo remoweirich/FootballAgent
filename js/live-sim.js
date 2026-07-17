@@ -416,6 +416,11 @@ const LiveSim = {
             ledger.byClient.set(c.player, { GOAL: c.goals || 0, ASSIST: c.assists || 0, YC: c.yellow || 0, RC: c.red || 0 });
 
         const target = Math.max(this.eventBudget(clients.length, rnd), required.length);
+        // spec §4: once a client is shown a red (or a second yellow) he features in no further
+        // events. Populated as the card requirements are narrated (below), then every later stream
+        // — filler, penalties, corners — skips him, and his dismissal is pinned to his last minute.
+        const sentOff = new Set();
+        const live = () => clients.filter(c => !sentOff.has(c.player));
 
         // ---- assemble, then stamp minutes across however many events we actually produced
         // Events are built as UNITS, not loose entries. A foul and the penalty it gives away are one
@@ -444,7 +449,7 @@ const LiveSim = {
         const pushWithPenalty = (ev, side) => {
             const unit = [ev];
             const forSide = this._penaltyFor(ev.events || [], side);
-            if (forSide) unit.push(this._penaltyEvent(forSide, ledger, clients, rnd, ctxFor, statAdjust));
+            if (forSide) unit.push(this._penaltyEvent(forSide, ledger, live(), rnd, ctxFor, statAdjust));
             units.push(unit);
         };
         const chainCount = () => units.reduce((n, u) => n + u.filter(e => e.kind === 'chain').length, 0);
@@ -484,6 +489,7 @@ const LiveSim = {
             const side = req.c.side;
             if (ch) noteChain(ch);
             else if (!this._spend([{ tag: req.need, player: req.c.player, anonymous: false, side: 'own' }], side, ledger)) return;
+            if (req.need === 'RC' || req.need === 'Y2C') sentOff.add(req.c.player);   // no further events for him
             pushWithPenalty({
                 kind: 'chain', side, need: req.need, client: req.c.player, chain: ch,
                 // A required outcome with no chain to carry it (a keeper's goal, say) still has to
@@ -506,7 +512,8 @@ const LiveSim = {
         const fillTo = limit => {
             let guard = 0;
             while (chainCount() < limit && guard++ < 40) {
-                const c = clients[Math.floor(rnd() * clients.length) % clients.length];
+                const pool = live();
+                const c = pool[Math.floor(rnd() * pool.length) % pool.length];
                 if (!c) return;
                 const mates = clients.filter(x => x.side === c.side).map(x => x.player);
                 // corners are their own stream (below); keep them out of the core puzzle-event budget
@@ -539,7 +546,7 @@ const LiveSim = {
             let awarded = false;
             if (rnd() < LIVE_SIM.PENALTY_CLIENT_WIN_CHANCE) {
                 const awards = tags => !!tags && this.parseTags(tags).some(e => e.tag === 'PENWON' || e.tag === 'PENCONC');
-                for (const c of this.shuffled(clients, rnd)) {
+                for (const c of this.shuffled(live(), rnd)) {
                     const mates = clients.filter(x => x.side === c.side).map(x => x.player);
                     const ch = this.buildChain(c.player, mates, { allow: awards, used, usedPieces, rnd });
                     if (!ch) continue;
@@ -558,7 +565,7 @@ const LiveSim = {
                 units.push([
                     { kind: 'penalty-award', side: forSide, client: null, events: [],
                         lines: [`PENALTY to ${nameOf(forSide)}! A clumsy challenge brings a man down in the box.`] },
-                    this._penaltyEvent(forSide, ledger, clients, rnd, ctxFor, statAdjust),
+                    this._penaltyEvent(forSide, ledger, live(), rnd, ctxFor, statAdjust),
                 ]);
             }
         }
@@ -597,7 +604,7 @@ const LiveSim = {
             for (let have = flagged[side]; have < target; have++) {
                 let ev = null;
                 if (cornerEvents < LIVE_SIM.CORNER_EVENT_MAX && rnd() < LIVE_SIM.CORNER_EVENT_CHANCE)
-                    ev = this._cornerEvent(side, clients, rnd, ctxFor, used, usedPieces);
+                    ev = this._cornerEvent(side, live(), rnd, ctxFor, used, usedPieces);
                 if (ev) cornerEvents += 1;
                 units.push([ev || { kind: 'corner', side, client: null, corner: side, events: [],
                     lines: [`Corner — ${nameOf(side)}`] }]);
@@ -627,6 +634,21 @@ const LiveSim = {
             });
             out.push(...unit);
         });
+
+        // A sent-off client's dismissal must be his LAST appearance. He was already kept out of every
+        // stream after his card, but his own goal or assist (scored before he walked) may have landed
+        // at a later minute than the red. Permute the minutes AMONG his own events so the red takes
+        // the latest — same minute set, so nothing collides and the scoreline is untouched.
+        for (const player of sentOff) {
+            const idxs = out.map((e, i) => i).filter(i => out[i].client === player || (out[i].events || []).some(ev => ev.player === player));
+            const rcIdx = idxs.find(i => (out[i].events || []).some(ev => (ev.tag === 'RC' || ev.tag === 'Y2C') && ev.player === player));
+            if (rcIdx == null || idxs.length < 2) continue;
+            const mins = idxs.map(i => out[i].minute).sort((a, b) => a - b);
+            const others = idxs.filter(i => i !== rcIdx).sort((a, b) => out[a].minute - out[b].minute);
+            others.forEach((i, k) => out[i].minute = mins[k]);   // his other events take the earlier minutes
+            out[rcIdx].minute = mins[mins.length - 1];           // the red takes the latest
+        }
+        out.sort((a, b) => a.minute - b.minute);
         return { events: out, minutes, statAdjust, corners };
     },
 

@@ -18,7 +18,39 @@ const Attend = {
     // start of a fresh processing week — the captured list is transient (not persisted): if the app
     // closes before the agent watches, the results already stand from the quick sim.
     reset() { GameState._attend = []; },
-    pending() { return GameState._attend || []; },
+    pending() { return this.order(GameState._attend || []); },
+
+    // ---- ordering: least reputable first, the showpiece last (decision) ----
+    // Main national cups outrank their country's secondary cup; the European finals outrank both
+    // (UECL < UEL < UCL). Ties: more clients on the pitch => later; then the agent's home country
+    // => later; then the leagues-dropdown order of countries.
+    MAIN_CUPS: new Set(['BEKER', 'FACUP', 'DFB', 'CDR', 'SCHWCUP', 'coppaitalia', 'coupefrance', 'tacaportugal', 'belgiancup']),
+    EUROPE_PRESTIGE: { UECL: 2, UEL: 3, UCL: 4 },
+    COUNTRY_ORDER: ['England', 'Germany', 'Spain', 'Italy', 'France', 'Netherlands', 'Portugal', 'Switzerland', 'Belgium', 'Liechtenstein'],
+
+    _prestige(m) {
+        if (m.kind === 'europe-final') return this.EUROPE_PRESTIGE[m.compId] || 2;
+        if (m.kind === 'cup-final') return this.MAIN_CUPS.has(m.compId) ? 1 : 0;
+        return 0;   // play-off / last-day deciders sit with the lower cups until specced otherwise
+    },
+    _matchCountry(m) {
+        const inviter = this._inviterSide(m);
+        const club = (typeof Clubs !== 'undefined') ? Clubs.getClubById(inviter === 'home' ? m.homeId : m.awayId) : null;
+        return club ? club.country : '';
+    },
+    // home country sorts last; everyone else follows the leagues-dropdown order
+    _countryRank(country) {
+        const i = this.COUNTRY_ORDER.indexOf(country);
+        const base = i < 0 ? this.COUNTRY_ORDER.length : i;
+        const home = (typeof GameState !== 'undefined') && country === GameState.homeCountry;
+        return (home ? 1000 : 0) + base;
+    },
+    order(list) {
+        return list.slice().sort((a, b) =>
+            this._prestige(a) - this._prestige(b) ||
+            a.clients.length - b.clients.length ||
+            this._countryRank(this._matchCountry(a)) - this._countryRank(this._matchCountry(b)));
+    },
 
     // Called by the final-playing code. `r` is the League.playMatch result (carries homeAppear /
     // awayAppear — the per-player match detail). `extra` may carry { minutes, firstLeg, targetDivision,
@@ -36,8 +68,11 @@ const Attend = {
             id: 'att_' + GameState.seasonStartYear + '_' + GameState.week + '_' + this.pending().length,
             kind, compId, homeId, awayId,
             homeName: this._clubName(homeId), awayName: this._clubName(awayId),
-            hg: r.hg, ag: r.ag, winner: r.winner,
+            // extra.score / extra.winner carry the extra-time-inclusive result when a final went to ET
+            hg: extra.score ? extra.score.hg : r.hg, ag: extra.score ? extra.score.ag : r.ag,
+            winner: extra.winner || r.winner,
             pens: extra.pens || r.pens || null,
+            et: !!extra.et,
             minutes: extra.minutes || 90,
             firstLeg: extra.firstLeg || null,                 // { scored, conceded } for the client's team, two-legged decider only
             targetDivision: extra.targetDivision || null,

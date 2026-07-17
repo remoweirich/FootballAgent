@@ -439,12 +439,19 @@ const Europe = {
         const [a, b] = c.ko.sf.winners;
         const r = League.playMatch(a, b, comp, false);   // neutral venue, no home edge
         c.ko.final = { a, b, ag: r.hg, bg: r.ag, winner: r.winner };
-        // a level final is settled on penalties — the final view renders as a single-match tie (h=a, a=b)
-        if (r.hg === r.ag) { const [w, l] = League._penScore(); c.ko.final.pens = r.winner === a ? { h: w, a: l } : { h: l, a: w }; }
-        c.ko.winner = r.winner;
-        // a European final the agent may be invited to attend (see js/attend.js). Extra time (clock
-        // to 120) only when it was level and went to pens; a decided final ends at 90.
-        if (typeof Attend !== 'undefined') Attend.consider('europe-final', comp, a, b, r, { pens: c.ko.final.pens, minutes: c.ko.final.pens ? 120 : 90 });
+        // level after 90': extra time (which may decide it), else penalties. Same as a domestic final.
+        if (r.hg === r.ag) {
+            const et = League._extraTime(a, b);
+            if (et.hg !== et.ag) {
+                c.ko.final.ag += et.hg; c.ko.final.bg += et.ag; c.ko.final.et = true;
+                c.ko.final.winner = et.hg > et.ag ? a : b;
+            } else { const [w, l] = League._penScore(); c.ko.final.pens = r.winner === a ? { h: w, a: l } : { h: l, a: w }; }
+        }
+        c.ko.winner = c.ko.final.winner;
+        // a European final the agent may be invited to attend (see js/attend.js). Clock runs to 120
+        // whenever it went past 90 (extra time and/or pens).
+        if (typeof Attend !== 'undefined')
+            Attend.consider('europe-final', comp, a, b, r, { pens: c.ko.final.pens, et: c.ko.final.et, winner: c.ko.final.winner, minutes: (c.ko.final.pens || c.ko.final.et) ? 120 : 90, score: { hg: c.ko.final.ag, ag: c.ko.final.bg } });
     },
 
     // ============================================================ helpers for UI / capture / tests
