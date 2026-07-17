@@ -60,6 +60,7 @@ const Attend = {
                 squadRole: p.squadRole, side, played: !!a,
                 goals: a ? (a.g || 0) : 0, assists: a ? (a.a || 0) : 0,
                 yellow: a ? (a.yellow || 0) : 0, red: a ? (a.red || 0) : 0,
+                rating: a ? a.rating : null,   // the engine's match rating, for the live-view client panel
             });
         }
         return out;

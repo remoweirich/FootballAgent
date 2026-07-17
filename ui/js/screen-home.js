@@ -95,6 +95,7 @@ Home.advance = function () {
     const res = Sim.advanceWeek();
     Router.lastWeekNet = GameState.agency.balance - before;
     Home._spotlights = res.spotlights || [];
+    Home._pendingAttend = (res.attend || []).slice();   // finals the agent may watch this week
     const lines = res.events.map(e => `<div class="frow"><span class="frow__k">${e.text}</span></div>`).join('');
     // tap anywhere in the card to continue (not just the button) — lets you rattle through
     // several quiet weeks by tapping the same spot repeatedly
@@ -110,11 +111,11 @@ Home.advance = function () {
 Home._afterSummary = function () {
     Router.closeModal();
     if (Home._spotlights && Home._spotlights.length) { Home._spotIndex = 0; Home._showSpotlight(); }
-    else Router.refresh();
+    else Home._startInvites();
 };
 Home._showSpotlight = function () {
     const list = Home._spotlights, i = Home._spotIndex;
-    if (!list || i >= list.length) { Router.closeModal(); Router.refresh(); return; }
+    if (!list || i >= list.length) { Home._startInvites(); return; }
     const s = list[i];
     Router.modal(`<div onclick="Home._nextSpotlight()" style="text-align:center;cursor:pointer">
         <div style="font-size:38px;margin-bottom:var(--space-3)">${s.icon || '📣'}</div>
@@ -127,3 +128,35 @@ Home._showSpotlight = function () {
     </div>`);
 };
 Home._nextSpotlight = function () { Home._spotIndex++; Home._showSpotlight(); };
+
+// ---- "Attend the Final" invitations: walk through them one at a time after the spotlights ----
+Home._startInvites = function () {
+    Home._inviteIdx = 0;
+    Home._showInvite();
+};
+Home._showInvite = function () {
+    const list = Home._pendingAttend || [], i = Home._inviteIdx || 0;
+    if (typeof Attend === 'undefined' || i >= list.length) { Router.closeModal(); Router.refresh(); return; }
+    const inv = Attend.invitePayload(list[i]);
+    const body = inv.body.split('\n').map(l => l.trim() ? `<p style="margin:0 0 var(--space-3);line-height:1.6">${UI.esc(l)}</p>` : '').join('');
+    Router.modal(`<div>
+        <div style="font-size:30px;text-align:center;margin-bottom:var(--space-2)">🎟️</div>
+        <h2 style="margin:0 0 var(--space-4);text-align:center">${UI.esc(inv.header)}</h2>
+        <div style="color:var(--text-secondary);max-height:44vh;overflow-y:auto">${body}</div>
+        <div class="flex-row" style="margin-top:var(--space-5);gap:var(--space-3)">
+            <button class="btn btn--ghost" style="flex:1" onclick="Home._declineInvite()">Decline</button>
+            <button class="btn btn--primary" style="flex:1" onclick="Home._acceptInvite()">Attend</button>
+        </div>
+    </div>`);
+};
+Home._declineInvite = function () { Home._inviteIdx = (Home._inviteIdx || 0) + 1; Home._showInvite(); };
+Home._acceptInvite = function () {
+    const m = (Home._pendingAttend || [])[Home._inviteIdx || 0];
+    if (!m || typeof LiveView === 'undefined') { Home._declineInvite(); return; }
+    Router.closeModal();
+    LiveView.show(m, function () {
+        Router.refresh();                        // LiveView took over #app; rebuild the shell
+        Home._inviteIdx = (Home._inviteIdx || 0) + 1;
+        Home._showInvite();
+    });
+};
