@@ -442,6 +442,9 @@ const Europe = {
         // a level final is settled on penalties — the final view renders as a single-match tie (h=a, a=b)
         if (r.hg === r.ag) { const [w, l] = League._penScore(); c.ko.final.pens = r.winner === a ? { h: w, a: l } : { h: l, a: w }; }
         c.ko.winner = r.winner;
+        // a European final the agent may be invited to attend (see js/attend.js). Extra time (clock
+        // to 120) only when it was level and went to pens; a decided final ends at 90.
+        if (typeof Attend !== 'undefined') Attend.consider('europe-final', comp, a, b, r, { pens: c.ko.final.pens, minutes: c.ko.final.pens ? 120 : 90 });
     },
 
     // ============================================================ helpers for UI / capture / tests

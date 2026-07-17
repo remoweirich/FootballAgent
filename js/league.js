@@ -454,6 +454,9 @@ const League = {
         const tie = { h: home, a: away, hg: r.hg, ag: r.ag, winner: r.winner };
         // a single-match cup tie level after 90' is settled on penalties — record a definitive score
         if (r.hg === r.ag) { const [w, l] = this._penScore(); tie.pens = (r.winner === home) ? { h: w, a: l } : { h: l, a: w }; }
+        // the final is a match the agent may be invited to attend (see js/attend.js). A final has
+        // extra time (clock to 120) only if it was level and went to pens; a decided final ends at 90.
+        if (isFinal && typeof Attend !== 'undefined') Attend.consider('cup-final', compId, home, away, r, { pens: tie.pens, minutes: tie.pens ? 120 : 90 });
         return tie;
     },
 
