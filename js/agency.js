@@ -20,7 +20,7 @@ const Agency = {
             relationships[c.id] = Math.round(Math.max(48, Math.min(75, base)));
         });
         GameState.agency = {
-            name: 'Your Agency', reputation: 12, balance: 3000,
+            name: 'Your Agency', agentName: '', reputation: 12, balance: 3000,
             homeCountry: GameState.homeCountry || 'Netherlands',
             scouts: [], relationships,
             intlLicenceUntil: null,   // absWeek until which an International Scouting Licence is valid

@@ -37,6 +37,9 @@ const Setup = {
             <label class="field-label"><i class="ti ti-briefcase"></i>Agency name</label>
             <input id="setupName" class="text-input" type="text" maxlength="32" placeholder="e.g. Nordvind Sports Group" autocomplete="off" autocorrect="off" spellcheck="false">
 
+            <label class="field-label"><i class="ti ti-user"></i>Your name</label>
+            <input id="setupAgent" class="text-input" type="text" maxlength="32" placeholder="e.g. Alex Mercer" autocomplete="off" autocorrect="off" spellcheck="false">
+
             <label class="field-label"><i class="ti ti-world"></i>Home country</label>
             <div class="select-wrap">
                 <select id="setupCountry" class="select-input">${opts}</select>
@@ -52,11 +55,13 @@ const Setup = {
         this.renderSlide();
         this.wireHowto();
 
-        const nameEl = document.getElementById('setupName'), startBtn = document.getElementById('setupStart');
-        nameEl.value = '';   // belt-and-braces: some browsers restore a field's last typed value
+        const nameEl = document.getElementById('setupName'), agentEl = document.getElementById('setupAgent'), startBtn = document.getElementById('setupStart');
+        nameEl.value = agentEl.value = '';   // belt-and-braces: some browsers restore a field's last typed value
         // by id across page loads even without autocomplete data for this exact origin/field.
         startBtn.disabled = true;
-        nameEl.addEventListener('input', () => { startBtn.disabled = !nameEl.value.trim(); });
+        const refresh = () => { startBtn.disabled = !(nameEl.value.trim() && agentEl.value.trim()); };
+        nameEl.addEventListener('input', refresh);
+        agentEl.addEventListener('input', refresh);
         startBtn.addEventListener('click', () => this.start());
     },
 
@@ -138,9 +143,10 @@ const Setup = {
 
     start() {
         const name = document.getElementById('setupName').value.trim();
-        if (!name) return;
+        const agent = document.getElementById('setupAgent').value.trim();
+        if (!name || !agent) return;
         const country = document.getElementById('setupCountry').value;
-        GameState.startNewGame(country, name);
+        GameState.startNewGame(country, name, agent);
         Main.afterLoad();
     }
 };

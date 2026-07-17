@@ -58,12 +58,13 @@ const GameState = {
             this.startNewGame(this.homeCountry || 'Netherlands', (this.agency && this.agency.name) || 'Your Agency');
         }
     },
-    startNewGame(country, name) {
+    startNewGame(country, name, agentName) {
         this.homeCountry = (country && REGIONS_BY_COUNTRY[country]) ? country : 'Netherlands';
         this.week = 1; this.seasonStartYear = 2025;
         this.players = PlayerGen.generatePool();
         Agency.init();
         this.agency.name = (name && name.trim()) ? name.trim() : 'Your Agency';
+        this.agency.agentName = (agentName && agentName.trim()) ? agentName.trim() : '';
         this.agency.homeCountry = this.homeCountry;
         PlayerGen.seedKnownProspects();
         League.setupSeason();
@@ -76,6 +77,10 @@ const GameState = {
     },
 
     getPlayer(id) { return this.players.find(p => p.id === id); },
+
+    // The agent's own name, for letters addressed to them (invitations). Empty on saves made before
+    // the field existed — callers fall back to a neutral salutation.
+    agentName() { return (this.agency && this.agency.agentName) || ''; },
 
     addLog(text, type = 'info') {
         this.log.unshift({ week: this.week, season: this.seasonLabel(), text, type });

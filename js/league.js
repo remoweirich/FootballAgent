@@ -840,15 +840,32 @@ const League = {
     },
 
     // ---- German relegation: two-legged ties (higher seed hosts leg 2), penalties if level on aggregate ----
+    // A two-legged tie, decomposed so the DECIDING leg (leg 2) can be intercepted and live-simmed
+    // ("Attend the Final") while leg 1 is always quick-simmed. `_twoLeggedTie` composes the two and
+    // is behaviourally identical to before — every existing caller is unaffected.
     _twoLeggedTie(aId, bId, comp) {
-        const l1 = this.playMatch(bId, aId, comp, true);   // leg 1 away for a
-        const l2 = this.playMatch(aId, bId, comp, true);   // leg 2 home for a
-        const aggA = l1.ag + l2.hg, aggB = l1.hg + l2.ag;
+        return this._twoLeggedLeg2(this._twoLeggedLeg1(aId, bId, comp));
+    },
+    // Leg 1 (away for a). Returns the state the decider needs, with the first-leg score.
+    _twoLeggedLeg1(aId, bId, comp) {
+        const l1 = this.playMatch(bId, aId, comp, true);
+        return { a: aId, b: bId, comp, leg1: { h: bId, a: aId, hg: l1.hg, ag: l1.ag } };
+    },
+    // Fold a single-match leg-2 result (r is oriented home = a) into the aggregate and settle the
+    // tie. Kept separate from playing the match so an attended (live-simmed) leg 2 resolves the tie
+    // through exactly this path — the result feeds season processing identically to a quick sim.
+    _twoLeggedResolve(state, r) {
+        const l1 = state.leg1;
+        const aggA = l1.ag + r.hg, aggB = l1.hg + r.ag;
         let winner, pens = null;
-        if (aggA > aggB) winner = aId;
-        else if (aggB > aggA) winner = bId;
-        else { const sA = this.clubStrength(aId), sB = this.clubStrength(bId); winner = (Math.random() < sA / (sA + sB)) ? aId : bId; const [w, l] = this._penScore(); pens = winner === aId ? { winner, a: w, b: l } : { winner, a: l, b: w }; }
-        return { a: aId, b: bId, leg1: { h: bId, a: aId, hg: l1.hg, ag: l1.ag }, leg2: { h: aId, a: bId, hg: l2.hg, ag: l2.ag }, aggA, aggB, winner, pens };
+        if (aggA > aggB) winner = state.a;
+        else if (aggB > aggA) winner = state.b;
+        else { const sA = this.clubStrength(state.a), sB = this.clubStrength(state.b); winner = (Math.random() < sA / (sA + sB)) ? state.a : state.b; const [w, l] = this._penScore(); pens = winner === state.a ? { winner, a: w, b: l } : { winner, a: l, b: w }; }
+        return { a: state.a, b: state.b, leg1: l1, leg2: { h: state.a, a: state.b, hg: r.hg, ag: r.ag }, aggA, aggB, winner, pens };
+    },
+    // Leg 2 (home for a), quick-simmed, then resolved.
+    _twoLeggedLeg2(state) {
+        return this._twoLeggedResolve(state, this.playMatch(state.a, state.b, state.comp, true));
     },
     playGermanRelegation() {
         const L = GameState.league;

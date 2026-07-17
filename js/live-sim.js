@@ -796,6 +796,31 @@ const LiveSim = {
         if (need === 'RC') return parsed.some(e => (e.tag === 'RC' || e.tag === 'Y2C') && named(e));
         return parsed.some(e => e.tag === need && named(e));
     },
+
+    // ================================================================ invitations
+    // A club's letter inviting the agent to attend the DECIDING leg of a two-legged promotion
+    // play-off final. Pure text, no DOM. The five variants are chosen by the client's team's own
+    // first-leg margin. `firstLeg` is that team's score: { scored, conceded }. `targetDivision` is
+    // where they go if they win (caller supplies the wording, incl. any "the").
+    playoffFinalInvite({ agentName, client, teamName, oppName, targetDivision, firstLeg }) {
+        const s = (firstLeg && firstLeg.scored) | 0, c = (firstLeg && firstLeg.conceded) | 0;
+        const diff = s - c, score = `${s}:${c}`;
+        const div = targetDivision || 'the division above';
+        let line;
+        if (diff >= 3)
+            line = `We looked quite comfortable when we beat them ${score} in the first leg, but we haven't won the tie yet! And I know ${client} will certainly want to play to impress.`;
+        else if (diff >= 1)
+            line = `The first leg was quite the nailbiter, with our narrow ${score} win giving us a bit of an edge for the return leg, but it is far from decided yet. With the help of ${client}, I am sure we will succeed!`;
+        else if (diff === 0)
+            line = `What a competitive game that ${score} draw was — we really had to put in the fight. I know our players are hot and hungry for the return leg, so come and watch us reach for promotion! Maybe ${client} will be the one to put us over the line.`;
+        else if (diff >= -2)
+            line = `With our narrow ${score} loss in the first leg, we will need to dig in and give it our all to overcome ${oppName}. Will ${client} be the one to bring us back into the tie? Come along and help us reach ${div}!`;
+        else
+            line = `I know it didn't look good when we lost ${score} in the first leg, but it's not over till it's over. I know our players have it in them, and maybe ${client} can prove to be a deciding factor in creating a historic remontada.`;
+        return `Dear ${agentName || 'Sir/Madam'},\n\n`
+            + `The season is reaching its climax, and ${client} is right in the thick of it. If you'd be interested, ${teamName} would like to invite you to come and watch the game.\n\n`
+            + line;
+    },
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = { LiveSim, LIVE_SIM };
