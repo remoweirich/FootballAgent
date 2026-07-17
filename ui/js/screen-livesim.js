@@ -11,9 +11,15 @@
 // unit-testable; only _render / the clock loop touch the document.
 
 const LiveView = {
-    BASE_MS_PER_MIN: 2200,   // 1x: ~90 minutes in ~3.3 real minutes
+    BASE_MS_PER_MIN: 730,    // 1x default: brisk (~90 minutes in ~66s), speed up from here to 2x/4x
+    SLOWMO: 0.25,            // while an event narrates, the clock crawls at 25% of the default speed
+    LINE_MS: 1150,           // real time between a chain's pieces revealing (start → middle → end)
     TICK_MS: 100,
     other: s => (s === 'home' ? 'away' : 'home'),
+
+    // card/goal symbols for the feed tags and the panels
+    TAG_SYM: { GOAL: '⚽', OG: '⚽', ASSIST: 'A', YC: '🟨', Y2C: '🟨🟥', RC: '🟥', PENMISS: '✗', PENSAVE: '🧤', PENWON: 'PK', PENCONC: 'PK' },
+    tagSym(t) { return this.TAG_SYM[t] || t; },
 
     // ---------- pure helpers (no DOM) ----------
     // Goals this event puts on the board, per side. Sums across the timeline to exactly hg:ag.
@@ -70,7 +76,7 @@ const LiveView = {
         this.spec = Attend.timelineSpec(match);
         this.timeline = LiveSim.buildTimeline(this.spec);
         this.finalStats = this.buildStats(match, this.timeline);
-        this.s = { clock: 0, speed: 1, paused: false, revealed: 0, done: false, dwellUntil: 0 };
+        this.s = { clock: 0, speed: 1, paused: false, revealed: 0, done: false, reveal: null };
         this.score = { home: 0, away: 0 };
         this.feed = [];
         // running per-client tallies for the panel, keyed by playerId
@@ -99,31 +105,46 @@ const LiveView = {
     },
 
     // ---------- clock ----------
+    // Two modes. Normal: the clock runs at `speed × default`, and when it reaches an event the event
+    // is added to the feed and (if it's a multi-piece chain) narration begins. Narrating: the clock
+    // crawls at 25% of the default while the chain's start → middle → end pieces appear one at a
+    // time, like live commentary; the goal/card only LANDS (score, stats) once the last piece shows.
     _tick() {
         const st = this.s;
         if (st.done || st.paused) return;
         const now = Date.now();
-        if (now < st.dwellUntil) { return; }
-        st.clock += (this.TICK_MS * st.speed) / this.BASE_MS_PER_MIN;
         const evs = this.timeline.events;
-        // reveal one chain at a time so a multi-line event can be read before the next arrives
-        while (st.revealed < evs.length && evs[st.revealed].minute <= Math.floor(st.clock)) {
-            const e = evs[st.revealed];
-            this._apply(e);
-            st.revealed++;
-            const lines = (e.lines || []).length;
-            if (lines > 1) { st.dwellUntil = now + Math.min(900 + lines * 700, 3200) / st.speed; break; }
+
+        if (st.reveal) {
+            st.clock += (this.TICK_MS * this.SLOWMO) / this.BASE_MS_PER_MIN;   // slow-mo during an event
+            if (now >= st.reveal.nextAt) {
+                st.reveal.e._shown += 1;
+                if (st.reveal.e._shown >= (st.reveal.e.lines || []).length) { this._land(st.reveal.e); st.reveal = null; }
+                else st.reveal.nextAt = now + this.LINE_MS;
+            }
+            if (!st.reveal && st.clock >= this.timeline.minutes && st.revealed >= evs.length) { this._finish(); return; }
+            this._paint();
+            return;
+        }
+
+        st.clock += (this.TICK_MS * st.speed) / this.BASE_MS_PER_MIN;
+        if (st.revealed < evs.length && evs[st.revealed].minute <= Math.floor(st.clock)) {
+            const e = evs[st.revealed]; st.revealed++;
+            this.feed.unshift(e); e._shown = 1;
+            if ((e.lines || []).length > 1) st.reveal = { e, nextAt: now + this.LINE_MS };   // narrate it out
+            else this._land(e);                                                              // a one-liner lands at once
+            this._paint();
+            return;   // one event at a time
         }
         if (st.clock >= this.timeline.minutes && st.revealed >= evs.length) { this._finish(); return; }
         if (st.clock > this.timeline.minutes) st.clock = this.timeline.minutes;
         this._paint();
     },
 
-    _apply(e) {
+    // apply an event's effects to the scoreboard, stats and client tallies (the moment it "happens")
+    _land(e) {
         const d = this.scoreDelta(e);
         this.score.home += d.home; this.score.away += d.away;
-        this.feed.unshift(e);
-        // client tallies
         for (const ev of e.events || []) {
             if (!ev.player) continue;
             const t = this.tally[ev.player.id]; if (!t) continue;
@@ -137,14 +158,19 @@ const LiveView = {
 
     setSpeed(v) {
         if (this.s.done) return;
-        this.s.paused = false; this.s.speed = v; this.s.dwellUntil = 0;
+        this.s.paused = false; this.s.speed = v;
         this._paint();
     },
-    togglePause() { if (this.s.done) return; this.s.paused = !this.s.paused; this.s.dwellUntil = 0; this._paint(); },
+    togglePause() { if (this.s.done) return; this.s.paused = !this.s.paused; this._paint(); },
     skip() {
         if (this.s.done) return;
         const evs = this.timeline.events;
-        while (this.s.revealed < evs.length) { this._apply(evs[this.s.revealed]); this.s.revealed++; }
+        // finish any half-narrated event, then reveal and land the rest at once
+        if (this.s.reveal) { const e = this.s.reveal.e; e._shown = (e.lines || []).length; this._land(e); this.s.reveal = null; }
+        while (this.s.revealed < evs.length) {
+            const e = evs[this.s.revealed]; this.s.revealed++;
+            this.feed.unshift(e); e._shown = (e.lines || []).length; this._land(e);
+        }
         this._finish();
     },
 
@@ -212,19 +238,22 @@ const LiveView = {
         return this.feed.map(e => {
             const client = e.client || (e.kind === 'chain' && e.chain && e.chain.pieces[0].player);
             const accent = client ? ' lv-ev--client' : '';
-            const tags = (e.events || []).filter(x => x.player).map(x => `<span class="lv-tagpill">${x.tag}</span>`).join('');
-            const lines = (e.lines || []).map(l => `<div class="lv-line">${UI.esc(l)}</div>`).join('');
+            const all = e.lines || [];
+            const shown = e._shown != null ? e._shown : all.length;
+            // the outcome symbol (goal/card) only appears once the move has fully played out
+            const tags = shown >= all.length ? (e.events || []).filter(x => x.player).map(x => `<span class="lv-tagpill">${this.tagSym(x.tag)}</span>`).join('') : '';
+            const lines = all.slice(0, shown).map(l => `<div class="lv-line">${UI.esc(l)}</div>`).join('');
             return `<div class="lv-ev${accent}"><div class="lv-min">${e.minute}'</div><div class="lv-evbody">${client ? `<div class="lv-evname">${UI.esc(client.name)} ${tags}</div>` : ''}${lines}</div></div>`;
         }).join('');
     },
 
     _statsHTML() {
         const p = this.s.clock / this.timeline.minutes, F = this.finalStats;
-        // corners are the real revealed count, not an interpolation
+        // corners are the real revealed count; cards come from the landed client tallies
         const cor = { home: 0, away: 0 };
-        for (const e of this.feed) if (e.corner) cor[e.corner]++;
+        for (const e of this.feed) if (e.corner && (e._shown == null || e._shown >= (e.lines || []).length)) cor[e.corner]++;
         const yr = { home: { y: 0, r: 0 }, away: { y: 0, r: 0 } };
-        for (const e of this.feed) { const d = this.cardDelta(e); yr.home.y += d.home.y; yr.home.r += d.home.r; yr.away.y += d.away.y; yr.away.r += d.away.r; }
+        for (const c of this.match.clients) { const t = this.tally[c.playerId]; if (t) { yr[c.side].y += t.y; yr[c.side].r += t.r; } }
         const possH = this.possAt(F.possession.home, p);
         const row = (label, h, a) => `<div class="lv-strow"><span class="lv-stv">${h}</span><span class="lv-stl">${label}</span><span class="lv-stv">${a}</span></div>`;
         const bar = `<div class="lv-possbar"><div class="lv-possfill" style="width:${possH}%"></div></div>`;
@@ -234,8 +263,8 @@ const LiveView = {
             ${row('On target', this.statAt(F.sot.home, p), this.statAt(F.sot.away, p))}
             ${row('Corners', cor.home, cor.away)}
             ${row('Fouls', this.statAt(F.fouls.home, p), this.statAt(F.fouls.away, p))}
-            ${row('Yellow', yr.home.y, yr.away.y)}
-            ${row('Red', yr.home.r, yr.away.r)}
+            ${row('🟨', yr.home.y, yr.away.y)}
+            ${row('🟥', yr.home.r, yr.away.r)}
         </div>`;
     },
 
@@ -248,7 +277,7 @@ const LiveView = {
             const r = this.ratingAt(c.rating, p);
             const rc = r >= 7 ? 'var(--state-good)' : r < 6.5 ? 'var(--state-bad)' : 'var(--text-secondary)';
             const badge = c.side === 'home' ? this.match.homeName : this.match.awayName;
-            const line = [t.g ? `${t.g} G` : '', t.a ? `${t.a} A` : '', t.shots ? `${t.shots} sh` : '', t.y ? `${t.y} YC` : '', t.r ? `RC` : ''].filter(Boolean).join(' · ') || 'no stats yet';
+            const line = [t.g ? `${t.g} ⚽` : '', t.a ? `${t.a} A` : '', t.shots ? `${t.shots} sh` : '', t.y ? `🟨` : '', t.r ? `🟥` : ''].filter(Boolean).join(' · ') || 'no stats yet';
             return `<div class="lv-cl"><div class="lv-clhead"><span class="lv-clname">${UI.esc(c.name)}</span><span class="lv-clrate" style="color:${rc}">${r.toFixed(1)}</span></div>
                 <div class="lv-clsub">${UI.esc(c.position)} · ${UI.esc(badge)}</div>
                 <div class="lv-clstat">${line}</div></div>`;
