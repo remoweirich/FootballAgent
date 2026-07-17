@@ -30,11 +30,29 @@ const Attend = {
 
     // Open a window from this week's captures (called at the end of advanceWeek). Least reputable
     // first, so the showpiece is the last thing you watch.
+    // A finals weekend, in chronological order (Mon evening → Sun night). Assigning the LAST n slots
+    // to the n finals puts the showpiece last (Sun night) and keeps the order chronological =
+    // prestige; small fields sit on the weekend, only a big one spills onto weekday evenings.
+    SCHEDULE_SLOTS: [
+        ['Monday', '20:00'], ['Tuesday', '20:00'], ['Wednesday', '20:00'], ['Thursday', '20:00'],
+        ['Friday', '19:45'], ['Friday', '20:45'],
+        ['Saturday', '14:30'], ['Saturday', '16:00'], ['Saturday', '17:00'], ['Saturday', '18:30'], ['Saturday', '19:45'], ['Saturday', '20:45'],
+        ['Sunday', '14:30'], ['Sunday', '16:00'], ['Sunday', '17:00'], ['Sunday', '18:00'], ['Sunday', '18:30'], ['Sunday', '19:45'], ['Sunday', '20:45'],
+    ],
+    _assignSchedule(finals) {
+        const slots = this.SCHEDULE_SLOTS, n = finals.length;
+        const chosen = slots.slice(Math.max(0, slots.length - n));
+        while (chosen.length < n) chosen.unshift(slots[0]);   // more finals than slots (never, really)
+        finals.forEach((m, i) => { m.day = chosen[i][0]; m.time = chosen[i][1]; });
+    },
+
     openWindow(captures) {
         if (!captures || !captures.length) return null;
+        const finals = this.order(captures);
+        this._assignSchedule(finals);
         GameState.attendWindow = {
             season: GameState.seasonStartYear, week: GameState.week,
-            finals: this.order(captures), pointer: -1, watched: 0,
+            finals, pointer: -1, watched: 0,
         };
         // each invite also lands in the inbox individually (the row opens the overview, not a mail
         // detail — see the inbox renderer's 'attend' special-case)
@@ -93,7 +111,10 @@ const Attend = {
     // Main national cups outrank their country's secondary cup; the European finals outrank both
     // (UECL < UEL < UCL). Ties: more clients on the pitch => later; then the agent's home country
     // => later; then the leagues-dropdown order of countries.
-    MAIN_CUPS: new Set(['BEKER', 'FACUP', 'DFB', 'CDR', 'SCHWCUP', 'coppaitalia', 'coupefrance', 'tacaportugal', 'belgiancup']),
+    // the id each MAIN national cup FINAL is played under (see League.*Step); the secondary cups
+    // (KBEK, LLC, LPOKAL, CUPABASS, LICHCUP, NOTRECOUPE, COUPENAT, SEGTACA, CFED, COPPACOMP) and the
+    // minor Liechtensteiner Cup sit at the lower tier (prestige 0)
+    MAIN_CUPS: new Set(['BEKER', 'FACUP', 'DFB', 'CDR', 'SCHWCUP', 'COPPA', 'COUPEFR', 'TACAPT', 'BELCUP']),
     EUROPE_PRESTIGE: { UECL: 2, UEL: 3, UCL: 4 },
     COUNTRY_ORDER: ['England', 'Germany', 'Spain', 'Italy', 'France', 'Netherlands', 'Portugal', 'Switzerland', 'Belgium', 'Liechtenstein'],
 

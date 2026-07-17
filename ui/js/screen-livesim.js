@@ -327,19 +327,23 @@ const AttendOverview = {
         const rows = w.finals.map((m, i) => {
             const revealed = Attend.isRevealed(i), watchable = Attend.isWatchable(i);
             const comp = Attend._compTitle(m);
-            let right;
+            const when = (m.day && m.time) ? `${m.day} · ${m.time}` : '';
+            let action;
             if (revealed) {
                 const note = m.pens ? ` (pens ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : m.pens.a + '–' + m.pens.b})` : m.et ? ' (ET)' : '';
-                right = `<span style="font-variant-numeric:tabular-nums;color:var(--text-bright);font-weight:var(--weight-semibold)">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></span>`;
+                action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></div>`;
             } else if (watchable) {
-                right = `<button class="btn btn--primary" style="padding:6px 14px" onclick="AttendOverview.watch(${i})">Attend</button>`;
+                action = `<button class="btn btn--primary lv-ov-btn" onclick="AttendOverview.watch(${i})">Attend</button>`;
             } else {
-                right = `<span class="muted" style="font-size:11px"><i class="ti ti-lock"></i> in the past</span>`;
+                action = `<div class="lv-ov-locked"><i class="ti ti-lock"></i> in the past</div>`;
             }
-            return `<div class="list-row" style="cursor:default"><div style="flex:1;min-width:0">
-                <div class="row-title">${UI.esc(m.homeName)} <span style="color:var(--text-dim)">vs</span> ${UI.esc(m.awayName)}</div>
-                <div class="row-sub">${UI.esc(comp)}</div></div>${right}</div>`;
+            return `<div class="lv-ov-card">
+                ${when ? `<div class="lv-ov-when">${when}</div>` : ''}
+                <div class="lv-ov-fix">${UI.esc(m.homeName)} <span style="color:var(--text-dim)">vs</span> ${UI.esc(m.awayName)}</div>
+                <div class="lv-ov-comp">${UI.esc(comp)}</div>
+                ${action}</div>`;
         }).join('');
+        this._injectOverviewCSS();
         el.innerHTML = `<p class="hint" style="margin-bottom:var(--space-4)">You're invited to ${w.finals.length} final${w.finals.length > 1 ? 's' : ''} — ${left} left to watch. They play least-prestigious first; once you attend a later one you can't go back to an earlier, and unwatched results reveal when you advance the week.</p>${rows}`;
     },
     watch(i) {
@@ -350,6 +354,18 @@ const AttendOverview = {
             Attend.watch(i); GameState.save();
             Router.go('attendfinals');   // rebuild the shell and land back on the overview
         });
+    },
+    _injectOverviewCSS() {
+        if (document.getElementById('lvOvCSS')) return;
+        const css = `
+        .lv-ov-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px}
+        .lv-ov-when{color:var(--accent-text);font-size:var(--fs-xs);font-weight:var(--weight-semibold);margin-bottom:3px}
+        .lv-ov-fix{color:var(--text-bright);font-weight:var(--weight-semibold);line-height:1.3}
+        .lv-ov-comp{color:var(--text-dim);font-size:var(--fs-xs);margin-top:2px;margin-bottom:10px}
+        .lv-ov-btn{width:100%;padding:7px 0;font-size:var(--fs-sm)}
+        .lv-ov-res{font-variant-numeric:tabular-nums;color:var(--text-bright);font-weight:var(--weight-semibold);font-size:var(--fs-md)}
+        .lv-ov-locked{color:var(--text-dim);font-size:var(--fs-xs)}`;
+        const el = document.createElement('style'); el.id = 'lvOvCSS'; el.textContent = css; document.head.appendChild(el);
     },
 };
 Router.register('attendfinals', { isMain: false, parent: 'inbox', title: 'Finals to attend', render(el) { AttendOverview.render(el); } });
