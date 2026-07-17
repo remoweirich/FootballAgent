@@ -61,9 +61,12 @@ const LiveView = {
     },
 
     // ---------- lifecycle ----------
-    show(match, onDone) {
+    // opts.nextLabel: "FC Basel vs FC Zürich" when another accepted final follows (the full-time
+    // button then reads "Attend …"); null/absent when this is the last, so it reads "Leave".
+    show(match, onDone, opts) {
         this.match = match;
         this.onDone = onDone || function () { };
+        this.nextLabel = (opts && opts.nextLabel) || null;
         this.spec = Attend.timelineSpec(match);
         this.timeline = LiveSim.buildTimeline(this.spec);
         this.finalStats = this.buildStats(match, this.timeline);
@@ -84,7 +87,9 @@ const LiveView = {
         this.s.clock = this.timeline.minutes;
         // bank any converted-penalty goal the live sim moved to a client
         if (applyAdjust && typeof Attend !== 'undefined') Attend.applyStatAdjust(this.match, this.timeline.statAdjust);
-        this._renderFullTime();
+        // stay on the tabbed view so the stats and the full event feed can still be browsed —
+        // "jump to result" lands here too. Only the scoreboard controls change.
+        this._paint();
     },
 
     _close() {
@@ -171,23 +176,32 @@ const LiveView = {
     },
 
     _paint() {
-        if (this.s.done) return;   // full-time screen owns the DOM after finish
         const b = document.getElementById('lvBoard'); if (!b) return;
         const m = this.match, st = this.s;
         const speedBtn = (v, lbl) => `<button class="lv-sp ${!st.paused && st.speed === v ? 'on' : ''}" onclick="LiveView.setSpeed(${v})">${lbl}</button>`;
+        let ctrl, banner = '';
+        if (st.done) {
+            const won = m.winner === this._inviterId();
+            const decided = m.pens ? `pens ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : m.pens.a + '–' + m.pens.b}` : m.et ? 'after extra time' : '';
+            banner = `<div class="lv-ftbanner">${won ? '🏆 ' : ''}Full time${decided ? ` · <span style="color:var(--danger-text)">${decided}</span>` : ''}</div>`;
+            const label = this.nextLabel ? `Attend ${UI.esc(this.nextLabel)}` : 'Leave';
+            ctrl = `<div class="lv-ctrl"><button class="btn btn--primary" style="flex:1" onclick="LiveView._close()">${label}</button></div>`;
+        } else {
+            ctrl = `<div class="lv-ctrl">
+                <button class="lv-sp ${st.paused ? 'on' : ''}" onclick="LiveView.togglePause()"><i class="ti ti-player-pause"></i></button>
+                ${speedBtn(1, '1×')}${speedBtn(2, '2×')}${speedBtn(4, '4×')}
+                <button class="lv-sp" onclick="LiveView.skip()">Result ⏭</button>
+            </div>`;
+        }
         b.innerHTML = `
-            <div class="lv-comp">${UI.esc(this.match._compLabel || Attend._compTitle(m))}</div>
+            <div class="lv-comp">${UI.esc(Attend._compTitle(m))}</div>
             <div class="lv-score">
                 <span class="lv-team">${UI.esc(m.homeName)}</span>
                 <span class="lv-nums">${this.score.home}<span class="lv-colon">:</span>${this.score.away}</span>
                 <span class="lv-team lv-team--a">${UI.esc(m.awayName)}</span>
             </div>
             <div class="lv-clock">${this._clockLabel()}</div>
-            <div class="lv-ctrl">
-                <button class="lv-sp ${st.paused ? 'on' : ''}" onclick="LiveView.togglePause()"><i class="ti ti-player-pause"></i></button>
-                ${speedBtn(1, '1×')}${speedBtn(2, '2×')}${speedBtn(4, '4×')}
-                <button class="lv-sp" onclick="LiveView.skip()">Skip ⏭</button>
-            </div>`;
+            ${banner}${ctrl}`;
         document.querySelectorAll('.lv-tab').forEach(el => el.classList.toggle('on', el.dataset.t === this.tab));
         const body = document.getElementById('lvBody'); if (!body) return;
         body.innerHTML = this.tab === 'stats' ? this._statsHTML() : this.tab === 'clients' ? this._clientsHTML() : this._feedHTML();
@@ -244,27 +258,6 @@ const LiveView = {
         return `<div class="lv-clients">${html || '<p class="lv-empty">No clients on the pitch.</p>'}</div>`;
     },
 
-    _renderFullTime() {
-        const m = this.match, won = m.winner === (this._inviterId());
-        const pensLine = m.pens ? `<div class="lv-ftpens">Penalties: ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : (m.pens.a + '–' + m.pens.b)}</div>`
-            : m.et ? `<div class="lv-ftpens">After extra time</div>` : '';
-        const clientLines = this.match.clients.filter(c => c.played).map(c => {
-            const t = this.tally[c.playerId] || {};
-            const bits = [t.g ? `${t.g} goal${t.g > 1 ? 's' : ''}` : '', t.a ? `${t.a} assist${t.a > 1 ? 's' : ''}` : '', c.rating != null ? `${c.rating.toFixed(1)} rating` : ''].filter(Boolean).join(', ');
-            return `<div class="lv-ftcl"><span>${UI.esc(c.name)}</span><span class="muted">${bits || 'played'}</span></div>`;
-        }).join('');
-        document.getElementById('app').innerHTML = `<div class="lv-wrap lv-ft">
-            <div class="lv-ftcard">
-                ${won ? '<div class="lv-fttrophy">🏆</div>' : ''}
-                <div class="lv-ftlabel">Full time</div>
-                <div class="lv-ftscore">${UI.esc(m.homeName)} ${this.score.home}–${this.score.away} ${UI.esc(m.awayName)}</div>
-                ${pensLine}
-                <div class="lv-ftclients">${clientLines}</div>
-                <button class="btn btn--primary" style="margin-top:var(--space-5);width:100%" onclick="LiveView._close()">Continue</button>
-            </div>
-        </div>`;
-        this._injectCSS();
-    },
     _inviterId() { const c = this.match.clients.find(x => x.side === 'home'); return c ? this.match.homeId : this.match.awayId; },
 
     _injectCSS() {
@@ -279,6 +272,7 @@ const LiveView = {
         .lv-nums{font-size:34px;font-weight:var(--weight-semibold);color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap}
         .lv-colon{margin:0 4px;color:var(--text-dim)}
         .lv-clock{margin-top:6px;font-size:var(--fs-sm);color:var(--accent);font-variant-numeric:tabular-nums}
+        .lv-ftbanner{margin-top:8px;font-size:var(--fs-sm);color:var(--text-bright);font-weight:var(--weight-semibold)}
         .lv-ctrl{display:flex;gap:6px;justify-content:center;margin-top:12px}
         .lv-sp{background:var(--surface-raised);border:1px solid var(--line);color:var(--text-secondary);border-radius:var(--radius-sm);padding:6px 10px;font-size:var(--fs-xs);cursor:pointer}
         .lv-sp.on{background:var(--accent-tint);border-color:var(--accent-border);color:var(--accent-text)}

@@ -129,14 +129,18 @@ Home._showSpotlight = function () {
 };
 Home._nextSpotlight = function () { Home._spotIndex++; Home._showSpotlight(); };
 
-// ---- "Attend the Final" invitations: walk through them one at a time after the spotlights ----
+// ---- "Attend the Final" invitations ----
+// First decide on every invitation (Attend / Decline), then watch the accepted ones back to back:
+// the full-time button of each chains straight into the next ("Attend X vs Y"), or reads "Leave" on
+// the last. Ordering is least-reputable-first, so the showpiece is saved for last (see Attend.order).
 Home._startInvites = function () {
     Home._inviteIdx = 0;
+    Home._accepted = [];
     Home._showInvite();
 };
 Home._showInvite = function () {
     const list = Home._pendingAttend || [], i = Home._inviteIdx || 0;
-    if (typeof Attend === 'undefined' || i >= list.length) { Router.closeModal(); Router.refresh(); return; }
+    if (typeof Attend === 'undefined' || i >= list.length) { Home._startWatch(); return; }
     const inv = Attend.invitePayload(list[i]);
     const body = inv.body.split('\n').map(l => l.trim() ? `<p style="margin:0 0 var(--space-3);line-height:1.6">${UI.esc(l)}</p>` : '').join('');
     Router.modal(`<div>
@@ -149,14 +153,23 @@ Home._showInvite = function () {
         </div>
     </div>`);
 };
-Home._declineInvite = function () { Home._inviteIdx = (Home._inviteIdx || 0) + 1; Home._showInvite(); };
 Home._acceptInvite = function () {
     const m = (Home._pendingAttend || [])[Home._inviteIdx || 0];
-    if (!m || typeof LiveView === 'undefined') { Home._declineInvite(); return; }
+    if (m) Home._accepted.push(m);
+    Home._inviteIdx = (Home._inviteIdx || 0) + 1;
+    Home._showInvite();
+};
+Home._declineInvite = function () { Home._inviteIdx = (Home._inviteIdx || 0) + 1; Home._showInvite(); };
+
+Home._startWatch = function () { Home._watchIdx = 0; Home._watchNext(); };
+Home._watchNext = function () {
+    const q = Home._accepted || [], i = Home._watchIdx || 0;
+    if (typeof LiveView === 'undefined' || i >= q.length) { Router.closeModal(); Router.refresh(); return; }
+    const m = q[i], next = q[i + 1];
     Router.closeModal();
     LiveView.show(m, function () {
         Router.refresh();                        // LiveView took over #app; rebuild the shell
-        Home._inviteIdx = (Home._inviteIdx || 0) + 1;
-        Home._showInvite();
-    });
+        Home._watchIdx = (Home._watchIdx || 0) + 1;
+        Home._watchNext();
+    }, { nextLabel: next ? (next.homeName + ' vs ' + next.awayName) : null });
 };
