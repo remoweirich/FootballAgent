@@ -420,12 +420,28 @@ const League = {
     // kept and neither side gets the home bonus.
     // A definitive penalty-shootout result (the winner is strictly ahead). Best-of-five with
     // sudden death, ~75% conversion. Returns [winnerGoals, loserGoals], e.g. [4,3] or [5,4] or [3,1].
+    // A shootout score that could actually have happened. Kicks alternate and STOP the moment the
+    // tie is mathematically settled, so the losing side never takes a kick that cannot matter —
+    // which is why 5:1 is impossible (at 4:1 with one kick each left, the trailing side can only
+    // reach 3, so it is already over). Playing all five each and counting produced those results.
+    // Returns [winner, loser].
     _penScore() {
-        let a = 0, b = 0;
-        for (let i = 0; i < 5; i++) { if (Math.random() < 0.75) a++; if (Math.random() < 0.75) b++; }
+        const CONV = 0.75, KICKS = 5;
+        let a = 0, b = 0, ka = 0, kb = 0;
+        for (let i = 0; i < KICKS * 2; i++) {
+            if (i % 2 === 0) { if (Math.random() < CONV) a++; ka++; }
+            else { if (Math.random() < CONV) b++; kb++; }
+            if (a > b + (KICKS - kb)) break;   // b cannot catch up even by scoring everything left
+            if (b > a + (KICKS - ka)) break;
+        }
+        // sudden death: both take one, repeat until exactly one of them scores
         let guard = 0;
-        while (a === b && guard++ < 40) { if (Math.random() < 0.72) a++; if (Math.random() < 0.72) b++; }
-        if (a === b) a++;
+        while (a === b && guard++ < 40) {
+            const sa = Math.random() < 0.72, sb = Math.random() < 0.72;
+            if (sa) a++;
+            if (sb) b++;
+        }
+        if (a === b) a++;   // the guard should never fire; never hand back a drawn shootout
         return a > b ? [a, b] : [b, a];
     },
     playCupTie(h, a, compId, isFinal) {

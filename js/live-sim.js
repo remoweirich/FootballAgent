@@ -175,7 +175,16 @@ const LiveSim = {
         const usedPieces = opts.usedPieces || new Set();
         const stale = p => usedPieces.has(p.id) ? 0.15 : 1;   // seen already: allowed, but unlikely
 
-        const starts = idx.start.filter(p => p.codes.has(code));
+        // opts.family pins the chain to one family — a spot kick has to come from N, not from
+        // whatever else this client happens to be eligible for.
+        //
+        // N (a client takes a penalty) and X (a client keeper faces one) narrate a kick that has
+        // already been awarded, so they are only ever reachable by asking for them BY NAME, from
+        // _penaltyEvent. Leaving them in the general pool conjured penalties out of nowhere — every
+        // match had one.
+        const starts = idx.start.filter(p => p.codes.has(code) &&
+            (opts.family ? p.keys.some(k => k.fam === opts.family)
+                : !p.keys.some(k => this.PEN_FAMILIES.includes(k.fam))));
         for (let attempt = 0; attempt < 24; attempt++) {
             const start = this.pickWeighted(starts, rnd, p => p.weight * stale(p));
             if (!start) return null;
@@ -356,15 +365,35 @@ const LiveSim = {
         const target = Math.max(this.eventBudget(clients.length, rnd), required.length);
 
         // ---- assemble, then stamp minutes across however many events we actually produced
-        const out = [];
+        // Events are built as UNITS, not loose entries. A foul and the penalty it gives away are one
+        // indivisible beat: the ordering shuffle below moves whole units, so the kick can never be
+        // flung to the far side of the match from the offence that caused it.
+        const units = [];
         const used = new Set(), usedPieces = new Set();
         const noteChain = ch => { used.add(this.chainKey(ch)); ch.pieces.forEach(x => usedPieces.add(x.piece.id)); };
+        const ctxFor = side => ({ teamName: nameOf(side), oppName: oppOf(side) });
+        // A won or conceded penalty is a promise to the viewer: the kick gets taken, right after the
+        // event that awarded it, and the scoreboard moves (or doesn't) accordingly. Never leave one
+        // hanging — that was the old reason for refusing these chains outright.
+        const pushWithPenalty = (ev, side) => {
+            const unit = [ev];
+            const forSide = this._penaltyFor(ev.events || [], side);
+            if (forSide) unit.push(this._penaltyEvent(forSide, ledger, clients, rnd, ctxFor));
+            units.push(unit);
+        };
+        const chainCount = () => units.reduce((n, u) => n + u.filter(e => e.kind === 'chain').length, 0);
 
         const chainFor = (c, need) => {
             const mates = clients.filter(x => x.side === c.side).map(x => x.player);
-            const allow = tags => this._tagsSatisfy(tags, need);
             const credit = { player: c.player, tag: need };
-            for (let tries = 0; tries < 10; tries++) {
+            // Two passes. A booking is usually just a booking, but for some roles the only card
+            // ending the workbook offers is one that also gives away a penalty — so ask first for a
+            // chain that does ONLY what was needed, and settle for the dramatic one if there is no
+            // alternative. Without this a booked centre-back conceded a penalty every single time.
+            const clean = tags => this._tagsSatisfy(tags, need) && !this.parseTags(tags).some(e => this.PEN_TAGS.includes(e.tag));
+            const any = tags => this._tagsSatisfy(tags, need);
+            for (let tries = 0; tries < 16; tries++) {
+                const allow = tries < 10 ? clean : any;
                 const ch = this.buildChain(c.player, mates, { allow, credit, used, usedPieces, rnd });
                 if (!ch) continue;
                 const ev = this.resolveTags(ch);
@@ -376,57 +405,78 @@ const LiveSim = {
             return null;
         };
 
-        for (const req of required) {
+        const doRequired = req => {
             // One chain can settle several requirements at once — a GOAL:E; ASSIST:M piece pays for
-            // the scorer AND the assister. The ledger is the record of what is still owed, so an
-            // outcome already paid for is skipped rather than narrated a second time.
+            // the scorer AND the assister, and a converted penalty pays for the taker's goal. The
+            // ledger is the record of what is still owed, so an outcome already paid for is skipped
+            // rather than narrated a second time.
             const bal = ledger.byClient.get(req.c.player);
             const key = req.need === 'Y2C' ? 'RC' : req.need;
-            if (!bal || (bal[key] || 0) <= 0) continue;
+            if (!bal || (bal[key] || 0) <= 0) return;
 
             const ch = chainFor(req.c, req.need);
             const side = req.c.side;
             if (ch) noteChain(ch);
-            else if (!this._spend([{ tag: req.need, player: req.c.player, anonymous: false, side: 'own' }], side, ledger)) continue;
-            out.push({
+            else if (!this._spend([{ tag: req.need, player: req.c.player, anonymous: false, side: 'own' }], side, ledger)) return;
+            pushWithPenalty({
                 kind: 'chain', side, need: req.need, client: req.c.player, chain: ch,
                 // A required outcome with no chain to carry it (a keeper's goal, say) still has to
                 // be narrated — the engine awarded it, so it appears with plain commentary rather
                 // than being silently dropped from the feed.
-                lines: ch ? this.chainLines(ch, { teamName: nameOf(side), oppName: oppOf(side) })
+                lines: ch ? this.chainLines(ch, ctxFor(side))
                     : [this._plainLine(req.need, req.c.player, nameOf(side))],
                 events: ch ? this.resolveTags(ch)
                     : [{ tag: req.need, ref: 'E', player: req.c.player, anonymous: false, side: 'own' }],
-            });
-        }
-        // filler: puzzle events that change nothing at all, so the ledger stays authoritative.
-        // Deliberately untagged rather than "tagged but harmless" — a piece that merely looks
-        // neutral is how the penalty above slipped in.
-        const neutral = tags => !tags;
-        for (let i = required.length; i < target; i++) {
-            const c = clients[Math.floor(rnd() * clients.length) % clients.length];
-            if (!c) break;
-            const mates = clients.filter(x => x.side === c.side).map(x => x.player);
-            const ch = this.buildChain(c.player, mates, { allow: neutral, used, usedPieces, rnd });
-            if (!ch) continue;
-            noteChain(ch);
-            out.push({
-                kind: 'chain', side: c.side, need: null, client: c.player, chain: ch,
-                lines: this.chainLines(ch, { teamName: nameOf(c.side), oppName: oppOf(c.side) }),
-                events: this.resolveTags(ch),
-            });
-        }
+            }, side);
+        };
+        // Filler: puzzle events that settle nothing on their own. Untagged pieces qualify, and so do
+        // purely penalty-flavoured ones — those cost nothing and the kick that follows is narrated
+        // and paid for like any other. Anything that scores or books someone is excluded: those are
+        // the engine's to award, not the filler's.
+        const neutral = tags => {
+            if (!tags) return true;
+            return this.parseTags(tags).every(e => this.PEN_TAGS.includes(e.tag));
+        };
+        const fillTo = limit => {
+            let guard = 0;
+            while (chainCount() < limit && guard++ < 40) {
+                const c = clients[Math.floor(rnd() * clients.length) % clients.length];
+                if (!c) return;
+                const mates = clients.filter(x => x.side === c.side).map(x => x.player);
+                const ch = this.buildChain(c.player, mates, { allow: neutral, used, usedPieces, rnd });
+                if (!ch) continue;
+                const ev = this.resolveTags(ch);
+                if (!this._spend(ev, c.side, ledger)) continue;
+                noteChain(ch);
+                pushWithPenalty({
+                    kind: 'chain', side: c.side, need: null, client: c.player, chain: ch,
+                    lines: this.chainLines(ch, ctxFor(c.side)), events: ev,
+                }, c.side);
+            }
+        };
+
+        // ORDER MATTERS. Cards and filler go first because they are what awards penalties, and a
+        // penalty can only be scored out of a goal the engine gave the taker. Narrating his goal in
+        // open play first would leave the ledger empty by the time he steps up, so he would miss
+        // every penalty he ever took. Goals and assists are narrated afterwards, out of whatever
+        // the spot kicks left — a converted penalty simply IS his goal, and doRequired skips it.
+        const cardReqs = required.filter(r => r.need === 'YC' || r.need === 'RC');
+        const scoreReqs = required.filter(r => r.need === 'GOAL' || r.need === 'ASSIST');
+        cardReqs.forEach(doRequired);
+        fillTo(Math.max(0, target - scoreReqs.length));
+        scoreReqs.forEach(doRequired);
+        fillTo(target);
         // whatever the scoreline still owes after the chains — a chain may already have spent an
         // anonymous goal (GOAL:T, "an unnamed team-mate finishes"), so read the ledger, not anonGoals
         for (const side of ['home', 'away'])
             for (let i = 0; i < ledger.anon[side]; i++)
-                out.push({ kind: 'goal', side, client: null, lines: [`GOAL — ${nameOf(side)}`], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] });
+                units.push([{ kind: 'goal', side, client: null, lines: [`GOAL — ${nameOf(side)}`], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
 
-        // shuffle so anonymous goals aren't all last, then stamp minutes in order
-        for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+        // shuffle whole units so anonymous goals aren't all last, then stamp minutes in order
+        for (let i = units.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [units[i], units[j]] = [units[j], units[i]]; }
+        const out = units.flat();
         const slots = this.spreadMinutes(out.length, 1, minutes, rnd);
         out.forEach((e, i) => { e.minute = slots[i] != null ? slots[i] : minutes; });
-        out.sort((a, b) => a.minute - b.minute);
         return { events: out, minutes };
     },
 
@@ -434,15 +484,16 @@ const LiveSim = {
     // ledger is debited and the chain is usable, on failure nothing is spent and the chain is
     // rejected. This is the single gate that keeps the feed and the stored stats identical.
     //
-    // In-play penalties are not payable yet: PENWON/PENCONC are supposed to spawn a penalty
-    // resolution (workbook families N and X), and until that exists a conceded penalty would be
-    // narrated and then never taken, leaving the scoreboard wrong. Rejecting them here costs some
-    // drama and keeps the invariant; they come back with the shootout work.
+    // The PEN* tags cost nothing on their own — winning, conceding, saving or missing a penalty
+    // moves no stat. PENWON/PENCONC do oblige the caller to narrate the kick that follows
+    // (buildTimeline appends it), and any GOAL that comes out of it is paid for there.
+    PEN_TAGS: ['PENWON', 'PENCONC', 'PENSAVE', 'PENMISS'],
+    PEN_FAMILIES: ['N', 'X'],   // N = a client takes a penalty, X = a client keeper faces one
     _spend(events, side, ledger) {
         const other = side === 'home' ? 'away' : 'home';
         const debits = [], anonDebits = { home: 0, away: 0 };
         for (const e of events) {
-            if (e.tag === 'PENWON' || e.tag === 'PENCONC' || e.tag === 'PENSAVE' || e.tag === 'PENMISS') return false;
+            if (this.PEN_TAGS.includes(e.tag)) continue;
             if (e.player) {
                 const bal = ledger.byClient.get(e.player);
                 const key = e.tag === 'Y2C' ? 'RC' : e.tag;
@@ -467,6 +518,77 @@ const LiveSim = {
         for (const [bal, m] of tally) for (const k of Object.keys(m)) bal[k] -= m[k];
         for (const s of ['home', 'away']) ledger.anon[s] -= anonDebits[s];
         return true;
+    },
+
+    // ---------------------------------------------------------------- penalties
+    // Which side is about to take a spot kick, given a chain's tags. PENWON is for the winner's
+    // team; PENCONC is against the conceder's. O flips the side, since it names an opponent.
+    _penaltyFor(events, side) {
+        const other = side === 'home' ? 'away' : 'home';
+        for (const e of events) {
+            if (e.tag === 'PENWON') return e.ref === 'O' ? other : side;
+            if (e.tag === 'PENCONC') return e.ref === 'O' ? side : other;
+        }
+        return null;
+    },
+
+    // Clients on `side` the workbook is willing to hand a spot kick to (family N start pieces).
+    penaltyTakers(clients, side) {
+        const idx = this.init();
+        const nStarts = idx.start.filter(p => p.keys.some(k => k.fam === 'N'));
+        return clients.filter(c => c.side === side).filter(c => {
+            const rc = this.roleCodeOf(c.player);
+            return rc && nStarts.some(p => p.codes.has(rc));
+        });
+    },
+
+    // Narrate the kick. A client the workbook lets take penalties ALWAYS takes it — that is the
+    // point of the N family, and it keeps anonymous takers rare. Whether he scores is not his to
+    // decide: if the engine gave him a goal he has not yet been shown scoring, this is it; if not,
+    // he misses. The kick always resolves, so the scoreboard can never be left hanging.
+    PEN_CONVERSION: 0.75,
+    _penaltyEvent(forSide, ledger, clients, rnd, ctx) {
+        const takers = this.penaltyTakers(clients, forSide);
+        const scorer = takers.find(c => (ledger.byClient.get(c.player) || {}).GOAL > 0);
+        const taker = scorer || takers[0];
+        const mates = clients.filter(x => x.side === forSide).map(x => x.player);
+
+        if (taker) {
+            // He can only score if the engine actually awarded him a goal that hasn't been shown
+            // yet — and even then he misses a quarter of the time, like anyone. A missed kick
+            // leaves the goal in the ledger to be narrated in open play instead, so nothing is
+            // lost. Without the roll he would convert every single penalty he ever took.
+            const wantGoal = !!scorer && rnd() < this.PEN_CONVERSION;
+            const allow = tags => {
+                const t = this.parseTags(tags);
+                const scores = t.some(e => e.tag === 'GOAL' && e.ref !== 'O');
+                return wantGoal ? scores : !scores;
+            };
+            const credit = wantGoal ? { player: taker.player, tag: 'GOAL' } : null;
+            for (let tries = 0; tries < 10; tries++) {
+                const ch = this.buildChain(taker.player, mates, { allow, credit, rnd, family: 'N' });
+                if (!ch) continue;
+                const ev = this.resolveTags(ch);
+                if (wantGoal && !ev.some(e => e.tag === 'GOAL' && e.player === taker.player)) continue;
+                if (!this._spend(ev, forSide, ledger)) continue;
+                return {
+                    kind: 'penalty', side: forSide, client: taker.player, chain: ch,
+                    lines: this.chainLines(ch, ctx(forSide)), events: ev,
+                };
+            }
+        }
+        // nobody nameable to take it: a short anonymous line, but it still resolves
+        const team = ctx(forSide).teamName;
+        if (ledger.anon[forSide] > 0) {
+            ledger.anon[forSide] -= 1;
+            return { kind: 'penalty', side: forSide, client: null, chain: null,
+                lines: [`Penalty to ${team}… and it's buried. GOAL — ${team}.`],
+                events: [{ tag: 'GOAL', ref: 'T', player: null, anonymous: true, side: 'own' }] };
+        }
+        const saved = rnd() < 0.5;
+        return { kind: 'penalty', side: forSide, client: null, chain: null,
+            lines: [saved ? `Penalty to ${team}… and the keeper saves it!` : `Penalty to ${team}… and it's missed! Off the woodwork and away.`],
+            events: [{ tag: saved ? 'PENSAVE' : 'PENMISS', ref: 'O', player: null, anonymous: true, side: 'opp' }] };
     },
 
     // Fallback commentary when the workbook has no chain that can carry a required outcome for
