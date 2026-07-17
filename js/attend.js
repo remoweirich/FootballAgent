@@ -36,6 +36,12 @@ const Attend = {
             season: GameState.seasonStartYear, week: GameState.week,
             finals: this.order(captures), pointer: -1, watched: 0,
         };
+        // each invite also lands in the inbox individually (the row opens the overview, not a mail
+        // detail — see the inbox renderer's 'attend' special-case)
+        if (GameState.addMail) for (const m of GameState.attendWindow.finals) {
+            const inv = this.invitePayload(m);
+            GameState.addMail({ kind: 'attend', subject: inv.header, body: inv.body, attendId: m.id, ttl: 3 });
+        }
         return GameState.attendWindow;
     },
     // Close the window — everything it held is now revealed (isHidden looks it up, and there is no
@@ -63,6 +69,18 @@ const Attend = {
         const i = w.finals.findIndex(m => m.id === attendId);
         return i >= 0 && i > w.pointer;
     },
+    // Is a cup/Europe object's FINAL still hidden? Looks at the last round's tie for the stamped
+    // id. Used to suppress the "🏆 Winner" banners (and the league-table trophy) alongside the score.
+    cupWinnerHidden(cupObj) {
+        if (!cupObj || !this.window()) return false;
+        const rounds = cupObj.results || [];
+        const last = rounds[rounds.length - 1];
+        const ft = last && (last.ties || []).find(t => t._attendId);
+        if (ft) return this.isHidden(ft._attendId);
+        if (cupObj.ko && cupObj.ko.final && cupObj.ko.final._attendId) return this.isHidden(cupObj.ko.final._attendId);
+        return false;
+    },
+
     // the next watchable final's fixture label, for the "Attend X vs Y" button
     nextWatchableLabel(afterIndex) {
         const w = this.window(); if (!w) return null;

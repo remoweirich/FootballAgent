@@ -189,9 +189,9 @@ const UI = {
     },
 
     kindIcon(kind) {
-        return ({ transfer: 'ti-arrows-exchange', loan: 'ti-repeat', renewal: 'ti-file-pencil', sponsor: 'ti-currency-euro', news: 'ti-news', summary: 'ti-flag', info: 'ti-info-circle' })[kind] || 'ti-mail';
+        return ({ transfer: 'ti-arrows-exchange', loan: 'ti-repeat', renewal: 'ti-file-pencil', sponsor: 'ti-currency-euro', news: 'ti-news', summary: 'ti-flag', info: 'ti-info-circle', attend: 'ti-ticket' })[kind] || 'ti-mail';
     },
     kindColor(kind) {
-        return ({ transfer: 'var(--state-good)', loan: 'var(--info)', renewal: 'var(--warning)', sponsor: 'var(--state-good)', news: 'var(--text-secondary)', summary: 'var(--gold)', info: 'var(--info)' })[kind] || 'var(--text-secondary)';
+        return ({ transfer: 'var(--state-good)', loan: 'var(--info)', renewal: 'var(--warning)', sponsor: 'var(--state-good)', news: 'var(--text-secondary)', summary: 'var(--gold)', info: 'var(--info)', attend: 'var(--gold)' })[kind] || 'var(--text-secondary)';
     }
 };

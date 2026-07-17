@@ -98,7 +98,10 @@ const LeaguesScreen = {
         const impl = (typeof EUROPE_DATA !== 'undefined') ? EUROPE_DATA.implemented[country] : null;
         let euHL = null, euCupReserved = false;
         if (impl && impl.div === div && typeof Europe !== 'undefined') {
-            const cupWinner = (GameState.league && GameState.league[impl.cupKey] && GameState.league[impl.cupKey].winner) || null;
+            const cupObj = GameState.league && GameState.league[impl.cupKey];
+            // while the cup final is an unwatched invitation, keep its winner out of the Europe-berth
+            // highlight too — otherwise the table quietly reveals who won it
+            const cupWinner = (cupObj && cupObj.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(cupObj))) ? cupObj.winner : null;
             const ids = rows.map(r => r.clubId);
             euHL = Europe.highlightMap(country, ids, cupWinner);
             euCupReserved = Europe.cupBerthReserved(country, ids, cupWinner);
@@ -189,6 +192,10 @@ const LeaguesScreen = {
     tie(t) {
         if (!t) return '';
         const lk = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
+        // "Attend the Final": a final you're invited to but haven't watched keeps its result hidden
+        // so the Competitions tab can't spoil it (see Attend / the inbox overview).
+        if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId))
+            return `<div class="tie-block"><div class="fixture"><span class="fx-home">${lk(t.h)}</span><span class="fx-score muted" style="font-size:11px">not played yet</span><span class="fx-away">${lk(t.a)}</span></div></div>`;
         if (t.bye) return `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${lk(t.h)}</span><span class="fx-score muted">bye</span><span class="fx-away"></span></div></div>`;
         if (t.leg1) {
             const l1 = t.leg1, l2 = t.leg2;
@@ -242,7 +249,7 @@ const LeaguesScreen = {
         const C = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
         const blurb = this.cupBlurb(key);
         if (!C || !C.results || !C.results.length) return `${blurb}<p class="hint">${label} hasn't kicked off yet.</p>`;
-        const winner = C.winner ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(C.winner)}</strong></div>` : '';
+        const winner = (C.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(C))) ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(C.winner)}</strong></div>` : '';
         const rounds = C.results.slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· wk ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
         return `${blurb}${winner}${rounds}`;
     },
@@ -251,7 +258,7 @@ const LeaguesScreen = {
         const blurb = this.cupBlurb(key);
         if (!K || !K.groups) return `${blurb}<p class="hint">${label} hasn't started yet.</p>`;
         const qual = key === 'llc' ? 2 : 1;   // how many per group are highlighted as qualifiers
-        const winner = K.winner ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(K.winner)}</strong></div>` : '';
+        const winner = (K.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(K))) ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(K.winner)}</strong></div>` : '';
         const groups = K.groups.map((g, i) => {
             const t = League._kSort(g.table);
             const rows = t.map((r, j) => `<div class="frow" style="${j < qual ? 'color:var(--state-good)' : ''}"><span class="frow__k">${UI.clubName(r.clubId)}</span><span class="frow__v">${r.P}p · ${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA} · ${r.Pts}pts</span></div>`).join('');
@@ -419,7 +426,8 @@ const LeaguesScreen = {
         const seasonNote = live ? '' : '<p class="hint" style="margin-bottom:var(--space-3)">Showing last season\'s competitions.</p>';
         const dd = `<select class="select-input" style="margin-bottom:var(--space-3)" onchange="LeaguesScreen.setEuComp(this.value)">${[['UCL', 'Champions League'], ['UEL', 'Europa League'], ['UECL', 'Conference League']].map(([k, l]) => `<option value="${k}" ${comp === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
         const icon = (typeof europeTrophyIcon === 'function') ? europeTrophyIcon(comp) : '🏆';
-        const winner = c.ko && c.ko.winner ? `<div class="result ok" style="text-align:center;margin-bottom:var(--space-3)">${icon} ${(COMPETITIONS[comp] || {}).name} winner: <strong>${UI.clubName(c.ko.winner)}</strong></div>` : '';
+        const euHidden = c.ko && c.ko.final && c.ko.final._attendId && typeof Attend !== 'undefined' && Attend.isHidden(c.ko.final._attendId);
+        const winner = (c.ko && c.ko.winner && !euHidden) ? `<div class="result ok" style="text-align:center;margin-bottom:var(--space-3)">${icon} ${(COMPETITIONS[comp] || {}).name} winner: <strong>${UI.clubName(c.ko.winner)}</strong></div>` : '';
         const tabs = this.euTabs(c);
         let stage = this.state.tab; if (!tabs.some(t => t[0] === stage)) stage = this.euDefaultTab(c);
         return seasonNote + dd + winner + this.euStage(c, comp, stage) + this.compHistLink(comp);
@@ -468,7 +476,7 @@ const LeaguesScreen = {
     euFinalView(c) {
         const f = c.ko && c.ko.final;
         if (!f) return '<p class="hint">The final is a single match at a neutral venue in week 47.</p>';
-        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk 47</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens, et: f.et })}</div>`;
+        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk 47</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens, et: f.et, _attendId: f._attendId })}</div>`;
     },
     // horizontal bracket from the Round of 16 to the final — every club's path, scroll to follow it
     euBracketTree(c) {

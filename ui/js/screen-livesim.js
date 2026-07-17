@@ -312,3 +312,44 @@ const LiveView = {
         const el = document.createElement('style'); el.id = 'lvCSS'; el.textContent = css; document.head.appendChild(el);
     },
 };
+
+// ============================================================
+//  Attend overview — the inbox screen listing this week's finals
+// ============================================================
+// Lists the finals you're invited to, least reputable first. You attend up to three, forward only:
+// watching a game reveals it and every earlier one and lets you no longer go back. Everything still
+// unseen reveals when you advance the week (Attend.finalizeWindow).
+const AttendOverview = {
+    render(el) {
+        const w = (typeof Attend !== 'undefined') ? Attend.window() : null;
+        if (!w || !w.finals.length) { el.innerHTML = '<p class="hint" style="text-align:center;padding:28px 0">No finals to attend right now.</p>'; return; }
+        const left = Attend.watchesLeft();
+        const rows = w.finals.map((m, i) => {
+            const revealed = Attend.isRevealed(i), watchable = Attend.isWatchable(i);
+            const comp = Attend._compTitle(m);
+            let right;
+            if (revealed) {
+                const note = m.pens ? ` (pens ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : m.pens.a + '–' + m.pens.b})` : m.et ? ' (ET)' : '';
+                right = `<span style="font-variant-numeric:tabular-nums;color:var(--text-bright);font-weight:var(--weight-semibold)">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></span>`;
+            } else if (watchable) {
+                right = `<button class="btn btn--primary" style="padding:6px 14px" onclick="AttendOverview.watch(${i})">Attend</button>`;
+            } else {
+                right = `<span class="muted" style="font-size:11px"><i class="ti ti-lock"></i> in the past</span>`;
+            }
+            return `<div class="list-row" style="cursor:default"><div style="flex:1;min-width:0">
+                <div class="row-title">${UI.esc(m.homeName)} <span style="color:var(--text-dim)">vs</span> ${UI.esc(m.awayName)}</div>
+                <div class="row-sub">${UI.esc(comp)}</div></div>${right}</div>`;
+        }).join('');
+        el.innerHTML = `<p class="hint" style="margin-bottom:var(--space-4)">You're invited to ${w.finals.length} final${w.finals.length > 1 ? 's' : ''} — ${left} left to watch. They play least-prestigious first; once you attend a later one you can't go back to an earlier, and unwatched results reveal when you advance the week.</p>${rows}`;
+    },
+    watch(i) {
+        const w = (typeof Attend !== 'undefined') ? Attend.window() : null;
+        if (!w || !Attend.isWatchable(i) || typeof LiveView === 'undefined') return;
+        const m = w.finals[i];
+        LiveView.show(m, function () {
+            Attend.watch(i); GameState.save();
+            Router.go('attendfinals');   // rebuild the shell and land back on the overview
+        });
+    },
+};
+Router.register('attendfinals', { isMain: false, parent: 'inbox', title: 'Finals to attend', render(el) { AttendOverview.render(el); } });

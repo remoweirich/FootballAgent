@@ -91,6 +91,24 @@ Router.register('home', {
 });
 
 Home.advance = function () {
+    // If finals from this week are still unwatched, warn before advancing — moving on reveals their
+    // results without you attending (the viewing window closes). See Attend.
+    if (typeof Attend !== 'undefined' && Attend.hasUnwatched()) {
+        const n = Attend.watchesLeft();
+        Router.modal(`<div>
+            <div style="font-size:30px;text-align:center;margin-bottom:var(--space-2)">🎟️</div>
+            <h2 style="margin:0 0 var(--space-3);text-align:center">Finals still to watch</h2>
+            <p style="color:var(--text-secondary);line-height:1.6">You can still attend up to ${n} more final${n === 1 ? '' : 's'} this week. Advance now and you'll only see their results — the invitations are gone.</p>
+            <div class="flex-row" style="margin-top:var(--space-5);gap:var(--space-3)">
+                <a class="btn btn--primary" style="flex:1" href="${Router.link('attendfinals')}" onclick="Router.closeModal()">Watch them</a>
+                <button class="btn btn--ghost" style="flex:1" onclick="Router.closeModal(); Home._doAdvance()">Advance anyway</button>
+            </div>
+        </div>`);
+        return;
+    }
+    Home._doAdvance();
+};
+Home._doAdvance = function () {
     const before = GameState.agency.balance;
     const res = Sim.advanceWeek();
     Router.lastWeekNet = GameState.agency.balance - before;
@@ -130,46 +148,27 @@ Home._showSpotlight = function () {
 Home._nextSpotlight = function () { Home._spotIndex++; Home._showSpotlight(); };
 
 // ---- "Attend the Final" invitations ----
-// First decide on every invitation (Attend / Decline), then watch the accepted ones back to back:
-// the full-time button of each chains straight into the next ("Attend X vs Y"), or reads "Leave" on
-// the last. Ordering is least-reputable-first, so the showpiece is saved for last (see Attend.order).
+// Each invited final pops up full-screen so you're aware of it; you watch them from the inbox
+// overview (up to three, least-prestigious first, no going back). The popups here only notify.
 Home._startInvites = function () {
     Home._inviteIdx = 0;
-    Home._accepted = [];
     Home._showInvite();
 };
 Home._showInvite = function () {
     const list = Home._pendingAttend || [], i = Home._inviteIdx || 0;
-    if (typeof Attend === 'undefined' || i >= list.length) { Home._startWatch(); return; }
+    if (typeof Attend === 'undefined' || i >= list.length) { Router.closeModal(); Router.refresh(); return; }
     const inv = Attend.invitePayload(list[i]);
     const body = inv.body.split('\n').map(l => l.trim() ? `<p style="margin:0 0 var(--space-3);line-height:1.6">${UI.esc(l)}</p>` : '').join('');
+    const last = i >= list.length - 1;
     Router.modal(`<div>
         <div style="font-size:30px;text-align:center;margin-bottom:var(--space-2)">🎟️</div>
         <h2 style="margin:0 0 var(--space-4);text-align:center">${UI.esc(inv.header)}</h2>
-        <div style="color:var(--text-secondary);max-height:44vh;overflow-y:auto">${body}</div>
-        <div class="flex-row" style="margin-top:var(--space-5);gap:var(--space-3)">
-            <button class="btn btn--ghost" style="flex:1" onclick="Home._declineInvite()">Decline</button>
-            <button class="btn btn--primary" style="flex:1" onclick="Home._acceptInvite()">Attend</button>
+        <div style="color:var(--text-secondary);max-height:40vh;overflow-y:auto">${body}</div>
+        <p class="hint" style="margin-top:var(--space-3)">Watch it from your inbox — up to three finals, least prestigious first.</p>
+        <div class="flex-row" style="margin-top:var(--space-4);gap:var(--space-3)">
+            ${last ? `<a class="btn btn--primary" style="flex:1" href="${Router.link('attendfinals')}" onclick="Router.closeModal()">Open overview</a>` : ''}
+            <button class="btn ${last ? 'btn--ghost' : 'btn--primary'}" style="flex:1" onclick="Home._nextInvite()">${last ? 'Close' : 'Next'}</button>
         </div>
     </div>`);
 };
-Home._acceptInvite = function () {
-    const m = (Home._pendingAttend || [])[Home._inviteIdx || 0];
-    if (m) Home._accepted.push(m);
-    Home._inviteIdx = (Home._inviteIdx || 0) + 1;
-    Home._showInvite();
-};
-Home._declineInvite = function () { Home._inviteIdx = (Home._inviteIdx || 0) + 1; Home._showInvite(); };
-
-Home._startWatch = function () { Home._watchIdx = 0; Home._watchNext(); };
-Home._watchNext = function () {
-    const q = Home._accepted || [], i = Home._watchIdx || 0;
-    if (typeof LiveView === 'undefined' || i >= q.length) { Router.closeModal(); Router.refresh(); return; }
-    const m = q[i], next = q[i + 1];
-    Router.closeModal();
-    LiveView.show(m, function () {
-        Router.refresh();                        // LiveView took over #app; rebuild the shell
-        Home._watchIdx = (Home._watchIdx || 0) + 1;
-        Home._watchNext();
-    }, { nextLabel: next ? (next.homeName + ' vs ' + next.awayName) : null });
-};
+Home._nextInvite = function () { Home._inviteIdx = (Home._inviteIdx || 0) + 1; Home._showInvite(); };

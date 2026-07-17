@@ -33,14 +33,22 @@ Nego.linkifyPlayers = function (html) {
 Router.register('inbox', {
     isMain: false, title: 'Inbox',
     render(el) {
-        if (!GameState.inbox.length) { el.innerHTML = '<div class="empty"><div class="empty__icon"><i class="ti ti-inbox"></i></div><div class="empty__title">Inbox empty</div><div class="empty__hint">Offers, scout reports, injuries and season reviews arrive here.</div></div>'; return; }
+        // a live "Attend the Final" window gets a banner at the top of the inbox linking to the overview
+        const w = (typeof Attend !== 'undefined') ? Attend.window() : null;
+        const banner = (w && w.finals.length) ? `<a class="list-row" href="${Router.link('attendfinals')}" style="cursor:pointer;background:var(--gold-tint);border:1px solid var(--gold-border);margin-bottom:var(--space-3)">
+            <div class="row-ico" style="background:color-mix(in srgb, var(--gold) 16%, transparent);color:var(--gold)"><i class="ti ti-ticket"></i></div>
+            <div style="flex:1;min-width:0"><div class="row-title">Finals to attend</div><div class="row-sub">${w.finals.length} invitation${w.finals.length > 1 ? 's' : ''} · ${Attend.watchesLeft()} left to watch</div></div>
+            <i class="ti ti-chevron-right" style="color:var(--gold)"></i></a>` : '';
+        if (!GameState.inbox.length && !banner) { el.innerHTML = '<div class="empty"><div class="empty__icon"><i class="ti ti-inbox"></i></div><div class="empty__title">Inbox empty</div><div class="empty__hint">Offers, scout reports, injuries and season reviews arrive here.</div></div>'; return; }
         el.innerHTML = `<div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4)">
             <span class="hint">${GameState.inbox.length} message(s) · ${GameState.unreadCount()} unread</span>
             <div class="flex-row" style="gap:6px"><button class="gbtn" onclick="NegoInbox.markAllRead()"><i class="ti ti-checks"></i>Mark all read</button><button class="gbtn" onclick="NegoInbox.dismissAll()"><i class="ti ti-trash"></i>Dismiss all</button></div>
-        </div>
+        </div>${banner}
         ${GameState.inbox.map(m => {
             const off = m.offer ? Nego.mailMeta(m) : '';
-            return `<a class="list-row" href="${Router.link('mail', m.id)}" style="cursor:pointer;${m.read ? '' : 'background:var(--accent-fill)'}">
+            // an invitation row opens the finals overview, not a mail detail
+            const href = m.kind === 'attend' ? Router.link('attendfinals') : Router.link('mail', m.id);
+            return `<a class="list-row" href="${href}" style="cursor:pointer;${m.read ? '' : 'background:var(--accent-fill)'}">
                 <div class="row-ico" style="background:color-mix(in srgb, ${UI.kindColor(m.kind)} 16%, transparent);color:${UI.kindColor(m.kind)}"><i class="ti ${UI.kindIcon(m.kind)}"></i></div>
                 <div style="flex:1;min-width:0"><div class="row-title">${UI.esc(m.subject)}</div><div class="row-sub">W${m.week} ${m.season}${off ? ' · ' + off : ''}</div></div>
                 ${!m.read ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none"></span>' : ''}
