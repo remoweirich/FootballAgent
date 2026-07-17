@@ -480,8 +480,10 @@ const League = {
         }
         // the final is a match the agent may be invited to attend (see js/attend.js). It runs the
         // clock to 120 whenever it went beyond 90 (extra time and/or pens).
-        if (isFinal && typeof Attend !== 'undefined')
-            Attend.consider('cup-final', compId, home, away, r, { pens: tie.pens, et: tie.et, winner: tie.winner, minutes: (tie.pens || tie.et) ? 120 : 90, score: { hg: tie.hg, ag: tie.ag } });
+        if (isFinal && typeof Attend !== 'undefined') {
+            const m = Attend.consider('cup-final', compId, home, away, r, { pens: tie.pens, et: tie.et, winner: tie.winner, minutes: (tie.pens || tie.et) ? 120 : 90, score: { hg: tie.hg, ag: tie.ag } });
+            if (m) tie._attendId = m.id;   // hide this final's score in the cup view until it's watched
+        }
         return tie;
     },
 

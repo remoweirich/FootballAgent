@@ -11,6 +11,7 @@ const GameState = {
     league: null,        // standings, schedules, cups (rebuilt each season)
     clubHistory: {},     // { clubId: [{year, division, position, trophies:[compId]}] }
     lastSeasonReport: null, // snapshot of finished-season cups/play-offs/promotions     // { clubId: [{year, division, position, trophies:[compId]}] }
+    attendWindow: null,  // "Attend the Final" viewing window (finals to watch this week), or null
     homeCountry: 'Netherlands', // chosen at the start: drives initial talents + domestic scouting regions
     needsSetup: false,
 
@@ -131,6 +132,7 @@ const GameState = {
                 players: this.players, inbox: this.inbox, log: this.log,
                 agency: this.agency, league: this.league, clubHistory: this.clubHistory,
                 clubEuropeBest: this.clubEuropeBest, debug: this.debug,
+                attendWindow: this.attendWindow,   // open "Attend the Final" viewing window, if any
                 lastSeasonReport: this.lastSeasonReport, clubState,
                 worldV: 2   // frozen-NPC world model (see _migrateWorldV2)
             });
@@ -147,6 +149,7 @@ const GameState = {
             this.clubHistory = d.clubHistory || {};
             this.clubEuropeBest = d.clubEuropeBest || {};
             this.debug = !!d.debug;   // developer/debug mode (off by default)
+            this.attendWindow = d.attendWindow || null;
             this.lastSeasonReport = d.lastSeasonReport || null;
             this._migrateMoraleFields();
             this._restoreClubState(d.clubState);

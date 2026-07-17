@@ -13,12 +13,63 @@
 // the UI reads `GameState._attend` after advanceWeek and renders the invitations.
 
 const Attend = {
-    MAX_PER_WEEK: 3,   // you may WATCH at most three live matches in a processing week (decision 7)
+    CAPTURE_CAP: 12,   // how many invited finals a single week can hold (wk 47 tops out around this)
+    WATCH_CAP: 3,      // you may WATCH at most three of them live (decision 7)
 
-    // start of a fresh processing week — the captured list is transient (not persisted): if the app
-    // closes before the agent watches, the results already stand from the quick sim.
-    reset() { GameState._attend = []; },
+    // ---- the transient capture list, filled by consider() during simulateWeek ----
+    resetCaptures() { GameState._attend = []; },
     pending() { return this.order(GameState._attend || []); },
+
+    // ================================================================ the viewing WINDOW
+    // After the finals are played, the invited ones become a persisted "window": an ordered list you
+    // can watch through, up to WATCH_CAP, forward only. Watching a game reveals it and every earlier
+    // (less prestigious) one — those finals are now in the past. Until revealed, a final's result is
+    // hidden in the Competitions tab (Attend.isHidden). The window closes — revealing everything —
+    // when you advance past it (finalizeWindow).
+    window() { return (typeof GameState !== 'undefined') ? GameState.attendWindow : null; },
+
+    // Open a window from this week's captures (called at the end of advanceWeek). Least reputable
+    // first, so the showpiece is the last thing you watch.
+    openWindow(captures) {
+        if (!captures || !captures.length) return null;
+        GameState.attendWindow = {
+            season: GameState.seasonStartYear, week: GameState.week,
+            finals: this.order(captures), pointer: -1, watched: 0,
+        };
+        return GameState.attendWindow;
+    },
+    // Close the window — everything it held is now revealed (isHidden looks it up, and there is no
+    // window to find). Called at the start of the next advanceWeek, when the finals are in the past.
+    finalizeWindow() { if (typeof GameState !== 'undefined') GameState.attendWindow = null; },
+
+    windowFinals() { const w = this.window(); return w ? w.finals : []; },
+    // index <= pointer means the game has been reached in time and its result is out
+    isRevealed(i) { const w = this.window(); return !w || i <= w.pointer; },
+    // watchable = not yet passed, and you have watches left (cannot jump back in time)
+    isWatchable(i) { const w = this.window(); return !!w && i > w.pointer && w.watched < this.WATCH_CAP; },
+    watchesLeft() { const w = this.window(); return w ? Math.max(0, this.WATCH_CAP - w.watched) : 0; },
+    hasUnwatched() { const w = this.window(); return !!w && w.finals.some((_, i) => this.isWatchable(i)); },
+
+    // Record that the game at index i was watched: it and everything before it are now revealed.
+    watch(i) {
+        const w = this.window(); if (!w || !this.isWatchable(i)) return false;
+        w.pointer = Math.max(w.pointer, i); w.watched += 1;
+        return true;
+    },
+    // Is THIS final (identified by the id stamped on its tie) still hidden? True only while its
+    // window entry exists and it has not yet been reached.
+    isHidden(attendId) {
+        const w = this.window(); if (!w || !attendId) return false;
+        const i = w.finals.findIndex(m => m.id === attendId);
+        return i >= 0 && i > w.pointer;
+    },
+    // the next watchable final's fixture label, for the "Attend X vs Y" button
+    nextWatchableLabel(afterIndex) {
+        const w = this.window(); if (!w) return null;
+        for (let i = afterIndex + 1; i < w.finals.length; i++)
+            if (this.isWatchable(i)) return w.finals[i].homeName + ' vs ' + w.finals[i].awayName;
+        return null;
+    },
 
     // ---- ordering: least reputable first, the showpiece last (decision) ----
     // Main national cups outrank their country's secondary cup; the European finals outrank both
@@ -57,15 +108,15 @@ const Attend = {
     // pens } depending on the kind. Captures only when a client's club is in the tie and the weekly
     // cap has room.
     consider(kind, compId, homeId, awayId, r, extra = {}) {
-        if (!GameState.agency) return;                       // no game yet
-        if (this.pending().length >= this.MAX_PER_WEEK) return;
+        if (!GameState.agency || !GameState._attend) return null;   // no game / not in a capture phase
+        if (GameState._attend.length >= this.CAPTURE_CAP) return null;
         const clients = [
             ...this._clientsAt(homeId, 'home', r && r.homeAppear),
             ...this._clientsAt(awayId, 'away', r && r.awayAppear),
         ];
-        if (!clients.length) return;                          // nobody the agent represents is involved
-        GameState._attend.push({
-            id: 'att_' + GameState.seasonStartYear + '_' + GameState.week + '_' + this.pending().length,
+        if (!clients.length) return null;                     // nobody the agent represents is involved
+        const match = {
+            id: 'att_' + GameState.seasonStartYear + '_' + GameState.week + '_' + GameState._attend.length,
             kind, compId, homeId, awayId,
             homeName: this._clubName(homeId), awayName: this._clubName(awayId),
             // extra.score / extra.winner carry the extra-time-inclusive result when a final went to ET
@@ -78,7 +129,9 @@ const Attend = {
             targetDivision: extra.targetDivision || null,
             clients,
             week: GameState.week, season: GameState.seasonStartYear,
-        });
+        };
+        GameState._attend.push(match);
+        return match;   // the caller stamps the tie with match.id so the result can be hidden
     },
 
     // Every client whose club (or loan club) is `clubId`, captured whether or not he featured —

@@ -130,7 +130,10 @@ const Sim = {
         // richer one-off "spotlight" moments (e.g. a client retiring) that deserve their own
         // pop-up after the week summary, instead of just another line in it
         const spotlights = [];
-        if (typeof Attend !== 'undefined') Attend.reset();   // fresh capture list for this week's finals
+        if (typeof Attend !== 'undefined') {
+            Attend.finalizeWindow();   // last week's invited finals are now in the past — reveal them all
+            Attend.resetCaptures();    // fresh capture list for this week's finals
+        }
         GameState.players.forEach(p => p._weekApps = 0);
 
         // ---- detect season-end / rollover ----
@@ -258,11 +261,12 @@ const Sim = {
         this._sponsorOffers(events);
         this._expireMail(events);
 
+        // finals a client is in become a persisted viewing window: their results are hidden in the
+        // Competitions tab until the agent watches (or advances past) them.
+        if (typeof Attend !== 'undefined') Attend.openWindow(GameState._attend);
         GameState.save();
         Storage.flush();   // a completed week is a meaningful checkpoint — don't leave it debounced
-        // matches the agent may be invited to watch live this week (finals with a client involved).
-        // Transient: the results already stand, so nothing is lost if he skips them.
-        const attend = (typeof Attend !== 'undefined') ? Attend.pending() : [];
+        const attend = (typeof Attend !== 'undefined') ? Attend.windowFinals() : [];
         return { events, spotlights, rolledSeason, seasonFinished, attend };
     },
 
