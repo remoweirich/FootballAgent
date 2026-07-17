@@ -99,6 +99,9 @@ const Attend = {
         return false;
     },
 
+    // is a play-off final object (single-match or two-legged) an unwatched invitation?
+    poFinalHidden(finalObj) { return !!(finalObj && finalObj._attendId && this.isHidden(finalObj._attendId)); },
+
     // the next watchable final's fixture label, for the "Attend X vs Y" button
     nextWatchableLabel(afterIndex) {
         const w = this.window(); if (!w) return null;
@@ -197,7 +200,7 @@ const Attend = {
     // Human label for a match's competition + fixture, e.g. "the Cup Final".
     COMP_TITLES: { 'cup-final': 'Cup Final', 'europe-final': 'European Final', 'playoff-final': 'Promotion Play-off Final', 'title-decider': 'Title decider', 'promotion-decider': 'Promotion decider' },
     _compTitle(m) {
-        if (typeof compName === 'function') { const n = compName(m.compId); if (n) return n + (m.kind === 'cup-final' || m.kind === 'europe-final' ? ' Final' : ''); }
+        if (typeof compName === 'function') { const n = compName(m.compId); if (n) return n + (['cup-final', 'europe-final', 'playoff-final'].includes(m.kind) ? ' Final' : ''); }
         return this.COMP_TITLES[m.kind] || 'the match';
     },
 
@@ -211,7 +214,9 @@ const Attend = {
         const comp = this._compTitle(m);
         let body;
         if (m.kind === 'playoff-final' && m.firstLeg && typeof LiveSim !== 'undefined' && LiveSim.playoffFinalInvite) {
-            body = LiveSim.playoffFinalInvite({ agentName: agent, client: names, teamName, oppName, targetDivision: m.targetDivision, firstLeg: m.firstLeg });
+            // firstLeg is stored from the deciding leg's HOME team; flip it for an away-team inviter
+            const fl = inviter === 'home' ? m.firstLeg : { scored: m.firstLeg.conceded, conceded: m.firstLeg.scored };
+            body = LiveSim.playoffFinalInvite({ agentName: agent, client: names, teamName, oppName, targetDivision: m.targetDivision, firstLeg: fl });
         } else {
             body = `Dear ${agent || 'Sir/Madam'},\n\n`
                 + `${teamName} have reserved a seat for you: come and watch ${names} in the ${comp} against ${oppName}.`;

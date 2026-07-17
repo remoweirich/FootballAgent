@@ -646,7 +646,7 @@ const League = {
             const fin = this.playMatch(home, away, 'PO', true);
             L.playoffs[div] = {
                 sf: [{ h: b1, a: b4, hg: sf1.hg, ag: sf1.ag, winner: sf1.winner }, { h: b2, a: b3, hg: sf2.hg, ag: sf2.ag, winner: sf2.winner }],
-                final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner },
+                final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner, _attendId: this._captureSinglePoFinal(home, away, fin) },
                 winner: fin.winner
             };
         });
@@ -753,7 +753,7 @@ const League = {
         const home = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
         const away = home === sf1.winner ? sf2.winner : sf1.winner;
         const fin = this.playMatch(home, away, 'PO', true);
-        return { sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner }, winner: fin.winner };
+        return { sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner, _attendId: this._captureSinglePoFinal(home, away, fin) }, winner: fin.winner };
     },
     playPlayoffsEngland() {
         const L = GameState.league;
@@ -777,7 +777,7 @@ const League = {
             const home = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
             const away = home === sf1.winner ? sf2.winner : sf1.winner;
             const fin = this.playMatch(home, away, 'PO', true);
-            L.playoffs[div] = { elim: [e1, e2], sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner }, winner: fin.winner };
+            L.playoffs[div] = { elim: [e1, e2], sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner, _attendId: this._captureSinglePoFinal(home, away, fin) }, winner: fin.winner };
         } else L.playoffs[div] = null;
     },
     applyPromotionRelegationEngland() {
@@ -896,6 +896,29 @@ const League = {
     // Leg 2 (home for a), quick-simmed, then resolved.
     _twoLeggedLeg2(state) {
         return this._twoLeggedResolve(state, this.playMatch(state.a, state.b, state.comp, true));
+    },
+    // A two-legged PROMOTION PLAY-OFF final. Decomposed so the deciding leg (leg 2) is the one the
+    // agent may attend, with the first-leg score carried for the invitation prose. Returns the same
+    // tie shape as _twoLeggedTie, plus _attendId on it (so the leagues view can hide the result).
+    _twoLeggedFinal(aId, bId, comp) {
+        const state = this._twoLeggedLeg1(aId, bId, comp);
+        const r2 = this.playMatch(aId, bId, comp, true);   // the deciding leg, home = a
+        const tie = this._twoLeggedResolve(state, r2);
+        if (typeof Attend !== 'undefined') {
+            const l1 = state.leg1;   // { h: bId, a: aId, hg, ag }
+            const m = Attend.consider('playoff-final', comp, aId, bId, r2, {
+                minutes: 90, winner: tie.winner, score: { hg: r2.hg, ag: r2.ag },
+                firstLeg: { scored: l1.ag, conceded: l1.hg },   // leg-2 home (aId) perspective; flipped for an away inviter
+            });
+            if (m) tie._attendId = m.id;
+        }
+        return tie;
+    },
+    // Capture a SINGLE-MATCH promotion play-off final; returns the attend id to stamp on the tie.
+    _captureSinglePoFinal(home, away, r) {
+        if (typeof Attend === 'undefined') return undefined;
+        const m = Attend.consider('playoff-final', 'PO', home, away, r, { minutes: 90 });
+        return m ? m.id : undefined;
     },
     playGermanRelegation() {
         const L = GameState.league;
@@ -1019,7 +1042,7 @@ const League = {
         const order = this.sortedTable(div).map(r => r.clubId); const seed = id => order.indexOf(id);
         const a = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
         const b = a === sf1.winner ? sf2.winner : sf1.winner;
-        const final = this._twoLeggedTie(a, b, 'PO');
+        const final = this._twoLeggedFinal(a, b, 'PO');
         return { sf: [sf1, sf2], final, winner: final.winner };
     },
     playPlayoffsSpain() {
@@ -1329,7 +1352,7 @@ const League = {
         const seed = id => order.indexOf(id);
         const a = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;   // higher regular-season finisher hosts final leg 2
         const b = a === sf1.winner ? sf2.winner : sf1.winner;
-        const final = this._twoLeggedTie(a, b, 'PO');
+        const final = this._twoLeggedFinal(a, b, 'PO');
         return { qf: [qf1, qf2], sf: [sf1, sf2], final, winner: final.winner };
     },
     playPlayoffsItaly() {
@@ -1685,7 +1708,7 @@ const League = {
             const sfA = this._twoLeggedTie(P4[2], P4[3], 'PO');     // Liga 4: 3rd (higher) hosts leg 2
             const sfB = this._twoLeggedTie(P3[16], P3[17], 'PO');   // Liga 3: 17th (higher) hosts leg 2
             const loserB = sfB.winner === P3[16] ? P3[17] : P3[16];
-            const final = this._twoLeggedTie(loserB, sfA.winner, 'PO');   // Liga 3 side (higher) hosts leg 2
+            const final = this._twoLeggedFinal(loserB, sfA.winner, 'PO');   // Liga 3 side (higher) hosts leg 2
             liga3PO = { sfA, sfB, winnerA: sfA.winner, loserB, final, winner: final.winner };
         }
         L.ptPlayoffs = { lpPlayoff, lp2Playoff, liga3PO, lpChallenger: P2prom[2] || null, lp2Challenger: P3[2] || null };
@@ -1830,7 +1853,7 @@ const League = {
             const sfA = this._twoLeggedTie(P4[2], P4[3], 'PO');     // Div 2: 3rd (higher) hosts leg 2
             const sfB = this._twoLeggedTie(P3[16], P3[17], 'PO');   // Div 1: 17th (higher) hosts leg 2
             const loserB = sfB.winner === P3[16] ? P3[17] : P3[16];
-            const final = this._twoLeggedTie(loserB, sfA.winner, 'PO');   // Div 1 side (higher) hosts leg 2
+            const final = this._twoLeggedFinal(loserB, sfA.winner, 'PO');   // Div 1 side (higher) hosts leg 2
             d1PO = { sfA, sfB, winnerA: sfA.winner, loserB, final, winner: final.winner };
         }
         L.bePlayoffs = { proPlayoff, cplPlayoff, d1PO, proChallenger: P2prom[2] || null, cplChallenger: P3[2] || null };

@@ -275,6 +275,9 @@ const LeaguesScreen = {
         const l1 = t.leg1, l2 = t.leg2;
         const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
+        // an unwatched invited decider: keep leg 2, the aggregate and the winner hidden
+        if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId))
+            return `${leg('Leg 1', l1)}<div class="fixture fixture--labeled"><span class="fx-label">Leg 2</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">not played yet</span><span class="fx-away">${nm(l2.a)}</span></div>`;
         return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}
             <div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>
             <div class="frow"><span class="frow__k">Winner</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(t.winner)}</span></div>`;
@@ -292,7 +295,7 @@ const LeaguesScreen = {
                 const po = P && P[div];
                 const title = `${COMPETITIONS[div].name} — promotion play-off`;
                 if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
-                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie2Leg(po.final)}${po.winner ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie2Leg(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
         }
         if (country === 'Switzerland') {
@@ -306,7 +309,7 @@ const LeaguesScreen = {
                 const po = P && P[div];
                 const title = `${COMPETITIONS[div].name} — promotion play-off`;
                 if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
-                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie2Leg(po.final)}${po.winner ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie2Leg(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
             return barBlock + poBlock;
         }
@@ -337,7 +340,7 @@ const LeaguesScreen = {
                 if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
                 const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
                 const qf = po.qf ? `${hd('Qualifiers')}${po.qf.map(t => this.tie(t)).join('')}` : '';
-                return `<div class="section-label">${title}</div><div class="fcard">${qf}${hd('Semi-finals')}${(po.sf || []).map(t => this.tie(t)).join('')}${hd('Final')}${this.tie(po.final)}${po.winner ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+                return `<div class="section-label">${title}</div><div class="fcard">${qf}${hd('Semi-finals')}${(po.sf || []).map(t => this.tie(t)).join('')}${hd('Final')}${this.tie(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
             const playout = ['SerieB', 'SerieC'].map(div => {
                 const po = pout && pout[div];
@@ -357,7 +360,7 @@ const LeaguesScreen = {
             let l3 = `<div class="section-label">Liga 3 play-off</div><p class="hint">Decided in week 46.</p>`;
             if (PO.liga3PO) {
                 const p = PO.liga3PO;
-                l3 = `<div class="section-label">Liga 3 play-off</div><div class="fcard">${hd('Semi-final A — Liga 4 3rd v 4th')}${this.relegTie(p.sfA)}${hd('Semi-final B — Liga 3 17th v 18th')}${this.relegTie(p.sfB)}${hd('Final — loser of SF-B v winner of SF-A')}${this.relegTie(p.final)}<div class="frow"><span class="frow__k">Into Liga 3</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div></div>`;
+                l3 = `<div class="section-label">Liga 3 play-off</div><div class="fcard">${hd('Semi-final A — Liga 4 3rd v 4th')}${this.relegTie(p.sfA)}${hd('Semi-final B — Liga 3 17th v 18th')}${this.relegTie(p.sfB)}${hd('Final — loser of SF-B v winner of SF-A')}${this.relegTie(p.final)}${typeof Attend !== 'undefined' && Attend.poFinalHidden(p.final) ? '' : `<div class="frow"><span class="frow__k">Into Liga 3</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div>`}</div>`;
             }
             return lp + lp2 + l3;
         }
@@ -371,7 +374,7 @@ const LeaguesScreen = {
             let d1 = `<div class="section-label">Belgian Division 1 play-off</div><p class="hint">Decided in week 46.</p>`;
             if (PO.d1PO) {
                 const p = PO.d1PO;
-                d1 = `<div class="section-label">Belgian Division 1 play-off</div><div class="fcard">${hd('Semi-final A — Division 2 3rd v 4th')}${this.relegTie(p.sfA)}${hd('Semi-final B — Division 1 17th v 18th')}${this.relegTie(p.sfB)}${hd('Final — loser of SF-B v winner of SF-A')}${this.relegTie(p.final)}<div class="frow"><span class="frow__k">Into Belgian Division 1</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div></div>`;
+                d1 = `<div class="section-label">Belgian Division 1 play-off</div><div class="fcard">${hd('Semi-final A — Division 2 3rd v 4th')}${this.relegTie(p.sfA)}${hd('Semi-final B — Division 1 17th v 18th')}${this.relegTie(p.sfB)}${hd('Final — loser of SF-B v winner of SF-A')}${this.relegTie(p.final)}${typeof Attend !== 'undefined' && Attend.poFinalHidden(p.final) ? '' : `<div class="frow"><span class="frow__k">Into Belgian Division 1</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div>`}</div>`;
             }
             return pro + cpl + d1;
         }
@@ -382,15 +385,19 @@ const LeaguesScreen = {
             const title = `${COMPETITIONS[div].name} — promotion play-off`;
             if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
             const elim = po.elim ? `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Eliminators</div>${po.elim.map(t => this.tie(t)).join('')}` : '';
-            return `<div class="section-label">${title}</div><div class="fcard">${elim}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie(po.final)}${po.winner ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+            return `<div class="section-label">${title}</div><div class="fcard">${elim}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
         }).join('');
     },
     tie2Leg(t) {
         if (!t) return '';
         const nm = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
         const l1 = t.leg1, l2 = t.leg2;
-        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
+        // an unwatched invited play-off decider: leg 1 already happened, but keep leg 2 + aggregate hidden
+        if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId)) {
+            return `${leg('Leg 1', l1)}<div class="fixture fixture--labeled"><span class="fx-label">Leg 2</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">not played yet</span><span class="fx-away">${nm(l2.a)}</span></div>`;
+        }
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
         return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}<div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>`;
     },
 
