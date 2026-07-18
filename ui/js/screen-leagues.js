@@ -85,8 +85,12 @@ const LeaguesScreen = {
     ZONE_MAP: { 'zone-promote': 'zone-promote', 'zone-relegate': 'zone-relegate', 'zone-playoff': 'zone-po-up', 'zone-releg-up': 'zone-po-up', 'zone-releg-down': 'zone-po-down' },
     standingsTable(div) {
         if (!GameState.league || !GameState.league.tables[div]) return '<p class="muted">No table yet.</p>';
-        const rows = League.sortedTable(div);
-        const champ = GameState.league.champions && GameState.league.champions[div];
+        // "Attend the Final": while a title decider in this division is an unwatched invitation, the
+        // whole final round is hidden — show the pre-round table (a snapshot) and no champion.
+        const hidden = typeof Attend !== 'undefined' && Attend.leagueRoundHidden(div);
+        const note = hidden ? `<p class="hint" style="margin-bottom:var(--space-3)"><i class="ti ti-ticket"></i> Final matchday hidden — attend it from your inbox to see how the title is decided.</p>` : '';
+        const rows = hidden ? (Attend.leagueSnapshot(div) || League.sortedTable(div)) : League.sortedTable(div);
+        const champ = hidden ? null : (GameState.league.champions && GameState.league.champions[div]);
         const country = divCountry(div);
         const ladder = COUNTRY_DIVS[country] || [];
         const tierIdx = ladder.indexOf(div);
@@ -107,8 +111,8 @@ const LeaguesScreen = {
             euCupReserved = Europe.cupBerthReserved(country, ids, cupWinner);
         }
         const pr = League.computeProRel();
-        let mk = (pr && pr.marks && pr.marks[div]) || { green: [], blue: [] };
-        if (!mk.green.length && !mk.blue.length && country === 'England') {
+        let mk = hidden ? { green: [], blue: [] } : ((pr && pr.marks && pr.marks[div]) || { green: [], blue: [] });
+        if (!hidden && !mk.green.length && !mk.blue.length && country === 'England') {
             const ids = rows.map(r => r.clubId);
             if (div === 'Natleague') mk = { green: ids.slice(0, 1), blue: ids.slice(1, 7) };
             else if (['CHAMP', 'LEAGUE1', 'LEAGUE2'].includes(div)) mk = { green: ids.slice(0, 2), blue: ids.slice(2, 6) };
@@ -117,7 +121,8 @@ const LeaguesScreen = {
             const c = Clubs.getClubById(r.clubId);
             const myCount = GameState.players.filter(p => p.agentId === 'me' && (p.onLoanAt || p.clubId) === r.clubId).length;
             let zoneKey = '';
-            if (country === 'Germany') zoneKey = { 'zone-relegate': 'zone-relegate', 'zone-releg-down': 'zone-releg-down' }[this._raw(country, div, i, n, 'german')] || this._raw(country, div, i, n, 'german');
+            if (hidden) zoneKey = '';   // don't colour promotion/relegation from the (hidden) final round
+            else if (country === 'Germany') zoneKey = { 'zone-relegate': 'zone-relegate', 'zone-releg-down': 'zone-releg-down' }[this._raw(country, div, i, n, 'german')] || this._raw(country, div, i, n, 'german');
             else if (country === 'Spain') zoneKey = this._raw(country, div, i, n, 'spanish');
             else if (country === 'Switzerland') zoneKey = this._raw(country, div, i, n, 'swiss');
             else if (country === 'Italy') zoneKey = this._raw(country, div, i, n, 'italian');
@@ -134,7 +139,7 @@ const LeaguesScreen = {
                 ${firstTd}<td class="club-cell">${UI.crest(c)}${c ? c.name : r.clubId}${myCount ? ` <span class="pill pill--accent" style="padding:1px 6px">${myCount}</span>` : ''}${champ === r.clubId ? ' 🏆' : ''}</td>
                 <td class="num">${r.P}</td><td class="num">${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA}</td><td class="num" style="color:var(--text)">${r.Pts}</td></tr>`;
         }).join('');
-        return `<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>Club</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>
+        return `${note}<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>Club</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>
             ${this.euHighlightLegend(euHL, euCupReserved)}
             <p class="hint" style="margin-top:var(--space-3)">Direct promotion/relegation shown in full colour; play-off zones lighter. Tap a club for its honours and your players there.</p>`;
     },

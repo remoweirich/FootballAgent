@@ -17,8 +17,16 @@ const Attend = {
     WATCH_CAP: 3,      // you may WATCH at most three of them live (decision 7)
 
     // ---- the transient capture list, filled by consider() during simulateWeek ----
-    resetCaptures() { GameState._attend = []; },
+    resetCaptures() { GameState._attend = []; GameState._attendSnapshots = {}; },
     pending() { return this.order(GameState._attend || []); },
+    // pre-final-round league table, stashed while the final round is played and hidden (see league.js)
+    stashLeagueSnapshot(div, rows) { (GameState._attendSnapshots = GameState._attendSnapshots || {})[div] = rows; },
+    // is a division's final round still hidden? (it has an unwatched title/promotion decider)
+    leagueRoundHidden(div) {
+        const w = this.window(); if (!w) return false;
+        return w.finals.some((m, i) => (m.kind === 'title-decider' || m.kind === 'promotion-decider') && m.compId === div && i > w.pointer);
+    },
+    leagueSnapshot(div) { const w = this.window(); return (w && w.leagueSnapshots) ? w.leagueSnapshots[div] : null; },
 
     // ================================================================ the viewing WINDOW
     // After the finals are played, the invited ones become a persisted "window": an ordered list you
@@ -53,6 +61,7 @@ const Attend = {
         GameState.attendWindow = {
             season: GameState.seasonStartYear, week: GameState.week,
             finals, pointer: -1, watched: 0,
+            leagueSnapshots: GameState._attendSnapshots || {},   // pre-round tables for hidden title deciders
         };
         // each invite also lands in the inbox individually (the row opens the overview, not a mail
         // detail — see the inbox renderer's 'attend' special-case)
@@ -200,7 +209,10 @@ const Attend = {
     // Human label for a match's competition + fixture, e.g. "the Cup Final".
     COMP_TITLES: { 'cup-final': 'Cup Final', 'europe-final': 'European Final', 'playoff-final': 'Promotion Play-off Final', 'title-decider': 'Title decider', 'promotion-decider': 'Promotion decider' },
     _compTitle(m) {
-        if (typeof compName === 'function') { const n = compName(m.compId); if (n) return n + (['cup-final', 'europe-final', 'playoff-final'].includes(m.kind) ? ' Final' : ''); }
+        const divName = (typeof compName === 'function') ? compName(m.compId) : null;
+        if (m.kind === 'title-decider') return (divName || 'League') + ' title decider';
+        if (m.kind === 'promotion-decider') return (divName || 'League') + ' promotion decider';
+        if (divName) return divName + (['cup-final', 'europe-final', 'playoff-final'].includes(m.kind) ? ' Final' : '');
         return this.COMP_TITLES[m.kind] || 'the match';
     },
 

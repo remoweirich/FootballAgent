@@ -1942,7 +1942,25 @@ const League = {
                     perWeek = Math.max(1, Math.min(remMd, targetByNow - L.mdIndex[div]));
                 }
                 for (let k = 0; k < perWeek && L.mdIndex[div] < s.length; k++) {
-                    s[L.mdIndex[div]].forEach(([h, a]) => this.playLeagueMatch(div, h, a));
+                    const md = L.mdIndex[div];
+                    // the FINAL round may be a title decider the agent can attend: if a client's club can
+                    // still win the division, play it with capture and hide the whole round's results.
+                    let deciders = null, snapshot = null;
+                    if (md === s.length - 1 && typeof Attend !== 'undefined') {
+                        const dec = this._lastDayTitleDeciders(div);
+                        if (dec.size) {
+                            const clientClubs = new Set(Agency.clients().map(p => effectiveClubId(p)));
+                            if ([...dec].some(id => clientClubs.has(id))) { deciders = dec; snapshot = this.sortedTable(div).map(r => ({ ...r })); }
+                        }
+                    }
+                    s[md].forEach(([h, a]) => {
+                        if (deciders) {
+                            const r = this.playMatch(h, a, div, true);
+                            this._applyLeagueResult(div, h, a, r);
+                            if (deciders.has(h) || deciders.has(a)) Attend.consider('title-decider', div, h, a, r, { minutes: 90 });
+                        } else this.playLeagueMatch(div, h, a);
+                    });
+                    if (snapshot) Attend.stashLeagueSnapshot(div, snapshot);   // pre-round table, for the hidden view
                     L.mdIndex[div] += 1;
                 }
             });
@@ -2004,6 +2022,12 @@ const League = {
 
     playLeagueMatch(div, homeId, awayId) {
         const res = this.playMatch(homeId, awayId, div, true);
+        this._applyLeagueResult(div, homeId, awayId, res);
+        return res;
+    },
+    // fold a played league result into the division table (split out so the final-round handler can
+    // play with capture and still update the table the same way)
+    _applyLeagueResult(div, homeId, awayId, res) {
         const T = GameState.league.tables[div];
         const home = T.find(r => r.clubId === homeId), away = T.find(r => r.clubId === awayId);
         home.P++; away.P++;
@@ -2011,6 +2035,34 @@ const League = {
         if (res.hg > res.ag) { home.W++; away.L++; home.Pts += 3; }
         else if (res.hg < res.ag) { away.W++; home.L++; away.Pts += 3; }
         else { home.D++; away.D++; home.Pts++; away.Pts++; }
+    },
+
+    // Which clubs going into the FINAL round can still finish 1st (win the title / division). Exact
+    // and bulletproof: a club T can win iff, assuming it wins its own game (its best case, and it can
+    // win any goal-difference tiebreak by a big enough margin), the other last-round games can be
+    // arranged so NO club finishes on more points than T. Each game is independent (one shared pair),
+    // so we sum, per game, the minimum number of its two teams that must exceed T's total. If that
+    // total is zero for T and holds for two or more clubs, the title is genuinely undecided.
+    _lastDayTitleDeciders(div) {
+        const L = GameState.league, s = L.schedule[div];
+        if (!s || L.mdIndex[div] !== s.length - 1) return new Set();   // only at the final round
+        const rows = this.sortedTable(div);
+        const pts = {}; rows.forEach(r => pts[r.clubId] = r.Pts);
+        const fixtures = s[L.mdIndex[div]];
+        const canWin = id => {
+            const tf = pts[id] + 3;                        // T wins its game
+            let above = 0;
+            for (const [h, a] of fixtures) {
+                if (h === id || a === id) { const opp = pts[h === id ? a : h]; if (opp > tf) above++; }
+                else {
+                    const o = p => p > tf ? 1 : 0;
+                    above += Math.min(o(pts[h] + 3) + o(pts[a]), o(pts[h] + 1) + o(pts[a] + 1), o(pts[h]) + o(pts[a] + 3));
+                }
+            }
+            return above === 0;
+        };
+        const contenders = rows.map(r => r.clubId).filter(canWin);
+        return contenders.length >= 2 ? new Set(contenders) : new Set();   // 1 contender = already decided
     },
 
     playMatch(homeId, awayId, compId, homeAdv = false) {
