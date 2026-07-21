@@ -114,7 +114,7 @@ const LiveSim = {
     // ---------------------------------------------------------------- weighted choice (pure)
     // rnd is injectable so tests can be deterministic. Weight 100 = standard, single digits =
     // the one-in-a-season stuff; respecting these is what keeps the rare pieces rare.
-    pickWeighted(list, rnd = Math.random, weightOf = p => p.weight) {
+    pickWeighted(list, rnd = Rng.next, weightOf = p => p.weight) {
         if (!list || !list.length) return null;
         let total = 0;
         for (const p of list) total += Math.max(0, weightOf(p));
@@ -211,7 +211,7 @@ const LiveSim = {
     //   awards a goal to someone whose budget was zero.
     buildChain(trigger, clients, opts = {}) {
         const idx = this.init();
-        const rnd = opts.rnd || Math.random;
+        const rnd = opts.rnd || Rng.next;
         const code = this.roleCodeOf(trigger);
         if (!code) return null;
         const usedPieces = opts.usedPieces || new Set();
@@ -351,20 +351,20 @@ const LiveSim = {
     // The cost of (b) is that a chain has to be found to fit a required outcome; where none exists
     // the goal still happened and is narrated plainly, so the invariant never bends to the prose.
 
-    shuffled(list, rnd = Math.random) {
+    shuffled(list, rnd = Rng.next) {
         const a = list.slice();
         for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
         return a;
     },
 
     // 3-9 client puzzle events, scaling with how many clients are on the pitch.
-    eventBudget(nClients, rnd = Math.random) {
+    eventBudget(nClients, rnd = Rng.next) {
         return Math.min(9, Math.max(3, 1 + nClients * 2 + Math.floor(rnd() * 3)));
     },
 
     // Distinct minutes, spread rather than clustered: the match is cut into n slots and one minute
     // is drawn inside each, so events never land two-in-a-minute and never all arrive at once.
-    spreadMinutes(n, first, last, rnd = Math.random) {
+    spreadMinutes(n, first, last, rnd = Rng.next) {
         if (n <= 0) return [];
         const span = last - first + 1, out = new Set();
         const slot = span / n;
@@ -387,8 +387,11 @@ const LiveSim = {
     // Returns { events: [...] } — minute-stamped, ordered, each either a client chain or an
     // anonymous team event. The caller replays it; the stats are already banked.
     buildTimeline(spec) {
-        const rnd = spec.rnd || Math.random;
+        const rnd = spec.rnd || Rng.next;
         const minutes = spec.minutes || 90;
+        // events are spread across regulation (or extra time if it produced goals); a pens match leaves
+        // 90'→120' empty. Defaults to the full clock so ordinary matches are unaffected.
+        const regMinutes = spec.regulation || minutes;
         const clients = (spec.clients || []).filter(c => c.player);
         const nameOf = side => side === 'home' ? spec.homeName : spec.awayName;
         const oppOf = side => side === 'home' ? spec.awayName : spec.homeName;
@@ -621,13 +624,13 @@ const LiveSim = {
         // leave room at the end for the longest unit's follow-up, so a penalty drawn late still has
         // a minute+1 to land its kick on rather than clamping onto the award's minute
         const maxSpan = shuffled.reduce((m, u) => Math.max(m, u.length), 1);
-        const slots = this.spreadMinutes(shuffled.length, 1, Math.max(1, minutes - maxSpan), rnd);
+        const slots = this.spreadMinutes(shuffled.length, 1, Math.max(1, regMinutes - maxSpan), rnd);
         const out = [];
         let prev = 0;
         shuffled.forEach((unit, i) => {
             const span = unit.length - 1;
-            let m = Math.max(slots[i] != null ? slots[i] : minutes - maxSpan, prev + 1);
-            m = Math.min(m, minutes - span);           // keep the whole unit inside the clock
+            let m = Math.max(slots[i] != null ? slots[i] : regMinutes - maxSpan, prev + 1);
+            m = Math.min(m, regMinutes - span);        // keep the whole unit inside regulation
             unit.forEach((e, k) => {
                 e.minute = m + k;                      // k=1 is the spot kick: one minute later
                 prev = e.minute;
@@ -649,7 +652,7 @@ const LiveSim = {
             out[rcIdx].minute = mins[mins.length - 1];           // the red takes the latest
         }
         out.sort((a, b) => a.minute - b.minute);
-        return { events: out, minutes, statAdjust, corners };
+        return { events: out, minutes, regulation: regMinutes, statAdjust, corners };
     },
 
     // A corner narrated as a client puzzle event. `won` is the team that has the corner. First try

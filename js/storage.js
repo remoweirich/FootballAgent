@@ -108,17 +108,31 @@ const Storage = {
     // Force the pending save through right now (advance-week completing,
     // the app being backgrounded, an explicit save point). Safe to call with
     // nothing pending — it's a no-op then.
+    //
+    // Race-safety: a save queued WHILE a write is in flight must not be lost. We snapshot the exact
+    // state we're writing, and only clear `_dirty` if it still points at that snapshot when the write
+    // finishes — if a newer saveGame() replaced it mid-write, we leave it dirty and loop to write the
+    // newer state too. Overlapping flush() callers chain onto the same tail rather than returning a
+    // promise that resolves before their (newer) data is on disk.
     async flush() {
+        // An in-flight flush drains until nothing is dirty (see _drain's while-loop), so any save
+        // queued during the write is guaranteed to be written before that same promise resolves —
+        // overlapping callers can safely await it.
         if (this._flushPromise) return this._flushPromise;
-        if (this._dirty == null) return;
-        clearTimeout(this._flushTimer);
-        const state = this._dirty;
-        this._flushPromise = (async () => {
-            const ok = await this._idbPut(state);
-            if (ok) { this._dirty = null; this._legacyClear(); }
-            else { this._legacyWrite(state); this._dirty = null; }
-        })();
+        this._flushPromise = this._drain();
         try { await this._flushPromise; } finally { this._flushPromise = null; }
+    },
+    // Write successive dirty snapshots until none is left. Each iteration commits exactly the state it
+    // captured, and only marks it clean if nothing newer arrived while the async write was in flight —
+    // otherwise the newer snapshot is kept dirty and the loop writes it too, so no save is ever lost.
+    async _drain() {
+        while (this._dirty != null) {
+            clearTimeout(this._flushTimer);
+            const state = this._dirty;
+            const ok = await this._idbPut(state);
+            if (ok) { this._legacyClear(); if (this._dirty === state) this._dirty = null; }
+            else { this._legacyWrite(state); if (this._dirty === state) this._dirty = null; }
+        }
     },
     async loadGame() {
         // an unflushed save is more current than whatever's on disk

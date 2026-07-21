@@ -240,7 +240,7 @@ const Scouting = {
     roleById(pos, id) { return this.rolesFor(pos).find(r => r.id === id) || this.rolesFor(pos)[0]; },
     assignRole(p) {
         const roles = this.rolesFor(p.position);
-        return roles[Math.floor(Math.random() * roles.length)].id;
+        return roles[Math.floor(Rng.next() * roles.length)].id;
     },
     styleBias(p) {
         const r = p.styleRole ? this.roleById(p.position, p.styleRole) : this.rolesFor(p.position)[0];
@@ -265,12 +265,12 @@ const Scouting = {
     generateReport(p, scoutQuality = 45) {
         if (!p.styleRole) p.styleRole = this.assignRole(p);
         const role = this.roleById(p.position, p.styleRole);
-        const desc = role.desc[Math.floor(Math.random() * role.desc.length)].replace(/\{name\}/g, p.name);
+        const desc = role.desc[Math.floor(Rng.next() * role.desc.length)].replace(/\{name\}/g, p.name);
 
         const margin = this.errorMargin(scoutQuality);
         // slightly more likely to over- than under-rate; magnitude uniform within the margin
-        const sign = Math.random() < 0.55 ? 1 : -1;
-        const mag = Math.random() * margin;
+        const sign = Rng.next() < 0.55 ? 1 : -1;
+        const mag = Rng.next() * margin;
         let est = Math.round(p.potential * (1 + sign * mag));
         est = Math.max(25, Math.min(99, est));
 

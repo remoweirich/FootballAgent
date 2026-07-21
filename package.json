@@ -4,6 +4,7 @@
   "private": true,
   "description": "Football Agent Manager — mobile Android build via Capacitor",
   "scripts": {
+    "test": "node tests/run.js",
     "build:mobile": "node scripts/build-mobile.js",
     "build:apk": "npm run build:mobile && npx cap sync android && cd android && gradlew.bat assembleDebug"
   },

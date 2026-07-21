@@ -15,8 +15,6 @@ const GameState = {
     homeCountry: 'Netherlands', // chosen at the start: drives initial talents + domestic scouting regions
     needsSetup: false,
 
-    STORAGE_KEY: 'fam_proto_v4',
-
     // ---- season phase ----
     isTransferWindowOpen(w = this.week) { return (w >= 1 && w <= 6) || (w >= 28 && w <= 33); },
     absWeek() { return this.seasonStartYear * 52 + this.week; },
@@ -62,6 +60,10 @@ const GameState = {
     startNewGame(country, name, agentName) {
         this.homeCountry = (country && REGIONS_BY_COUNTRY[country]) ? country : 'Netherlands';
         this.week = 1; this.seasonStartYear = 2025;
+        // Fix this game's RNG seed up front so the very first pool is drawn from the seeded stream;
+        // it rides along in every save (see save/load) and also anchors background-squad regen.
+        this.rngSeed = (Date.now() >>> 0) || 1;
+        Rng.seed(this.rngSeed);
         this.players = PlayerGen.generatePool();
         Agency.init();
         this.agency.name = (name && name.trim()) ? name.trim() : 'Your Agency';
@@ -90,7 +92,7 @@ const GameState = {
 
     // ---- inbox ----
     addMail(mail) {
-        mail.id = mail.id || ('m_' + Math.random().toString(36).slice(2, 9));
+        mail.id = mail.id || ('m_' + Rng.next().toString(36).slice(2, 9));
         mail.week = this.week;
         mail.abs = this.absWeek();
         mail.season = this.seasonLabel();
@@ -129,12 +131,16 @@ const GameState = {
             });
             Storage.saveGame({
                 week: this.week, seasonStartYear: this.seasonStartYear, homeCountry: this.homeCountry,
-                players: this.players, inbox: this.inbox, log: this.log,
+                // only the players the user can ever see are saved; the anonymous background squads
+                // (~95% of the old save) are regenerated on load (see isPersistedPlayer / regenerateBackgroundSquads)
+                players: this.players.filter(isPersistedPlayer), inbox: this.inbox, log: this.log,
                 agency: this.agency, league: this.league, clubHistory: this.clubHistory,
                 clubEuropeBest: this.clubEuropeBest, debug: this.debug,
                 attendWindow: this.attendWindow,   // open "Attend the Final" viewing window, if any
                 lastSeasonReport: this.lastSeasonReport, clubState,
-                worldV: 2   // frozen-NPC world model (see _migrateWorldV2)
+                rngSeed: this.rngSeed,            // this game's fixed seed (anchors background-squad regen)
+                rngState: Rng.getState(),         // live stream position, so a reload keeps rolling from here
+                schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
             });
         } catch (e) { console.warn('Save failed', e); }
     },
@@ -151,12 +157,38 @@ const GameState = {
             this.debug = !!d.debug;   // developer/debug mode (off by default)
             this.attendWindow = d.attendWindow || null;
             this.lastSeasonReport = d.lastSeasonReport || null;
-            this._migrateMoraleFields();
-            this._restoreClubState(d.clubState);
-            this._migrateWorldV2(d);
-            this._migrateScoutRegions();
+            // Restore the RNG: legacy saves predate the seed, so fall back to one derived from the
+            // save so a given save always regenerates the same background squads. rngState (the live
+            // position) is preferred; without it we reseed from rngSeed.
+            this.rngSeed = (d.rngSeed != null ? d.rngSeed : ((d.seasonStartYear || 2025) * 52 + (d.week || 1))) >>> 0 || 1;
+            Rng.setState(d.rngState != null ? d.rngState : this.rngSeed);
+            this._runMigrations(d);
+            // the save holds only the players the user can see; rebuild the anonymous background
+            // squads around them (a near no-op for old saves that still carry full squads)
+            if (typeof regenerateBackgroundSquads === 'function') regenerateBackgroundSquads();
             return this.players.length > 0 && this.agency != null;
         } catch (e) { console.warn('Load failed', e); return false; }
+    },
+
+    // ---- save schema versioning ----
+    // Bump SCHEMA_VERSION and append a MIGRATIONS entry when the save shape changes. Each entry's
+    // run() upgrades a save from the previous version to its own `to`; the pipeline runs every entry
+    // newer than the loaded save, in order. A legacy save with no schemaVersion is inferred from the
+    // old `worldV` marker (v2) or treated as v1 otherwise, so the very first saves still upgrade cleanly.
+    SCHEMA_VERSION: 3,
+    MIGRATIONS: [
+        { to: 2, run(gs, d) { gs._migrateWorldV2(d); } },     // frozen-NPC world model + anchor/reputation split
+        { to: 3, run(gs) { gs._migrateScoutRegions(); } }     // reshaped Portugal/Belgium scouting regions
+    ],
+    _runMigrations(d) {
+        // Structural defaults, not versioned steps: they must apply on EVERY load, because a save at
+        // the current version can still lack a lazily-added field (see the corresponding weekly ensure
+        // helpers). Both are idempotent and self-guarding.
+        this._migrateMoraleFields();
+        this._restoreClubState(d.clubState);
+        // versioned pipeline: infer the starting version, then run each newer migration in order
+        let from = d.schemaVersion != null ? d.schemaVersion : (d.worldV >= 2 ? 2 : 1);
+        for (const m of this.MIGRATIONS) if (m.to > from) { m.run(this, d); from = m.to; }
     },
     // One-time migration to the frozen-NPC world model (worldV 2). Pre-V2 saves carry a living
     // NPC pool that aged and decayed for every season played (a season-8 save's background

@@ -205,7 +205,7 @@ const LeaguesScreen = {
         if (t.leg1) {
             const l1 = t.leg1, l2 = t.leg2;
             // decided on penalties (level on aggregate): show the definitive shootout score in red
-            const penTag = t.pens ? ` <span style="color:var(--danger);font-size:9.5px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
+            const penTag = t.pens ? ` <span style="color:var(--danger);font-size:9.5px;white-space:nowrap">(pens ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
             const leg = (label, l, highlight) => {
                 const hw = highlight && t.winner === l.h, aw = highlight && t.winner === l.a;
                 return `<div class="fixture fixture--labeled"><span class="fx-label">${label}${highlight ? penTag : ''}</span><span class="fx-home ${hw ? 'fx-adv' : ''}">${lk(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away ${aw ? 'fx-adv' : ''}">${lk(l.a)}</span></div>`;
@@ -220,7 +220,7 @@ const LeaguesScreen = {
         const hw = t.winner === t.h, aw = t.winner === t.a;
         // single-match cup tie: penalties show the definitive shootout score, extra time a plain (ET)
         // — both in red, next to the result (the score already includes any ET goals)
-        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.h}–${t.pens.a})</span>`
+        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${League.penFixPair(t.pens.h, t.pens.a).join('–')})</span>`
             : t.et ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(ET)</span>` : '';
         return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}${penTag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
@@ -278,7 +278,7 @@ const LeaguesScreen = {
         if (!t) return '<p class="muted">Not yet played (week 46).</p>';
         const nm = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
         const l1 = t.leg1, l2 = t.leg2;
-        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
         // an unwatched invited decider: keep leg 2, the aggregate and the winner hidden
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId))
@@ -402,7 +402,7 @@ const LeaguesScreen = {
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId)) {
             return `${leg('Leg 1', l1)}<div class="fixture fixture--labeled"><span class="fx-label">Leg 2</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">not played yet</span><span class="fx-away">${nm(l2.a)}</span></div>`;
         }
-        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${t.pens.a}–${t.pens.b})</span>` : '';
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
         return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}<div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>`;
     },
 
@@ -468,10 +468,10 @@ const LeaguesScreen = {
         switch (stage) {
             case 'lp': return (c.table ? this.euTable(c) : '<p class="hint">The league-phase draw is made after qualifying (week 11).</p>') + (c.pots ? `<details style="margin-top:var(--space-4)"><summary class="section-label" style="cursor:pointer;list-style:revert">Seeding pots</summary>${this.euPots(c)}</details>` : '');
             case 'fixtures': return this.euFixtures(c);
-            case 'po': return this.euRound(c, 'po', 'Knockout play-off', 34);
-            case 'r16': return this.euRound(c, 'r16', 'Round of 16', 37);
-            case 'qf': return this.euRound(c, 'qf', 'Quarter-finals', 41);
-            case 'sf': return this.euRound(c, 'sf', 'Semi-finals', 44);
+            case 'po': return this.euRound(c, 'po', 'Knockout play-off', this._euCal('knockoutPO', 34));
+            case 'r16': return this.euRound(c, 'r16', 'Round of 16', this._euCal('R16', 37));
+            case 'qf': return this.euRound(c, 'qf', 'Quarter-finals', this._euCal('QF', 41));
+            case 'sf': return this.euRound(c, 'sf', 'Semi-finals', this._euCal('SF', 44));
             case 'final': return this.euFinalView(c);
             case 'bracket': return this.euBracketTree(c);
             case 'qual': default: {
@@ -480,6 +480,12 @@ const LeaguesScreen = {
             }
         }
     },
+    // a knockout round's first-leg week from EUROPE_DATA.calendar (fallback to the historical default)
+    _euCal(key, fallback) {
+        const cal = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar) || {};
+        const v = cal[key];
+        return Array.isArray(v) ? v[0] : (v != null ? v : fallback);
+    },
     euRound(c, key, label, wk) {
         const r = c.ko && c.ko[key];
         if (!r) return `<p class="hint">${label} is drawn in week ${wk}.</p>`;
@@ -487,8 +493,9 @@ const LeaguesScreen = {
     },
     euFinalView(c) {
         const f = c.ko && c.ko.final;
-        if (!f) return '<p class="hint">The final is a single match at a neutral venue in week 47.</p>';
-        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk 47</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens, et: f.et, _attendId: f._attendId })}</div>`;
+        const finalWk = this._euCal('final', 47);
+        if (!f) return `<p class="hint">The final is a single match at a neutral venue in week ${finalWk}.</p>`;
+        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk ${finalWk}</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens, et: f.et, _attendId: f._attendId })}</div>`;
     },
     // horizontal bracket from the Round of 16 to the final — every club's path, scroll to follow it
     euBracketTree(c) {
@@ -530,7 +537,9 @@ const LeaguesScreen = {
             <span style="display:inline-flex;align-items:center;gap:5px">${dot('#2563EB')} 9th–24th · knockout play-off</span>
             <span>25th–36th · eliminated</span></div>`;
         const done = c.ranked ? '' : `<p class="hint" style="margin-top:2px">Played ${c.mdPlayed}/8 matchdays.</p>`;
-        return `<div class="section-label">League phase</div><div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>Club</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>${legend}${done}`;
+        const lpWeeks = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase) || [];
+        const weeksNote = lpWeeks.length ? `<p class="hint" style="margin:0 0 var(--space-2)">Matchdays 1–8 play in weeks ${lpWeeks.join(', ')}.</p>` : '';
+        return `<div class="section-label">League phase</div>${weeksNote}<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>Club</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>${legend}${done}`;
     },
     // League-phase fixtures, one matchday at a time (dropdown top-right). Shows results if played,
     // otherwise the drawn pairing — every club plays exactly once each matchday.
@@ -538,9 +547,11 @@ const LeaguesScreen = {
         if (!c.schedule) return '<p class="hint">Fixtures appear once the league-phase draw is made (week 11).</p>';
         let md = this.state.euMd; if (!md || md < 1 || md > 8) md = Math.max(1, c.mdPlayed || 1);
         const played = md <= (c.mdPlayed || 0);
+        const lpWeeks = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase) || [];
+        const wk = lpWeeks[md - 1];
         const header = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
-            <div class="section-label" style="margin:0">Matchday ${md}${played ? '' : ' <span class="muted" style="font-weight:400">· not played yet</span>'}</div>
-            <select class="select-input" style="width:auto" onchange="LeaguesScreen.setEuMd(+this.value)">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}" ${n === md ? 'selected' : ''}>Matchday ${n}</option>`).join('')}</select>
+            <div class="section-label" style="margin:0">Matchday ${md}${wk ? ` <span class="muted" style="font-weight:400">· wk ${wk}</span>` : ''}${played ? '' : ' <span class="muted" style="font-weight:400">· not played yet</span>'}</div>
+            <select class="select-input" style="width:auto" onchange="LeaguesScreen.setEuMd(+this.value)">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}" ${n === md ? 'selected' : ''}>Matchday ${n}${lpWeeks[n - 1] ? ' · wk ' + lpWeeks[n - 1] : ''}</option>`).join('')}</select>
         </div>`;
         const list = played ? (c.mdResults[md - 1] || { matches: [] }).matches.map(x => [x.h, x.a, x.hg, x.ag]) : (c.schedule[md - 1] || []).map(([h, a]) => [h, a, null, null]);
         const lk = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;

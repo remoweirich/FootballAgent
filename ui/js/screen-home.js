@@ -156,7 +156,7 @@ Home._startInvites = function () {
 };
 Home._showInvite = function () {
     const list = Home._pendingAttend || [], i = Home._inviteIdx || 0;
-    if (typeof Attend === 'undefined' || i >= list.length) { Router.closeModal(); Router.refresh(); return; }
+    if (typeof Attend === 'undefined' || i >= list.length) { Router.closeModal(); Home._startFarewells(); return; }
     const inv = Attend.invitePayload(list[i]);
     const body = inv.body.split('\n').map(l => l.trim() ? `<p style="margin:0 0 var(--space-3);line-height:1.6">${UI.esc(l)}</p>` : '').join('');
     const last = i >= list.length - 1;
@@ -172,3 +172,30 @@ Home._showInvite = function () {
     </div>`);
 };
 Home._nextInvite = function () { Home._inviteIdx = (Home._inviteIdx || 0) + 1; Home._showInvite(); };
+
+// ---- retirement farewells ----
+// A retiring client earns a proper goodbye conversation, not just a mail. The queue is persisted
+// on the agency (see Sim season rollover), so a farewell survives a mid-flow app close and plays
+// on the next advance instead of silently disappearing.
+Home._startFarewells = function () {
+    const q = (GameState.agency && GameState.agency.pendingFarewells) || [];
+    if (!q.length || typeof Dialogue === 'undefined' || typeof DialogueView === 'undefined') { Home._startMoments(); return; }
+    const id = q.shift();
+    GameState.save();
+    const p = GameState.getPlayer(id);
+    if (!p) { Home._startFarewells(); return; }
+    DialogueView.show(Dialogue.buildFarewellScene(p), function () { GameState.save(); Home._startFarewells(); });
+};
+
+// ---- career-moment scenes ----
+// Debuts, milestones, hat-tricks, transfer calls, dream moves, fulfilled ambitions, injury visits.
+// Queued by the sim during the week (persisted on the agency), played here one after another.
+Home._startMoments = function () {
+    const q = (GameState.agency && GameState.agency.pendingScenes) || [];
+    if (!q.length || typeof Dialogue === 'undefined' || typeof DialogueView === 'undefined') { Router.refresh(); return; }
+    const entry = q.shift();
+    GameState.save();
+    const scene = Dialogue.buildMomentScene(entry);
+    if (!scene) { Home._startMoments(); return; }   // player gone or archived: skip it
+    DialogueView.show(scene, function () { GameState.save(); Home._startMoments(); });
+};

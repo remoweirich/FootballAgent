@@ -83,7 +83,10 @@ Router.register('mail', {
     },
     render(el, params) {
         const m = GameState.inbox.find(x => x.id === params[0]);
-        if (!m) { el.innerHTML = '<div class="empty">This message is no longer available.</div>'; return; }
+        // Backing into a message you already resolved (accepted a sponsorship, completed a transfer…)
+        // shouldn't dump you on a dead "no longer available" screen — you know it's gone. Bounce
+        // straight to the inbox instead.
+        if (!m) { Router.back('inbox'); return; }
         m.read = true;
         if (m.kind === 'transfer') Nego.transfer(el, m);
         else if (m.kind === 'renewal') Nego.renewal(el, m);
@@ -109,7 +112,7 @@ Nego.prependPlayerLink = function (el, m) {
 // After resolving an offer you almost always want to look at the player it concerned — and it keeps
 // the back button out of the pile of offers you just clicked through.
 Nego.goPlayer = function (playerId) {
-    if (playerId && GameState.getPlayer(playerId)) { Router.navStack.length = 0; Router.go('client/' + encodeURIComponent(playerId)); }
+    if (playerId && GameState.getPlayer(playerId)) { Router.replace('client/' + encodeURIComponent(playerId)); }
     else Router.back('inbox');
 };
 Nego.generic = function (el, m) {
@@ -305,13 +308,13 @@ Nego.sponsor = function (el, m) {
     if (!p) { this.dismiss(m.id); return; }
     const opts = o.options || [{ company: o.sponsorName, weekly: o.weeklyAmount, annual: 0, termSeasons: o.termSeasons || 1 }];
     const comm = p.sponsorCommission;
-    el.innerHTML = `<p class="hint">${(SPONSOR_LABEL[o.level] || 'Sponsor')} interest — pick one offer. Your ${comm}% cut is shown behind each amount.</p>
+    el.innerHTML = `<p class="hint">${(SPONSOR_LABEL[o.level] || 'Sponsor')} interest — pick one. It's steady weekly income against a bigger up-front lump sum. Your ${comm}% cut is shown behind each amount.</p>
         ${opts.map((opt, i) => {
         const wCut = Math.round(opt.weekly * comm / 100), aCut = Math.round((opt.annual || 0) * comm / 100);
         return `<div class="fcard">
                 <div class="frow" style="border-bottom:.5px solid var(--line-strong)"><span class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text)">${opt.company}</span></div>
                 <div class="frow"><span class="frow__k">Weekly</span><span class="frow__v">${UI.euro(opt.weekly)}/wk <span class="muted">(cut ${UI.euro(wCut)}/wk)</span></span></div>
-                <div class="frow"><span class="frow__k">Yearly</span><span class="frow__v">${UI.euro(opt.annual || 0)}/yr <span class="muted">(cut ${UI.euro(aCut)}/yr)</span></span></div>
+                <div class="frow"><span class="frow__k">Annual lump sum</span><span class="frow__v">${UI.euro(opt.annual || 0)}/yr <span class="muted">(cut ${UI.euro(aCut)}/yr)</span></span></div>
                 <div class="frow"><span class="frow__k">Term</span><span class="frow__v">${opt.termSeasons} season(s)</span></div>
                 <div style="padding:8px 0"><button class="btn btn--primary btn--sm" onclick="Nego.acceptSponsor('${m.id}',${i})"><i class="ti ti-signature"></i>Sign this one</button></div>
             </div>`;

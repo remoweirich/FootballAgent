@@ -189,12 +189,12 @@ const Upgrades = {
             let places = [];
             try { if (typeof Clubs !== 'undefined') places = Clubs.getClubsByCountry(country).map(c => c.city); } catch (e) { }
             if (!places.length) places = Object.keys(typeof CITY_REGION !== 'undefined' ? CITY_REGION : {});
-            name = name.replace('{place}', places.length ? places[Math.floor(Math.random() * places.length)] : 'Almelo');
+            name = name.replace('{place}', places.length ? places[Math.floor(Rng.next() * places.length)] : 'Almelo');
         }
         if (name.includes('{region}')) {
             const src = (typeof REGIONS_BY_COUNTRY !== 'undefined' && REGIONS_BY_COUNTRY[country]) || (typeof REGIONS !== 'undefined' ? REGIONS : []);
             const regs = src.map(r => r.name.replace(/\s*\(.*\)$/, ''));
-            name = name.replace('{region}', regs.length ? regs[Math.floor(Math.random() * regs.length)] : 'Gelderland');
+            name = name.replace('{region}', regs.length ? regs[Math.floor(Rng.next() * regs.length)] : 'Gelderland');
         }
         return name;
     },
@@ -205,7 +205,7 @@ const Upgrades = {
     },
     pickSponsor(level, country = 'Netherlands') {
         const pool = this.sponsorPool(level, country);
-        return this._fill(pool[Math.floor(Math.random() * pool.length)], country);
+        return this._fill(pool[Math.floor(Rng.next() * pool.length)], country);
     },
 
     // ---- SVG art (compact, recognisable) ----

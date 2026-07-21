@@ -61,13 +61,19 @@ const Router = {
     // build a safe href for a route with an id that may contain spaces/unicode (e.g. club ids)
     link(name, id) { return `#${name}/${encodeURIComponent(id)}`; },
     go(hash) { if (location.hash === '#' + hash) { this.route(true); return; } location.hash = hash; },
+    // Replace the current (often now-dead) screen with a deliberate destination: clear the
+    // hierarchy stack AND mark this as a back-navigation so route() does NOT re-stack the screen
+    // we're leaving. Without the flag, route() pushes the just-resolved mail straight back onto
+    // navStack, so backing out lands on the dead mail, which redirects here, which re-stacks it…
+    // an inescapable loop (you could never leave the inbox). See back(fallback) and Nego.goPlayer.
+    replace(hash) { this.navStack.length = 0; this._backNavigating = true; this.go(hash); },
     // An explicit fallback (e.g. Router.back('inbox') after resolving a mail item) is
     // a deliberate destination the caller wants regardless of how this screen was
     // reached — it takes priority over the hierarchy stack, not the other way round.
     // Only the plain Router.back() used by the back arrow/hardware button (no
     // fallback) walks the stack.
     back(fallback) {
-        if (fallback) { this.navStack.length = 0; this.go(fallback); return; }
+        if (fallback) { this.replace(fallback); return; }
         const prev = this.navStack.pop();
         if (prev != null) { this._backNavigating = true; this.go(prev); return; }
         // Nothing stacked (deep link, or siblings collapsed away): go UP to this screen's declared

@@ -60,7 +60,7 @@ const Attend = {
         this._assignSchedule(finals);
         GameState.attendWindow = {
             season: GameState.seasonStartYear, week: GameState.week,
-            finals, pointer: -1, watched: 0,
+            finals, pointer: -1, watched: 0, attended: [],
             leagueSnapshots: GameState._attendSnapshots || {},   // pre-round tables for hidden title deciders
         };
         // each invite also lands in the inbox individually (the row opens the overview, not a mail
@@ -78,8 +78,9 @@ const Attend = {
     windowFinals() { const w = this.window(); return w ? w.finals : []; },
     // index <= pointer means the game has been reached in time and its result is out
     isRevealed(i) { const w = this.window(); return !w || i <= w.pointer; },
-    // watchable = not yet passed, and you have watches left (cannot jump back in time)
-    isWatchable(i) { const w = this.window(); return !!w && i > w.pointer && w.watched < this.WATCH_CAP; },
+    // watchable = not yet passed, you have watches left (cannot jump back in time), and it doesn't
+    // clash with a final you're already attending (decision 6)
+    isWatchable(i) { const w = this.window(); return !!w && i > w.pointer && w.watched < this.WATCH_CAP && !this._attendClash(i); },
     watchesLeft() { const w = this.window(); return w ? Math.max(0, this.WATCH_CAP - w.watched) : 0; },
     hasUnwatched() { const w = this.window(); return !!w && w.finals.some((_, i) => this.isWatchable(i)); },
 
@@ -87,6 +88,15 @@ const Attend = {
     watch(i) {
         const w = this.window(); if (!w || !this.isWatchable(i)) return false;
         w.pointer = Math.max(w.pointer, i); w.watched += 1;
+        (w.attended = w.attended || []).push(i);   // remember its slot so later finals can't clash with it
+        // showing up for his big day is one of the strongest bonds an agent can build (js/dialogue.js)
+        if (typeof Dialogue !== 'undefined') {
+            const m = w.finals[i];
+            if (m && m.clients) m.clients.forEach(c => {
+                const p = GameState.getPlayer(c.playerId);
+                if (p) Dialogue.addBond(p, 6, 'you were there for his final');
+            });
+        }
         return true;
     },
     // Is THIS final (identified by the id stamped on its tie) still hidden? True only while its
@@ -111,28 +121,24 @@ const Attend = {
     // is a play-off final object (single-match or two-legged) an unwatched invitation?
     poFinalHidden(finalObj) { return !!(finalObj && finalObj._attendId && this.isHidden(finalObj._attendId)); },
 
-    // the next watchable final's fixture label, for the "Attend X vs Y" button
-    nextWatchableLabel(afterIndex) {
-        const w = this.window(); if (!w) return null;
-        for (let i = afterIndex + 1; i < w.finals.length; i++)
-            if (this.isWatchable(i)) return w.finals[i].homeName + ' vs ' + w.finals[i].awayName;
-        return null;
-    },
-
     // ---- ordering: least reputable first, the showpiece last (decision) ----
     // Main national cups outrank their country's secondary cup; the European finals outrank both
     // (UECL < UEL < UCL). Ties: more clients on the pitch => later; then the agent's home country
     // => later; then the leagues-dropdown order of countries.
-    // the id each MAIN national cup FINAL is played under (see League.*Step); the secondary cups
-    // (KBEK, LLC, LPOKAL, CUPABASS, LICHCUP, NOTRECOUPE, COUPENAT, SEGTACA, CFED, COPPACOMP) and the
-    // minor Liechtensteiner Cup sit at the lower tier (prestige 0)
+    // the id each MAIN national cup FINAL is played under (see League.*Step); the secondary/lower-league
+    // cups (KBEK, LLC, LPOKAL, CUPABASS, NOTRECOUPE, COUPENAT, SEGTACA, CFED, COPPACOMP) sit at the
+    // lowest tier (0). The Liechtensteiner Cup sits one tier above them (1) — above the lower-league
+    // cups but below the main national cups (2). Europe sits above everything (3 < 4 < 5).
     MAIN_CUPS: new Set(['BEKER', 'FACUP', 'DFB', 'CDR', 'SCHWCUP', 'COPPA', 'COUPEFR', 'TACAPT', 'BELCUP']),
-    EUROPE_PRESTIGE: { UECL: 2, UEL: 3, UCL: 4 },
+    EUROPE_PRESTIGE: { UECL: 3, UEL: 4, UCL: 5 },
     COUNTRY_ORDER: ['England', 'Germany', 'Spain', 'Italy', 'France', 'Netherlands', 'Portugal', 'Switzerland', 'Belgium', 'Liechtenstein'],
 
     _prestige(m) {
-        if (m.kind === 'europe-final') return this.EUROPE_PRESTIGE[m.compId] || 2;
-        if (m.kind === 'cup-final') return this.MAIN_CUPS.has(m.compId) ? 1 : 0;
+        if (m.kind === 'europe-final') return this.EUROPE_PRESTIGE[m.compId] || 3;
+        if (m.kind === 'cup-final') {
+            if (m.compId === 'LICHCUP') return 1;              // above lower-league cups, below national cups
+            return this.MAIN_CUPS.has(m.compId) ? 2 : 0;
+        }
         return 0;   // play-off / last-day deciders sit with the lower cups until specced otherwise
     },
     _matchCountry(m) {
@@ -152,6 +158,39 @@ const Attend = {
             this._prestige(a) - this._prestige(b) ||
             a.clients.length - b.clients.length ||
             this._countryRank(this._matchCountry(a)) - this._countryRank(this._matchCountry(b)));
+    },
+
+    // ---- travel: you can't be in two places at once (decision 6) ----
+    DAY_INDEX: { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 },
+    // a slot as an absolute minute of the finals weekend (Mon 00:00 = 0), or null if unscheduled
+    _slotMinutes(m) {
+        const d = this.DAY_INDEX[m && m.day]; if (d == null || !m.time) return null;
+        const [h, min] = String(m.time).split(':').map(Number);
+        return d * 1440 + (h || 0) * 60 + (min || 0);
+    },
+    // two finals you can't both attend: in different countries on the same day (no dashing between
+    // countries), or in the same country less than the travel gap (more than 3 hours) apart.
+    _clashes(a, b) {
+        const ma = this._slotMinutes(a), mb = this._slotMinutes(b);
+        if (ma == null || mb == null) return false;
+        const sameDay = Math.floor(ma / 1440) === Math.floor(mb / 1440);
+        const ca = this._matchCountry(a), cb = this._matchCountry(b);
+        if (ca && cb && ca !== cb) return sameDay;   // different countries → only a same-day clash
+        return Math.abs(ma - mb) <= 180;             // same country → need MORE than 3 hours between
+    },
+    // does final i clash with any final you've already committed to attending this weekend?
+    _attendClash(i) {
+        const w = this.window(); if (!w || !w.attended || !w.attended.length) return false;
+        const cand = w.finals[i];
+        return w.attended.some(j => this._clashes(cand, w.finals[j]));
+    },
+    // why final i can't be attended right now (for the overview), or null if it can
+    watchBlockReason(i) {
+        const w = this.window(); if (!w) return null;
+        if (i <= w.pointer) return 'in the past';
+        if (this._attendClash(i)) return 'clashes with your schedule';
+        if (w.watched >= this.WATCH_CAP) return 'no watches left';
+        return null;
     },
 
     // Called by the final-playing code. `r` is the League.playMatch result (carries homeAppear /
@@ -194,9 +233,13 @@ const Attend = {
         for (const p of Agency.clients()) {
             if (effectiveClubId(p) !== clubId) continue;
             const a = (appear || []).find(x => x.p === p);
+            // a loaned-in player follows the role his loan deal guaranteed, not his parent-club standing
+            // (mirrors assignStats' baseRole) — so the "may not play" caveat reflects where he'll actually
+            // line up: a youth prospect loaned out as a star is a star at the loan club.
+            const effRole = p.onLoanAt === clubId ? (p.loanRole || 'starter') : p.squadRole;
             out.push({
                 playerId: p.id, name: p.name, position: p.position, styleRole: p.styleRole,
-                squadRole: p.squadRole, side, played: !!a,
+                squadRole: effRole, side, played: !!a,
                 goals: a ? (a.g || 0) : 0, assists: a ? (a.a || 0) : 0,
                 yellow: a ? (a.yellow || 0) : 0, red: a ? (a.red || 0) : 0,
                 rating: a ? a.rating : null,   // the engine's match rating, for the live-view client panel
@@ -260,6 +303,9 @@ const Attend = {
         return {
             homeName: m.homeName, awayName: m.awayName,
             hg: m.hg, ag: m.ag, minutes: m.minutes,
+            // a shootout means extra time was scoreless (the goals shown are all from regulation), so
+            // keep the feed inside 90' and let the clock run on, empty, to 120 before the kicks
+            regulation: m.pens ? 90 : m.minutes,
             clients: m.clients.filter(c => c.played).map(c => ({
                 player: { id: c.playerId, name: c.name, position: c.position, styleRole: c.styleRole },
                 side: c.side, goals: c.goals, assists: c.assists, yellow: c.yellow, red: c.red,

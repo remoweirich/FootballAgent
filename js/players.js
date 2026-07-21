@@ -12,24 +12,27 @@ const ROLE_ORDER = ['youth', 'fringe', 'rotation', 'starter', 'key'];
 const POS_LIST = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const ATTACK_POS = ['CAM', 'LW', 'RW', 'ST'];
 const MID_POS = ['CDM', 'CM', 'CAM'];
-// English football pays more than Dutch (applied to every player's wage); Switzerland sits just under
-// the Dutch peak (its top clubs' reputations are close to the Eredivisie's, but wages fall a bit short)
-const COUNTRY_WAGE_MULT = { Netherlands: 1.0, England: 1.25, Germany: 1.12, Spain: 1.18, Switzerland: 0.93 };
+// Country pay tendency — a deliberately wide spread so a cross-border move reads as a real pay
+// event (a Premier League club coming for a Super League player should be a payrise hard to turn
+// down, and the Prem clearly outpays the Primeira Liga / La Liga for the same man). Applied to every
+// player's wage at generation AND to every renewal/transfer offer (see Agency.offeredWage), with a
+// per-offer jitter there so it's a tendency, not a fixed law. England leads; Portugal/Belgium trail.
+const COUNTRY_WAGE_MULT = { England: 1.42, Germany: 1.15, Spain: 1.12, Italy: 1.12, France: 1.02, Netherlands: 1.0, Switzerland: 0.92, Portugal: 0.9, Belgium: 0.88 };
 // development pacing: deliberately slow — a top young regular gains roughly a handful of points a
 // season on his own, and agency development upgrades give a meaningful, noticeable boost on top
 const DEV_BASE = 0.08;
 
 const PlayerGen = {
-    _id() { return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); },
+    _id() { return 'p_' + Date.now().toString(36) + '_' + Rng.next().toString(36).slice(2, 8); },
     squadSizeByTier(t) { return ({ 1: 20, 2: 18, 3: 16, 4: 14 })[t] || 16; },
-    randPos() { return POS_LIST[Math.floor(Math.random() * POS_LIST.length)]; },
-    gauss(mean, sd) { const r = (Math.random() + Math.random() + Math.random()) / 3; return mean + (r - 0.5) * 2 * sd; },
-    randSquadAge() { const r = (Math.random() + Math.random()) / 2; return Math.round(16 + r * 18); },
+    randPos() { return POS_LIST[Math.floor(Rng.next() * POS_LIST.length)]; },
+    gauss(mean, sd) { const r = (Rng.next() + Rng.next() + Rng.next()) / 3; return mean + (r - 0.5) * 2 * sd; },
+    randSquadAge() { const r = (Rng.next() + Rng.next()) / 2; return Math.round(16 + r * 18); },
 
     peakAgeFor(pos) {
-        if (pos === 'GK') return 30 + Math.floor(Math.random() * 5);
-        if (pos === 'CB' || pos === 'CDM' || pos === 'CM') return 28 + Math.floor(Math.random() * 4);
-        return 26 + Math.floor(Math.random() * 4);
+        if (pos === 'GK') return 30 + Math.floor(Rng.next() * 5);
+        if (pos === 'CB' || pos === 'CDM' || pos === 'CM') return 28 + Math.floor(Rng.next() * 4);
+        return 26 + Math.floor(Rng.next() * 4);
     },
 
     // Peaking and declining are two different ages: a winger who tops out at 26 doesn't start
@@ -37,7 +40,7 @@ const PlayerGen = {
     // outfielder might be at his best from 26 to 33 and a keeper from 30 to 37. Nobody declines
     // before 30, and when it starts is individual, not a fixed birthday.
     declineAgeFor(peakAge) {
-        const peakYears = 2 + Math.floor(Math.random() * 6);
+        const peakYears = 2 + Math.floor(Rng.next() * 6);
         return Math.max(30, Math.min(38, (peakAge || 28) + peakYears));
     },
 
@@ -53,8 +56,21 @@ const PlayerGen = {
     },
     sponsorBaseFor(ability) { return ability < 60 ? 0 : Math.round(Math.pow(ability - 55, 2) * 5 / 10) * 10; },
 
+    // Teenagers shouldn't command exorbitant wages just because they carry big potential — a 60-rated
+    // 15-year-old getting 18k/wk was a wonderkid-premium artefact. Hard weekly caps by age, EXCEPT at
+    // the very biggest clubs (rep 82+), who really do throw money at prospects, and for the rare
+    // generational talent (potential above 90), where the caps lift. Non-teenagers are untouched.
+    YOUTH_WAGE_CAP: { 15: 7500, 16: 15000, 17: 30000 },
+    capYouthWage(wage, age, reputation, potential) {
+        const cap = this.YOUTH_WAGE_CAP[age];
+        if (cap == null) return wage;
+        if ((reputation || 45) >= 82) return wage;
+        if ((potential || 0) > 90) return wage;
+        return Math.min(wage, cap);
+    },
+
     youthPotential(age, ability, cap = 92) {
-        const gain = Math.floor(Math.random() * 23) + 8;
+        const gain = Math.floor(Rng.next() * 23) + 8;
         const ageBonus = age <= 17 ? 6 : age <= 19 ? 3 : age <= 21 ? 1 : 0;
         return Math.min(cap, ability + gain + ageBonus);
     },
@@ -62,7 +78,7 @@ const PlayerGen = {
 
     // Temperament: roughly one player in thirty is a reliable performer wherever he goes, and
     // barely has a bad season. Everyone else carries a small permanent lean either way.
-    formTraitRoll() { return Math.random() < 1 / 30 ? this.gauss(0.34, 0.06) : this.gauss(0, 0.09); },
+    formTraitRoll() { return Rng.next() < 1 / 30 ? this.gauss(0.34, 0.06) : this.gauss(0, 0.09); },
 
     makePlayer(club, { ability, age, position }) {
         const nat = getRegionForClub(club);
@@ -72,7 +88,8 @@ const PlayerGen = {
         const isYouth = age <= 22;
         const peakAge = this.peakAgeFor(position);
         const potential = isYouth ? this.youthPotential(age, ability) : Math.max(ability, ability + (age < peakAge ? 3 : 0));
-        const wage = Math.round(this.wageFor(ability, club.reputation) * (COUNTRY_WAGE_MULT[club.country] || 1) / 10) * 10;
+        let wage = Math.round(this.wageFor(ability, club.reputation) * (COUNTRY_WAGE_MULT[club.country] || 1) / 10) * 10;
+        wage = this.capYouthWage(wage, age, club.reputation, potential);
         return {
             id: this._id(),
             name: generateName(nat), nationality: nat, nationalityFlag: getNationalityFlag(nat),
@@ -80,7 +97,7 @@ const PlayerGen = {
             formTrait: this.formTraitRoll(),
             clubId: club.id, clubTierAtJoin: club.tier,
             wage, sponsorIncome: this.sponsorBaseFor(ability),
-            contractUntilSeason: GameState ? GameState.seasonStartYear + 1 + Math.floor(Math.random() * 3) : 2027,
+            contractUntilSeason: GameState ? GameState.seasonStartYear + 1 + Math.floor(Rng.next() * 3) : 2027,
             squadRole: 'rotation',
             // representation
             agentId: null, wageCommission: 0, sponsorCommission: 0, repUntilSeason: null, repExpired: false,
@@ -88,7 +105,7 @@ const PlayerGen = {
             onLoanAt: null, loanUntilSeason: null, loanRole: null,
             transferListed: false, loanListed: false,
             injury: null, injuryHistory: [],
-            birthWeek: 1 + Math.floor(Math.random() * 52),
+            birthWeek: 1 + Math.floor(Rng.next() * 52),
             retireAge: Math.max(34, Math.min(41, Math.round(PlayerGen.gauss(37, 1.553)))),
             retireDelays: 0, retiringThisSeason: false, archived: false, everClient: false,
             styleRole: (typeof Scouting !== 'undefined') ? Scouting.assignRole({ position }) : null,
@@ -137,8 +154,8 @@ const PlayerGen = {
         return t[age] != null ? t[age] : (age < 15 ? 0.68 : 0.99);
     },
     makeProspect(club, opts = {}) {
-        const age = opts.age != null ? opts.age : 15 + Math.floor(Math.random() * 4);
-        const ability = opts.ability != null ? opts.ability : 3 + Math.floor(Math.random() * 14);
+        const age = opts.age != null ? opts.age : 15 + Math.floor(Rng.next() * 4);
+        const ability = opts.ability != null ? opts.ability : 3 + Math.floor(Rng.next() * 14);
         const p = this.makePlayer(club, { ability, age, position: opts.position });
         let pot;
         if (opts.potential != null) pot = opts.potential;
@@ -155,7 +172,7 @@ const PlayerGen = {
     seedKnownProspects() {
         const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
         const lower = this.lowerClubs();
-        const pick = () => lower[Math.floor(Math.random() * lower.length)];
+        const pick = () => lower[Math.floor(Rng.next() * lower.length)];
         const tec = (hc === 'Netherlands' && Clubs.getClubById('tec')) || pick();
         const kees = this.makeProspect(tec, { name: hc === 'Netherlands' ? 'Kees Peters' : undefined, age: 16, ability: 7, potential: 50, position: 'CAM' });
         kees.knownToAgent = true; kees.discoveredVia = 'contact';
@@ -174,16 +191,34 @@ const PlayerGen = {
 const PlayerDev = {
     youthBoost(age) { return age < 18 ? 1.85 : age < 21 ? 1.5 : age < 24 ? 1.25 : age < 26 ? 1.1 : 1.0; },
 
-    // level of the environment the player currently competes in
+    // level of the environment the player currently competes in (the club he is ACTUALLY at — a loan
+    // club counts, since that's where he trains and plays)
     envLevelFor(p) {
         if (isU21Loan(p)) return 34;                          // academy / youth level
         const c = Clubs.getClubById(effectiveClubId(p));
         return c ? c.reputation : 45;
     },
-    // challenged (env >= ability) -> faster; dominating a weak level -> slower
+    // Challenge: being BELOW your club's level — better team-mates, tougher training and opponents —
+    // accelerates growth; being clearly ABOVE it (dominating a weak side) slows it. Centred at 1.0 when
+    // the club's reputation matches your ability. Clamped so this alone can never let sitting out beat
+    // getting minutes (see envFactor / weeklyTick).
     challengeFactor(p) {
         const env = this.envLevelFor(p);
-        return Math.max(0.45, Math.min(1.45, 0.75 + (env - p.ability) / 45));
+        return Math.max(0.65, Math.min(1.45, 1 + (env - p.ability) / 45));
+    },
+    // Facilities: a higher-reputation club simply develops players faster (better training setup),
+    // regardless of the ability gap. Applies whether he plays or sits. ~1.0 around a solid pro club
+    // (reputation ~60), down to 0.9 at the amateur end, up to 1.3 at the elite end.
+    facilitiesFactor(p) {
+        const env = this.envLevelFor(p);
+        return Math.max(0.9, Math.min(1.3, 0.9 + Math.max(0, env - 45) / 150));
+    },
+    // The combined training-environment multiplier. Its range is deliberately bounded: the most a
+    // benched week can reach (0.18 × envMax ≈ 0.34) stays below the least a playing week can reach
+    // (1.0 × envMin ≈ 0.59), so PLAYING — even at a lower level — always develops a player more than
+    // sitting, while a bench week at a big club still beats one at a small club.
+    envFactor(p) {
+        return this.challengeFactor(p) * this.facilitiesFactor(p);
     },
 
     // appsThisWeek: number of matches played this week (0..~2)
@@ -207,10 +242,13 @@ const PlayerDev = {
             const st = (typeof seasonTotals === 'function') ? seasonTotals(p, year) : null;
             if (st && st.apps >= 4) form = Math.max(0.7, Math.min(1.6, 1 + (st.avg - 6.9) * 0.45));
             // organic week-to-week randomness
-            const rnd = 0.7 + Math.random() * 0.6;
+            const rnd = 0.7 + Rng.next() * 0.6;
             const up = (typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1;
             const moraleMult = (typeof moraleDevMult === 'function') ? moraleDevMult(moraleAvg(p)) : 1;
-            let pts = DEV_BASE * play * this.youthBoost(p.age) * gapF * highEnd * form * rnd * up * moraleMult;
+            // training environment: being stretched by a stronger level and better facilities develops
+            // a player faster; dominating a weak side at a small club develops him slower (see envFactor)
+            const envF = this.envFactor(p);
+            let pts = DEV_BASE * play * this.youthBoost(p.age) * gapF * highEnd * form * rnd * up * moraleMult * envF;
             pts = Math.min(pts, 0.40);                          // weekly ceiling: no single week causes a visible jump
             p._dev = (p._dev || 0) + pts;
             while (p._dev >= 1 && p.ability < p.potential && (p._devGained || 0) < 11) {
@@ -267,6 +305,12 @@ function effectiveClubId(p) { return p.onLoanAt || p.clubId; }
 // (aging, development, injuries, match stats). Everyone else is a frozen background extra —
 // club results come from the club's own reputation/seasonDelta, not from squad averages.
 function isSimRelevant(p) { return !p.archived && (p.agentId === 'me' || p.everClient === true || p.knownToAgent === true); }
+// Which players are worth SAVING. Only the ones the user can ever see: current/ex clients, scouted
+// prospects, and archived retirees (Client History). The anonymous background squads (~14k players,
+// ~95% of the old save) are NOT saved — they're frozen and regenerable from each club's reputation,
+// so they're rebuilt on load (League.regenerateBackgroundSquads), exactly as a fresh game or the V2
+// migration already does. This is undetectable in play and shrinks the save from ~13 MB to <1 MB.
+function isPersistedPlayer(p) { return p.agentId === 'me' || p.everClient === true || p.knownToAgent === true || p.archived === true; }
 function isU21Loan(p) { return typeof p.onLoanAt === 'string' && p.onLoanAt.indexOf('u21') === 0; }
 function u21ParentId(idOrPlayer) { const v = typeof idOrPlayer === 'string' ? idOrPlayer : idOrPlayer.onLoanAt; return (v && v.indexOf('u21') === 0) ? (v.split(':')[1] || null) : null; }
 

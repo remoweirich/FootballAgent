@@ -80,6 +80,14 @@ const DIV_TIER = { ERE: 1, EED: 2, TWD: 3, DRD: 4 };
 // every country's league ladder, top tier first
 const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'], Switzerland: ['SuperLeagueCH', 'ChallengeLeague', 'PromotionLeague', '1.LigaCH', '2.LigaCH'], Italy: ['SerieA', 'SerieB', 'SerieC', 'SerieD'], Portugal: ['LigaPortugal', 'LigaPortugal2', 'Liga3', 'Liga4'], Belgium: ['JupilerProLeague', 'ChallengerProLeague', 'BelgianDivision1', 'BelgianDivision2'], France: ['Ligue1', 'Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'] };
 const ALL_LEAGUE_DIVS = Object.values(COUNTRY_DIVS).reduce((a, b) => a.concat(b), []);
+// Cup calendars. A standard national cup runs its knockout on CUP_WEEKS; a clean 64-team (6-round)
+// cup skips week 32 (CUP_WEEKS_NO32). Kept as named constants so the fixture schedule is defined once
+// rather than repeated as a literal at ~20 call sites in simulateWeek and each stepper.
+const CUP_WEEKS = [4, 7, 15, 26, 32, 38, 47];
+const CUP_WEEKS_NO32 = [4, 7, 15, 26, 38, 47];
+// Weeks with no domestic league fixtures: the opening fortnight and the international breaks. Cups
+// still run in these weeks; league matchdays are spread across the remaining ones.
+const NO_LEAGUE_WEEKS = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
 // cups shown per country in the Leagues tab (extend this when adding more countries)
 const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Schweizer Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']], Italy: [['coppaitalia', 'Coppa Italia'], ['coppacompagno', 'Coppa Compagno']], Portugal: [['tacaportugal', 'Taça de Portugal'], ['segundataca', 'Segunda Taça']], Belgium: [['belgiancup', 'Belgian Cup'], ['notrecoupe', 'Notre Coupe']], France: [['coupefrance', 'Coupe de France'], ['coupenational', 'Coupe National']] };
 function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
@@ -126,12 +134,61 @@ function _topUpHostSquads(hostClubs) {
         };
         const fresh = [];
         for (let i = 0; i < needGK; i++) fresh.push(mk('GK'));
-        for (let i = 0; i < needOut; i++) fresh.push(mk(OUT[Math.floor(Math.random() * OUT.length)]));
+        for (let i = 0; i < needOut; i++) fresh.push(mk(OUT[Math.floor(Rng.next() * OUT.length)]));
         GameState.players.push(...fresh);
         // re-derive roles across the club's background squad (the agent's own players keep theirs)
         const bg = GameState.players.filter(p => !p.archived && p.clubId === cid && !isSimRelevant(p));
         if (bg.length) PlayerGen.assignRoles(bg);
     }
+}
+// Rebuild the anonymous background squads for EVERY real club after a load (see isPersistedPlayer /
+// the slim save). Behaviourally identical to a fresh generatePool + the persisted players overlaid:
+// each club is topped up to a full squad around whatever saved players sit there, and background
+// roles are re-derived. Efficient one-pass grouping (the per-host-club version above is fine for a
+// handful of clubs; this runs over all ~850). A no-op for old saves that still carry full squads.
+function regenerateBackgroundSquads() {
+    if (typeof PlayerGen === 'undefined' || !PlayerGen.makePlayer) return;
+    const byClub = new Map();
+    for (const p of GameState.players) {
+        if (p.archived || !p.clubId) continue;
+        let arr = byClub.get(p.clubId); if (!arr) byClub.set(p.clubId, arr = []); arr.push(p);
+    }
+    const OUT = POS_LIST.filter(x => x !== 'GK');
+    const fresh = [];
+    // Every real club, INCLUDING reserve sides (Jong Ajax, Bayern II…): generatePool gives them their
+    // own squads, so a client loaned to one still gets full-strength team-mates. (The per-week
+    // _topUpHostSquads skips reserves for speed, but their squads persist in memory once built here.)
+    const buildAll = () => {
+        for (const club of Clubs.allClubs) {
+            const existing = byClub.get(club.id) || [];
+            let gk = 0, out = 0;
+            for (const p of existing) { if (p.position === 'GK') gk++; else out++; }
+            const want = PlayerGen.squadSizeByTier(club.tier);
+            const needGK = Math.max(0, 2 - gk), needOut = Math.max(0, (want - 2) - out);
+            if (!needGK && !needOut) continue;
+            const mk = pos => {
+                const age = PlayerGen.randSquadAge();
+                let ability = PlayerGen.gauss(club.reputation, 7);
+                if (age < 24) ability -= (24 - age) * 1.1;
+                const np = PlayerGen.makePlayer(club, { ability, age, position: pos });
+                np.potential = np.ability;   // background players are frozen: no development curve
+                return np;
+            };
+            const made = [];
+            for (let i = 0; i < needGK; i++) made.push(mk('GK'));
+            for (let i = 0; i < needOut; i++) made.push(mk(OUT[Math.floor(Rng.next() * OUT.length)]));
+            // re-derive roles across the club's BACKGROUND squad only — the agent's own players keep theirs
+            const bg = existing.filter(p => !isSimRelevant(p)).concat(made);
+            if (bg.length) PlayerGen.assignRoles(bg);
+            fresh.push(...made);
+        }
+    };
+    // Draw the regenerated NPCs from a stream fixed to this game's seed, restoring the live sim stream
+    // afterwards: the same background squads come back every load, and rebuilding them never shifts the
+    // simulation's own sequence (a client's own matches roll the same whether or not you reloaded first).
+    const seed = (typeof GameState !== 'undefined' && GameState.rngSeed) || 0x9E3779B9;
+    if (typeof Rng !== 'undefined' && Rng.withSeed) Rng.withSeed(seed, buildAll); else buildAll();
+    if (fresh.length) GameState.players.push(...fresh);
 }
 let __sqCache = null, __sqCacheWeek = -1;
 function relevantSquads() {
@@ -189,7 +246,7 @@ const SEASON_ROLL_TABLES = [
 function rollFromTable(tableIdx, inverted) {
     const table = SEASON_ROLL_TABLES[tableIdx];
     const total = table.reduce((s, [, w]) => s + w, 0);
-    let r = Math.random() * total;
+    let r = Rng.next() * total;
     for (const [delta, w] of table) {
         r -= w;
         if (r <= 0) return inverted ? -delta : delta;
@@ -333,7 +390,7 @@ const League = {
     },
     // Swiss Super League / Challenge League: every pair meets 4 times a season, not 2
     quadRoundRobin(ids) { return this.roundRobin(ids).concat(this.roundRobin(ids)); },
-    shuffle(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; },
+    shuffle(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Rng.next() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; },
 
     setupSeason() {
         const tables = {}, schedule = {}, mdIndex = {};
@@ -429,20 +486,45 @@ const League = {
         const CONV = 0.75, KICKS = 5;
         let a = 0, b = 0, ka = 0, kb = 0;
         for (let i = 0; i < KICKS * 2; i++) {
-            if (i % 2 === 0) { if (Math.random() < CONV) a++; ka++; }
-            else { if (Math.random() < CONV) b++; kb++; }
+            if (i % 2 === 0) { if (Rng.next() < CONV) a++; ka++; }
+            else { if (Rng.next() < CONV) b++; kb++; }
             if (a > b + (KICKS - kb)) break;   // b cannot catch up even by scoring everything left
             if (b > a + (KICKS - ka)) break;
         }
         // sudden death: both take one, repeat until exactly one of them scores
         let guard = 0;
         while (a === b && guard++ < 40) {
-            const sa = Math.random() < 0.72, sb = Math.random() < 0.72;
+            const sa = Rng.next() < 0.72, sb = Rng.next() < 0.72;
             if (sa) a++;
             if (sb) b++;
         }
         if (a === b) a++;   // the guard should never fire; never hand back a drawn shootout
         return a > b ? [a, b] : [b, a];
+    },
+
+    // _penScore never produces an impossible scoreline, but shootout scores banked by OLDER builds
+    // (before the optimal-stop fix) can still be sitting in a loaded save and get rendered. These two
+    // helpers let the views repair such a stored result at display time, deterministically, so a
+    // "5–1" from an old save shows as the nearest score that could actually have happened.
+    // The full set of reachable winner–loser scores (verified by enumerating the process):
+    //   margin 1 is always possible (sudden death of any length: 1–0, 2–1, 3–2, 6–5, …);
+    //   margin ≥2 only from regulation, and only these: 2–0, 3–0, 3–1, 4–1, 4–2, 5–3.
+    penPossible(hi, lo) {
+        if (hi <= lo) return false;
+        if (hi - lo === 1) return true;
+        return [[2, 0], [3, 0], [3, 1], [4, 1], [4, 2], [5, 3]].some(([h, l]) => h === hi && l === lo);
+    },
+    // Repair one oriented (x, y) pair, preserving which side is higher (so the winner never flips) and
+    // the winner's tally; only the loser's tally is nudged up to the nearest possible value.
+    penFixPair(x, y) {
+        const flip = x < y;
+        let hi = flip ? y : x, lo = flip ? x : y;
+        if (hi <= lo) hi = lo + 1;
+        if (!this.penPossible(hi, lo)) {
+            if (hi > 5) lo = hi - 1;                                     // margin ≥2 impossible above 5 → snap to SD
+            else lo = ({ 2: 0, 3: 0, 4: 1, 5: 3 })[hi] != null ? ({ 2: 0, 3: 0, 4: 1, 5: 3 })[hi] : hi - 1;
+        }
+        return flip ? [lo, hi] : [hi, lo];
     },
 
     // Extra time for a FINAL level after 90'. Two 15-minute halves, low-scoring: ~0.45 goals a side
@@ -452,7 +534,7 @@ const League = {
         const sh = this.clubStrength(homeId), sa = this.clubStrength(awayId);
         const half = (att, def) => {
             const lam = Math.max(0.06, 0.45 + (att - def) / 40);
-            let g = 0, p = Math.exp(-lam), cum = p, x = Math.random(), term = p, k = 0;
+            let g = 0, p = Math.exp(-lam), cum = p, x = Rng.next(), term = p, k = 0;
             while (x > cum && k < 6) { k++; term *= lam / k; cum += term; g = k; }
             return g;
         };
@@ -465,7 +547,7 @@ const League = {
             const tierOf = id => { const c = Clubs.getClubById(id); return c ? c.tier : 99; };   // virtual minnows always host
             if (tierOf(h) < tierOf(a)) { home = a; away = h; }
         }
-        const r = this.playMatch(home, away, compId, !isFinal);
+        const r = this.playMatch(home, away, compId, !isFinal, isFinal);   // a cup final fields the best XI
         const tie = { h: home, a: away, hg: r.hg, ag: r.ag, winner: r.winner };
         // level after 90': a FINAL plays extra time (which may decide it); anything else goes
         // straight to penalties (no ET for ordinary cup rounds). See _extraTime / _penScore.
@@ -513,7 +595,7 @@ const League = {
             const rh = grp.table.find(x => x.clubId === h), ra = grp.table.find(x => x.clubId === a);
             rh.P++; ra.P++; rh.GF += r.hg; rh.GA += r.ag; ra.GF += r.ag; ra.GA += r.hg;
             if (r.hg > r.ag) { rh.W++; ra.L++; rh.Pts += 3; } else if (r.hg < r.ag) { ra.W++; rh.L++; ra.Pts += 3; } else { rh.D++; ra.D++; rh.Pts++; ra.Pts++; }
-            rh.cards += Math.floor(Math.random() * 4); ra.cards += Math.floor(Math.random() * 4);
+            rh.cards += Math.floor(Rng.next() * 4); ra.cards += Math.floor(Rng.next() * 4);
             grp.md++;
         });
     },
@@ -567,7 +649,7 @@ const League = {
         const rh = grp.table.find(x => x.clubId === h), ra = grp.table.find(x => x.clubId === a);
         rh.P++; ra.P++; rh.GF += r.hg; rh.GA += r.ag; ra.GF += r.ag; ra.GA += r.hg;
         if (r.hg > r.ag) { rh.W++; ra.L++; rh.Pts += 3; } else if (r.hg < r.ag) { ra.W++; rh.L++; ra.Pts += 3; } else { rh.D++; ra.D++; rh.Pts++; ra.Pts++; }
-        rh.cards += Math.floor(Math.random() * 4); ra.cards += Math.floor(Math.random() * 4);
+        rh.cards += Math.floor(Rng.next() * 4); ra.cards += Math.floor(Rng.next() * 4);
         grp.md++;
     },
     llcGroupStep(week) {
@@ -607,13 +689,13 @@ const League = {
         return { pos: idx + 1, total: sorted.length, div, divName: (COMPETITIONS[div] || {}).name || div, pts: sorted[idx].Pts, played: sorted[idx].P };
     },
     _kSort(table) {
-        return [...table].sort((a, b) => b.Pts - a.Pts || (b.GF - b.GA) - (a.GF - a.GA) || b.GF - a.GF || a.GA - b.GA || a.cards - b.cards || (Math.random() - 0.5));
+        return [...table].sort((a, b) => b.Pts - a.Pts || (b.GF - b.GA) - (a.GF - a.GA) || b.GF - a.GF || a.GA - b.GA || a.cards - b.cards || (Rng.next() - 0.5));
     },
     seedKleineKO() {
         const K = GameState.league.kbek;
         const winners = [], seconds = [];
         K.groups.forEach(grp => { const s = this._kSort(grp.table); winners.push(s[0].clubId); seconds.push(s[1]); });
-        seconds.sort((a, b) => b.Pts - a.Pts || (b.GF - b.GA) - (a.GF - a.GA) || b.GF - a.GF || a.GA - b.GA || a.cards - b.cards || (Math.random() - 0.5));
+        seconds.sort((a, b) => b.Pts - a.Pts || (b.GF - b.GA) - (a.GF - a.GA) || b.GF - a.GF || a.GA - b.GA || a.cards - b.cards || (Rng.next() - 0.5));
         K.remaining = this.shuffle(winners.concat(seconds.slice(0, 4).map(r => r.clubId)));
     },
     _kleineRoundName(week) { return ({ 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 47: 'Final' })[week]; },
@@ -890,7 +972,7 @@ const League = {
         let winner, pens = null;
         if (aggA > aggB) winner = state.a;
         else if (aggB > aggA) winner = state.b;
-        else { const sA = this.clubStrength(state.a), sB = this.clubStrength(state.b); winner = (Math.random() < sA / (sA + sB)) ? state.a : state.b; const [w, l] = this._penScore(); pens = winner === state.a ? { winner, a: w, b: l } : { winner, a: l, b: w }; }
+        else { const sA = this.clubStrength(state.a), sB = this.clubStrength(state.b); winner = (Rng.next() < sA / (sA + sB)) ? state.a : state.b; const [w, l] = this._penScore(); pens = winner === state.a ? { winner, a: w, b: l } : { winner, a: l, b: w }; }
         return { a: state.a, b: state.b, leg1: l1, leg2: { h: state.a, a: state.b, hg: r.hg, ag: r.ag }, aggA, aggB, winner, pens };
     },
     // Leg 2 (home for a), quick-simmed, then resolved.
@@ -906,8 +988,12 @@ const League = {
         const tie = this._twoLeggedResolve(state, r2);
         if (typeof Attend !== 'undefined') {
             const l1 = state.leg1;   // { h: bId, a: aId, hg, ag }
+            // a level aggregate goes to (scoreless) extra time, then penalties — carry that through so
+            // the live view runs the clock to 120 and plays the shootout instead of stopping at 90
+            const wentToPens = !!tie.pens;
             const m = Attend.consider('playoff-final', comp, aId, bId, r2, {
-                minutes: 90, winner: tie.winner, score: { hg: r2.hg, ag: r2.ag },
+                minutes: wentToPens ? 120 : 90, et: wentToPens, pens: tie.pens || null,
+                winner: tie.winner, score: { hg: r2.hg, ag: r2.ag },
                 firstLeg: { scored: l1.ag, conceded: l1.hg },   // leg-2 home (aId) perspective; flipped for an away inviter
             });
             if (m) tie._attendId = m.id;
@@ -1111,7 +1197,7 @@ const League = {
     // pool's ever exhausted rather than breaking the bracket
     _swissVirtualSub(pool, usedSet) {
         let pick = pool.find(v => !usedSet.has(v.id));
-        if (!pick) pick = pool[Math.floor(Math.random() * pool.length)];
+        if (!pick) pick = pool[Math.floor(Rng.next() * pool.length)];
         usedSet.add(pick.id);
         return pick.id;
     },
@@ -1168,7 +1254,7 @@ const League = {
         let entrants = pool.filter(id => id !== 'Eschen/Mauren');
         const reserves = entrants.filter(isReserveClub);
         if (entrants.length > 64 && reserves.length) {
-            const drop = reserves[Math.floor(Math.random() * reserves.length)];
+            const drop = reserves[Math.floor(Rng.next() * reserves.length)];
             entrants = entrants.filter(id => id !== drop);
         }
         const promSet = new Set(Clubs.getClubsByDivision('PromotionLeague').map(c => c.id));
@@ -1471,7 +1557,7 @@ const League = {
             if (c.anchorRep == null) c.anchorRep = c.reputation;
             const target = Math.round(Math.max(20, Math.min(95, c.anchorRep + (boost.get(c.id) || 0))));
             if (c.reputation < target) c.reputation = target;
-            else if (c.reputation > target) c.reputation = Math.max(target, Math.round(c.reputation - (1 + Math.random() * 4)));
+            else if (c.reputation > target) c.reputation = Math.max(target, Math.round(c.reputation - (1 + Rng.next() * 4)));
         });
     },
 
@@ -1778,7 +1864,7 @@ const League = {
         const rh = grp.table.find(x => x.clubId === h), ra = grp.table.find(x => x.clubId === a);
         rh.P++; ra.P++; rh.GF += r.hg; rh.GA += r.ag; ra.GF += r.ag; ra.GA += r.hg;
         if (r.hg > r.ag) { rh.W++; ra.L++; rh.Pts += 3; } else if (r.hg < r.ag) { ra.W++; rh.L++; ra.Pts += 3; } else { rh.D++; ra.D++; rh.Pts++; ra.Pts++; }
-        rh.cards += Math.floor(Math.random() * 4); ra.cards += Math.floor(Math.random() * 4);
+        rh.cards += Math.floor(Rng.next() * 4); ra.cards += Math.floor(Rng.next() * 4);
         grp.md++;
     },
     _belgianCupRoundName(week) {
@@ -1913,8 +1999,7 @@ const League = {
 
     // ---------------- weekly simulation ----------------
     _leagueWeeksRemaining(fromWeek) {
-        const NO_LEAGUE = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
-        let n = 0; for (let w = fromWeek; w <= 45; w++) if (!NO_LEAGUE.has(w)) n++;
+        let n = 0; for (let w = fromWeek; w <= 45; w++) if (!NO_LEAGUE_WEEKS.has(w)) n++;
         return n;
     },
     simulateWeek() {
@@ -1922,7 +2007,7 @@ const League = {
         const week = GameState.week;
 
         // no league matches in the opening fortnight or during international breaks (cups still run)
-        const NO_LEAGUE = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
+        const NO_LEAGUE = NO_LEAGUE_WEEKS;
         if (!NO_LEAGUE.has(week)) {
             // how many active league weeks have elapsed (incl. this one) vs the whole season — used to spread
             // any extra rounds evenly across the campaign instead of cramming them into the opening weeks
@@ -1966,7 +2051,7 @@ const League = {
             });
         }
 
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week)) this.bekerStep(week);
+        if (CUP_WEEKS.includes(week)) this.bekerStep(week);
 
         if ([4, 7, 16].includes(week) && L.kbek && !L.kbek.groupDone) {
             this.kleineGroupStep();
@@ -1976,44 +2061,45 @@ const League = {
         }
 
         // English cups (run in parallel with the Dutch ones)
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.facup) this.facupStep(week);
+        if (CUP_WEEKS.includes(week) && L.facup) this.facupStep(week);
         if ((week === 4 || week === 7) && L.llc) this.llcGroupStep(week);
         else if ([11, 15, 26, 32, 38, 47].includes(week) && L.llc) this.llcKOStep(week);
 
         // German cups (same rounds/weeks as the others)
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.dfb) this.dfbStep(week);
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.lpokal) this.lpokalStep(week);
+        if (CUP_WEEKS.includes(week) && L.dfb) this.dfbStep(week);
+        if (CUP_WEEKS.includes(week) && L.lpokal) this.lpokalStep(week);
 
         // Spanish cups (64 clubs -> one fewer round; week 32 is skipped)
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.cdr) this.spanishCupStep('cdr', week);
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.cfed) this.spanishCupStep('cfed', week);
+        if (CUP_WEEKS_NO32.includes(week) && L.cdr) this.spanishCupStep('cdr', week);
+        if (CUP_WEEKS_NO32.includes(week) && L.cfed) this.spanishCupStep('cfed', week);
 
         // Swiss cups: Schweizer Cup runs the full 7 rounds like the others; Cupa Bass is 64 clubs so
         // skips week 32 like the Spanish cups; the Liechtensteiner Cup is just QF/SF/Final
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.schwcup) this.schweizerCupStep(week);
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.cupabass) this.cupaBassStep(week);
+        if (CUP_WEEKS.includes(week) && L.schwcup) this.schweizerCupStep(week);
+        if (CUP_WEEKS_NO32.includes(week) && L.cupabass) this.cupaBassStep(week);
         if ([32, 38, 47].includes(week) && L.lichcup) this.lichCupStep(week);
 
         // Italian cups: both are 64 clubs, so 6 rounds skipping week 32 like the Spanish/Cupa Bass cups
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.coppaitalia) this.italianCupStep('coppaitalia', week);
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.coppacompagno) this.italianCupStep('coppacompagno', week);
+        if (CUP_WEEKS_NO32.includes(week) && L.coppaitalia) this.italianCupStep('coppaitalia', week);
+        if (CUP_WEEKS_NO32.includes(week) && L.coppacompagno) this.italianCupStep('coppacompagno', week);
 
         // French cups: Coupe de France is 124 clubs -> 7 rounds (uses week 32); Coupe National
         // is a clean 64 -> 6 rounds (skips week 32)
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.coupefrance) this.coupeFranceStep(week);
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.coupenational) this.coupeNationalStep(week);
+        if (CUP_WEEKS.includes(week) && L.coupefrance) this.coupeFranceStep(week);
+        if (CUP_WEEKS_NO32.includes(week) && L.coupenational) this.coupeNationalStep(week);
 
         // Portuguese cups: Taça de Portugal has a Liga 4 preliminary (wk4) then a 64-team seeded
         // knockout using week 32; the Segunda Taça is a clean 64 -> 6 rounds, skipping week 32
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.tacaportugal) this.tacaPortugalStep(week);
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.segundataca) this.segundaTacaStep(week);
+        if (CUP_WEEKS.includes(week) && L.tacaportugal) this.tacaPortugalStep(week);
+        if (CUP_WEEKS_NO32.includes(week) && L.segundataca) this.segundaTacaStep(week);
 
         // Belgian cups: the Belgian Cup runs a Division 2 group phase (wk4) then a 64-team seeded
         // knockout using week 32; Notre Coupe is a clean 64 -> 6 rounds, skipping week 32
-        if ([4, 7, 15, 26, 32, 38, 47].includes(week) && L.belgiancup) this.belgianCupStep(week);
-        if ([4, 7, 15, 26, 38, 47].includes(week) && L.notrecoupe) this.notreCoupeStep(week);
+        if (CUP_WEEKS.includes(week) && L.belgiancup) this.belgianCupStep(week);
+        if (CUP_WEEKS_NO32.includes(week) && L.notrecoupe) this.notreCoupeStep(week);
 
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); this.playPlayoffsPortugal(); this.playPlayoffsBelgium(); L.playoffs._done = true; }
+        // every promotion/relegation play-off is a do-or-die match — field the best XI (see playMatch/assignStats)
+        if (week === 46 && L.playoffs && !L.playoffs._done) { this._bigMatch = true; this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); this.playPlayoffsPortugal(); this.playPlayoffsBelgium(); this._bigMatch = false; L.playoffs._done = true; }
 
         // UEFA club competitions (UCL/UEL/UECL) run in parallel all season — qualifying wk1-6,
         // league phase wk11-31, knockouts wk34-48. See js/europe.js.
@@ -2065,18 +2151,20 @@ const League = {
         return contenders.length >= 2 ? new Set(contenders) : new Set();   // 1 contender = already decided
     },
 
-    playMatch(homeId, awayId, compId, homeAdv = false) {
+    playMatch(homeId, awayId, compId, homeAdv = false, bigMatch = false) {
         // home edge: +6 in leagues/play-offs, +8 in cups (one-off knockout nights swing harder)
         const advSize = (COMPETITIONS[compId] && COMPETITIONS[compId].type === 'cup') ? 8 : 6;
         const sh = this.clubStrength(homeId) + (homeAdv ? advSize : 0);
         const sa = this.clubStrength(awayId);
         const hg = this.scoreGoals(sh, sa);
         const ag = this.scoreGoals(sa, sh);
-        const homeAppear = this.assignStats(homeId, compId, hg, ag);
-        const awayAppear = this.assignStats(awayId, compId, ag, hg);
+        // the whole play-off phase counts as big (set around the week-46 block); cup/Europe finals pass it explicitly
+        const big = bigMatch || !!this._bigMatch;
+        const homeAppear = this.assignStats(homeId, compId, hg, ag, big);
+        const awayAppear = this.assignStats(awayId, compId, ag, hg, big);
         let winner = homeId;
         if (ag > hg) winner = awayId;
-        else if (hg === ag) winner = (sh + Math.random() * 6) >= (sa + Math.random() * 6) ? homeId : awayId;
+        else if (hg === ag) winner = (sh + Rng.next() * 6) >= (sa + Rng.next() * 6) ? homeId : awayId;
         // homeAppear/awayAppear are undefined for clubs this save doesn't model in detail; only the
         // live sim reads them (see assignStats), every other caller uses hg/ag/winner as before.
         return { hg, ag, winner, homeAppear, awayAppear };
@@ -2084,12 +2172,12 @@ const League = {
 
     scoreGoals(att, def) {
         const lambda = Math.max(0.2, 1.3 + (att - def) / 22);
-        let g = 0; const p = Math.exp(-lambda); let cum = p, x = Math.random(), term = p, k = 0;
+        let g = 0; const p = Math.exp(-lambda); let cum = p, x = Rng.next(), term = p, k = 0;
         while (x > cum && k < 8) { k++; term *= lambda / k; cum += term; g = k; }
         return g;
     },
 
-    assignStats(clubId, compId, scored, conceded) {
+    assignStats(clubId, compId, scored, conceded, bigMatch = false) {
         const year = GameState.seasonStartYear;
         // world model: only clubs hosting a sim-relevant player (client / ex-client / scouted
         // prospect) get their match dressed in player detail — for everyone else the result is
@@ -2108,7 +2196,7 @@ const League = {
 
         const loanedIn = available.filter(p => p.onLoanAt === clubId);
         const guaranteed = [], maybeLoan = [];
-        loanedIn.forEach(p => { if (p.loanRole === 'rotation' && Math.random() > 0.65) maybeLoan.push(p); else guaranteed.push(p); });
+        loanedIn.forEach(p => { if (p.loanRole === 'rotation' && Rng.next() > 0.65) maybeLoan.push(p); else guaranteed.push(p); });
         guaranteed.splice(5);
         const rest = available.filter(p => !guaranteed.includes(p) && !maybeLoan.includes(p));
         const bestGK = rest.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability)[0];
@@ -2137,7 +2225,7 @@ const League = {
         };
 
         const outfield = rest.filter(p => p !== bestGK)
-            .map(p => ({ p, w: (ROLE_PLAYTIME[effRole(p)] ?? 0.4) * 3 + p.ability / 80 + Math.random() * 0.8 }))
+            .map(p => ({ p, w: (ROLE_PLAYTIME[effRole(p)] ?? 0.4) * 3 + p.ability / 80 + Rng.next() * 0.8 }))
             .sort((a, b) => b.w - a.w).map(x => x.p);
 
         const starters = [];
@@ -2145,8 +2233,13 @@ const League = {
         guaranteed.forEach(p => { if (starters.length < 11) starters.push(p); });
         for (const p of outfield) { if (starters.length >= 11) break; starters.push(p); }
 
-        const ATTEND = { key: 0.95, starter: 0.82, rotation: 0.26, fringe: 0.16, youth: 0.08 };
-        const willPlay = pl => Math.random() < (ATTEND[effRole(pl)] ?? 0.6);
+        // How often a man in the matchday XI actually takes the field (vs being rested). Nudged up
+        // across the board so a club's best men — and the agent's clients among them — feature more
+        // often, not just occasionally. In a big match (final / play-off) nobody rests his starters:
+        // key/starter roles are guaranteed to play, so several clients at one club all turn out.
+        const ATTEND = { key: 0.97, starter: 0.90, rotation: 0.34, fringe: 0.20, youth: 0.11 };
+        const BIG_START = { key: true, starter: true };
+        const willPlay = pl => (bigMatch && BIG_START[effRole(pl)]) ? true : Rng.next() < (ATTEND[effRole(pl)] ?? 0.6);
         const benchPool = outfield.filter(p => !starters.includes(p));   // remaining outfielders, best-first
         const finalStarters = [];
         starters.forEach(pl => {
@@ -2159,7 +2252,7 @@ const League = {
         const subs = maybeLoan.concat(benchPool).slice(0, 5);
         const appear = [];
         finalStarters.forEach(p => appear.push({ p, full: true, g: 0, a: 0 }));
-        subs.forEach(p => { if (Math.random() < (ATTEND[effRole(p)] ?? 0.5) * 0.7) appear.push({ p, full: false, g: 0, a: 0 }); });
+        subs.forEach(p => { if (Rng.next() < (ATTEND[effRole(p)] ?? 0.5) * 0.7) appear.push({ p, full: false, g: 0, a: 0 }); });
         if (!appear.length) return;
 
         const posW = { ST: 1.0, LW: 0.8, RW: 0.8, CAM: 0.7, CM: 0.4, CDM: 0.2, LB: 0.15, RB: 0.15, CB: 0.12, GK: 0.0 };
@@ -2180,15 +2273,15 @@ const League = {
         const ghostA = ghosts * 0.50 * ghostAb;   // ~ the average outfielder's assist weight
         for (let i = 0; i < scored; i++) {
             const total = appear.reduce((s, a) => s + wG(a), 0) + ghostG || 1;
-            let r = Math.random() * total, pick = null;
+            let r = Rng.next() * total, pick = null;
             for (const a of appear) { r -= wG(a); if (r <= 0) { pick = a; break; } }
             if (!pick) continue;   // an unmodelled team-mate scored — nothing to record
             pick.g += 1;
-            if (Math.random() < 0.7) {
+            if (Rng.next() < 0.7) {
                 const others = appear.filter(a => a !== pick);
                 const t2 = others.reduce((s, a) => s + wA(a) + 0.05, 0) + ghostA;
                 if (t2 > 0) {
-                    let r2 = Math.random() * t2, as = null;
+                    let r2 = Rng.next() * t2, as = null;
                     for (const a of others) { r2 -= (wA(a) + 0.05); if (r2 <= 0) { as = a; break; } }
                     if (as) as.a += 1;   // otherwise an unmodelled team-mate laid it on
                 }
@@ -2206,7 +2299,7 @@ const League = {
             if (p.position === 'GK' && conceded === 0) c.cs = (c.cs || 0) + 1;   // clean sheet
             p._weekApps = (p._weekApps || 0) + (a.full ? 1 : 0.5);
             const yRate = (yellowRate[p.position] ?? 0.10) * (sBias(p).card || 1), rRate = yRate * 0.06;
-            const rr = Math.random();
+            const rr = Rng.next();
             if (rr < rRate) {
                 c.red += 1; a.red = 1;
                 p._suspended = (p._suspended || 0) + 1;                 // straight red -> one-match ban
@@ -2221,14 +2314,20 @@ const League = {
             // Keying this off raw ability instead meant anyone halfway decent averaged 7.5
             // everywhere. A season at your own level can still be exceptional — that's what the
             // form draw is for — it just isn't the default.
-            let rating = 6.55 + levelGapRating(p.ability - (ghostClub ? ghostClub.reputation : 50)) + resultBonus + a.g * 1.0 + a.a * 0.55;
+            // goals and assists weigh heavily: a season's scoring should visibly lift the average, so a
+            // productive attacker rates above a same-level team-mate who doesn't chip in (goals 1.35,
+            // assists 0.65 — up from 1.0 / 0.55)
+            let rating = 6.55 + levelGapRating(p.ability - (ghostClub ? ghostClub.reputation : 50)) + resultBonus + a.g * 1.35 + a.a * 0.65;
             if (conceded === 0 && (p.position === 'GK' || p.position === 'CB' || p.position === 'LB' || p.position === 'RB')) rating += 0.6;
             if (conceded >= 3 && (p.position === 'GK' || p.position === 'CB')) rating -= 0.45;
             rating += PlayerGen.gauss(0, 0.62);        // match to match: some days it just doesn't click
             rating += formBiasOf(p);                   // this season's form, and his temperament
             rating += moraleRatingMod(moraleAvg(p));   // derived from avg morale only — never a single dimension
+            if (p.settling) rating -= 0.3;             // abroad and not yet at home: a small, temporary form drag
             rating = Math.max(4.0, Math.min(10, rating));
             c.ratingSum += rating; a.rating = rating;
+            // a hat-trick is a match-ball moment: queue his call for after the week's summary
+            if (a.g >= 3 && p.agentId === 'me' && typeof Dialogue !== 'undefined') Dialogue.queueMoment({ type: 'hattrick', playerId: p.id });
             // rolling recent form (see effRole): the last dozen appearances, oldest dropping off
             p._recent = p._recent || [];
             p._recent.push({ g: a.g, a: a.a, r: Math.round(rating * 10) / 10 });

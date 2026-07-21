@@ -13,7 +13,9 @@
 const LiveView = {
     BASE_MS_PER_MIN: 730,    // 1x default: brisk (~90 minutes in ~66s), speed up from here to 2x/4x
     SLOWMO: 0.25,            // while an event narrates, the clock crawls at 25% of the default speed
-    LINE_MS: 1150,           // real time between a chain's pieces revealing (start → middle → end)
+    LINE_MS: 2000,           // real time between a chain's pieces revealing (start → middle → end) — paced to read
+    GOAL_HOLD_MS: 2000,      // a goal freezes the clock this long and flashes the board (the celebration)
+    PEN_MS: 950,             // real time between penalties in a shootout
     TICK_MS: 100,
     other: s => (s === 'home' ? 'away' : 'home'),
 
@@ -67,17 +69,15 @@ const LiveView = {
     },
 
     // ---------- lifecycle ----------
-    // opts.nextLabel: "FC Basel vs FC Zürich" when another accepted final follows (the full-time
-    // button then reads "Attend …"); null/absent when this is the last, so it reads "Leave".
-    show(match, onDone, opts) {
+    show(match, onDone) {
         this.match = match;
         this.onDone = onDone || function () { };
-        this.nextLabel = (opts && opts.nextLabel) || null;
         this.spec = Attend.timelineSpec(match);
         this.timeline = LiveSim.buildTimeline(this.spec);
         this.finalStats = this.buildStats(match, this.timeline);
-        this.s = { clock: 0, speed: 1, paused: false, revealed: 0, done: false, reveal: null };
+        this.s = { clock: 0, speed: 1, paused: false, revealed: 0, done: false, reveal: null, phase: 'match' };
         this.score = { home: 0, away: 0 };
+        this.pen = null; this._penDone = false;   // penalty shootout (two-leg / ET finals)
         this.feed = [];
         // running per-client tallies for the panel, keyed by playerId
         this.tally = {};
@@ -99,9 +99,21 @@ const LiveView = {
     },
 
     _close() {
-        clearInterval(this._timer);
+        clearInterval(this._timer); clearInterval(this._penTimer); clearTimeout(this._flashTimer);
         const done = this.onDone; this.onDone = function () { };
         done();
+    },
+    // Full-time button: before leaving, share the moment with your man — the party after a win,
+    // the consolation after a defeat. This is also where a promised win bonus settles (see
+    // Dialogue.buildPostmatchScene). Falls straight through when no client featured.
+    _done() {
+        const m = this.match;
+        const feat = (typeof Dialogue !== 'undefined') ? Dialogue.featuredClient(m) : null;
+        if (feat && typeof DialogueView !== 'undefined') {
+            const won = m.winner === this._inviterId();
+            const self = this;
+            DialogueView.show(Dialogue.buildPostmatchScene(feat, m, won), function () { GameState.save(); self._close(); });
+        } else this._close();
     },
 
     // ---------- clock ----------
@@ -115,6 +127,9 @@ const LiveView = {
         const now = Date.now();
         const evs = this.timeline.events;
 
+        // a goal just went in: hold the clock for the celebration, then carry on
+        if (st.hold) { if (now < st.hold) { this._paint(); return; } st.hold = null; }
+
         if (st.reveal) {
             st.clock += (this.TICK_MS * this.SLOWMO) / this.BASE_MS_PER_MIN;   // slow-mo during an event
             if (now >= st.reveal.nextAt) {
@@ -122,7 +137,7 @@ const LiveView = {
                 if (st.reveal.e._shown >= (st.reveal.e.lines || []).length) { this._land(st.reveal.e); st.reveal = null; }
                 else st.reveal.nextAt = now + this.LINE_MS;
             }
-            if (!st.reveal && st.clock >= this.timeline.minutes && st.revealed >= evs.length) { this._finish(); return; }
+            if (!st.reveal && st.clock >= this.timeline.minutes && st.revealed >= evs.length) { this._matchEnded(); return; }
             this._paint();
             return;
         }
@@ -136,15 +151,79 @@ const LiveView = {
             this._paint();
             return;   // one event at a time
         }
-        if (st.clock >= this.timeline.minutes && st.revealed >= evs.length) { this._finish(); return; }
+        if (st.clock >= this.timeline.minutes && st.revealed >= evs.length) { this._matchEnded(); return; }
         if (st.clock > this.timeline.minutes) st.clock = this.timeline.minutes;
         this._paint();
+    },
+
+    // full time (or the end of extra time). If the tie was settled on penalties, play the shootout
+    // before finishing; otherwise bank the result straight away.
+    _matchEnded() {
+        if (this.match.pens && !this._penDone) { this._startShootout(); return; }
+        this._finish();
+    },
+
+    // ---------- penalty shootout ----------
+    _startShootout() {
+        this._penDone = true;
+        clearInterval(this._timer);
+        this.s.clock = this.timeline.minutes;   // park the clock at 120'
+        this.s.phase = 'shootout';
+        const P = this.match.pens;
+        // home/away tallies (pens may be stored {h,a} or {a,b}); repair to a scoreline that could
+        // actually have happened, same as the banner/overview do
+        const rawH = P.h != null ? P.h : P.a;
+        const rawA = P.h != null ? P.a : P.b;
+        const fixed = (typeof League !== 'undefined' && League.penFixPair) ? League.penFixPair(rawH, rawA) : [rawH, rawA];
+        this.pen = { kicks: this._shootout(fixed[0], fixed[1]), i: 0, h: 0, a: 0 };
+        this._paint();
+        this._penTimer = setInterval(() => this._penTick(), this.PEN_MS);
+    },
+    _penTick() {
+        const pen = this.pen;
+        if (!pen || pen.i >= pen.kicks.length) { clearInterval(this._penTimer); this.s.phase = 'pendone'; this._finish(); return; }
+        const k = pen.kicks[pen.i]; k.revealed = true; pen.i++;
+        if (k.scored) { if (k.side === 'home') pen.h++; else pen.a++; }
+        this._paint();
+    },
+    // A plausible kick-by-kick sequence that ends on the banked tallies (which side wins, and by how
+    // much, is already decided — this is just the drama). Makes are front-loaded so the running score
+    // stays believable and the shootout stops the instant it is mathematically settled.
+    _shootout(fixH, fixA) {
+        const kicks = [];
+        const regH = Math.min(fixH, 5), regA = Math.min(fixA, 5);
+        const homeWins = fixH > fixA;
+        const patt = makes => Array.from({ length: 5 }, (_, i) => i < makes);
+        const hPat = patt(regH), aPat = patt(regA);
+        let h = 0, a = 0;
+        for (let r = 0; r < 5; r++) {
+            kicks.push({ side: 'home', scored: hPat[r] }); if (hPat[r]) h++;
+            kicks.push({ side: 'away', scored: aPat[r] }); if (aPat[r]) a++;
+            const rem = 5 - (r + 1);
+            if (h > a + rem || a > h + rem) break;   // already settled — no more regulation kicks
+        }
+        // sudden death: regulation finished 5-5 (a tally above 5 says so); the winner takes one more
+        if (fixH > 5 || fixA > 5) {
+            const rounds = Math.max(fixH, fixA) - 5;
+            for (let r = 0; r < rounds; r++) {
+                const last = r === rounds - 1;
+                kicks.push({ side: 'home', scored: homeWins ? true : !last });
+                kicks.push({ side: 'away', scored: homeWins ? !last : true });
+            }
+        }
+        return kicks;
     },
 
     // apply an event's effects to the scoreboard, stats and client tallies (the moment it "happens")
     _land(e) {
         const d = this.scoreDelta(e);
         this.score.home += d.home; this.score.away += d.away;
+        // a goal freezes the clock for a beat and flashes the board — the celebration. Skipped while
+        // fast-forwarding to the result (this._skipping) and once the match is already over.
+        if ((d.home + d.away) > 0 && !this._skipping && !this.s.done) {
+            this.s.hold = Date.now() + this.GOAL_HOLD_MS;
+            this._goalFlash();
+        }
         for (const ev of e.events || []) {
             if (!ev.player) continue;
             const t = this.tally[ev.player.id]; if (!t) continue;
@@ -164,6 +243,7 @@ const LiveView = {
     togglePause() { if (this.s.done) return; this.s.paused = !this.s.paused; this._paint(); },
     skip() {
         if (this.s.done) return;
+        this._skipping = true;   // no goal celebrations while fast-forwarding to the result
         const evs = this.timeline.events;
         // finish any half-narrated event, then reveal and land the rest at once
         if (this.s.reveal) { const e = this.s.reveal.e; e._shown = (e.lines || []).length; this._land(e); this.s.reveal = null; }
@@ -171,7 +251,18 @@ const LiveView = {
             const e = evs[this.s.revealed]; this.s.revealed++;
             this.feed.unshift(e); e._shown = (e.lines || []).length; this._land(e);
         }
+        this._skipping = false; this.s.hold = null;
         this._finish();
+    },
+
+    // flash the scoreboard for the length of the goal hold (a class on the board element survives the
+    // innerHTML repaints; the animation lives on .lv-nums — see _injectCSS)
+    _goalFlash() {
+        const b = document.getElementById('lvBoard'); if (!b) return;
+        b.classList.remove('lv-goal'); void b.offsetWidth;   // restart the animation if goals come quick
+        b.classList.add('lv-goal');
+        clearTimeout(this._flashTimer);
+        this._flashTimer = setTimeout(() => { const el = document.getElementById('lvBoard'); if (el) el.classList.remove('lv-goal'); }, this.GOAL_HOLD_MS);
     },
 
     // ---------- rendering ----------
@@ -190,28 +281,48 @@ const LiveView = {
             <div class="lv-body" id="lvBody"></div>
         </div>`;
         this._injectCSS();
+        this._boardSig = null; this._bodySig = null;   // force a fresh paint into the new shell
         this._paint();
     },
 
     _clockLabel() {
         const mins = this.timeline.minutes, c = Math.min(this.s.clock, mins);
         const shown = Math.floor(c);
+        if (this.s.phase === 'shootout') return "PENS";
         if (this.s.done) return "FT";
         if (shown >= 90 && mins === 90) return "90+" + Math.min(5, Math.max(1, shown - 89)) + "'";
+        if (mins > 90 && shown >= 90) return "ET " + shown + "'";   // extra time
         return shown + "'";
     },
 
+    // _tick() calls this ~10x/second, but the visible state changes far less often: the displayed
+    // clock only steps once per simulated minute, the feed only on a new event or narration line,
+    // and the scoreboard only on a goal. Split the paint into board + body, each guarded by a
+    // signature of exactly what it renders, so an unchanged frame writes no innerHTML at all —
+    // roughly an 85% cut in DOM churn over a full match, and the difference between smooth and
+    // janky on a phone.
     _paint() {
+        this._paintBoard();
+        this._paintBody();
+    },
+    _paintBoard() {
         const b = document.getElementById('lvBoard'); if (!b) return;
-        const m = this.match, st = this.s;
+        const st = this.s;
+        const clockMin = Math.min(Math.floor(st.clock), this.timeline.minutes);
+        const penSig = this.pen ? `|p${this.pen.i}-${this.pen.h}-${this.pen.a}` : '';
+        const sig = `${clockMin}|${this.score.home}|${this.score.away}|${st.speed}|${st.paused}|${st.done}|${st.phase}${penSig}`;
+        if (sig === this._boardSig) return;
+        this._boardSig = sig;
+        const m = this.match;
         const speedBtn = (v, lbl) => `<button class="lv-sp ${!st.paused && st.speed === v ? 'on' : ''}" onclick="LiveView.setSpeed(${v})">${lbl}</button>`;
         let ctrl, banner = '';
         if (st.done) {
             const won = m.winner === this._inviterId();
-            const decided = m.pens ? `pens ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : m.pens.a + '–' + m.pens.b}` : m.et ? 'after extra time' : '';
+            const decided = m.pens ? `pens ${League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–')}` : m.et ? 'after extra time' : '';
             banner = `<div class="lv-ftbanner">${won ? '🏆 ' : ''}Full time${decided ? ` · <span style="color:var(--danger-text)">${decided}</span>` : ''}</div>`;
-            const label = this.nextLabel ? `Attend ${UI.esc(this.nextLabel)}` : 'Leave';
-            ctrl = `<div class="lv-ctrl"><button class="btn btn--primary" style="flex:1" onclick="LiveView._close()">${label}</button></div>`;
+            ctrl = `<div class="lv-ctrl"><button class="btn btn--primary" style="flex:1" onclick="LiveView._done()">Leave</button></div>`;
+        } else if (st.phase === 'shootout') {
+            ctrl = '';   // the shootout plays itself out — no controls
         } else {
             ctrl = `<div class="lv-ctrl">
                 <button class="lv-sp ${st.paused ? 'on' : ''}" onclick="LiveView.togglePause()"><i class="ti ti-player-pause"></i></button>
@@ -227,9 +338,27 @@ const LiveView = {
                 <span class="lv-team lv-team--a">${UI.esc(m.awayName)}</span>
             </div>
             <div class="lv-clock">${this._clockLabel()}</div>
-            ${banner}${ctrl}`;
+            ${this.pen ? this._penHTML() : ''}${banner}${ctrl}`;
+    },
+    // the shootout strip: a row of markers per side (⚽ scored, ✗ missed, ○ still to come) and a tally
+    _penHTML() {
+        const m = this.match, pen = this.pen;
+        const marks = side => pen.kicks.filter(k => k.side === side)
+            .map(k => `<span class="lv-penmk">${k.revealed ? (k.scored ? '⚽' : '✗') : '○'}</span>`).join('');
+        const row = (name, side, tot) => `<div class="lv-penrow"><span class="lv-penteam">${UI.esc(name)}</span><span class="lv-penmks">${marks(side)}</span><span class="lv-pentot">${tot}</span></div>`;
+        return `<div class="lv-pens"><div class="lv-penttl">Penalty shootout</div>${row(m.homeName, 'home', pen.h)}${row(m.awayName, 'away', pen.a)}</div>`;
+    },
+    _paintBody() {
         document.querySelectorAll('.lv-tab').forEach(el => el.classList.toggle('on', el.dataset.t === this.tab));
         const body = document.getElementById('lvBody'); if (!body) return;
+        const st = this.s, top = this.feed[0];
+        const clockMin = Math.min(Math.floor(st.clock), this.timeline.minutes);
+        // the feed only depends on which events have shown; the stats/clients tabs ease with the clock
+        const sig = this.tab === 'feed'
+            ? `feed|${st.revealed}|${st.done}|${this.feed.length}|${top ? top._shown : 0}`
+            : `${this.tab}|${clockMin}|${st.revealed}|${st.done}|${this.score.home}-${this.score.away}`;
+        if (sig === this._bodySig) return;
+        this._bodySig = sig;
         body.innerHTML = this.tab === 'stats' ? this._statsHTML() : this.tab === 'clients' ? this._clientsHTML() : this._feedHTML();
     },
 
@@ -299,9 +428,18 @@ const LiveView = {
         .lv-team{flex:1;font-size:var(--fs-sm);color:var(--text-secondary);text-align:right;line-height:1.2}
         .lv-team--a{text-align:left}
         .lv-nums{font-size:34px;font-weight:var(--weight-semibold);color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap}
+        .lv-goal .lv-nums{animation:lvGoal .4s ease-in-out 0s 5}
+        @keyframes lvGoal{0%,100%{color:var(--text-bright);transform:scale(1)}50%{color:var(--accent);transform:scale(1.18)}}
         .lv-colon{margin:0 4px;color:var(--text-dim)}
         .lv-clock{margin-top:6px;font-size:var(--fs-sm);color:var(--accent);font-variant-numeric:tabular-nums}
         .lv-ftbanner{margin-top:8px;font-size:var(--fs-sm);color:var(--text-bright);font-weight:var(--weight-semibold)}
+        .lv-pens{margin:10px auto 2px;max-width:340px;background:var(--surface-raised);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px}
+        .lv-penttl{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+        .lv-penrow{display:flex;align-items:center;gap:8px;padding:2px 0}
+        .lv-penteam{flex:none;width:84px;text-align:left;font-size:var(--fs-xs);color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .lv-penmks{flex:1;display:flex;flex-wrap:wrap;gap:3px;font-size:13px;line-height:1}
+        .lv-penmk{opacity:.9}
+        .lv-pentot{flex:none;min-width:18px;text-align:right;font-weight:var(--weight-semibold);color:var(--text-bright);font-variant-numeric:tabular-nums}
         .lv-ctrl{display:flex;gap:6px;justify-content:center;margin-top:12px}
         .lv-sp{background:var(--surface-raised);border:1px solid var(--line);color:var(--text-secondary);border-radius:var(--radius-sm);padding:6px 10px;font-size:var(--fs-xs);cursor:pointer}
         .lv-sp.on{background:var(--accent-tint);border-color:var(--accent-border);color:var(--accent-text)}
@@ -359,12 +497,13 @@ const AttendOverview = {
             const when = (m.day && m.time) ? `${m.day} · ${m.time}` : '';
             let action;
             if (revealed) {
-                const note = m.pens ? ` (pens ${m.pens.h != null ? m.pens.h + '–' + m.pens.a : m.pens.a + '–' + m.pens.b})` : m.et ? ' (ET)' : '';
+                const note = m.pens ? ` (pens ${League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–')})` : m.et ? ' (ET)' : '';
                 action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></div>`;
             } else if (watchable) {
                 action = `<button class="btn btn--primary lv-ov-btn" onclick="AttendOverview.watch(${i})">Attend</button>`;
             } else {
-                action = `<div class="lv-ov-locked"><i class="ti ti-lock"></i> in the past</div>`;
+                const reason = Attend.watchBlockReason(i) || 'in the past';
+                action = `<div class="lv-ov-locked"><i class="ti ti-lock"></i> ${reason}</div>`;
             }
             return `<div class="lv-ov-card">
                 ${when ? `<div class="lv-ov-when">${when}</div>` : ''}
@@ -379,10 +518,17 @@ const AttendOverview = {
         const w = (typeof Attend !== 'undefined') ? Attend.window() : null;
         if (!w || !Attend.isWatchable(i) || typeof LiveView === 'undefined') return;
         const m = w.finals[i];
-        LiveView.show(m, function () {
-            Attend.watch(i); GameState.save();
-            Router.go('attendfinals');   // rebuild the shell and land back on the overview
-        });
+        const start = function () {
+            LiveView.show(m, function () {
+                Attend.watch(i); GameState.save();
+                Router.go('attendfinals');   // rebuild the shell and land back on the overview
+            });
+        };
+        // a word with your man in the dressing room first (calm him, fire him up, or promise a
+        // win bonus) — pure relationship play, the banked result is untouched
+        const feat = (typeof Dialogue !== 'undefined') ? Dialogue.featuredClient(m) : null;
+        if (feat && typeof DialogueView !== 'undefined') DialogueView.show(Dialogue.buildPrematchScene(feat, m), start);
+        else start();
     },
     _injectOverviewCSS() {
         if (document.getElementById('lvOvCSS')) return;

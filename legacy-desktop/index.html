@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Agent Manager</title>
-    <link rel="stylesheet" href="styles/main.css?v=37">
+    <!-- SEVERED DESKTOP UI — kept for reference, NOT part of the mobile app (see legacy-desktop/README.md).
+         Engine files live at the repo root (../js/); the desktop-only UI files are local (js/). This
+         shell predates the Attend/Dialogue/live-sim systems and does not load them. -->
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
     <div class="app">
@@ -59,21 +62,24 @@
         </div>
     </div>
 
-    <script src="js/names-data.js?v=37"></script>
-    <script src="js/clubs.js?v=37"></script>
-    <script src="js/players.js?v=37"></script>
-    <script src="js/storage.js?v=1"></script>
-    <script src="js/game-state.js?v=37"></script>
-    <script src="js/upgrades.js?v=37"></script>
-    <script src="js/scouting.js?v=37"></script>
-    <script src="js/league.js?v=37"></script>
-    <script src="js/europe-data.js?v=37"></script>
-    <script src="js/europe.js?v=37"></script>
-    <script src="js/scouts.js?v=37"></script>
-    <script src="js/agency.js?v=37"></script>
-    <script src="js/simulation.js?v=37"></script>
-    <script src="js/ui.js?v=37"></script>
-    <script src="js/debug.js?v=37"></script>
-    <script src="js/main.js?v=37"></script>
+    <!-- shared engine (lives at the repo root) -->
+    <script src="../js/rng.js"></script>
+    <script src="../js/names-data.js"></script>
+    <script src="../js/clubs.js"></script>
+    <script src="../js/players.js"></script>
+    <script src="../js/storage.js"></script>
+    <script src="../js/game-state.js"></script>
+    <script src="../js/upgrades.js"></script>
+    <script src="../js/scouting.js"></script>
+    <script src="../js/league.js"></script>
+    <script src="../js/europe-data.js"></script>
+    <script src="../js/europe.js"></script>
+    <script src="../js/scouts.js"></script>
+    <script src="../js/agency.js"></script>
+    <script src="../js/simulation.js"></script>
+    <!-- desktop-only UI (severed here) -->
+    <script src="js/ui.js"></script>
+    <script src="js/debug.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

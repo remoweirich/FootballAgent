@@ -46,8 +46,8 @@ const Scouts = {
     scoutName() {
         const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
         const set = SCOUT_NAMES[hc] || SCOUT_NAMES.Netherlands;
-        return set.first[Math.floor(Math.random() * set.first.length)] + ' ' +
-            set.last[Math.floor(Math.random() * set.last.length)];
+        return set.first[Math.floor(Rng.next() * set.first.length)] + ' ' +
+            set.last[Math.floor(Rng.next() * set.last.length)];
     },
     _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); },
 
@@ -64,14 +64,14 @@ const Scouts = {
         const base = Math.max(18, rep);
         const q1 = this._clampQ(PlayerGen.gauss(base * 0.72, 4));
         const q2 = this._clampQ(PlayerGen.gauss(base * 1.0, 4));
-        const q3 = Math.random() < 0.28 ? this._clampQ(PlayerGen.gauss(base + 18, 6))   // occasional stand-out
+        const q3 = Rng.next() < 0.28 ? this._clampQ(PlayerGen.gauss(base + 18, 6))   // occasional stand-out
             : this._clampQ(PlayerGen.gauss(base * 1.28, 5));
         return [q1, q2, q3].map(q => this.makeOffer(this.titleFor(q), q));
     },
     makeOffer(title, quality) {
-        const weeklyCost = Math.round(this.salaryFor(quality) * (0.85 + Math.random() * 0.30) / 10) * 10;
+        const weeklyCost = Math.round(this.salaryFor(quality) * (0.85 + Rng.next() * 0.30) / 10) * 10;
         return {
-            id: 's_' + Math.random().toString(36).slice(2, 8),
+            id: 's_' + Rng.next().toString(36).slice(2, 8),
             name: this.scoutName(), title,
             quality, weeklyCost, region: null, maxTalentAge: 22
         };
@@ -114,14 +114,40 @@ const Scouts = {
         const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
         return Math.max(...regionsForCountry(hc).map(r => this.regionReportCost(r.id)));
     },
-    // per-report cost of scouting a foreign league, as a multiple of the dearest home region (travel + prestige)
+    // fixed per-report cost of scouting each foreign league (from clubs_by_region.xlsx, "Clubs by
+    // Division" sheet, row 13). Absolute figures — international scouting no longer scales off the
+    // player's home country. Scout discount still applies (see intlLeagueCost).
+    INTL_LEAGUE_COST: {
+        // Netherlands
+        ERE: 7880, EED: 4830, TWD: 3100, DRD: 1320,
+        // England
+        PREM: 20000, CHAMP: 9220, LEAGUE1: 4900, LEAGUE2: 2250, Natleague: 1840,
+        // Germany
+        BUNDES: 18550, '2BUNDES': 9620, '3LIGA': 4840, REGIONAL1: 2090, REGIONAL2: 1770, REGIONAL3: 1110,
+        // Spain
+        LaLiga: 18470, LaLiga2: 9070, PrimeraSup: 4610, PrimeraInf: 2020, Segunda: 1680,
+        // Switzerland
+        SuperLeagueCH: 6000, ChallengeLeague: 3000, PromotionLeague: 1500, '1.LigaCH': 750, '2.LigaCH': 600,
+        // Italy
+        SerieA: 16830, SerieB: 8730, SerieC: 4640, SerieD: 1940,
+        // Portugal
+        LigaPortugal: 7880, LigaPortugal2: 3760, Liga3: 2250, Liga4: 920,
+        // France
+        Ligue1: 17340, Ligue2: 8400, Ligue3: 4560, Ligue4: 2000, Ligue5: 1640,
+        // Belgium
+        JupilerProLeague: 7340, ChallengerProLeague: 3530, BelgianDivision1: 2240, BelgianDivision2: 1020
+    },
+    // per-report cost of scouting a foreign league, as a multiple of the dearest home region — kept
+    // only as a fallback for any division not listed in INTL_LEAGUE_COST above
     intlLeagueMult(div) {
         const m = { Natleague: 1.5, LEAGUE2: 2.5, LEAGUE1: 2.5, CHAMP: 3, PREM: 5, DRD: 1.5, TWD: 2.5, EED: 3, ERE: 5, REGIONAL3: 1.2, REGIONAL2: 1.5, REGIONAL1: 2, '3LIGA': 2.5, '2BUNDES': 3, BUNDES: 4.5, Segunda: 1.5, PrimeraInf: 2, PrimeraSup: 2.5, LaLiga2: 3, LaLiga: 4.8, '2.LigaCH': 1.1, '1.LigaCH': 1.4, PromotionLeague: 2.3, ChallengeLeague: 2.8, SuperLeagueCH: 4.8 };
         return m[div] || 2.5;
     },
     intlLeagueCost(div) {
         const disc = (typeof Upgrades !== 'undefined') ? Upgrades.scoutDiscount() : 0;
-        return Math.round((this.homeRegionMaxCost() * this.intlLeagueMult(div)) * (1 - disc) / 50) * 50;
+        const base = this.INTL_LEAGUE_COST[div] != null ? this.INTL_LEAGUE_COST[div]
+            : Math.round(this.homeRegionMaxCost() * this.intlLeagueMult(div));   // fallback for any unlisted division
+        return Math.round((base * (1 - disc)) / 10) * 10;
     },
     // a stronger league (higher average reputation/Elo) lets the SAME scout unearth better talents more often
     leagueQualityBonus(div) {
@@ -215,7 +241,7 @@ const Scouts = {
     },
 
     // reports arrive every 6-7 weeks
-    nextFindDelay(quality = 50) { return 6 + Math.floor(Math.random() * 2) + (quality < 30 ? 3 : quality < 50 ? 1 : 0); },
+    nextFindDelay(quality = 50) { return 6 + Math.floor(Rng.next() * 2) + (quality < 30 ? 3 : quality < 50 ? 1 : 0); },
 
     // scout quality -> the calibre of talent he can unearth: [minAbility, maxAbility, centrePotential, potentialCap]
     tierRanges(q) {
@@ -237,12 +263,12 @@ const Scouts = {
         // spread current ability ACROSS the tier band [loA..hiA], driven by age + potential + genuine noise
         const ageN = Math.max(0, Math.min(1, (age - 15) / 7));                 // 15y→0 .. 22y→1
         const potN = Math.max(0, Math.min(1, (potential - loA) / Math.max(1, cap - loA)));
-        let frac = 0.22 + ageN * 0.42 + potN * 0.22 + (Math.random() - 0.5) * 0.42;
+        let frac = 0.22 + ageN * 0.42 + potN * 0.22 + (Rng.next() - 0.5) * 0.42;
         frac = Math.max(0, Math.min(1, frac));
         let ability = Math.round(loA + frac * (hiA - loA));
         ability = Math.min(ability, potential);                                // never above his ceiling
         // very rare precocious teenager (only the best scouts ever see these, <0.5%)
-        if (q >= 95 && age <= 18 && Math.random() < 0.004) ability = Math.min(potential, hiA, ability + 8 + Math.floor(Math.random() * 6));
+        if (q >= 95 && age <= 18 && Rng.next() < 0.004) ability = Math.min(potential, hiA, ability + 8 + Math.floor(Rng.next() * 6));
         potential = Math.max(potential, ability);
         return { ability, potential };
     },
@@ -258,7 +284,7 @@ const Scouts = {
         return sorted[this._clamp(idx, 0, span - 1)];
     },
 
-    _prospectAge(maxAge) { const m = Math.max(15, Math.min(22, maxAge || 22)); return 15 + Math.floor(Math.pow(Math.random(), 1.6) * (m - 15 + 1)); },
+    _prospectAge(maxAge) { const m = Math.max(15, Math.min(22, maxAge || 22)); return 15 + Math.floor(Math.pow(Rng.next(), 1.6) * (m - 15 + 1)); },
 
     // called once per week from the simulation
     tick() {
@@ -267,10 +293,10 @@ const Scouts = {
         ag.scouts.forEach(s => {
             if (!s.region && !s.league) {
                 // an idle scout on the payroll still keeps his ear to the ground: 1-2 finds a season, anywhere in the home country
-                if (Math.random() < 0.03) {
+                if (Rng.next() < 0.03) {
                     const hc = GameState.homeCountry || 'Netherlands';
                     const homeClubs = Clubs.allClubs.filter(c => c.country === hc);
-                    const club = homeClubs[Math.floor(Math.random() * homeClubs.length)] || Clubs.allClubs[Math.floor(Math.random() * Clubs.allClubs.length)];
+                    const club = homeClubs[Math.floor(Rng.next() * homeClubs.length)] || Clubs.allClubs[Math.floor(Rng.next() * Clubs.allClubs.length)];
                     const age = this._prospectAge(s.maxTalentAge);
                     const { ability, potential } = this.rolledTalent(s.quality, age);
                     const pr = PlayerGen.makeProspect(club, { ability, potential, age });
@@ -292,11 +318,11 @@ const Scouts = {
             const effQ = intl ? Math.min(99, s.quality + this.leagueQualityBonus(s.league)) : s.quality;
             const span = Math.max(0, Math.min(7, (s.maxTalentAge || 22) - 15));   // wider age window -> more to find
             const spanF = span / 7;                                              // 0 (only 15yo) .. 1 (15-22)
-            let n = s.quality < 30 ? Math.floor(Math.random() * 2)               // 0-1 (sometimes empty-handed)
-                : s.quality < 50 ? 1 + Math.floor(Math.random() * 2)            // 1-2
-                    : 2 + (Math.random() < 0.5 ? 1 : 0);                        // 2-3
-            if (n === 0 && Math.random() < 0.25 + spanF * 0.5) n = 1;            // a broad search still tends to turn something up
-            if (Math.random() < spanF * 0.25) n += 1;                            // and occasionally one extra
+            let n = s.quality < 30 ? Math.floor(Rng.next() * 2)               // 0-1 (sometimes empty-handed)
+                : s.quality < 50 ? 1 + Math.floor(Rng.next() * 2)            // 1-2
+                    : 2 + (Rng.next() < 0.5 ? 1 : 0);                        // 2-3
+            if (n === 0 && Rng.next() < 0.25 + spanF * 0.5) n = 1;            // a broad search still tends to turn something up
+            if (Rng.next() < spanF * 0.25) n += 1;                            // and occasionally one extra
             const batch = [];
             for (let i = 0; i < n; i++) {
                 const age = this._prospectAge(s.maxTalentAge);

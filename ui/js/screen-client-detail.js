@@ -66,8 +66,9 @@ const ClientDetail = {
         if (mine) {
             statusRow = `<div class="chip-row" style="margin-bottom:var(--space-4)">
                 <button class="cl-chip ${p.transferListed ? 'cl-on' : ''}" onclick="ClientDetail.toggleTL('${p.id}')">${p.transferListed ? '✓ Transfer-listed' : 'Request transfer-listing'}</button>
-                <button class="cl-chip ${p.loanListed ? 'cl-on' : ''}" onclick="ClientDetail.toggleLL('${p.id}')">${p.loanListed ? '✓ Loan-listed' : 'Not loan-listed'}</button>
+                ${p.loanListed ? '<span class="cl-chip cl-on">✓ Loan-listed</span>' : ''}
                 ${p.onLoanAt ? `<span class="cl-chip cl-on">${isU21Loan(p) ? 'In' : 'On loan:'} ${UI.clubName(p.onLoanAt)}</span>` : atReserve ? `<span class="cl-chip cl-on">Reserve: ${UI.clubName(p.clubId)}</span>` : ''}
+                ${p.settling ? `<span class="cl-chip cl-on">Settling in abroad (${p.settling.weeksLeft}w)</span>` : ''}
                 ${p.repExpired ? '<span class="cl-chip cl-on">Rep term up · free release</span>' : ''}
             </div>`;
             let moveBtns = '';
@@ -78,7 +79,9 @@ const ClientDetail = {
             } else if (isU21Loan(p) || isReserveClub(p.onLoanAt)) {
                 moveBtns = `<button class="btn btn--accent-outline" onclick="ClientDetail.reqU21Recall('${p.id}')"><i class="ti ti-arrow-up"></i>Request recall from ${UI.clubName(p.onLoanAt)}</button>`;
             }
-            actions = `<div class="gap-2" style="display:flex;flex-direction:column;margin-top:var(--space-4)">${moveBtns}<button class="btn btn--ghost" onclick="ClientDetail.reqRenewal('${p.id}')"><i class="ti ti-file-pencil"></i>Renewal talks</button></div>`;
+            const ci = (typeof Dialogue !== 'undefined') ? Dialogue.canCheckIn(p) : { ok: false };
+            const checkinBtn = `<button class="btn btn--ghost" ${ci.ok ? '' : 'disabled'} onclick="ClientDetail.checkIn('${p.id}')"><i class="ti ti-message-circle"></i>${ci.ok ? 'Check in with him' : ci.reason === 'cooldown' ? `Checked in recently (${ci.weeksLeft}w)` : 'Check in with him'}</button>`;
+            actions = `<div class="gap-2" style="display:flex;flex-direction:column;margin-top:var(--space-4)">${moveBtns}${checkinBtn}<button class="btn btn--ghost" onclick="ClientDetail.reqRenewal('${p.id}')"><i class="ti ti-file-pencil"></i>Renewal talks</button></div>`;
         } else {
             const gate = Agency.canSign(p);
             actions = gate.ok
@@ -122,7 +125,6 @@ const ClientDetail = {
         if (p.transferListed) { Agency.toggleTransferList(p); GameState.save(); Router.refresh(); return; }
         const r = Agency.requestTransferListing(p); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad');
     },
-    toggleLL(id) { Agency.toggleLoanList(GameState.getPlayer(id)); GameState.save(); Router.refresh(); },
     reqLoan(id) { const r = Agency.requestLoan(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     sendU21(id) {
         const p = GameState.getPlayer(id), reserve = reserveClubFor(p.clubId), dest = reserve ? reserve.name : youthTeamName(p.clubId);
@@ -134,6 +136,12 @@ const ClientDetail = {
     reqPromote(id) { const r = Agency.requestPromotion(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqU21Recall(id) { const r = Agency.requestU21Recall(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqRenewal(id) { const r = Agency.requestRenewalTalks(GameState.getPlayer(id)); GameState.save(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
+    checkIn(id) {
+        const p = GameState.getPlayer(id);
+        const gate = Dialogue.canCheckIn(p);
+        if (!gate.ok) { Router.result(gate.reason === 'cooldown' ? `You checked in with ${p.name} recently — give it ~${gate.weeksLeft} week(s).` : 'Not right now.', 'bad'); return; }
+        DialogueView.show(Dialogue.buildCheckinScene(p), () => { GameState.save(); Router.refresh(); });
+    },
 
     // ---- shop to any club, any country, one or several at once ----
     openShop(id) { this.ctx(id).shop = { country: (Clubs.getClubById(GameState.getPlayer(id).clubId) || {}).country || GameState.homeCountry || 'Netherlands', selected: new Set(), mode: 'transfer' }; this.renderShop(id); },
@@ -295,7 +303,7 @@ const ClientDetail = {
                 <div class="hint" style="margin-top:6px">${hint}</div>
             </div>`;
         }).join('');
-        return bars + this.moraleCaseCard(p) + `<div class="fcard" style="padding:11px 12px;font-size:var(--fs-sm);color:var(--text-muted);line-height:1.5;margin-bottom:var(--space-5)">Overall morale is the average of the four. Arrows compare against 4 weeks ago. Low playing-time morale often comes before a transfer request.</div>` + this.moraleAgentBlock(p);
+        return bars + this.moraleCaseCard(p) + `<div class="fcard" style="padding:11px 12px;font-size:var(--fs-sm);color:var(--text-muted);line-height:1.5;margin-bottom:var(--space-5)">Overall morale is the average of the four. Arrows compare against 4 weeks ago. Low playing-time morale often comes before a transfer request.</div>` + this.bondBlock(p) + this.moraleAgentBlock(p) + this.supportBlock(p);
     },
     moraleCaseCard(p) {
         const c = p.moraleCase; if (!c) return '';
@@ -309,14 +317,15 @@ const ClientDetail = {
             body += `<div class="frow"><span class="frow__k"><i class="ti ti-signature"></i>Promise</span><span class="frow__v">You'll ${typeLabel}</span></div>
                 <div class="frow"><span class="frow__k"><i class="ti ti-calendar"></i>Deadline</span><span class="frow__v" style="${weeksLeft <= 2 ? 'color:var(--danger)' : ''}">${weeksLeft} week${weeksLeft === 1 ? '' : 's'} left</span></div>`;
         }
-        if (c.stage === 1) {
+        if (c.stage <= 2) {
+            // a real conversation (chat scene), not a button that pats him on the head. The promise
+            // shortcut stays for stage 1: some things you settle without the full sit-down.
             const cd = p._talkCooldownAbs != null ? Math.max(0, MORALE.TALK_COOLDOWN_WEEKS - (aw - p._talkCooldownAbs)) : 0;
             body += `<div class="flex-row" style="margin-top:var(--space-3)">
-                <button class="btn btn--ghost btn--sm" ${cd > 0 ? 'disabled' : ''} onclick="ClientDetail.talkToClient('${p.id}')"><i class="ti ti-mail"></i>${cd > 0 ? `Talked recently (${Math.ceil(cd)}w)` : 'Talk to him'}</button>
-                ${!c.promise ? `<button class="btn btn--accent-outline btn--sm" onclick="ClientDetail.openPromiseSheet('${p.id}')"><i class="ti ti-signature"></i>Make a promise</button>` : ''}
+                <button class="btn btn--ghost btn--sm" ${cd > 0 ? 'disabled' : ''} onclick="ClientDetail.talkToClient('${p.id}')"><i class="ti ti-message-circle"></i>${cd > 0 ? `Talked recently (${Math.ceil(cd)}w)` : 'Talk to him'}</button>
+                ${c.stage === 1 && !c.promise ? `<button class="btn btn--accent-outline btn--sm" onclick="ClientDetail.openPromiseSheet('${p.id}')"><i class="ti ti-signature"></i>Make a promise</button>` : ''}
             </div>`;
-        } else if (!c.promise) {
-            body += `<div class="hint" style="margin-top:4px">He's taken this further — see your inbox for what's changed.</div>`;
+            if (c.stage === 2 && !c.promise) body += `<div class="hint" style="margin-top:4px">He's taken this further — see your inbox for what's changed.</div>`;
         }
         return `<div class="section-label" style="margin-top:var(--space-2)">Open case</div>
             <div class="fcard" style="margin-bottom:var(--space-5)">
@@ -324,7 +333,12 @@ const ClientDetail = {
                 ${body}
             </div>`;
     },
-    talkToClient(id) { const r = Agency.talkToClient(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
+    talkToClient(id) {
+        const p = GameState.getPlayer(id);
+        const gate = Dialogue.canTalk(p);
+        if (!gate.ok) { Router.result(gate.reason === 'cooldown' ? `You spoke with ${p.name} recently — give it ~${gate.weeksLeft} week(s).` : `There's nothing to talk through with ${p.name} right now.`, 'bad'); return; }
+        DialogueView.show(Dialogue.buildComplaintScene(p), () => { GameState.save(); Router.refresh(); });
+    },
     openPromiseSheet(id) {
         const p = GameState.getPlayer(id);
         const types = Agency.validPromiseTypes(p);
@@ -340,6 +354,103 @@ const ClientDetail = {
     },
     // gifts + agent relationship actions live here (moved off the Contract tab, which is
     // facts-only) since they're all levers against the same morale.agent dimension
+    // career-long trust, distinct from this month's mood; grown at big shared moments
+    bondBlock(p) {
+        const bond = Dialogue.bondOf(p), tier = Dialogue.tierOf(bond);
+        const next = Dialogue.TIERS.slice().reverse().find(([min]) => min > bond);
+        const persona = Dialogue.knownPersona(p);
+        const tierCol = bond >= 75 ? 'var(--gold)' : bond >= 50 ? 'var(--accent)' : bond >= 25 ? 'var(--info-text)' : 'var(--text-muted)';
+        return `<div class="section-label">Your bond</div>
+            <div class="fcard" style="margin-bottom:var(--space-4)">
+                <div class="frow"><span class="frow__k"><i class="ti ti-heart-handshake" style="color:${tierCol}"></i>${tier}</span>
+                    <span class="frow__v muted">${next ? `${next[0] - bond} to ${next[1]}` : 'as close as it gets'}</span></div>
+                <div style="height:6px;border-radius:3px;background:var(--line-strong);margin:2px 0 9px;overflow:hidden">
+                    <div style="height:100%;width:${bond}%;background:${tierCol};border-radius:3px"></div>
+                </div>
+                <div class="frow"><span class="frow__k"><i class="ti ti-user-search"></i>Personality</span>
+                    <span class="frow__v">${persona || '<span class="muted">still getting to know him</span>'}</span></div>
+                ${this.factsRows(p)}
+            </div>`;
+    },
+    // "What you know about him" — facts he has told you (Check in / volunteered at tier upgrades).
+    // Undiscovered facts show as a nudge to ask, fulfilled ones as little career keepsakes.
+    factsRows(p) {
+        if (typeof Dialogue === 'undefined') return '';
+        const f = Dialogue.ensureFacts(p);
+        const ask = '<span class="muted">ask him sometime</span>';
+        const rows = [];
+        const fav = f.favClub;
+        rows.push(['ti-heart', 'Boyhood club', fav.discovered
+            ? `${UI.clubName(fav.clubId)}${fav.fulfilled ? ' <span style="color:var(--gold)">✓ dream move' + (fav.year ? ', ' + GameState.seasonLabelFor(fav.year) : '') + '</span>' : ''}`
+            : ask]);
+        const amb = f.ambition;
+        rows.push(['ti-target-arrow', 'Ambition', amb.discovered
+            ? `${UI.esc(Dialogue.ambitionText(p))} <span class="${amb.fulfilled ? '' : 'muted'}" style="${amb.fulfilled ? 'color:var(--gold)' : ''}">· ${UI.esc(Dialogue.ambitionProgress(p))}</span>`
+            : ask]);
+        rows.push(['ti-home-heart', 'Life', f.family.discovered
+            ? (f.family.status === 'single' ? 'On his own for now' : f.family.status === 'partner' ? 'Has a partner' : 'Family man, kids at home') + (f.hobby.discovered ? ` · into ${UI.esc(f.hobby.name)}` : '')
+            : ask]);
+        (f.keepsakes || []).forEach(k => rows.push(['ti-gift', 'From him', `${UI.esc(k.text)} <span class="muted">(${GameState.seasonLabelFor(k.year)})</span>`]));
+        return rows.map(([ico, k, v]) => `<div class="frow"><span class="frow__k"><i class="ti ${ico}"></i>${k}</span><span class="frow__v">${v}</span></div>`).join('');
+    },
+    // Concierge: the agent as life-manager. Settling-in support appears only while it can help;
+    // the financial advisor is a 1–5 season contract (only worth it for the reckless types); media
+    // training is one-off.
+    supportBlock(p) {
+        if (typeof Dialogue === 'undefined') return '';
+        const S = Dialogue.SERVICES, s = p.settling;
+        const btn = (kind, state) => {
+            const svc = S[kind];
+            return `<button class="btn btn--ghost btn--sm" ${state ? 'disabled' : ''} onclick="ClientDetail.support('${p.id}','${kind}')"><i class="ti ti-lifebuoy"></i>${svc.label} · ${state || UI.euro(svc.cost)}</button>`;
+        };
+        let settle = '';
+        if (s) {
+            settle = `<div class="hint" style="margin-bottom:var(--space-2)">He's settling in abroad: ~${s.weeksLeft} week(s) of dipped form${s.morale ? ' and mood' : ''} to go. Support shortens it.</div>
+                <div class="flex-row" style="flex-wrap:wrap;margin-bottom:var(--space-3)">
+                    ${btn('language', s.services.language ? 'done' : null)}
+                    ${btn('house', !s.morale ? 'done' : null)}
+                    ${btn('family', s.services.family ? 'done' : null)}
+                </div>`;
+        }
+        // financial advisor: multi-year contract. Flag the risk only once you actually know he's loose
+        // with money; otherwise it's just available with no nudge.
+        const engaged = Dialogue.advisorEngaged(p);
+        const through = engaged ? GameState.seasonLabelFor(p._finAdvisorUntil - 1) : null;
+        const riskHint = (!engaged && Dialogue.moneyRiskKnown(p))
+            ? `<div class="hint" style="color:var(--warning);margin-bottom:var(--space-2)">⚠ ${p.name} is loose with money — a bad-investment hit is a real risk. Worth insuring.</div>` : '';
+        const advisorLine = engaged
+            ? `<button class="btn btn--ghost btn--sm" onclick="ClientDetail.advisorSheet('${p.id}')"><i class="ti ti-shield-check"></i>Advisor · covered to ${through} · extend</button>`
+            : `<button class="btn btn--ghost btn--sm" onclick="ClientDetail.advisorSheet('${p.id}')"><i class="ti ti-shield"></i>Financial advisor · from ${UI.euro(Dialogue.advisorCost(1))}</button>`;
+        return `<div class="section-label">Support & services</div>
+            ${settle}${riskHint}
+            <div class="flex-row" style="flex-wrap:wrap;margin-bottom:var(--space-4)">
+                ${advisorLine}
+                ${btn('media', p._mediaTrained ? 'done' : null)}
+            </div>`;
+    },
+    support(id, kind) {
+        const r = Dialogue.buyService(GameState.getPlayer(id), kind);
+        GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
+    // pick how many seasons of financial-advisor cover to buy (or add)
+    advisorSheet(id) {
+        const p = GameState.getPlayer(id);
+        const engaged = Dialogue.advisorEngaged(p);
+        const rows = [1, 2, 3, 4, 5].map(y => {
+            const cost = Dialogue.advisorCost(y);
+            const afford = GameState.agency.balance >= cost;
+            return `<button class="btn btn--ghost" style="width:100%;justify-content:space-between;margin-bottom:8px" ${afford ? '' : 'disabled'} onclick="ClientDetail.doAdvisor('${id}',${y})"><span>${y} season${y === 1 ? '' : 's'}</span><span>${UI.euro(cost)}</span></button>`;
+        }).join('');
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Financial advisor for ${p.name}</div>
+            <p class="hint">${engaged ? `Currently covered to ${GameState.seasonLabelFor(p._finAdvisorUntil - 1)}. Buying more seasons extends it.` : 'Insures against the rare bad-investment hit that only the loose-with-money types risk. Longer terms are a little cheaper per season, and you\'ll get a reminder when it lapses.'}</p>
+            ${rows}
+            <button class="btn btn--ghost" onclick="Router.closeSheet()">Cancel</button>`);
+    },
+    doAdvisor(id, years) {
+        Router.closeSheet();
+        const r = Dialogue.hireAdvisor(GameState.getPlayer(id), years);
+        GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
     moraleAgentBlock(p) {
         const refusing = p.moraleCase && p.moraleCase.dim === 'agent' && p.moraleCase.stage >= 3;
         const tierBtn = (tier, label) => {
@@ -403,7 +514,16 @@ const ClientDetail = {
             <div class="fcard" style="margin-bottom:var(--space-5)">${sponsors.length ? sponsors.map(d => `<div class="frow"><span class="frow__k">${d.company}</span><span class="frow__v">${UI.euro(d.weekly)}/wk · to ${GameState.seasonLabelFor(d.untilSeason)}</span></div>`).join('') : `<div class="empty empty--inline"><div class="empty__icon"><i class="ti ti-tag"></i></div><div class="empty__hint">No active sponsor deals.</div></div>`}</div>
             <button class="btn btn--danger" onclick="ClientDetail.release('${p.id}')"><i class="ti ti-user-x"></i>End representation · release (${UI.euro(releaseFee)})</button>`;
     },
-    gift(id, tier) { const r = Agency.giveGift(GameState.getPlayer(id), tier); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
+    gift(id, tier) {
+        const p = GameState.getPlayer(id);
+        const r = Agency.giveGift(p, tier); GameState.save();
+        // a successful gift plays out as a short conversation; failures stay a plain banner
+        if (r.ok && r.scene && typeof DialogueView !== 'undefined') {
+            DialogueView.show(Dialogue.buildGiftScene(p, r.tier, r.diminished), () => { GameState.save(); Router.refresh(); });
+            return;
+        }
+        Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
     release(id) {
         const p = GameState.getPlayer(id), fee = Agency.releaseFee(p);
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Release ${p.name}?</div>

@@ -1,0 +1,1017 @@
+// ============================================================
+//  Dialogue — client personality, bond, and conversation scenes
+//  (Phase 1 of the client-relationship system; see
+//  docs/client-dialogue-design.md)
+//
+//  Pure logic, no DOM. Lines come from DIALOGUE_DATA, generated
+//  from dialogue_lines.xlsx by scripts/parse-dialogue-xlsx.mjs.
+//  The chat UI lives in ui/js/screen-dialogue.js.
+// ============================================================
+const Dialogue = {
+    // ---- personality ----
+    // Four axes, two poles each. Every player gets a primary and a secondary pole from two
+    // DIFFERENT axes. Personality is hidden at signing and revealed through conversations;
+    // the reveal state is stored alongside the roll.
+    AXES: [
+        ['hothead', 'professional'],
+        ['showman', 'humble'],
+        ['homebody', 'adventurer'],
+        ['loyal', 'mercenary']
+    ],
+    POLE_LABEL: {
+        hothead: 'Hothead', professional: 'Professional', showman: 'Showman', humble: 'Humble',
+        homebody: 'Homebody', adventurer: 'Adventurer', loyal: 'Loyal', mercenary: 'Mercenary'
+    },
+
+    // Lazily assigned so every player from an older save gets one the first time it matters.
+    ensurePersonality(p) {
+        if (p.personality && p.personality.primary) return p.personality;
+        const ai = Math.floor(Rng.next() * this.AXES.length);
+        let bi = Math.floor(Rng.next() * (this.AXES.length - 1));
+        if (bi >= ai) bi++;
+        p.personality = {
+            primary: this.AXES[ai][Math.floor(Rng.next() * 2)],
+            secondary: this.AXES[bi][Math.floor(Rng.next() * 2)],
+            revP: false, revS: false
+        };
+        return p.personality;
+    },
+    // what the agent KNOWS about him (revealed poles only); null when nothing is known yet
+    knownPersona(p) {
+        const pe = p.personality;
+        if (!pe) return null;
+        const parts = [];
+        if (pe.revP) parts.push(this.POLE_LABEL[pe.primary]);
+        if (pe.revS) parts.push(this.POLE_LABEL[pe.secondary]);
+        return parts.length ? parts.join(' · ') : null;
+    },
+    hasTrait(p, pole) {
+        const pe = this.ensurePersonality(p);
+        return pe.primary === pole || pe.secondary === pole;
+    },
+    // a conversation teaches you something about the man, gradually
+    _maybeReveal(p, forcePole) {
+        const pe = this.ensurePersonality(p);
+        if (forcePole) {
+            if (pe.primary === forcePole && !pe.revP) { pe.revP = true; return this.POLE_LABEL[forcePole]; }
+            if (pe.secondary === forcePole && !pe.revS) { pe.revS = true; return this.POLE_LABEL[forcePole]; }
+        }
+        if (!pe.revP && Rng.next() < 0.6) { pe.revP = true; return this.POLE_LABEL[pe.primary]; }
+        if (pe.revP && !pe.revS && Rng.next() < 0.4) { pe.revS = true; return this.POLE_LABEL[pe.secondary]; }
+        return null;
+    },
+
+    // ---- bond (career-long trust; slow, mostly earned at big moments) ----
+    TIERS: [[75, 'Family'], [50, 'Confidant'], [25, 'Trusted'], [0, 'Business']],
+    bondOf(p) {
+        if (p.bond == null) {
+            // seed from how he currently feels about you, so a settled long-term client
+            // doesn't start from zero
+            const agent = (p.morale && p.morale.agent) || 50;
+            p.bond = Math.max(0, Math.min(10, Math.round((agent - 50) / 5)));
+        }
+        return p.bond;
+    },
+    tierOf(bond) { for (const [min, name] of this.TIERS) if (bond >= min) return name; return 'Business'; },
+    tierName(p) { return this.tierOf(this.bondOf(p)); },
+    addBond(p, delta, why) {
+        if (!p || p.agentId !== 'me') return;
+        const before = this.bondOf(p);
+        p.bond = Math.max(0, Math.min(100, before + delta));
+        const tb = this.tierOf(before), ta = this.tierOf(p.bond);
+        if (ta !== tb && p.bond > before) {
+            GameState.addLog(`${p.name} now sees you as more than an agent (${ta}).`, 'morale');
+            // growing trust loosens the tongue: crossing a tier, he volunteers something personal
+            const vol = p.archived ? '' : this._volunteerFact(p);
+            GameState.addMail({
+                kind: 'news', cat: 'morale', subject: `${p.name} — ${ta.toLowerCase()}`,
+                body: `Your relationship with ${p.name} has grown. He now treats you as ${ta === 'Trusted' ? 'someone he trusts' : ta === 'Confidant' ? 'a confidant' : 'family'}.${why ? ' (' + why + ')' : ''}${vol}`, ttl: 4
+            });
+        }
+        // a big shared moment at Confidant+ sometimes moves him to give something back (Phase 4)
+        if (delta > 0 && this._maybeThanks) this._maybeThanks(p, delta);
+    },
+    // Trusted+ perk: he gives you more time before taking a complaint further
+    patienceBonusWeeks(p) { return this.bondOf(p) >= 25 ? 2 : 0; },
+
+    // ---- line picking ----
+    fill(text, p, extra) {
+        const club = (typeof Clubs !== 'undefined') && Clubs.getClubById(effectiveClubId(p));
+        const agent = (GameState.agentName && GameState.agentName()) || 'boss';
+        let out = String(text)
+            .replace(/\{first\}/g, (p.name || '').split(' ')[0] || p.name)
+            .replace(/\{name\}/g, p.name || '')
+            .replace(/\{club\}/g, club ? club.name : 'the club')
+            .replace(/\{agent\}/g, agent)
+            .replace(/\{position\}/g, p.position || '');
+        if (extra) for (const k of Object.keys(extra)) out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), extra[k]);
+        return out;
+    },
+    // Prefer lines written for his personality over generic ones, and avoid anything he has said
+    // recently. Falls back gracefully: personality pool -> any pool -> ignore the seen-filter.
+    _pick(rows, p, extra) {
+        const pe = this.ensurePersonality(p);
+        const seen = p._linesSeen || [];
+        const mine = rows.filter(r => r.personality === pe.primary || r.personality === pe.secondary);
+        const generic = rows.filter(r => r.personality === 'any');
+        let pool = mine.length && Rng.next() < 0.75 ? mine : generic;
+        if (!pool.length) pool = mine.length ? mine : rows;
+        if (!pool.length) return null;
+        const fresh = pool.filter(r => !seen.includes(r.id));
+        const row = (fresh.length ? fresh : pool)[Math.floor(Rng.next() * (fresh.length ? fresh.length : pool.length))];
+        p._linesSeen = seen.concat(row.id).slice(-40);
+        return { id: row.id, text: this.fill(row.text, p, extra) };
+    },
+
+    choiceLabel(scene, choice) {
+        const r = (DIALOGUE_DATA.choices || []).find(c => c.scene === scene && c.choice === choice);
+        return r ? { label: r.label, hint: r.hint } : { label: choice, hint: '' };
+    },
+
+    // =================================================== complaint scene
+    // Launched from the client's open-case card ("Talk to him"). One conversation per cooldown
+    // window, stage 1 and 2 only; at stage 3 talking is over by design.
+    canTalk(p) {
+        const c = p.moraleCase;
+        if (!c || c.stage > 2) return { ok: false, reason: 'no case' };
+        const aw = GameState.absWeek();
+        const cdWeeks = (typeof MORALE !== 'undefined' ? MORALE.TALK_COOLDOWN_WEEKS : 4);
+        if (p._talkCooldownAbs != null && aw - p._talkCooldownAbs < cdWeeks)
+            return { ok: false, reason: 'cooldown', weeksLeft: Math.ceil(cdWeeks - (aw - p._talkCooldownAbs)) };
+        return { ok: true };
+    },
+    buildComplaintScene(p) {
+        const c = p.moraleCase; if (!c) return null;
+        const stage = String(Math.min(2, c.stage));
+        const opens = DIALOGUE_DATA.complaint.filter(r => r.beat === 'open'
+            && (r.dim === c.dim || r.dim === 'any') && (r.stage === stage || r.stage === 'any'));
+        const open = this._pick(opens, p);
+        const keys = c.stage === 1 ? ['listen', 'promise', 'pushback', 'deflect'] : ['listen', 'pushback'];
+        const choices = keys
+            .filter(k => k !== 'promise' || (!c.promise && Agency.validPromiseTypes(p).length))
+            .map(k => ({ key: k, ...this.choiceLabel('complaint', k) }));
+        return { kind: 'complaint', playerId: p.id, dim: c.dim, stage: c.stage, open, choices };
+    },
+    // Whether pushing back lands. Deterministic and learnable: professionals respect a straight
+    // answer, hotheads never take it, everyone else needs real trust behind it.
+    _pushbackWorks(p) {
+        if (this.hasTrait(p, 'hothead')) return { good: false, drove: 'hothead' };
+        if (this.hasTrait(p, 'professional')) return { good: true, drove: 'professional' };
+        return { good: this.bondOf(p) >= 50, drove: null };
+    },
+    // Apply a complaint-scene choice. Returns { reply: {id,text}, ok, revealed, closed }.
+    // For 'promise', promiseType must be one of Agency.validPromiseTypes(p).
+    resolveComplaint(p, choiceKey, promiseType) {
+        const c = p.moraleCase; if (!c) return { ok: false, message: 'No open case.' };
+        const aw = GameState.absWeek();
+        const M = (typeof MORALE !== 'undefined') ? MORALE : { TALK_AGENT_BONUS: 6 };
+        const replies = (choice, outcome) => DIALOGUE_DATA.complaint.filter(r => r.beat === 'reply'
+            && r.choice === choice && (r.outcome === outcome || r.outcome === 'any'));
+        let outcome = 'good', revealDriver = null, closed = false;
+
+        if (choiceKey === 'listen') {
+            p.morale.agent = Math.min(100, p.morale.agent + (M.TALK_AGENT_BONUS || 6));
+            c.sinceAbsWeek += 2;                       // being heard buys patience
+            GameState.addLog(`Talked things through with ${p.name}.`, 'morale');
+        } else if (choiceKey === 'promise') {
+            const r = Agency.makePromise(p, promiseType);
+            if (!r.ok) return { ok: false, message: r.message };
+        } else if (choiceKey === 'pushback') {
+            const res = this._pushbackWorks(p);
+            outcome = res.good ? 'good' : 'bad';
+            revealDriver = res.drove;
+            if (res.good) {
+                p.moraleCase = null; closed = true;    // he accepts your view; the matter is dropped
+                p.morale.agent = Math.min(100, p.morale.agent + 4);
+                this.addBond(p, 2, 'he respects a straight answer');
+                GameState.addLog(`Talked ${p.name} out of his complaint.`, 'morale');
+            } else {
+                p.morale[c.dim] = Math.max(0, p.morale[c.dim] - 4);
+                p.morale.agent = Math.max(0, p.morale.agent - 3);
+                c.sinceAbsWeek -= 2;                   // you made it worse
+                GameState.addLog(`The talk with ${p.name} went badly.`, 'morale');
+            }
+        } else if (choiceKey === 'deflect') {
+            outcome = 'bad';
+            c.sinceAbsWeek += 2;                       // bought time
+            p.morale.agent = Math.max(0, p.morale.agent - 2);   // at a price
+        } else {
+            return { ok: false, message: 'Unknown choice.' };
+        }
+        p._talkCooldownAbs = aw;
+        const reply = this._pick(replies(choiceKey, outcome), p);
+        const revealed = this._maybeReveal(p, revealDriver);
+        return { ok: true, reply, outcome, revealed, closed };
+    },
+
+    // =================================================== gift scene
+    buildGiftScene(p, tier, diminished) {
+        const mood = diminished ? 'diminished' : 'fresh';
+        const reacts = DIALOGUE_DATA.gifts.filter(r => r.beat === 'react'
+            && (r.tier === tier || r.tier === 'any') && (r.mood === mood || r.mood === 'any'));
+        const react = this._pick(reacts, p);
+        const choices = ['praise', 'modest'].map(k => ({ key: k, ...this.choiceLabel('gift', k) }));
+        return { kind: 'gift', playerId: p.id, tier, diminished: !!diminished, react, choices };
+    },
+    // Your parting words after a gift. A small read on the man: showmen enjoy the praise,
+    // professionals and the humble prefer you keep it grounded.
+    resolveGiftClose(p, choiceKey) {
+        const rows = DIALOGUE_DATA.gifts.filter(r => r.beat === 'close' && r.choice === choiceKey);
+        const matched = choiceKey === 'praise'
+            ? (this.hasTrait(p, 'showman') || this.hasTrait(p, 'mercenary'))
+            : (this.hasTrait(p, 'professional') || this.hasTrait(p, 'humble'));
+        if (matched) p.morale.agent = Math.min(100, p.morale.agent + 1);
+        const reply = this._pick(rows, p);
+        const revealed = Rng.next() < 0.35 ? this._maybeReveal(p) : null;
+        return { ok: true, reply, matched, revealed };
+    },
+
+    // =================================================== final-day rituals (Phase 2)
+    // Which parting words suit which man. A choice "matches" when either of his poles is in the
+    // set; matched choices earn the relationship, mismatches cost a little (or just fall flat).
+    MATCH_SETS: {
+        calm: ['hothead', 'professional', 'homebody', 'humble'],
+        fireup: ['showman', 'adventurer', 'loyal', 'mercenary'],
+        toast: ['showman', 'adventurer', 'hothead', 'mercenary'],
+        quiet: ['humble', 'professional', 'homebody', 'loyal'],
+        sit: ['humble', 'loyal', 'homebody'],
+        space: ['hothead', 'adventurer'],
+        speech: ['professional', 'showman', 'mercenary']
+    },
+    choiceMatches(p, key) {
+        const set = this.MATCH_SETS[key]; if (!set) return false;
+        const pe = this.ensurePersonality(p);
+        return set.includes(pe.primary) || set.includes(pe.secondary);
+    },
+    // The client the ritual scenes are with: the best of your players on the inviting side who
+    // actually took the pitch (falls back to any of them if none played).
+    featuredClient(m) {
+        if (!m || !m.clients || !m.clients.length) return null;
+        const inviter = m.clients.some(c => c.side === 'home') ? 'home' : 'away';
+        const cands = m.clients.filter(c => c.side === inviter);
+        const pool = cands.filter(c => c.played).length ? cands.filter(c => c.played) : cands;
+        let best = null, bestAb = -1;
+        for (const c of pool) {
+            const p = GameState.getPlayer(c.playerId);
+            if (p && p.ability > bestAb) { best = p; bestAb = p.ability; }
+        }
+        return best;
+    },
+    _opponentName(m, p) {
+        const myClub = effectiveClubId(p);
+        const oppId = m.homeId === myClub ? m.awayId : m.homeId;
+        const c = (typeof Clubs !== 'undefined') && Clubs.getClubById(oppId);
+        return c ? c.name : (typeof findVirtualClub === 'function' && (findVirtualClub(oppId) || {}).name) || 'the opposition';
+    },
+    // Dressing-room word before kickoff. The result is already banked and CANNOT change here;
+    // everything this scene does lands after the final whistle (see buildPostmatchScene).
+    buildPrematchScene(p, m) {
+        const extra = { opponent: this._opponentName(m, p) };
+        const open = this._pick(DIALOGUE_DATA.final.filter(r => r.beat === 'pre-open'), p, extra);
+        const choices = ['calm', 'fireup', 'bonus'].map(k => ({ key: k, ...this.choiceLabel('prematch', k) }));
+        return { kind: 'prematch', playerId: p.id, matchId: m.id, extra, open, choices };
+    },
+    resolvePrematch(p, scene, choiceKey, bonusTier) {
+        const extra = scene.extra;
+        const replies = (choice, outcome) => DIALOGUE_DATA.final.filter(r => r.beat === 'pre-reply'
+            && r.choice === choice && (r.outcome === outcome || r.outcome === 'any'));
+        if (choiceKey === 'bonus') {
+            const cost = Agency.giftCost(bonusTier, p);
+            if (GameState.agency.balance < cost) return { ok: false, message: `You can't cover a ${bonusTier} gift right now (€${UI.money(cost)}).` };
+            p._finalTalk = { matchId: scene.matchId, choice: 'bonus', matched: false, bonusTier };
+            return { ok: true, reply: this._pick(replies('bonus', 'any'), p, extra), outcome: 'good', revealed: null };
+        }
+        const matched = this.choiceMatches(p, choiceKey);
+        p._finalTalk = { matchId: scene.matchId, choice: choiceKey, matched };
+        const revealed = this._maybeReveal(p);
+        return { ok: true, reply: this._pick(replies(choiceKey, matched ? 'good' : 'bad'), p, extra), outcome: matched ? 'good' : 'bad', revealed };
+    },
+    // Full time. Settles everything the dressing room set up (the right word, the promised
+    // bonus) and opens the party or the consolation. Returns notes for the UI to show first.
+    buildPostmatchScene(p, m, won) {
+        const extra = { opponent: this._opponentName(m, p) };
+        const notes = [];
+        const talk = p._finalTalk && p._finalTalk.matchId === m.id ? p._finalTalk : null;
+        if (talk) {
+            if (talk.matched) { this.addBond(p, 2); notes.push('Your word before kickoff steadied him.'); }
+            if (talk.bonusTier) {
+                if (won) {
+                    const cost = Agency.giftCost(talk.bonusTier, p);
+                    GameState.agency.balance -= cost;
+                    GameState.addFinance('Gifts & relationships', -cost);
+                    // an EARNED gift lands half again as hard, and never rings hollow
+                    p.morale.agent = Math.min(100, p.morale.agent + Math.round(Agency.giftBoost(talk.bonusTier) * 1.5));
+                    this.addBond(p, 3, 'you kept your word on the win bonus');
+                    GameState.addLog(`Paid ${p.name} his promised win bonus (−€${UI.money(cost)}).`, 'info');
+                    notes.push(`You kept your promise: the ${talk.bonusTier} gift is his (−€${UI.money(cost)}).`);
+                } else {
+                    notes.push('The win bonus stays in your pocket. Not the way you wanted to save money.');
+                }
+            }
+            delete p._finalTalk;
+        }
+        const open = this._pick(DIALOGUE_DATA.final.filter(r => r.beat === (won ? 'win-open' : 'loss-open')), p, extra);
+        const keys = won ? ['toast', 'quiet', 'tab'] : ['sit', 'space', 'speech'];
+        const choices = keys.map(k => ({ key: k, ...this.choiceLabel(won ? 'postwin' : 'postloss', k) }));
+        return { kind: 'postmatch', playerId: p.id, matchId: m.id, won, extra, notes, open, choices };
+    },
+    resolvePostmatch(p, choiceKey, won, extra) {
+        const beat = won ? 'win-reply' : 'loss-reply';
+        const replies = outcome => DIALOGUE_DATA.final.filter(r => r.beat === beat
+            && r.choice === choiceKey && (r.outcome === outcome || r.outcome === 'any'));
+        let outcome = 'good', note = null;
+        if (choiceKey === 'tab') {
+            const cost = Agency.giftCost('medium', p);
+            GameState.agency.balance -= cost;
+            GameState.addFinance('Gifts & relationships', -cost);
+            this.addBond(p, 4, 'the night was on you');
+            p.morale.agent = Math.min(100, p.morale.agent + 4);
+            note = `The night is on you (−€${UI.money(cost)}).`;
+        } else if (this.choiceMatches(p, choiceKey)) {
+            this.addBond(p, won ? 3 : 4, won ? 'you celebrated it right' : 'you handled the defeat right');
+            p.morale.agent = Math.min(100, p.morale.agent + (won ? 3 : 2));
+        } else {
+            outcome = 'bad';
+            this.addBond(p, 1);   // showing up still counts, even when the words miss
+            if (!won) p.morale.agent = Math.max(0, p.morale.agent - 2);
+        }
+        const revealed = this._maybeReveal(p);
+        return { ok: true, reply: this._pick(replies(outcome), p, extra), outcome, revealed, note };
+    },
+
+    // =================================================== retirement farewell (Phase 2)
+    // his career, in one line, from the records the game already keeps
+    careerMontage(p) {
+        const t = (typeof careerTotal === 'function') ? careerTotal(p) : { apps: 0, goals: 0, assists: 0 };
+        const seasons = (typeof seasonsActiveLeague === 'function') ? seasonsActiveLeague(p) : 0;
+        const clubs = (typeof careerByClub === 'function') ? careerByClub(p).filter(c => !c.youth && c.agg.apps > 0).length : 0;
+        const cups = (p.trophies || []).length;
+        const bits = [];
+        if (seasons) bits.push(`${seasons} season${seasons === 1 ? '' : 's'}`);
+        if (clubs) bits.push(`${clubs} club${clubs === 1 ? '' : 's'}`);
+        bits.push(`${t.apps} appearances`, `${t.goals} goals`);
+        if (cups) bits.push(`${cups} troph${cups === 1 ? 'y' : 'ies'}`);
+        return bits.join(' · ');
+    },
+    buildFarewellScene(p) {
+        const tier = this.tierOf(this.bondOf(p)).toLowerCase();
+        const opens = DIALOGUE_DATA.farewell.filter(r => r.beat === 'open' && (r.tier === tier || r.tier === 'any'));
+        const open = this._pick(opens, p);
+        const choices = ['career', 'personal'].map(k => ({ key: k, ...this.choiceLabel('farewell', k) }));
+        // the quiet capstone: he ended his career at the club he supported as a boy
+        const f = p.facts;
+        const boyhoodNote = (f && f.ambition && f.ambition.type === 'boyhood' && f.ambition.fulfilled)
+            ? 'He got his wish: his last match came in the shirt he grew up worshipping.' : null;
+        return { kind: 'farewell', playerId: p.id, tier, montage: this.careerMontage(p), boyhoodNote, open, choices };
+    },
+    resolveFarewell(p, choiceKey) {
+        const rows = DIALOGUE_DATA.farewell.filter(r => r.beat === 'reply' && r.choice === choiceKey);
+        // a star seen out properly reflects on the agency: word gets around you stay to the end
+        let note = null;
+        if (this.bondOf(p) >= 50 && !p._farewellDone) {
+            Agency.bumpRep(2);
+            note = 'Word gets around: you look after your people to the very end. (+2 reputation)';
+        }
+        p._farewellDone = true;
+        return { ok: true, reply: this._pick(rows, p), note };
+    },
+
+    // =================================================== the facts ledger (Phase 3)
+    // Things he has told you: his boyhood club, what drives him, his life outside football.
+    // Discovered through Check in (or volunteered once he trusts you), displayed on his page,
+    // and paid off later: land his dream move and the game remembers.
+    HOBBIES: ['golf', 'fishing', 'gaming', 'chess', 'cooking', 'classic cars', 'photography', 'making music', 'padel', 'poker'],
+    TOP5_DIVS: ['PREM', 'LaLiga', 'SerieA', 'BUNDES', 'Ligue1'],
+    // the big-five leagues a talent might dream of, and how strongly (the glamour destinations lead)
+    LEAGUE_NAMES: { PREM: 'the Premier League', LaLiga: 'La Liga', BUNDES: 'the Bundesliga', SerieA: 'Serie A', Ligue1: 'Ligue 1' },
+    LEAGUE_PULL: { PREM: 4, LaLiga: 3, BUNDES: 3, SerieA: 2, Ligue1: 1.5 },
+    BIG5_COUNTRY: { England: 'PREM', Spain: 'LaLiga', Germany: 'BUNDES', Italy: 'SerieA', France: 'Ligue1' },
+    // "smaller" football nations whose talents more often dream of a bigger league abroad
+    SMALL_LEAGUE_HOMES: ['Netherlands', 'Switzerland', 'Portugal', 'Belgium', 'France'],
+
+    _clubName(id) { const c = Clubs.getClubById(id); return c ? c.name : (typeof League !== 'undefined' && League.teamName ? League.teamName(id) : 'his club'); },
+    _weightedByRep2(list) { if (!list.length) return null; const t = list.reduce((s, c) => s + c.reputation * c.reputation, 0); let r = Rng.next() * t; for (const c of list) { r -= c.reputation * c.reputation; if (r <= 0) return c.id; } return list[list.length - 1].id; },
+    _weightedByRep(list) { if (!list.length) return null; const t = list.reduce((s, c) => s + c.reputation, 0); let r = Rng.next() * t; for (const c of list) { r -= c.reputation; if (r <= 0) return c.id; } return list[list.length - 1].id; },
+    // the club he is most associated with: most senior appearances, else where he plays now
+    _primaryClub(p) {
+        let best = Clubs.getClubById(effectiveClubId(p)) || null, bestApps = -1;
+        if (typeof careerByClub === 'function') careerByClub(p).forEach(c => {
+            if (c.youth) return; const cl = Clubs.getClubById(c.clubId);
+            if (cl && c.agg.apps > bestApps) { best = cl; bestApps = c.agg.apps; }
+        });
+        return best;
+    },
+    // Rivalry has no data table, so we use a sound proxy: two established clubs in the SAME country
+    // are treated as rivals of each other. It keeps a one-club Basel man from naming FC Zürich (or any
+    // big domestic side) as a dream — while a kid at a small club is still free to idolise a giant.
+    _isPresumedRival(clubId, p) {
+        const cand = Clubs.getClubById(clubId); if (!cand) return false;
+        const primary = this._primaryClub(p); if (!primary || primary.id === clubId) return false;
+        return cand.country === primary.country && cand.reputation >= 62 && primary.reputation >= 62;
+    },
+
+    _homeCountryOf(p) {
+        // his nationality when it is a playable country; else where he plays now
+        const played = ['Netherlands', 'England', 'Germany', 'Spain', 'Switzerland', 'Italy', 'France', 'Portugal', 'Belgium'];
+        if (played.includes(p.nationality)) return p.nationality;
+        const c = Clubs.getClubById(effectiveClubId(p));
+        return c ? c.country : GameState.homeCountry;
+    },
+    // His boyhood club. ~19 in 20 it's from his home country; within that, ~8 in 10 it's from the
+    // region he came up in (the club he's at now), so a Basel lad supports a Basel-region side, not a
+    // crosstown/national rival. Big clubs still collect the most childhood hearts (rep-squared weight).
+    _rollFavClub(p) {
+        const home = this._homeCountryOf(p);
+        const cur = Clubs.getClubById(effectiveClubId(p));
+        const regionId = cur ? cur.region : null;
+        const notRival = c => !this._isPresumedRival(c.id, p);
+        // ~1 in 20: a foreign giant idolised from afar
+        if (Rng.next() < 0.05) {
+            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 82);
+            const g = this._weightedByRep2(giants); if (g) return g;
+        }
+        // within his home country: ~8 in 10 from his own region, else anywhere at home
+        let pool = null;
+        if (regionId && Rng.next() < 0.80) pool = Clubs.allClubs.filter(c => c.country === home && c.region === regionId && notRival(c));
+        if (!pool || !pool.length) pool = Clubs.allClubs.filter(c => c.country === home && c.tier <= 2 && notRival(c));
+        if (!pool.length) pool = Clubs.allClubs.filter(c => c.country === home && notRival(c));
+        return this._weightedByRep2(pool) || (cur ? cur.id : null);
+    },
+    _rollFamily(p) {
+        const r = Rng.next();
+        if (p.age < 22) return r < 0.7 ? 'single' : 'partner';
+        if (p.age < 28) return r < 0.3 ? 'single' : r < 0.8 ? 'partner' : 'kids';
+        return r < 0.15 ? 'single' : r < 0.5 ? 'partner' : 'kids';
+    },
+    _rollAmbition(p, favClubId) {
+        this.ensurePersonality(p);
+        const club = Clubs.getClubById(effectiveClubId(p));
+        const home = this._homeCountryOf(p);
+        const hasType = t => (p.trophies || []).some(tr => COMPETITIONS[tr.compId] && COMPETITIONS[tr.compId].type === t);
+        const w = {};   // eligible types with weights
+        // playing at a higher level, expressed as a LEAGUE — the dominant dream, and more so for talents
+        // out of the smaller football nations (a Young Boys kid wanting the Bundesliga)
+        w.league = this.SMALL_LEAGUE_HOMES.includes(home) ? 4 : 2.5;
+        // playing for a specific big club someday (a foreign giant, his boyhood club, or — for a modest
+        // talent — simply a top-flight side back home)
+        w.dreamclub = 2.5;
+        if (favClubId && favClubId !== effectiveClubId(p) && !this._isPresumedRival(favClubId, p)) w.boyhood = 1.5;
+        if (!hasType('league')) w.title = 2;
+        if (!hasType('cup')) w.cup = 1.5;
+        if (!this._hasEuropeApps(p)) w.europe = 1.5;
+        if (ATTACK_POS.includes(p.position)) w.goals = 2;
+        // temperament pulls the dream in its own direction
+        const boost = (k, f) => { if (w[k]) w[k] *= f; };
+        if (this.hasTrait(p, 'adventurer')) boost('league', 3);
+        if (this.hasTrait(p, 'mercenary') || this.hasTrait(p, 'showman')) { boost('league', 2); boost('dreamclub', 2); }
+        if (this.hasTrait(p, 'showman')) boost('goals', 2);
+        if (this.hasTrait(p, 'loyal') || this.hasTrait(p, 'homebody')) { boost('boyhood', 4); boost('title', 2); boost('league', 0.4); }
+        if (this.hasTrait(p, 'professional')) { boost('title', 2); boost('cup', 2); }
+        const keys = Object.keys(w);
+        if (!keys.length) return { type: 'cup' };
+        let r = Rng.next() * keys.reduce((s, k) => s + w[k], 0), type = keys[0];
+        for (const k of keys) { r -= w[k]; if (r <= 0) { type = k; break; } }
+        return this._mkAmbition(type, p, favClubId);
+    },
+    _mkAmbition(type, p, favClubId) {
+        if (type === 'goals') {
+            const cur = (typeof careerTotal === 'function') ? careerTotal(p).goals : 0;
+            return { type, target: Math.max(50, Math.ceil((cur + 40 + Rng.next() * 80) / 25) * 25) };
+        }
+        if (type === 'league') return { type, div: this._rollDreamLeague(p) };
+        if (type === 'dreamclub') { const id = this._rollDreamClub(p, favClubId); return id ? { type, clubId: id } : { type: 'title' }; }
+        if (type === 'boyhood') return (favClubId && !this._isPresumedRival(favClubId, p)) ? { type } : { type: 'league', div: this._rollDreamLeague(p) };
+        return { type };
+    },
+    // a big-five league other than the one he already plays in (his own, if it is a big five)
+    _rollDreamLeague(p) {
+        const homeDiv = this.BIG5_COUNTRY[this._homeCountryOf(p)];
+        const curDiv = (Clubs.getClubById(effectiveClubId(p)) || {}).division;
+        const opts = Object.keys(this.LEAGUE_NAMES).filter(d => d !== homeDiv && d !== curDiv);
+        const pool = opts.length ? opts : Object.keys(this.LEAGUE_NAMES);
+        let r = Rng.next() * pool.reduce((s, d) => s + (this.LEAGUE_PULL[d] || 1), 0);
+        for (const d of pool) { r -= (this.LEAGUE_PULL[d] || 1); if (r <= 0) return d; }
+        return pool[0];
+    },
+    // the specific club he dreams of. A capable talent aims at a foreign giant (or his boyhood club);
+    // a modest one keeps it realistic: a top-flight side back home ("play for Thun someday"). Never a rival.
+    _rollDreamClub(p, favClubId) {
+        const home = this._homeCountryOf(p);
+        if (p.ability >= 60) {
+            if (favClubId && favClubId !== effectiveClubId(p) && !this._isPresumedRival(favClubId, p) && Rng.next() < 0.3) return favClubId;
+            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 80);
+            const g = this._weightedByRep2(giants); if (g) return g;   // foreign, so never a domestic rival
+        }
+        // modest, home-grown dream: any top-flight side back home, linear-rep weighted so smaller names show up
+        const pool = Clubs.allClubs.filter(c => c.country === home && c.tier === 1 && c.id !== effectiveClubId(p) && !this._isPresumedRival(c.id, p));
+        const home1 = this._weightedByRep(pool); if (home1) return home1;
+        const abroad = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 78);
+        return this._weightedByRep2(abroad) || favClubId || null;
+    },
+    _hasEuropeApps(p) {
+        for (const y of Object.keys(p.stats || {}))
+            for (const st of Object.values(p.stats[y]))
+                for (const cid of Object.keys(st.comps || {}))
+                    if ((cid === 'UCL' || cid === 'UEL' || cid === 'UECL') && st.comps[cid].apps > 0) return true;
+        return false;
+    },
+    ensureFacts(p) {
+        if (p.facts && p.facts.ambition) {
+            // migration: pin his formative country once (older facts objects lack it). Without
+            // this, "home" would drift to wherever he currently plays, which breaks the abroad
+            // ambition and made foreign-heritage players "settle in" on domestic moves.
+            if (!p.facts.home) { p.facts.home = this._homeCountryOf(p); this._seedLangs(p, p.facts.home); }
+            return p.facts;
+        }
+        const home = this._homeCountryOf(p);
+        const favClub = this._rollFavClub(p);
+        p.facts = {
+            home,
+            favClub: { clubId: favClub, discovered: false, fulfilled: false },
+            family: { status: this._rollFamily(p), discovered: false },
+            hobby: { name: this.HOBBIES[Math.floor(Rng.next() * this.HOBBIES.length)], discovered: false },
+            ambition: { ...this._rollAmbition(p, favClub), discovered: false, fulfilled: false }
+        };
+        this._seedLangs(p, home);   // he grew up there: he speaks the language, whatever his passport says
+        return p.facts;
+    },
+    _seedLangs(p, home) {
+        const langs = this.LANGS[home] || [];
+        p._langs = Array.from(new Set((p._langs || []).concat(langs)));
+    },
+    // A pronoun-free verb phrase that reads correctly both as a page label AND inside a spoken line
+    // ("I want to {ambition}", "To {ambition}? Done.") — so never "his career" in the first person.
+    ambitionText(p) {
+        const f = this.ensureFacts(p), a = f.ambition;
+        const fav = f.favClub.clubId ? this._clubName(f.favClub.clubId) : 'the club I grew up on';
+        return {
+            league: `play in ${this.LEAGUE_NAMES[a.div] || 'a bigger league'} someday`,
+            dreamclub: `play for ${a.clubId ? this._clubName(a.clubId) : 'a big club'} one day`,
+            boyhood: `finish where it began, at ${fav}`,
+            title: 'win a league title', cup: 'lift a cup', europe: 'play in Europe',
+            goals: `reach ${a.target} career goals`,
+            // legacy ambition types from older saves
+            topflight: 'play in one of the big five leagues', abroad: 'play abroad'
+        }[a.type] || 'make it to the top';
+    },
+    ambitionProgress(p) {
+        const a = this.ensureFacts(p).ambition;
+        if (a.fulfilled) return 'fulfilled' + (a.year ? ' in ' + GameState.seasonLabelFor(a.year) : '');
+        const club = Clubs.getClubById(effectiveClubId(p));
+        switch (a.type) {
+            case 'league': return club ? `now in ${(COMPETITIONS[club.division] || {}).name || club.division}` : 'no club';
+            case 'dreamclub': return 'not there yet';
+            case 'boyhood': return 'the door there is still open';
+            case 'topflight': return club ? `currently: ${(COMPETITIONS[club.division] || {}).name || club.division}` : 'no club';
+            case 'title': return 'no league title yet';
+            case 'cup': return 'no cup win yet';
+            case 'europe': return 'no European football yet';
+            case 'goals': return `${(typeof careerTotal === 'function') ? careerTotal(p).goals : 0}/${a.target} career goals`;
+            case 'abroad': return 'still playing at home';
+            default: return '';
+        }
+    },
+    // once he trusts you, he starts telling you things unprompted (used on tier upgrades)
+    _volunteerFact(p) {
+        const f = this.ensureFacts(p);
+        if (f.favClub.clubId && !f.favClub.discovered) {
+            f.favClub.discovered = true;
+            const c = Clubs.getClubById(f.favClub.clubId);
+            return ` He also let something slip: his boyhood club is ${c ? c.name : 'a club back home'}.`;
+        }
+        if (!f.ambition.discovered) {
+            f.ambition.discovered = true;
+            return ` He also opened up about what drives him: he wants to ${this.ambitionText(p)}.`;
+        }
+        return '';
+    },
+
+    // =================================================== check in (Phase 3)
+    CHECKIN_COOLDOWN_WEEKS: 3,
+    canCheckIn(p) {
+        if (p.agentId !== 'me' || p.archived) return { ok: false, reason: 'not a client' };
+        const aw = GameState.absWeek();
+        if (p._checkinAbs != null && aw - p._checkinAbs < this.CHECKIN_COOLDOWN_WEEKS)
+            return { ok: false, reason: 'cooldown', weeksLeft: Math.ceil(this.CHECKIN_COOLDOWN_WEEKS - (aw - p._checkinAbs)) };
+        return { ok: true };
+    },
+    buildCheckinScene(p) {
+        const f = this.ensureFacts(p);
+        const open = this._pick(DIALOGUE_DATA.checkin.filter(r => r.beat === 'open'), p);
+        const keys = [];
+        if (f.favClub.clubId && !f.favClub.discovered) keys.push('q-club');
+        if (!f.ambition.discovered) keys.push('q-ambition');
+        keys.push('q-life', 'q-room', 'q-none');
+        const choices = keys.map(k => ({ key: k, ...this.choiceLabel('checkin', k) }));
+        return { kind: 'checkin', playerId: p.id, open, choices };
+    },
+    resolveCheckin(p, q) {
+        const f = this.ensureFacts(p);
+        const aw = GameState.absWeek();
+        p._checkinAbs = aw;
+        Agency._creditAgentAction(p, 2);   // showing your face counts, and resets the neglect clock
+        let variant = 'any', extra = {}, note = null;
+        if (q === 'q-life') {
+            if (!f.family.discovered) { f.family.discovered = true; variant = f.family.status; note = `Noted: ${f.family.status === 'single' ? "it's just him right now" : f.family.status === 'partner' ? 'he has a partner' : 'he has kids'}.`; }
+            else if (!f.hobby.discovered) { f.hobby.discovered = true; variant = 'hobby'; extra.hobby = f.hobby.name; note = `Noted: he's into ${f.hobby.name}.`; }
+            else variant = 'nothing';
+        } else if (q === 'q-club') {
+            f.favClub.discovered = true;
+            const c = Clubs.getClubById(f.favClub.clubId);
+            extra.favclub = c ? c.name : 'a club back home';
+            note = `Noted: his boyhood club is ${extra.favclub}.`;
+        } else if (q === 'q-ambition') {
+            f.ambition.discovered = true;
+            extra.ambition = this.ambitionText(p);
+            note = `Noted: he wants to ${extra.ambition}.`;
+        }
+        const rows = DIALOGUE_DATA.checkin.filter(r => r.beat === 'reply' && r.choice === q
+            && (r.variant === variant || r.variant === 'any' || (q !== 'q-life' && !r.variant)));
+        const reply = this._pick(rows.length ? rows : DIALOGUE_DATA.checkin.filter(r => r.beat === 'reply' && r.choice === q), p, extra);
+        const revealed = this._maybeReveal(p);
+        return { ok: true, reply, note, revealed };
+    },
+
+    // =================================================== career moments (Phase 3)
+    // A queue of small scenes triggered by the sim (persisted on the agency, played from Home).
+    queueMoment(entry) {
+        if (!GameState.agency) return;
+        const q = GameState.agency.pendingScenes = GameState.agency.pendingScenes || [];
+        if (q.length >= 12) return;
+        if (q.some(e => e.type === entry.type && e.playerId === entry.playerId)) return;
+        q.push(entry);
+    },
+    // weekly detection: appearance/goal milestones and ambition fulfilment. Baselines initialise
+    // silently on first sight, so a veteran loaded from an old save never gets a stale "100 apps!".
+    APPS_MARKS: [100, 250, 500],
+    GOAL_MARKS: [50, 100, 200],
+    weeklyMoments() {
+        if (!GameState.agency) return;
+        const year = GameState.seasonStartYear;
+        Agency.clients().forEach(p => {
+            this._settleTick(p);          // settling-in abroad ticks down (Phase 4)
+            this._moneyTick(p, year);     // rare off-field money trouble (Phase 4)
+            const t = (typeof careerTotal === 'function') ? careerTotal(p) : null;
+            if (!t) return;
+            if (!p._mile) { p._mile = { a: t.apps, g: t.goals }; }
+            else if (t.apps !== p._mile.a || t.goals !== p._mile.g) {
+                let best = null;   // { pri, entry } — one scene a week at most, the biggest one
+                const offer = (pri, entry) => { if (!best || pri > best.pri) best = { pri, entry }; };
+                if (p._mile.a === 0 && t.apps > 0) offer(1, { type: 'debut', playerId: p.id });
+                if (p._mile.g === 0 && t.goals > 0) offer(2, { type: 'firstgoal', playerId: p.id });
+                this.APPS_MARKS.forEach((m, i) => { if (p._mile.a < m && t.apps >= m) offer(3 + i, { type: 'milestone', playerId: p.id, milestone: `${m} appearances` }); });
+                this.GOAL_MARKS.forEach((m, i) => { if (p._mile.g < m && t.goals >= m) offer(6 + i, { type: 'milestone', playerId: p.id, milestone: `${m} career goals` }); });
+                if (best) this.queueMoment(best.entry);
+                p._mile = { a: t.apps, g: t.goals };
+            }
+            this._checkAmbition(p);
+        });
+    },
+    _checkAmbition(p) {
+        const f = this.ensureFacts(p), a = f.ambition;
+        if (!a.discovered || a.fulfilled || a.type === 'boyhood') return;   // boyhood settles at retirement
+        const club = Clubs.getClubById(effectiveClubId(p));
+        const hasType = t => (p.trophies || []).some(tr => COMPETITIONS[tr.compId] && COMPETITIONS[tr.compId].type === t);
+        let done = false;
+        if (a.type === 'league') done = !!(club && club.division === a.div);
+        else if (a.type === 'dreamclub') done = effectiveClubId(p) === a.clubId;
+        else if (a.type === 'title') done = hasType('league');
+        else if (a.type === 'cup') done = hasType('cup');
+        else if (a.type === 'europe') done = this._hasEuropeApps(p);
+        else if (a.type === 'goals') done = (typeof careerTotal === 'function') && careerTotal(p).goals >= a.target;
+        // legacy ambition types from older saves
+        else if (a.type === 'topflight') done = !!(club && this.TOP5_DIVS.includes(club.division));
+        else if (a.type === 'abroad') done = !!(club && club.country !== (f.home || this._homeCountryOf(p)));
+        if (done) {
+            a.fulfilled = true; a.year = GameState.seasonStartYear;
+            this.queueMoment({ type: 'ambition', playerId: p.id });
+        }
+    },
+    // called at retirement resolution, while he still has a club (see simulation.js)
+    checkBoyhoodAtRetirement(p) {
+        const f = p.facts; if (!f || !f.ambition || f.ambition.type !== 'boyhood' || f.ambition.fulfilled) return;
+        if (f.favClub.clubId && effectiveClubId(p) === f.favClub.clubId) {
+            f.ambition.fulfilled = true; f.ambition.year = GameState.seasonStartYear;
+            this.addBond(p, 4, 'he finished where his heart always was');
+        }
+    },
+    // called by Agency._finalizeTransfer: a client only calls after a move that MEANS something — a
+    // move to the club he supported as a boy (THE call of his career). A move that fulfils a stated
+    // ambition already gets its own scene (see _checkAmbition); an ordinary transfer gets no chat, so
+    // you aren't buried under ten identical "thanks for the move" screens every window.
+    onTransferCompleted(p, toClubId) {
+        if (p.agentId !== 'me') return;
+        const f = this.ensureFacts(p);
+        if (f.favClub.clubId === toClubId && !f.favClub.fulfilled) {
+            f.favClub.discovered = true; f.favClub.fulfilled = true; f.favClub.year = GameState.seasonStartYear;
+            this.queueMoment({ type: 'dreammove', playerId: p.id, clubId: toClubId });
+        }
+        this._startSettling(p, Clubs.getClubById(toClubId));   // a language barrier means an adjustment period
+    },
+    // called when a long injury lands (see Sim._injuries)
+    onInjury(p, weeks) {
+        if (p.agentId !== 'me' || weeks < 6) return;
+        this.queueMoment({ type: 'injury', playerId: p.id, weeks });
+    },
+
+    buildMomentScene(entry) {
+        const p = GameState.getPlayer(entry.playerId);
+        if (!p || p.archived) return null;
+        const extra = {}, notes = [];
+        if (entry.milestone) extra.milestone = entry.milestone;
+        if (entry.clubId) extra.newclub = (Clubs.getClubById(entry.clubId) || {}).name || 'his new club';
+        if (entry.weeks) extra.weeks = String(entry.weeks);
+        if (entry.occasion) extra.occasion = entry.occasion;
+        if (entry.type === 'ambition') extra.ambition = this.ambitionText(p);
+        if (entry.type === 'referral') extra.mate = (GameState.getPlayer(entry.mateId) || {}).name || 'a team-mate';
+        // the big ones pay out on arrival, so the numbers are right even if the scene is skipped
+        if (entry.type === 'dreammove' && !entry._paid) { this.addBond(p, 8, 'you made his boyhood dream real'); entry._paid = true; }
+        if (entry.type === 'ambition' && !entry._paid) { this.addBond(p, 6, 'his ambition, delivered'); Agency.bumpRep(1); entry._paid = true; }
+        if (entry.type === 'thanks' && !entry._paid) {
+            entry._paid = true;
+            if (entry.gift === 'money') {
+                extra.thing = `an envelope. Inside: €${UI.money(entry.value)} toward the agency`;
+                GameState.agency.balance += entry.value;
+                GameState.addFinance('Gifts from clients', entry.value);
+                notes.push(`He covered €${UI.money(entry.value)} of the agency's costs.`);
+            } else {
+                extra.thing = entry.thing;
+                const f = this.ensureFacts(p);
+                (f.keepsakes = f.keepsakes || []).push({ year: GameState.seasonStartYear, text: entry.thing });
+                notes.push('A keepsake for the office shelf. It goes in his file, and your memory.');
+            }
+        }
+        if (entry.type === 'thanks') extra.thing = extra.thing || entry.thing || 'a gift';
+        const open = this._pick(DIALOGUE_DATA.moments.filter(r => r.kind === entry.type && r.beat === 'open'), p, extra);
+        const keys = entry.type === 'injury' ? ['there', 'flowers']
+            : entry.type === 'thanks' ? ['cherish', 'banter']
+            : entry.type === 'invite' ? ['attend', 'gift', 'decline']
+            : ['praise', 'modest'];
+        const scene = entry.type === 'injury' ? 'injury'
+            : entry.type === 'thanks' ? 'thanks'
+            : entry.type === 'invite' ? 'invite' : 'moment';
+        const choices = keys.map(k => ({ key: k, ...this.choiceLabel(scene, k) }));
+        return { kind: 'moment', momentType: entry.type, playerId: p.id, extra, notes, open, choices };
+    },
+    // Which countries count as neighbours for travel costs (symmetric). Used to price an in-person
+    // visit: cheap at home, more abroad, most for a long haul. Kept here rather than in the map data
+    // because it's a gameplay concept (reachability), not geography.
+    NEIGHBOURS: {
+        Netherlands: ['Belgium', 'Germany', 'England'],
+        Belgium: ['Netherlands', 'Germany', 'France', 'England'],
+        Germany: ['Netherlands', 'Belgium', 'France', 'Switzerland'],
+        France: ['Belgium', 'Germany', 'Switzerland', 'Italy', 'Spain', 'England'],
+        Switzerland: ['Germany', 'France', 'Italy', 'Liechtenstein'],
+        Italy: ['France', 'Switzerland'],
+        Spain: ['France', 'Portugal'],
+        Portugal: ['Spain'],
+        England: ['France', 'Belgium', 'Netherlands'],
+        Liechtenstein: ['Switzerland'],
+    },
+    // Cost of visiting a player in person: €200 in your own country, €1,000 in a neighbouring one,
+    // €2,000 for anywhere farther (or when his country can't be determined, treat it as home).
+    visitCost(p) {
+        const home = (GameState.agency && GameState.agency.homeCountry) || GameState.homeCountry;
+        const club = (typeof Clubs !== 'undefined') ? Clubs.getClubById(effectiveClubId(p)) : null;
+        const away = club ? club.country : null;
+        if (!home || !away || home === away) return 200;
+        return (this.NEIGHBOURS[home] || []).includes(away) ? 1000 : 2000;
+    },
+    resolveMoment(p, scene, key) {
+        const rows = DIALOGUE_DATA.moments.filter(r => r.beat === 'reply' && r.choice === key
+            && (r.kind === scene.momentType || r.kind === 'any'));
+        let note = null;
+        if (key === 'there') {
+            // visiting him in person costs travel money, scaled by how far away he plays
+            const cost = this.visitCost(p);
+            GameState.agency.balance -= cost; GameState.addFinance('Gifts & relationships', -cost);
+            this.addBond(p, 3, 'you showed up when it mattered'); p.morale.agent = Math.min(100, p.morale.agent + 2);
+            note = `You made the trip to see him (−€${UI.money(cost)}).`;
+        }
+        else if (key === 'flowers') {
+            const cost = 50;
+            GameState.agency.balance -= cost; GameState.addFinance('Gifts & relationships', -cost);
+            this.addBond(p, 1);
+            note = `Flowers on their way (−€${UI.money(cost)}).`;
+        }
+        else if (key === 'cherish' || key === 'banter') {
+            // his gift to you: the graceful read for the sentimental, the laugh for the loud
+            const matched = key === 'cherish'
+                ? (this.hasTrait(p, 'loyal') || this.hasTrait(p, 'homebody') || this.hasTrait(p, 'humble'))
+                : (this.hasTrait(p, 'showman') || this.hasTrait(p, 'hothead') || this.hasTrait(p, 'mercenary'));
+            if (matched) { this.addBond(p, 1); p.morale.agent = Math.min(100, p.morale.agent + 1); }
+        } else if (key === 'attend') {
+            const cost = 2000;
+            if (GameState.agency.balance < cost) return { ok: false, message: `You can't cover the trip right now (€${UI.money(cost)}).` };
+            GameState.agency.balance -= cost;
+            GameState.addFinance('Gifts & relationships', -cost);
+            this.addBond(p, 4, 'you showed up for his big day');
+            p.morale.agent = Math.min(100, p.morale.agent + 3);
+            note = `A weekend well spent (−€${UI.money(cost)}).`;
+        } else if (key === 'gift') {
+            const cost = Agency.giftCost('small', p);
+            GameState.agency.balance -= cost;
+            GameState.addFinance('Gifts & relationships', -cost);
+            this.addBond(p, 1);
+            note = `The gift is on its way (−€${UI.money(cost)}).`;
+        } else if (key === 'decline') {
+            this.addBond(p, -1);
+            p.morale.agent = Math.max(0, p.morale.agent - 2);
+        } else {
+            const matched = key === 'praise'
+                ? (this.hasTrait(p, 'showman') || this.hasTrait(p, 'mercenary') || this.hasTrait(p, 'hothead'))
+                : (this.hasTrait(p, 'professional') || this.hasTrait(p, 'humble') || this.hasTrait(p, 'homebody'));
+            this.addBond(p, matched ? 2 : 1);
+            if (matched) p.morale.agent = Math.min(100, p.morale.agent + 1);
+        }
+        const revealed = Rng.next() < 0.35 ? this._maybeReveal(p) : null;
+        return { ok: true, reply: this._pick(rows, p, scene.extra), note, revealed };
+    },
+
+    // =================================================== reciprocity (Phase 4)
+    KEEPSAKES: ['a signed shirt from his debut', 'a watch with a date engraved on the back', 'a framed photo of the two of you at his first signing', 'the match ball from his best game, signed by the whole squad', 'a bottle from a vineyard he part-owns'],
+    // Called from addBond: a big moment at Confidant+ sometimes moves him to give something back.
+    _maybeThanks(p, delta) {
+        if (p.archived || delta < 3 || this.bondOf(p) < 50) return;
+        const year = GameState.seasonStartYear;
+        if (p._thanksSeason === year || Rng.next() > 0.3) return;
+        p._thanksSeason = year;
+        const money = Rng.next() < 0.5;
+        this.queueMoment(money
+            ? { type: 'thanks', playerId: p.id, gift: 'money', value: Math.min(40000, Math.max(1000, Math.round((p.wage || 5000) * 1.5 / 100) * 100)) }
+            : { type: 'thanks', playerId: p.id, gift: 'keepsake', thing: this.KEEPSAKES[Math.floor(Rng.next() * this.KEEPSAKES.length)] });
+    },
+    // Confidant+ perk: instead of a complaint landing cold, he pulls you aside first — a quiet
+    // two-week head start before the formal case machinery begins. Once a season, per client.
+    tipOff(p, dim) {
+        const aw = GameState.absWeek(), year = GameState.seasonStartYear;
+        if (p._tipUntil != null) {
+            if (aw < p._tipUntil) return true;          // still inside the grace he bought you
+            delete p._tipUntil; return false;           // grace over: the case opens for real
+        }
+        if (this.bondOf(p) < 50 || p._tipSeason === year) return false;
+        p._tipSeason = year; p._tipUntil = aw + 2;
+        const what = { time: "the gaffer's freezing me out", club: "my head isn't right at this club", wage: "my money situation is eating at me", agent: "I need more from you than I'm getting" }[dim] || 'something';
+        GameState.addMail({
+            kind: 'news', cat: 'morale', subject: `${p.name} pulled you aside`,
+            body: `${p.name}, quietly, after training: "Listen. ${what.charAt(0).toUpperCase() + what.slice(1)}. I'm not going public with it, not yet. But sort it, yeah?" You have a head start before this becomes a formal complaint.`, ttl: 4
+        });
+        GameState.addLog(`${p.name} tipped you off before making it official.`, 'morale');
+        return true;
+    },
+    // Season-rollover social calendar: wedding/christening invitations (Confidant+) and, at Family,
+    // the rare referral of a teammate into your orbit.
+    onSeasonRollover() {
+        const year = GameState.seasonStartYear;   // already the NEW season by this point
+        Agency.clients().forEach(p => {
+            const bond = this.bondOf(p);
+            const f = this.ensureFacts(p);
+            // a financial-advisor contract that has just run out: remind the agent to renew it
+            if (p._finAdvisorUntil != null && year >= p._finAdvisorUntil) {
+                delete p._finAdvisorUntil;
+                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} — advisor contract expired`, body: `The financial advisor you arranged for ${p.name} has reached the end of his contract. ${p.name} is one to keep an eye on with money — renew it from his page if you want him covered.`, ttl: 6 });
+            }
+            if (bond >= 50 && f.family.discovered) {
+                if (f.family.status === 'partner' && !p._evWedding && Rng.next() < 0.25) {
+                    p._evWedding = true;
+                    this.queueMoment({ type: 'invite', playerId: p.id, occasion: 'my wedding' });
+                } else if (f.family.status === 'kids' && !p._evChristening && Rng.next() < 0.25) {
+                    p._evChristening = true;
+                    this.queueMoment({ type: 'invite', playerId: p.id, occasion: "the little one's christening" });
+                }
+            }
+            if (bond >= 75 && p._referSeason !== year && Rng.next() < 0.25) {
+                const mate = this._pickReferral(p);
+                if (mate) {
+                    p._referSeason = year;
+                    mate.knownToAgent = true; mate.discoveredVia = 'referral'; mate._warmIntro = p.id;
+                    this.queueMoment({ type: 'referral', playerId: p.id, mateId: mate.id });
+                    GameState.addLog(`${p.name} recommended ${mate.name} to you.`, 'sign');
+                }
+            }
+        });
+    },
+    _pickReferral(p) {
+        const clubId = effectiveClubId(p);
+        const cands = GameState.players.filter(x => x.id !== p.id && !x.archived && x.agentId == null
+            && !x.knownToAgent && (x.onLoanAt || x.clubId) === clubId && x.age <= 26);
+        if (!cands.length) return null;
+        cands.sort((a, b) => (b.potential || b.ability) - (a.potential || a.ability));
+        return cands[0];
+    },
+
+    // =================================================== settling in & concierge (Phase 4)
+    // Language map: a move to a country that shares no language with what he speaks starts a
+    // settling-in period — a small morale drag and a small form drag until he finds his feet.
+    LANGS: { Netherlands: ['nl'], Belgium: ['nl', 'fr'], England: ['en'], Germany: ['de'], Switzerland: ['de', 'fr', 'it'], Spain: ['es'], Italy: ['it'], France: ['fr'], Portugal: ['pt'] },
+    _langsOf(p) { return (this.LANGS[p.nationality] || []).concat(p._langs || []); },
+    _startSettling(p, club) {
+        if (!club || !this.LANGS[club.country]) return;
+        const speaks = this._langsOf(p);
+        if (this.LANGS[club.country].some(l => speaks.includes(l))) return;   // he can get by
+        let weeks = 12 + Math.floor(Rng.next() * 7);                       // 12–18 weeks base
+        if (this.hasTrait(p, 'homebody')) weeks = Math.round(weeks * 1.75);   // uprooted, and he feels it
+        if (this.hasTrait(p, 'adventurer')) weeks = Math.round(weeks * 0.5);  // this is what he lives for
+        p.settling = { weeksLeft: weeks, morale: true, lang: this.LANGS[club.country][0], services: {} };
+        GameState.addMail({
+            kind: 'news', cat: 'general', subject: `${p.name} — settling in abroad`,
+            body: `${p.name} has moved to a country whose language he doesn't speak. Expect his form and mood to dip for around ${weeks} weeks while he finds his feet. Support (language course, house hunting, flying the family over) shortens it — see his page.`, ttl: 5
+        });
+    },
+    _settleTick(p) {
+        const s = p.settling; if (!s) return;
+        if (s.morale && s.weeksLeft % 2 === 0) p.morale.club = Math.max(0, p.morale.club - 1);
+        s.weeksLeft -= 1;
+        if (s.weeksLeft <= 0) {
+            p._langs = (p._langs || []).concat(s.lang);   // he leaves the period with the language
+            delete p.settling;
+            GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} has settled in`, body: `${p.name} is over the worst of the move: the language is coming along and life abroad finally feels like home. His form should recover now.`, ttl: 3 });
+        }
+    },
+    // Only certain temperaments are loose with money: the flashy showman and the impulsive hothead.
+    // Sensible types never blow it on a bad scheme, so they never need an advisor.
+    RISKY_MONEY_POLES: ['showman', 'hothead'],
+    MONEY_TROUBLE_WEEKLY: 0.0006,   // deliberately rare: ~1 incident/season across a 60-strong roster
+    _moneyRiskPole(p) { return this.RISKY_MONEY_POLES.find(pole => this.hasTrait(p, pole)) || null; },
+    _moneyRisky(p) { return !!this._moneyRiskPole(p); },
+    // whether you already KNOW he's reckless with money (a revealed risky trait) — drives the UI hint
+    moneyRiskKnown(p) {
+        const pe = p.personality; if (!pe) return false;
+        return (pe.revP && this.RISKY_MONEY_POLES.includes(pe.primary)) || (pe.revS && this.RISKY_MONEY_POLES.includes(pe.secondary));
+    },
+    advisorEngaged(p) { return p._finAdvisorUntil != null && GameState.seasonStartYear < p._finAdvisorUntil; },
+    // rare off-field money trouble, only for the reckless; a financial advisor (multi-year) heads it off
+    _moneyTick(p, year) {
+        if (!this._moneyRisky(p)) return;                                  // sensible players don't do this
+        if (Rng.next() > this.MONEY_TROUBLE_WEEKLY) return;
+        if (this.advisorEngaged(p)) {
+            if (Rng.next() < 0.5) {
+                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} — advisor earns his keep`, body: `${p.name}'s financial advisor steered him away from a "guaranteed" investment that turned out to be anything but. Money and mood intact. ${p.name} knows who arranged that advisor.`, ttl: 3 });
+                this.addBond(p, 1);
+            }
+            return;
+        }
+        p.morale.wage = Math.max(0, p.morale.wage - 12);
+        p.morale.agent = Math.max(0, p.morale.agent - 4);
+        const flavour = this.hasTrait(p, 'showman') ? 'chasing the high life' : 'on an impulsive punt';
+        GameState.addMail({ kind: 'news', cat: 'morale', subject: `${p.name} — bad investment`, body: `${p.name} sank money into a scheme a team-mate recommended, ${flavour}. It has collapsed, and it stings: his mood around money has taken a real hit. A financial advisor would have caught it — he's the type who needs one.`, ttl: 5 });
+        this._maybeReveal(p, this._moneyRiskPole(p));   // the incident lays his reckless streak bare
+    },
+    // the concierge menu (client page): each purchase is the agent doing his real job
+    SERVICES: {
+        language: { label: 'Language course', cost: 5000 },
+        house: { label: 'House hunting', cost: 8000 },
+        family: { label: 'Fly the family over', cost: 4000 },
+        media: { label: 'Media training', cost: 10000 }
+    },
+    ADVISOR_PER_YEAR: 2500,
+    // a modest discount for committing to more years (so you don't have to re-hire every season)
+    advisorCost(years) {
+        years = Math.max(1, Math.min(5, years || 1));
+        return Math.round(this.ADVISOR_PER_YEAR * years * (1 - Math.min(0.2, 0.05 * (years - 1))) / 50) * 50;
+    },
+    // hire (or extend) a financial advisor for 1–5 seasons — its own path, since the cost and the
+    // multi-season term differ from the fixed one-off services
+    hireAdvisor(p, years) {
+        years = Math.max(1, Math.min(5, years || 1));
+        const cost = this.advisorCost(years);
+        if (GameState.agency.balance < cost) return { ok: false, message: `Not enough money (€${UI.money(cost)}).` };
+        // extends from the current end if he's already covered, otherwise from this season
+        const from = this.advisorEngaged(p) ? p._finAdvisorUntil : GameState.seasonStartYear;
+        p._finAdvisorUntil = from + years;
+        GameState.agency.balance -= cost;
+        GameState.addFinance('Client support', -cost);
+        this.addBond(p, 1);
+        const through = GameState.seasonLabelFor(p._finAdvisorUntil - 1);
+        GameState.addLog(`Financial advisor engaged for ${p.name}, ${years} season(s) through ${through} (−€${UI.money(cost)}).`, 'info');
+        return { ok: true, message: `Financial advisor engaged for ${p.name} through ${through} (−€${UI.money(cost)}).` };
+    },
+    buyService(p, kind, years) {
+        if (kind === 'advisor') return this.hireAdvisor(p, years);
+        const svc = this.SERVICES[kind]; if (!svc) return { ok: false, message: 'Unknown service.' };
+        if (GameState.agency.balance < svc.cost) return { ok: false, message: `Not enough money (€${UI.money(svc.cost)}).` };
+        const s = p.settling;
+        if (kind === 'language') {
+            if (!s || s.services.language) return { ok: false, message: 'No use for that right now.' };
+            s.services.language = true; s.weeksLeft = Math.max(1, Math.ceil(s.weeksLeft / 2));
+        } else if (kind === 'house') {
+            if (!s || !s.morale) return { ok: false, message: 'No use for that right now.' };
+            s.morale = false; s.services.house = true;
+        } else if (kind === 'family') {
+            const f = this.ensureFacts(p);
+            if (!s || s.services.family) return { ok: false, message: 'No use for that right now.' };
+            if (!f.family.discovered || f.family.status === 'single') return { ok: false, message: 'As far as you know there is no family to fly over. Ask him about life sometime.' };
+            s.services.family = true; s.weeksLeft = Math.max(1, Math.ceil(s.weeksLeft / 3));
+        } else if (kind === 'media') {
+            if (p._mediaTrained) return { ok: false, message: 'He has already done his media training.' };
+            p._mediaTrained = true;
+        }
+        GameState.agency.balance -= svc.cost;
+        GameState.addFinance('Client support', -svc.cost);
+        this.addBond(p, 1);
+        GameState.addLog(`${svc.label} arranged for ${p.name} (−€${UI.money(svc.cost)}).`, 'info');
+        return { ok: true, message: `${svc.label} arranged for ${p.name} (−€${UI.money(svc.cost)}).` };
+    }
+};
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { Dialogue };

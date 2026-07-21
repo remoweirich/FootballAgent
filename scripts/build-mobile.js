@@ -2,8 +2,8 @@
 // Android APK. Pulls in only what the mobile UI actually loads (see the <script>
 // list in ui/index.html): the shared engine files, the mobile screens/router/shim,
 // the three CSS files, and the self-hosted font/icon vendor assets. The old
-// desktop UI (index.html, js/ui.js, js/main.js, js/debug.js, styles/) is never
-// touched — it has no path into this bundle.
+// desktop UI has been severed into legacy-desktop/ (see its README) and has no
+// path into this bundle.
 const fs = require('fs');
 const path = require('path');
 
@@ -11,15 +11,16 @@ const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'dist', 'mobile');
 
 const ENGINE_FILES = [
+    'rng.js',
     'names-data.js', 'clubs.js', 'players.js', 'storage.js', 'game-state.js',
     'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js',
-    'live-sim-data.js', 'live-sim.js', 'attend.js'
+    'live-sim-data.js', 'live-sim.js', 'attend.js', 'dialogue-data.js', 'dialogue.js'
 ];
 const UI_JS_FILES = [
     'shim.js', 'ui-helpers.js', 'router.js',
     'screen-setup.js', 'screen-home.js', 'screen-clients.js', 'screen-club.js',
     'screen-client-detail.js', 'screen-negotiations.js', 'screen-agency.js',
-    'screen-finance.js', 'screen-leagues.js', 'screen-scouting.js', 'screen-livesim.js', 'main.js'
+    'screen-finance.js', 'screen-leagues.js', 'screen-scouting.js', 'screen-livesim.js', 'screen-dialogue.js', 'main.js'
 ];
 const CSS_FILES = ['files/design-tokens.css', 'files/components.css', 'app.css'];
 const VENDOR_DIRS = ['inter', 'tabler-icons', 'flag-icons'];

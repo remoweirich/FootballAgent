@@ -58,7 +58,7 @@ function euClub(id) { return (typeof EUROPE_VIRTUAL_MAP !== 'undefined' && EUROP
 function euRep(id) { const v = euClub(id); if (v) return v.reputation; const c = Clubs.getClubById(id); return c ? c.reputation : 50; }
 function euAssoc(id) { const v = euClub(id); if (v) return v.country; const c = Clubs.getClubById(id); return c ? c.country : '?'; }
 function euName(id) { return League.teamName(id); }
-function euShuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+function euShuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Rng.next() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 const Europe = {
     COMPS: ['UCL', 'UEL', 'UECL'],
@@ -118,12 +118,12 @@ const Europe = {
 
     // Efraimidis-Spirakis weighted sampling without replacement -> full ordering (index 0 = 1st).
     _weightedOrder(clubs, wf) {
-        return clubs.map(c => ({ id: c.id, k: Math.pow(Math.random(), 1 / Math.max(1e-6, wf(c))) }))
+        return clubs.map(c => ({ id: c.id, k: Math.pow(Rng.next(), 1 / Math.max(1e-6, wf(c))) }))
             .sort((a, b) => b.k - a.k).map(x => x.id);
     },
     _weightedPick(clubs, wf) {
         let best = null, bk = -1;
-        for (const c of clubs) { const k = Math.pow(Math.random(), 1 / Math.max(1e-6, wf(c))); if (k > bk) { bk = k; best = c.id; } }
+        for (const c of clubs) { const k = Math.pow(Rng.next(), 1 / Math.max(1e-6, wf(c))); if (k > bk) { bk = k; best = c.id; } }
         return best;
     },
 
@@ -254,7 +254,7 @@ const Europe = {
         c.stage = 'league';
     },
     _buildPots(ids) {
-        const sorted = ids.slice().sort((a, b) => euRep(b) - euRep(a) || Math.random() - 0.5);
+        const sorted = ids.slice().sort((a, b) => euRep(b) - euRep(a) || Rng.next() - 0.5);
         const pots = [[], [], [], []];
         sorted.forEach((id, i) => pots[Math.min(3, Math.floor(i / 9))].push(id));
         return pots;
@@ -323,7 +323,7 @@ const Europe = {
             if (bestCnt === 0) return false;
             const [h, a] = matches[best];
             const cols = []; for (let r = 0; r < K; r++) if (bestMask & (1 << r)) cols.push(r);
-            for (let i = cols.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[cols[i], cols[j]] = [cols[j], cols[i]]; }
+            for (let i = cols.length - 1; i > 0; i--) { const j = Math.floor(Rng.next() * (i + 1));[cols[i], cols[j]] = [cols[j], cols[i]]; }
             for (const r of cols) {
                 assign[best] = r; used[h] |= (1 << r); used[a] |= (1 << r);
                 if (solve()) return true;
@@ -358,7 +358,7 @@ const Europe = {
                 if (c.length < bestN) { bestN = c.length; best = sl; bestC = c; if (bestN === 0) break; }
             }
             if (bestN === 0) return null;   // dead end -> restart
-            const X = best.X, qx = potOf[X], Y = bestC[Math.floor(Math.random() * bestC.length)];
+            const X = best.X, qx = potOf[X], Y = bestC[Math.floor(Rng.next() * bestC.length)];
             best.done = true; best.match = [X, Y]; remaining--;
             awayNeed[Y][qx] = 0; opp[X].add(Y); opp[Y].add(X);
             ac[X][assoc[Y]] = (ac[X][assoc[Y]] || 0) + 1; ac[Y][assoc[X]] = (ac[Y][assoc[X]] || 0) + 1;
@@ -405,7 +405,7 @@ const Europe = {
         t.aggB = t.leg1.hg + l2.ag;   // lower seed
         if (t.aggA > t.aggB) t.winner = t.a;
         else if (t.aggB > t.aggA) t.winner = t.b;
-        else { const sA = League.clubStrength(t.a), sB = League.clubStrength(t.b); t.winner = (Math.random() < sA / (sA + sB)) ? t.a : t.b; const [w, l] = League._penScore(); t.pens = t.winner === t.a ? { winner: t.winner, a: w, b: l } : { winner: t.winner, a: l, b: w }; }
+        else { const sA = League.clubStrength(t.a), sB = League.clubStrength(t.b); t.winner = (Rng.next() < sA / (sA + sB)) ? t.a : t.b; const [w, l] = League._penScore(); t.pens = t.winner === t.a ? { winner: t.winner, a: w, b: l } : { winner: t.winner, a: l, b: w }; }
         return t;
     },
     _koLeg2Round(ed, comp, key) {   // second week of a round: play every leg 2, set winners
@@ -437,7 +437,7 @@ const Europe = {
     _playFinal(ed, comp) {
         const c = ed.comps[comp]; if (!c.ko.sf || !c.ko.sf.winners || c.ko.sf.winners.length < 2 || c.ko.final) return;
         const [a, b] = c.ko.sf.winners;
-        const r = League.playMatch(a, b, comp, false);   // neutral venue, no home edge
+        const r = League.playMatch(a, b, comp, false, true);   // neutral venue, no home edge; a final fields the best XI
         c.ko.final = { a, b, ag: r.hg, bg: r.ag, winner: r.winner };
         // level after 90': extra time (which may decide it), else penalties. Same as a domestic final.
         if (r.hg === r.ag) {
@@ -510,7 +510,7 @@ const Europe = {
         const standings = {}, cups = {};
         for (const [country, cfg] of Object.entries(EUROPE_DATA.implemented)) {
             const clubs = Clubs.getClubsByDivision(cfg.div).slice()
-                .sort((a, b) => (b.reputation + (Math.random() * 8 - 4)) - (a.reputation + (Math.random() * 8 - 4)));
+                .sort((a, b) => (b.reputation + (Rng.next() * 8 - 4)) - (a.reputation + (Rng.next() * 8 - 4)));
             standings[cfg.div] = clubs.map(c => c.id);
             cups[country] = this._weightedPick(clubs.slice(0, 12).map(c => ({ id: c.id, r: c.reputation })), c => Math.sqrt(c.r));
         }

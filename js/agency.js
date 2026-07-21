@@ -112,10 +112,10 @@ const Agency = {
         const wageOver = wage - max.wage, sponsorOver = sponsor - max.sponsor;
         if (wageOver <= 0 && sponsorOver <= 0) {
             const lines = ['“That works for me — let’s do it.”', '“Fair enough. You’ve got yourself a client.”', '“I’m happy with that. Let’s get to work.”'];
-            return { status: 'accept', message: lines[Math.floor(Math.random() * lines.length)] };
+            return { status: 'accept', message: lines[Math.floor(Rng.next() * lines.length)] };
         }
         if (round >= 4) {
-            const weeks = 5 + Math.floor(Math.random() * 6);
+            const weeks = 5 + Math.floor(Rng.next() * 6);
             p.noTalkUntil = aw + weeks;
             return { status: 'walk', weeks, message: `“We're going round in circles. I don't want to discuss this again for a while.”` };
         }
@@ -170,6 +170,13 @@ const Agency = {
         recordAbilityPoint(p); recordWagePoint(p);
         Agency.bumpRep(0.3);
         p._lastAgentActionAbs = GameState.absWeek();   // the neglect clock starts fresh from day one
+        // a referral arrives warm: his team-mate vouched for you, so he starts as a believer
+        if (p._warmIntro) {
+            if (p.morale) p.morale.agent = Math.max(p.morale.agent, 85);
+            p.bond = Math.max(p.bond || 0, 12);
+            delete p._warmIntro;
+            GameState.addLog(`${p.name} joined on a team-mate's recommendation — he arrives already trusting you.`, 'sign');
+        }
         GameState.addLog(`Signed ${p.name} — ${wage}% wage / ${sponsor}% sponsor, ${term} season(s).`, 'sign');
     },
 
@@ -188,7 +195,7 @@ const Agency = {
         const pool = cands.slice(), picks = [];
         while (pool.length && picks.length < n) {
             const weights = pool.map(c => Math.max(0.0005, this._loanCountryWeight(fromCountry, c.country || fromCountry, ability)));
-            let total = weights.reduce((s, w) => s + w, 0), r = Math.random() * total, idx = 0;
+            let total = weights.reduce((s, w) => s + w, 0), r = Rng.next() * total, idx = 0;
             for (; idx < pool.length - 1; idx++) { r -= weights[idx]; if (r <= 0) break; }
             picks.push(pool[idx]); pool.splice(idx, 1);
         }
@@ -215,17 +222,21 @@ const Agency = {
         const parent = Clubs.getClubById(p.clubId);
         // interest is weighted by geography: mostly his own country, some neighbours, rarely far away
         const parentCountry = (parent && parent.country) || GameState.homeCountry;
-        const picks = this._weightedLoanPicks(cands, parentCountry, p.ability, 3 + Math.floor(Math.random() * 2)).map(c => c.id);
+        const picks = this._weightedLoanPicks(cands, parentCountry, p.ability, 3 + Math.floor(Rng.next() * 2)).map(c => c.id);
         const rel = this.relationship(p.clubId);
-        let sanction = 0.55 + (rel - 55) / 200 + (['youth', 'fringe', 'rotation'].includes(p.squadRole) ? 0.2 : -0.15);
-        sanction = Math.max(0.1, Math.min(0.95, sanction));
-        if (Math.random() > sanction) {
+        // clubs happily loan out youth/fringe/rotation for minutes, but a starter is a wrench and a
+        // star player almost unthinkable — they're built around him, so he's kept regardless
+        let sanction = 0.55 + (rel - 55) / 200 + (['youth', 'fringe', 'rotation'].includes(p.squadRole) ? 0.2 : p.squadRole === 'starter' ? -0.45 : -0.6);
+        const floor = (p.squadRole === 'key' || p.squadRole === 'starter') ? 0.03 : 0.1;
+        sanction = Math.max(floor, Math.min(0.95, sanction));
+        if (Rng.next() > sanction) {
             this.changeRelationship(p.clubId, -1);
             GameState.addMail({ kind: 'news', cat: 'general', subject: `${parent ? parent.name : 'His club'} on a loan for ${p.name}`, body: `${parent ? parent.name : 'His club'} would rather keep ${p.name} around for now and won't sanction a loan. Try again later or build the relationship.`, ttl: 4 });
             return { ok: false, message: `${parent ? parent.name : 'His club'} won't sanction a loan for ${p.name} right now.` };
         }
         p._pendingLoan = { from: GameState.absWeek() + 1, picks };
         p._loanOk = true;   // the club has sanctioned a loan — you can now also shop him out on loan to clubs of your choosing
+        p.loanListed = true; // reflected as a read-only "Loan-listed" indicator on his page
         GameState.addMail({ kind: 'news', cat: 'general', subject: `${parent ? parent.name : 'His club'} open to loaning ${p.name}`, body: `${parent ? parent.name : 'His club'} are happy to let ${p.name} go out on loan for game time. Interested clubs will be in touch over the coming week — or shop him out to specific clubs yourself.`, ttl: 5 });
         return { ok: true, message: `${parent ? parent.name : 'His club'} sanction the loan. Offers will start arriving next week — or shop him to clubs of your choosing on loan.` };
     },
@@ -237,7 +248,7 @@ const Agency = {
             `${p.name} will sharpen up against tough opposition at ${dest}.`,
             `Sensible. We'd rather ${p.name} play regularly than warm our bench.`
         ];
-        GameState.addMail({ kind: 'news', subject: `${clubName} on ${p.name}`, body: lines[Math.floor(Math.random() * lines.length)], ttl: 3 });
+        GameState.addMail({ kind: 'news', subject: `${clubName} on ${p.name}`, body: lines[Math.floor(Rng.next() * lines.length)], ttl: 3 });
     },
     _u21Consent(p) {
         const rel = this.relationship(p.clubId);
@@ -256,14 +267,14 @@ const Agency = {
         this.setCooldown(p, 'u21send');
         const seniorName = Clubs.getClubById(p.clubId)?.name || '';
         // the club has to agree to drop him to the youth/reserve setup
-        if (Math.random() > this._u21Consent(p)) {
+        if (Rng.next() > this._u21Consent(p)) {
             this.changeRelationship(p.clubId, -1);
             const no = [
                 `We disagree — ${p.name} is part of our first-team plans and stays with the senior squad.`,
                 `We disagree. We need ${p.name} around the first team right now.`,
                 `Not for us — ${p.name} won't be going down to the youth side at the moment.`
             ];
-            GameState.addMail({ kind: 'news', cat: 'general', subject: `${seniorName} on ${p.name}`, body: no[Math.floor(Math.random() * no.length)], ttl: 4 });
+            GameState.addMail({ kind: 'news', cat: 'general', subject: `${seniorName} on ${p.name}`, body: no[Math.floor(Rng.next() * no.length)], ttl: 4 });
             return { ok: false, message: `${seniorName} won't sanction sending ${p.name} to the youth side right now.` };
         }
         const reserve = reserveClubFor(p.clubId);
@@ -279,18 +290,47 @@ const Agency = {
         this._u21ClubReaction(p, seniorName, jong);
         return { ok: true, message: `${p.name} joined ${jong}. He'll play youth-league games to develop — they appear in his history but don't count toward senior appearances.` };
     },
-    // a client at a reserve side can ask to be pulled up to the senior team
+    // Sub-professional youth wage: below this, a promotion earns a proper first-team contract; at or
+    // above it he's already on pro money and is simply pulled up on his existing deal.
+    PRO_WAGE_FLOOR: 2000,
+    // Move a client up to the senior squad. Returns { pro, wage } describing whether a new professional
+    // contract was handed out (only when he was on a sub-professional youth wage).
+    _promoteToSenior(p, parent) {
+        const wasWage = p.wage || 0;
+        p.clubId = parent.id; p.clubTierAtJoin = parent.tier;
+        p.onLoanAt = null; p.loanUntilSeason = null; p.loanMid = false; p.loanRole = null; p._loanOk = false;
+        p.squadRole = 'fringe';
+        if (wasWage < this.PRO_WAGE_FLOOR) {
+            const pro = Math.max(2500, this.offeredWage(p, parent, { loyalty: false, jitter: false }));
+            p.wage = pro; p.contractUntilSeason = GameState.seasonStartYear + 2;
+            if (p.agentId === 'me' && typeof recordWagePoint === 'function') recordWagePoint(p);
+            // his first professional contract is a life moment, not just a ledger entry
+            if (p.agentId === 'me' && typeof Dialogue !== 'undefined') Dialogue.queueMoment({ type: 'procontract', playerId: p.id });
+            return { pro: true, wage: pro };
+        }
+        return { pro: false, wage: wasWage };
+    },
+    // a client at a reserve side can ask to be pulled up to the senior team — possible any time of
+    // year (an internal move within the same club family, nothing to do with the transfer window)
     requestPromotion(p) {
         if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
         if (!isReserveClub(p.clubId)) return { ok: false, message: `${p.name} isn't at a reserve side.` };
         if (p.onLoanAt) return { ok: false, message: `${p.name} is currently away on loan.` };
         const parent = parentClubForReserve(p.clubId);
         if (!parent) return { ok: false, message: `No senior side is linked to ${Clubs.getClubById(p.clubId)?.name}.` };
-        if (GameState.inbox.find(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === parent.id)) return { ok: false, message: 'A promotion offer is already in your inbox.' };
-        const offer = this._offerObj(p, p.clubId, parent.id, 0, { initiatedByAgent: true, internal: true });
-        GameState.addMail({ kind: 'transfer', subject: `${parent.name} can promote ${p.name}`, offer, persistence: 0, ttl: 3 });
-        GameState.addLog(`Requested a promotion of ${p.name} to ${parent.name}.`, 'offer');
-        return { ok: true, message: `${parent.name} are open to promoting ${p.name} from the reserves — complete it from your inbox (no transfer fee).` };
+        const res = this._promoteToSenior(p, parent);
+        GameState.addLog(`${p.name} promoted to ${parent.name}${res.pro ? ` on a first-team deal (€${UI.money(res.wage)}/wk)` : ''}.`, 'sign');
+        GameState.addMail({
+            kind: 'news', cat: 'general', subject: `${parent.name} promote ${p.name}`,
+            body: res.pro
+                ? `${parent.name} have promoted ${p.name} from the reserves to the senior squad and handed him his first professional contract — €${UI.money(res.wage)}/wk.`
+                : `${parent.name} have promoted ${p.name} from the reserves to the senior squad. Already on professional terms, he steps up on his existing deal with no renegotiation.`, ttl: 4
+        });
+        return {
+            ok: true, message: res.pro
+                ? `${p.name} is promoted to ${parent.name} on a professional deal (€${UI.money(res.wage)}/wk).`
+                : `${p.name} is promoted to ${parent.name} — pulled up on his existing deal, no renegotiation.`
+        };
     },
     // ask the parent club to pull a player back up from the U21/reserves early (e.g. to loan him out properly)
     requestU21Recall(p) {
@@ -305,12 +345,22 @@ const Agency = {
         const rel = this.relationship(p.clubId);
         let chance = 0.35 + (rel - 55) / 200 + (['starter', 'key'].includes(p.squadRole) ? 0.15 : -0.1);
         chance = Math.max(0.08, Math.min(0.85, chance));
-        if (Math.random() < chance) {
+        if (Rng.next() < chance) {
             p.onLoanAt = null; p.loanUntilSeason = null; p.loanMid = false; p.loanRole = null;
             p.squadRole = 'fringe';
-            GameState.addLog(`${clubName} recalled ${p.name} from ${destName} at your request.`, 'info');
-            GameState.addMail({ kind: 'news', cat: 'general', subject: `${clubName} recall ${p.name}`, body: `At your request, ${clubName} have pulled ${p.name} back up from ${destName} to the first-team squad.`, ttl: 4 });
-            return { ok: true, message: `${clubName} recall ${p.name} from ${destName} — he's back with the senior squad.` };
+            // stepping up from the youth side on a sub-professional wage earns a proper first-team deal;
+            // one already on pro money is just pulled up as he is
+            let proNote = '';
+            if ((p.wage || 0) < this.PRO_WAGE_FLOOR && club) {
+                const pro = Math.max(2500, this.offeredWage(p, club, { loyalty: false, jitter: false }));
+                p.wage = pro; p.contractUntilSeason = GameState.seasonStartYear + 2;
+                if (p.agentId === 'me' && typeof recordWagePoint === 'function') recordWagePoint(p);
+                if (p.agentId === 'me' && typeof Dialogue !== 'undefined') Dialogue.queueMoment({ type: 'procontract', playerId: p.id });
+                proNote = ` on a professional deal (€${UI.money(pro)}/wk)`;
+            }
+            GameState.addLog(`${clubName} recalled ${p.name} from ${destName} at your request${proNote}.`, 'info');
+            GameState.addMail({ kind: 'news', cat: 'general', subject: `${clubName} recall ${p.name}`, body: `At your request, ${clubName} have pulled ${p.name} back up from ${destName} to the first-team squad${proNote}.`, ttl: 4 });
+            return { ok: true, message: `${clubName} recall ${p.name} from ${destName} — he's back with the senior squad${proNote}.` };
         }
         this.changeRelationship(p.clubId, -1);
         return { ok: false, message: `${clubName} would rather ${p.name} keep developing at ${destName} for now.` };
@@ -364,40 +414,51 @@ const Agency = {
         if (this.onCooldown(p, 'shop:' + target.id)) return { ok: false, message: `${target.name} already heard your pitch for ${p.name} this week — try again next week.` };
         this.setCooldown(p, 'shop:' + target.id);
 
-        const potRead = p.potential + Math.round((Math.random() - 0.5) * 16);
+        const potRead = p.potential + Math.round((Rng.next() - 0.5) * 16);
         const perceived = p.ability + 0.5 * Math.max(0, potRead - p.ability);
         // a transfer-listed player is explicitly up for sale — shopping him around is
         // exactly what the club expects an agent to do, so it never offends them. Only
         // shopping a player who ISN'T listed (going behind the club's back) risks it.
-        const discovered = !p.transferListed && Math.random() < 0.5;
+        const discovered = !p.transferListed && Rng.next() < 0.5;
         let msg = '';
         if (discovered && parent) { this.changeRelationship(parent.id, -15); msg += `${parent.name} found out and feels betrayed (relationship −15). `; }
 
-        // even the friendliest fee estimate is beyond what this club/league can fund
-        if (this.playerValue(p) * 0.6 > this.buyerMaxFee(target)) {
+        const free = this.isFreeAgent(p);
+        // A FREE AGENT has no fee — a club that can't take him on can't afford his WAGES, not a fee.
+        // Even then most clubs will still table a low-wage contract rather than walk away; only a minority
+        // decide the wages are out of reach and pass entirely.
+        const wageTight = free && this.offeredWage(p, target, { loyalty: false, jitter: false }) > this.maxClubWage(p, target);
+        // even the friendliest fee estimate is beyond what this club/league can fund (permanent deals only)
+        if (!free && this.playerValue(p) * 0.6 > this.buyerMaxFee(target)) {
             return { ok: true, interested: false, message: msg + `${target.name} rate him but can't afford the fee.` };
         }
         // not good enough right now to dislodge their current XI
         if (perceived < target.reputation - 6) {
             return { ok: true, interested: false, message: msg + `${target.name} say they don't need a player like ${p.name} right now.` };
         }
+        if (wageTight && Rng.next() < 0.3) {
+            return { ok: true, interested: false, message: msg + `${target.name} like ${p.name} but can't afford his wages.` };
+        }
         // most clubs pass — only a minority bite on any given pitch. Being persistent (re-shopping
         // week after week) gives fresh rolls, so a club can still come round; blanket-pitching a whole
         // division no longer floods you with offers. Transfer-listed players draw a little more interest.
         const biteChance = p.transferListed ? 0.42 : 0.30;
-        if (Math.random() >= biteChance) return { ok: true, interested: false, message: msg + `${target.name} didn't bite this time.` };
+        if (Rng.next() >= biteChance) return { ok: true, interested: false, message: msg + `${target.name} didn't bite this time.` };
 
         // a stage-2+ club case means he's publicly known to want out — the club's own asking
         // price softens too (a smaller cut than the incoming-bid discount, since this is the
         // agent choosing to sell rather than the market pricing in his unhappiness)
-        let fee = this.estimateFee(p, target, { skipCaseDiscount: true });
-        if (p.moraleCase && p.moraleCase.dim === 'club' && p.moraleCase.stage >= 2) {
+        let fee = free ? 0 : this.estimateFee(p, target, { skipCaseDiscount: true });
+        if (!free && p.moraleCase && p.moraleCase.dim === 'club' && p.moraleCase.stage >= 2) {
             fee = Math.max(500, Math.round(fee * MORALE.STAGE2_CLUB_ASK_MULT / 500) * 500);
         }
         const offer = this._offerObj(p, parent ? parent.id : null, target.id, fee, { initiatedByAgent: true });
-        GameState.addMail({ kind: 'transfer', subject: `${target.name} want ${p.name}`, offer, persistence: 1, ttl: 2 });
-        GameState.addLog(`${target.name} tabled €${UI.money(fee)} for ${p.name}.`, 'offer');
-        return { ok: true, interested: true, message: msg + `${target.name} are interested — offer in your inbox (€${UI.money(fee)}).` };
+        // a wage-tight club that still bites offers what it CAN pay — a low-wage contract
+        if (wageTight) offer.proposedWage = Math.max(30, Math.round(this.maxClubWage(p, target) * (0.85 + Rng.next() * 0.1) / 10) * 10);
+        GameState.addMail({ kind: 'transfer', subject: free ? `${target.name} offer ${p.name} a contract` : `${target.name} want ${p.name}`, offer, persistence: 1, ttl: 2 });
+        GameState.addLog(free ? `${target.name} offer ${p.name} a deal (€${UI.money(offer.proposedWage)}/wk).` : `${target.name} tabled €${UI.money(fee)} for ${p.name}.`, 'offer');
+        const tail = free ? `offering €${UI.money(offer.proposedWage)}/wk${wageTight ? ' (a reduced deal — his usual wages are a stretch for them)' : ''}` : `offer in your inbox (€${UI.money(fee)})`;
+        return { ok: true, interested: true, message: msg + `${target.name} are interested — ${tail}.` };
     },
 
     // whether the "loan" mode is available in Shop-to-clubs: the parent club must first have
@@ -420,7 +481,7 @@ const Agency = {
         if (!(role === 'key' || role === 'starter' || role === 'rotation'))
             return { ok: true, interested: false, message: `${target.name} can't promise ${p.name} enough game time to take him on loan.` };
         // loans bite a little more readily than permanent deals (lower commitment), but still selective
-        if (Math.random() >= 0.42) return { ok: true, interested: false, message: `${target.name} passed on a loan for ${p.name} this time.` };
+        if (Rng.next() >= 0.42) return { ok: true, interested: false, message: `${target.name} passed on a loan for ${p.name} this time.` };
         if (GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id && m.offer.toClubId === target.id))
             return { ok: true, interested: false, message: `${target.name} already have a loan offer in for ${p.name}.` };
         GameState.addMail({ kind: 'loan', subject: `${target.name} want ${p.name} on loan`, offer: { playerId: p.id, fromClubId: p.clubId, toClubId: target.id, role }, persistence: 0, ttl: 3 });
@@ -440,10 +501,12 @@ const Agency = {
         const wageCaseOpen = p.moraleCase && p.moraleCase.dim === 'wage' && p.moraleCase.stage >= 2;
         const refuse = (msg) => { if (wageCaseOpen) p.morale.club = Math.max(0, p.morale.club + MORALE.STAGE2_WAGE_CLUB_PENALTY); return { ok: false, message: msg }; };
         const seasonsLeft = (p.contractUntilSeason ?? GameState.seasonStartYear) - GameState.seasonStartYear;
-        if (seasonsLeft > 2 && Math.random() < 0.7) return refuse(`${club.name} won't talk — plenty of contract left.`);
-        if (p.squadRole === 'fringe' && Math.random() < 0.5) return refuse(`${club.name} aren't planning with ${p.name}.`);
-        const proposedWage = Math.max(p.wage + 10, Math.round(PlayerGen.wageFor(p.ability, club.reputation) * 1.1 * this.wagePotentialFactor(p) / 10) * 10);
-        const proposedTermSeasons = Math.min(2 + Math.floor(Math.random() * 2), this.maxContractTerm(p, club));
+        if (seasonsLeft > 2 && Rng.next() < 0.7) return refuse(`${club.name} won't talk — plenty of contract left.`);
+        if (p.squadRole === 'fringe' && Rng.next() < 0.5) return refuse(`${club.name} aren't planning with ${p.name}.`);
+        // a renewal reflects loyalty and recent form, not just the ability bracket — a long-serving,
+        // in-form player is due a real bump, not the +€10 the flat bracket used to hand back
+        const proposedWage = Math.max(p.wage + 10, this.offeredWage(p, club, { loyalty: true, jitter: false }));
+        const proposedTermSeasons = Math.min(2 + Math.floor(Rng.next() * 2), this.maxContractTerm(p, club));
         const offer = { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons };
         GameState.addMail({ kind: 'renewal', subject: `Renewal terms for ${p.name} at ${club.name}`, offer, persistence: 0, ttl: 3 });
         return { ok: true, message: `${club.name} are open to talks — proposal in your inbox.` };
@@ -464,10 +527,62 @@ const Agency = {
         const potWeight = p.age <= 21 ? 1.3 : p.age <= 25 ? 0.8 : p.age <= 28 ? 0.4 : 0.15;
         return 1 + potGap * 0.06 * potWeight * this.potentialConfidence(p.ability);
     },
+
+    // ---------- wage market factors (loyalty · form · country · youth caps) ----------
+    // The most recent MEANINGFUL season average — the current one once it has real minutes, else the
+    // last completed campaign. Drives both the performance wage bonus and the higher-value transfer pull.
+    recentSeasonRating(p) {
+        const y = GameState.seasonStartYear;
+        const cur = seasonTotals(p, y);
+        if (cur.apps >= 10) return cur.avg;
+        const prev = seasonTotals(p, y - 1);
+        if (prev.apps >= 10) return prev.avg;
+        return cur.apps > 0 ? cur.avg : (prev.avg || 0);
+    },
+    // A season of >8.00 is worth +60% wage, >7.50 +25%, >7.24 +10% (each tier, nothing below).
+    perfWageMult(p) {
+        const r = this.recentSeasonRating(p);
+        return r > 8.00 ? 1.60 : r > 7.50 ? 1.25 : r > 7.24 ? 1.10 : 1;
+    },
+    // In form also lifts a player's market value and the bids he draws — up to +25%.
+    perfValueMult(p) {
+        const r = this.recentSeasonRating(p);
+        return r > 8.00 ? 1.25 : r > 7.50 ? 1.15 : r > 7.24 ? 1.08 : 1;
+    },
+    // Loyalty: +5% per season at the club, growing until 32; from 33 on it sheds 15 points a year down
+    // to a 5%-above-normal floor. Only meaningful when re-signing at the SAME club.
+    loyaltyMult(p) {
+        const years = (typeof Sim !== 'undefined' && Sim._seasonsAtClub) ? Sim._seasonsAtClub(p) : 0;
+        let bonus = 0.05 * years;
+        if (p.age > 32 && bonus > 0) bonus = Math.max(0.05, bonus - 0.15 * (p.age - 32));
+        return 1 + Math.max(0, bonus);
+    },
+    // Country pay tendency, with a per-offer jitter so it's a likelihood rather than a fixed law: an
+    // English suitor USUALLY outpays a Portuguese one for the same player, but not on literally every bid.
+    countryWageMult(club, jitter) {
+        let m = (club && COUNTRY_WAGE_MULT[club.country]) || 1;
+        if (jitter) m *= 0.9 + Rng.next() * 0.28;
+        return m;
+    },
+    // The wage a club would put on the table for `p`: ability/reputation base × wonderkid premium ×
+    // country tendency × recent-form bonus × (loyalty, only when re-signing) — then teenage caps.
+    offeredWage(p, club, opts = {}) {
+        const rep = club ? club.reputation : 45;
+        let w = PlayerGen.wageFor(p.ability, rep) * this.wagePotentialFactor(p);
+        w *= this.countryWageMult(club, opts.jitter !== false);
+        w *= this.perfWageMult(p);
+        if (opts.loyalty && club && p.clubId === club.id) w *= this.loyaltyMult(p);
+        w = PlayerGen.capYouthWage(w, p.age, rep, p.potential);
+        return Math.max(30, Math.round(w / 10) * 10);
+    },
     // club willingness to pay wage (for renewal/transfer negotiation)
     maxClubWage(p, club) {
-        let base = PlayerGen.wageFor(p.ability, club ? club.reputation : 45) * 1.6 * this.wagePotentialFactor(p);   // clear room to push the wage up
+        const rep = club ? club.reputation : 45;
+        let base = PlayerGen.wageFor(p.ability, rep) * 1.6 * this.wagePotentialFactor(p);   // clear room to push the wage up
+        base *= this.countryWageMult(club, false) * this.perfWageMult(p);                   // country tendency + recent form
+        if (club && p.clubId === club.id) base *= this.loyaltyMult(p);                      // long service pays, when he stays
         base *= 1 + Math.max(-0.08, Math.min(0.25, (this.relationship(club ? club.id : null) - 55) / 220));
+        base = PlayerGen.capYouthWage(base, p.age, rep, p.potential);
         return Math.round(base / 10) * 10;
     },
     // clubs won't lock up an ageing player for years — unless he clearly outclasses the level he's at
@@ -484,19 +599,26 @@ const Agency = {
     },
     contractSeasonsLeft(p) { return (p.contractUntilSeason != null ? p.contractUntilSeason : GameState.seasonStartYear) - GameState.seasonStartYear; },
     isFreeAgent(p) { return !!p.freeAgent || p.clubId == null; },
+    // Bosman: once the winter window shuts in a player's final contract season, other clubs can agree a
+    // free pre-contract and he moves for nothing. Before that he still commands a fee; after the season
+    // rolls over he'd be a plain free agent anyway once the deal lapses.
+    isPreContractFree(p) {
+        return !!p && !this.isFreeAgent(p) && p.contractUntilSeason != null
+            && p.contractUntilSeason <= GameState.seasonStartYear && GameState.week > 33;
+    },
     // pick a bidding club, strongly preferring the player's own country; cross-border bids are
     // rare and rarer the lower the player's level (Urk bids for a TEC player far sooner than Carlisle)
     pickBuyer(cands, p) {
         if (!cands || !cands.length) return null;
         const home = (Clubs.getClubById(p.clubId) || {}).country || p._lastCountry || null;
-        if (!home) return cands[Math.floor(Math.random() * cands.length)];
+        if (!home) return cands[Math.floor(Rng.next() * cands.length)];
         const same = cands.filter(c => c.country === home);
         const cross = cands.filter(c => c.country !== home);
         const crossProb = Math.max(0.02, Math.min(0.35, ((p.ability || 50) - 45) / 120));
         let pool;
-        if (same.length && cross.length) pool = (Math.random() < crossProb) ? cross : same;
+        if (same.length && cross.length) pool = (Rng.next() < crossProb) ? cross : same;
         else pool = same.length ? same : cross;
-        return pool[Math.floor(Math.random() * pool.length)];
+        return pool[Math.floor(Rng.next() * pool.length)];
     },
 
     // greeting reflects how the club feels about you
@@ -533,7 +655,7 @@ const Agency = {
         if (reqIdx <= ceilIdx) return { status: 'accept', role: requested, message: `Agreed — ${p.name} joins as ${roleLabel(requested, p.age)}.` };
         const rel = this.relationship(club ? club.id : null);
         const concede = Math.max(0, Math.min(0.85, 0.12 + (rel - 55) / 200 + (round - 1) * 0.22 - (reqIdx - ceilIdx - 1) * 0.28));
-        if (Math.random() < concede) return { status: 'accept', role: requested, message: `Alright — we'll let ${p.name} play as ${roleLabel(requested, p.age)}.` };
+        if (Rng.next() < concede) return { status: 'accept', role: requested, message: `Alright — we'll let ${p.name} play as ${roleLabel(requested, p.age)}.` };
         if (round >= 4) return { status: 'final', role: ceil, message: `That's our final word — ${roleLabel(ceil, p.age)} at most for ${p.name}.` };
         return { status: 'counter', role: ceil, message: `We see ${p.name} more as a ${roleLabel(ceil, p.age)}, not a ${roleLabel(requested, p.age)}.` };
     },
@@ -552,7 +674,7 @@ const Agency = {
             + (['youth', 'fringe'].includes(p.squadRole) ? 0.15 : 0)
             - (['key', 'starter'].includes(p.squadRole) ? 0.20 : 0);
         chance = Math.max(0.05, Math.min(0.92, chance));
-        if (Math.random() < chance) {
+        if (Rng.next() < chance) {
             p.transferListed = true;
             p._txOffersFrom = GameState.absWeek() + 1;
             GameState.addLog(`${club.name} agreed to transfer-list ${p.name}.`, 'info');
@@ -610,7 +732,7 @@ const Agency = {
 
         if (wageOk && roleOk && bonusOk) {
             const lines = [`“Good — we've got a deal for ${p.name}.”`, `“That package works for us. Welcome aboard, ${p.name}.”`, `“Agreed on all counts. Let's get it signed.”`];
-            return { status: 'accept', counter, message: lines[Math.floor(Math.random() * lines.length)] };
+            return { status: 'accept', counter, message: lines[Math.floor(Rng.next() * lines.length)] };
         }
         if (round >= 4) return { status: 'final', counter, message: `“This is our final package: €${UI.money(counter.wage)}/wk, ${roleLabel(counter.role, p.age)}, ${term}yr, €${UI.money(counter.bonus)} bonus. Take it or leave it.”` };
 
@@ -634,6 +756,10 @@ const Agency = {
         if (bonus && p.morale) p.morale.agent = Math.min(100, p.morale.agent + bonus);
     },
     // closes an open moraleCase if its promise matches one of the just-fulfilled types
+    _checkPromiseKeptBondHook(p) {
+        // a promise kept is the quiet backbone of a long relationship (see js/dialogue.js)
+        if (typeof Dialogue !== 'undefined') Dialogue.addBond(p, 4, 'you kept your word');
+    },
     _checkPromiseKept(p, fulfillTypes) {
         const c = p.moraleCase;
         if (!c || !c.promise || !fulfillTypes.includes(c.promise.type)) return;
@@ -641,6 +767,7 @@ const Agency = {
         p.morale.agent = Math.min(100, p.morale.agent + MORALE.PROMISE_KEPT_AGENT);
         GameState.addMail({ kind: 'news', cat: 'morale', subject: `${p.name} — promise kept`, body: `${p.name}: "You came through for me. I appreciate it."`, ttl: 4 });
         p.moraleCase = null;
+        this._checkPromiseKeptBondHook(p);
     },
 
     acceptTransfer(mail, agreedWage, role, termSeasons, signingBonus, opts = {}) {
@@ -741,7 +868,9 @@ const Agency = {
 
         if (fromClub) this.changeRelationship(fromClub.id, pkg.initiatedByAgent ? +1 : +3);
         this.changeRelationship(toClub.id, +4);
-        Agency.bumpRep(movingUp ? 3 + Math.random() * 3 : 1);
+        Agency.bumpRep(movingUp ? 3 + Rng.next() * 3 : 1);
+        // his call after signing — and if this is the club he supported as a boy, THE call (js/dialogue.js)
+        if (typeof Dialogue !== 'undefined') Dialogue.onTransferCompleted(p, toClub.id);
         // the club's reputation promptly rises to what its roster of agent clients justifies:
         // anchor + Σ max(0, ability − anchor)/11 (uncapped). It never snaps DOWN here — once
         // players leave, League.normalizeReputations fades it by 1–5 per season instead.
@@ -841,22 +970,29 @@ const Agency = {
         return { ok: true, message: `${p.name} is on loan at ${borrower.name} (${roleLabel(r, p.age)}, ${durLabel}).` };
     },
 
+    // sponsor deals still running this season or later
+    activeSponsorCount(p) { return (p.sponsorDeals || []).filter(d => d.untilSeason >= GameState.seasonStartYear).length; },
+    MAX_SPONSORS: 2,
     acceptSponsor(mail, optionIndex = 0) {
         const o = mail.offer, p = GameState.getPlayer(o.playerId);
         if (!p) return { ok: false, message: 'Gone.' };
+        if (this.activeSponsorCount(p) >= this.MAX_SPONSORS) return { ok: false, message: `${p.name} already carries ${this.MAX_SPONSORS} sponsorship deals — the most a player can hold at once. Let one run out first.` };
         const opt = (o.options && o.options[optionIndex]) || (o.weeklyAmount != null ? { company: o.sponsorName, weekly: o.weeklyAmount, annual: 0, termSeasons: o.termSeasons || 1 } : null);
         if (!opt) return { ok: false, message: 'Offer expired.' };
+        // never two active deals from the same brand (a stale offer could name one he has since signed)
+        if ((p.sponsorDeals || []).some(d => d.company === opt.company && d.untilSeason >= GameState.seasonStartYear))
+            return { ok: false, message: `${p.name} already has an active deal with ${opt.company}.` };
         p.sponsorIncome += opt.weekly;
         if (!p.sponsorDeals) p.sponsorDeals = [];
         p.sponsorDeals.push({ company: opt.company, weekly: opt.weekly, annual: opt.annual, untilSeason: GameState.seasonStartYear + opt.termSeasons });
         // pay the first annual instalment now (your sponsor cut on it goes to the agency)
         const annualCut = Math.round((opt.annual || 0) * p.sponsorCommission / 100);
-        if (annualCut) GameState.agency.balance += annualCut; GameState.addFinance('Sponsoring', annualCut);
+        if (annualCut) { GameState.agency.balance += annualCut; GameState.addFinance('Sponsoring', annualCut); }
         this._creditAgentAction(p, 6);   // unchanged +6 bump, now also resets the neglect clock (Phase 2)
         GameState.removeMail(mail.id);
         const weeklyCut = Math.round(opt.weekly * p.sponsorCommission / 100);
         GameState.addLog(`${p.name} signed ${opt.company}: +€${UI.money(opt.weekly)}/wk${opt.annual ? ' + €' + UI.money(opt.annual) + '/yr' : ''} for ${opt.termSeasons} season(s).`, 'sign');
-        return { ok: true, message: `${p.name} signs with ${opt.company}: €${UI.money(opt.weekly)}/wk${opt.annual ? ' plus €' + UI.money(opt.annual) + '/yr' : ''} for ${opt.termSeasons} season(s). Your ${p.sponsorCommission}% = €${UI.money(weeklyCut)}/wk${annualCut ? ' + €' + UI.money(annualCut) + '/yr' : ''}.` };
+        return { ok: true, message: `${p.name} signs with ${opt.company}: €${UI.money(opt.weekly)}/wk${opt.annual ? ' plus a €' + UI.money(opt.annual) + '/yr lump sum' : ''} for ${opt.termSeasons} season(s). Your ${p.sponsorCommission}% = €${UI.money(weeklyCut)}/wk${annualCut ? ' + €' + UI.money(annualCut) + '/yr' : ''}.` };
     },
 
     declineMail(mail) { GameState.removeMail(mail.id); },
@@ -926,6 +1062,7 @@ const Agency = {
         // gifts too close together (any tier) ring hollow — halved effect within the window
         const diminished = p._giftLog.lastAny != null && (aw - p._giftLog.lastAny) < MORALE.GIFT_DIMINISH_WEEKS;
         const boost = this.giftBoost(tier) * (diminished ? MORALE.GIFT_DIMINISH_FACTOR : 1);
+        const strained = p.morale.agent < 50;   // read BEFORE the boost: was this a peace offering?
         p.morale.agent = Math.min(100, p.morale.agent + boost);
         p._giftLog[tier] = aw; p._giftLog.lastAny = aw;
         const lines = {
@@ -934,23 +1071,18 @@ const Agency = {
             large: ['“Wow — you didn’t have to! I won’t forget this.”', '“This is incredible, thank you so much!”', '“Now we’re talking — you look after me and I’ll repay it on the pitch.”']
         };
         const arr = lines[tier] || lines.small;
-        const quote = arr[Math.floor(Math.random() * arr.length)];
+        const quote = arr[Math.floor(Rng.next() * arr.length)];
         GameState.addLog(`Gave ${p.name} a ${tier} gift (−€${UI.money(cost)})${diminished ? ' — diminished, too soon after the last one' : ''}.`, 'info');
-        return { ok: true, quote, message: `${p.name}: ${quote}${diminished ? '<br><span class="muted">(reduced effect — too soon after your last gift)</span>' : ''}`, cost };
+        // a gift lands hardest when things between you are strained (see js/dialogue.js)
+        if (typeof Dialogue !== 'undefined') Dialogue.addBond(p, strained ? 2 : 1);
+        // `scene` lets the UI play the reaction as a short conversation instead of a banner
+        return { ok: true, quote, scene: true, tier, diminished, message: `${p.name}: ${quote}${diminished ? '<br><span class="muted">(reduced effect — too soon after your last gift)</span>' : ''}`, cost };
     },
 
-    // ---------- morale case actions (Phase 3) ----------
-    talkToClient(p) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (!p.moraleCase || p.moraleCase.stage !== 1) return { ok: false, message: `There's nothing to talk through with ${p.name} right now.` };
-        const aw = GameState.absWeek();
-        if (p._talkCooldownAbs != null && aw - p._talkCooldownAbs < MORALE.TALK_COOLDOWN_WEEKS)
-            return { ok: false, message: `You spoke with ${p.name} recently — give it a little longer.` };
-        p._talkCooldownAbs = aw;
-        p.morale.agent = Math.min(100, p.morale.agent + MORALE.TALK_AGENT_BONUS);
-        GameState.addLog(`Talked things through with ${p.name}.`, 'morale');
-        return { ok: true, message: `${p.name} appreciates you taking the time to talk it through.` };
-    },
+    // ---------- morale case actions ----------
+    // (the "Talk to him" flow is now the Dialogue complaint scene — see js/dialogue.js /
+    // ui/js/screen-dialogue.js; the old flat-bonus Agency.talkToClient it replaced is gone)
+
     // which promise types make sense for the player's currently open case
     validPromiseTypes(p) {
         if (!p.moraleCase || p.moraleCase.stage !== 1) return [];
@@ -1008,13 +1140,21 @@ const Agency = {
         const potGap = Math.max(0, (p.potential || p.ability) - p.ability);
         const potWeight = p.age <= 21 ? 1.3 : p.age <= 25 ? 0.8 : p.age <= 28 ? 0.4 : 0.15;
         v *= 1 + potGap * 0.045 * potWeight * this.potentialConfidence(p.ability);   // upside is worth most in the young — but muted for unproven low-ability players, see potentialConfidence()
-        const ageMult = p.age <= 19 ? 1.35 : p.age <= 21 ? 1.25 : p.age <= 23 ? 1.12 : p.age <= 26 ? 1.0 : p.age <= 29 ? 0.82 : p.age <= 31 ? 0.58 : 0.38;
+        // age curve: young premium, then a steep, explicit decline from 31 so ageing players slide down
+        // the market and become affordable to lower clubs. Relative to a 26-year-old of the same ability,
+        // a 31yo is worth 35% less, 32→45%, 33→55%, 34→65%, 35→80%, 36→90%, 37+→95% less.
+        const ageMult = p.age <= 19 ? 1.35 : p.age <= 21 ? 1.25 : p.age <= 23 ? 1.12 : p.age <= 26 ? 1.0
+            : p.age <= 28 ? 0.80 : p.age <= 30 ? 0.72
+            : p.age === 31 ? 0.65 : p.age === 32 ? 0.55 : p.age === 33 ? 0.45 : p.age === 34 ? 0.35
+            : p.age === 35 ? 0.20 : p.age === 36 ? 0.10 : 0.05;
         v *= ageMult;
+        v *= this.perfValueMult(p);   // a red-hot season pulls higher bids (up to +25%)
         const yrsLeft = Math.max(0, (p.contractUntilSeason || GameState.seasonStartYear) - GameState.seasonStartYear);
         v *= 0.78 + Math.min(4, yrsLeft) * 0.11;                       // longer deal left -> pricier
         return v;
     },
     estimateFee(p, targetClub, opts = {}) {
+        if (this.isPreContractFree(p)) return 0;   // a pre-contract signing costs no transfer fee (Bosman)
         let v = this.playerValue(p);
         if (targetClub) {
             const rep = targetClub.reputation;
@@ -1042,7 +1182,7 @@ const Agency = {
         const toClub = Clubs.getClubById(toId);
         return {
             playerId: p.id, fromClubId: fromId, toClubId: toId, transferFee: fee,
-            proposedWage: Math.round(PlayerGen.wageFor(p.ability, toClub ? toClub.reputation : 45) * this.wagePotentialFactor(p) / 10) * 10,
+            proposedWage: this.offeredWage(p, toClub, { loyalty: false }),   // includes country tendency + form (item: cross-country payrise)
             role: this.maxRoleAt(p, toClub),
             initiatedByAgent: !!opts.initiatedByAgent
         };

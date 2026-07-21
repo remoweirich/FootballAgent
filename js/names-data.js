@@ -841,7 +841,7 @@ const FALLBACK_NAMES = {
 // exactly 100) so no single country silently absorbs any rounding remainder.
 const NATIONALITY_WEIGHT_TOTAL = Object.values(NATIONALITY_DISTRIBUTION).reduce((s, w) => s + w, 0);
 function getRandomNationality() {
-    let rand = Math.random() * NATIONALITY_WEIGHT_TOTAL;
+    let rand = Rng.next() * NATIONALITY_WEIGHT_TOTAL;
     for (const [nationality, weight] of Object.entries(NATIONALITY_DISTRIBUTION)) {
         rand -= weight;
         if (rand <= 0) return nationality;
@@ -852,7 +852,7 @@ function getRandomNationality() {
 // Function to get nationality based on scouting region
 // 85% from region, 14% international mix, 1% complete wildcard
 function getRegionBasedNationality(scoutRegion) {
-    const rand = Math.random();
+    const rand = Rng.next();
 
     // ~11% chance: complete wildcard from the full weighted distribution (global variety)
     if (rand < 0.11) {
@@ -951,14 +951,14 @@ function getRegionSecondaryNationality(region) {
     const options = secondaryMap[region] || ["Germany", "France", "Spain", "Italy", "Brazil"];
     
     // Pick random from secondary options
-    return options[Math.floor(Math.random() * options.length)];
+    return options[Math.floor(Rng.next() * options.length)];
 }
 
 // Function to generate a name based on nationality
 function generateName(nationality) {
     const names = NAMES_DATABASE[nationality] || FALLBACK_NAMES;
-    const firstName = names.firstNames[Math.floor(Math.random() * names.firstNames.length)];
-    const lastName = names.lastNames[Math.floor(Math.random() * names.lastNames.length)];
+    const firstName = names.firstNames[Math.floor(Rng.next() * names.firstNames.length)];
+    const lastName = names.lastNames[Math.floor(Rng.next() * names.lastNames.length)];
     
     return `${firstName} ${lastName}`;
 }
