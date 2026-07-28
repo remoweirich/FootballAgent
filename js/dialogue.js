@@ -125,7 +125,52 @@ const Dialogue = {
 
     choiceLabel(scene, choice) {
         const r = (DIALOGUE_DATA.choices || []).find(c => c.scene === scene && c.choice === choice);
-        return r ? { label: r.label, hint: r.hint } : { label: choice, hint: '' };
+        const say = this.SAY[scene + ':' + choice] || '';
+        return r ? { label: r.label, hint: r.hint, say } : { label: choice, hint: '', say };
+    },
+    // What the AGENT actually SAYS when you pick a choice — full prose, so his side of the chat reads
+    // like real speech instead of a stage direction ("Listen" → an actual line). The buttons keep their
+    // short labels; this is only the spoken bubble. Keyed "scene:choice"; falls back to the label.
+    // (Prose lives in code by design for now; a future pass can lift it into the dialogue workbook.)
+    SAY: {
+        'complaint:listen': "Talk to me. Whatever it is, I want to hear it — all of it.",
+        'complaint:promise': "Alright. Here's what I'm going to do about it.",
+        'complaint:pushback': "I hear you. But let me be straight with you for a second.",
+        'complaint:deflect': "Let's not get ahead of ourselves. Give it a little time yet.",
+        'promise:move': "Leave it with me. I'll find you the right move — the right club, not just any club.",
+        'promise:newContract': "I'll get you the deal you deserve at this club. Give me a bit of time.",
+        'promise:playingTime': "I'll have a proper word with the manager about your minutes. We'll sort this.",
+        'promise:renegotiateRep': "And I'll take less on my end to make it happen. That's how much I back you.",
+        'gift:praise': "You earned this. Every bit of it — don't let anyone tell you otherwise.",
+        'gift:modest': "It's nothing, honestly. Just wanted you to know I'm paying attention.",
+        'prematch:calm': "Breathe. You've done all the work already. Just go and play your game.",
+        'prematch:fireup': "This is your night. Go out there and take it — leave nothing behind.",
+        'prematch:bonus': "Tell you what — you win this one, and there's a little something extra in it for you.",
+        'bonus:small': "You win tonight and there's a gift in it for you. My word on it.",
+        'bonus:medium': "Win this and I'll look after you properly — that's a promise.",
+        'bonus:large': "You bring this home and I'll make it worth your while, big time. My word.",
+        'postwin:toast': "Come here — that was special. Let's enjoy this one.",
+        'postwin:quiet': "Beautifully done. I'll let you get back to the lads.",
+        'postwin:tab': "Everything's on me tonight. You've more than earned it.",
+        'postloss:sit': "Sit with me a minute. It stings now — it won't for long.",
+        'postloss:space': "I'll leave you to it. Head up. We go again.",
+        'postloss:speech': "Listen to me. One game doesn't define you. Don't you dare forget that.",
+        'farewell:career': "What a career it's been. You should be proud of every single minute.",
+        'farewell:personal': "Forget the football a second — I'm just glad I got to know you.",
+        'checkin:q-life': "So how are things away from the pitch? Everything good at home?",
+        'checkin:q-club': "How are you settling in at the club? Getting on with everyone?",
+        'checkin:q-ambition': "Where do you want all this to go? What are we really aiming for?",
+        'checkin:q-room': "Who do you knock about with in the dressing room these days?",
+        'checkin:q-none': "No agenda today. I just wanted to see how you're doing.",
+        'moment:praise': "That was some moment. Take it all in — you earned it.",
+        'moment:modest': "Quietly brilliant, that. Well played.",
+        'injury:there': "I'm coming to see you. You're not going through this on your own.",
+        'injury:flowers': "I'll send something over — just so you know I'm thinking of you.",
+        'thanks:cherish': "This means a great deal to me. I'll keep it, honestly.",
+        'thanks:banter': "You didn't have to do that, you soft sod. Cheers, though — really.",
+        'invite:attend': "Wouldn't miss it for the world. I'll be right there in the stands.",
+        'invite:gift': "I can't make it in person, but let me send something to mark the day.",
+        'invite:decline': "I can't be there this time — but I'm with you in spirit, you know that.",
     },
 
     // =================================================== complaint scene
@@ -450,12 +495,14 @@ const Dialogue = {
         const hasType = t => (p.trophies || []).some(tr => COMPETITIONS[tr.compId] && COMPETITIONS[tr.compId].type === t);
         const w = {};   // eligible types with weights
         // playing at a higher level, expressed as a LEAGUE — the dominant dream, and more so for talents
-        // out of the smaller football nations (a Young Boys kid wanting the Bundesliga)
-        w.league = this.SMALL_LEAGUE_HOMES.includes(home) ? 4 : 2.5;
+        // out of the smaller football nations (a Young Boys kid wanting the Bundesliga). NOT offered to a
+        // player who has already played in a big-five league — that dream is already lived (B1).
+        if (!this._everInBig5(p)) w.league = this.SMALL_LEAGUE_HOMES.includes(home) ? 4 : 2.5;
         // playing for a specific big club someday (a foreign giant, his boyhood club, or — for a modest
         // talent — simply a top-flight side back home)
         w.dreamclub = 2.5;
-        if (favClubId && favClubId !== effectiveClubId(p) && !this._isPresumedRival(favClubId, p)) w.boyhood = 1.5;
+        // "finish where it began" — only if there's a genuine prior spell at that club to return to (B2)
+        if (favClubId && favClubId !== effectiveClubId(p) && !this._isPresumedRival(favClubId, p) && this._playedAtClub(p, favClubId)) w.boyhood = 1.5;
         if (!hasType('league')) w.title = 2;
         if (!hasType('cup')) w.cup = 1.5;
         if (!this._hasEuropeApps(p)) w.europe = 1.5;
@@ -513,6 +560,27 @@ const Dialogue = {
             for (const st of Object.values(p.stats[y]))
                 for (const cid of Object.keys(st.comps || {}))
                     if ((cid === 'UCL' || cid === 'UEL' || cid === 'UECL') && st.comps[cid].apps > 0) return true;
+        return false;
+    },
+    // has he ever played in a big-five league (current club or a past spell)? — gates the "play in a
+    // bigger league" ambition so it's never handed to someone already living it (B1)
+    _everInBig5(p) {
+        const cur = (Clubs.getClubById(effectiveClubId(p)) || {}).division;
+        if (cur && this.TOP5_DIVS && this.TOP5_DIVS.includes(cur)) return true;
+        for (const y of Object.keys(p.stats || {}))
+            for (const st of Object.values(p.stats[y]))
+                for (const cid of Object.keys(st.comps || {}))
+                    if (this.TOP5_DIVS && this.TOP5_DIVS.includes(cid) && (st.comps[cid].apps || 0) > 0) return true;
+        return false;
+    },
+    // does he have a genuine prior spell (senior appearances) at this club? — gates the boyhood-return
+    // ambition so it never points at a club he never played for (B2)
+    _playedAtClub(p, clubId) {
+        if (!clubId) return false;
+        if (typeof careerByClub === 'function') return careerByClub(p).some(c => c.clubId === clubId && c.agg && c.agg.apps > 0);
+        for (const y of Object.keys(p.stats || {}))
+            for (const st of Object.values(p.stats[y]))
+                if (st.clubId === clubId) { for (const c of Object.values(st.comps || {})) if ((c.apps || 0) > 0) return true; }
         return false;
     },
     ensureFacts(p) {
@@ -889,6 +957,13 @@ const Dialogue = {
                     GameState.addLog(`${p.name} recommended ${mate.name} to you.`, 'sign');
                 }
             }
+            // family life moves on over the years: single → partner → kids. A change re-opens the topic
+            // (discovered reset), so a yearly check-in can catch it (D6). Rolled AFTER this year's social
+            // events so it only affects future seasons — this year's status is what triggers them.
+            if (f.family) {
+                if (f.family.status === 'single' && Rng.next() < 0.14) { f.family.status = 'partner'; f.family.discovered = false; }
+                else if (f.family.status === 'partner' && Rng.next() < 0.14) { f.family.status = 'kids'; f.family.discovered = false; }
+            }
         });
     },
     _pickReferral(p) {
@@ -904,18 +979,36 @@ const Dialogue = {
     // Language map: a move to a country that shares no language with what he speaks starts a
     // settling-in period — a small morale drag and a small form drag until he finds his feet.
     LANGS: { Netherlands: ['nl'], Belgium: ['nl', 'fr'], England: ['en'], Germany: ['de'], Switzerland: ['de', 'fr', 'it'], Spain: ['es'], Italy: ['it'], France: ['fr'], Portugal: ['pt'] },
-    _langsOf(p) { return (this.LANGS[p.nationality] || []).concat(p._langs || []); },
+    // every country he has genuinely played in (senior apps) — he picked up the language there
+    _countriesPlayedIn(p) {
+        const out = new Set();
+        if (typeof careerByClub === 'function')
+            for (const c of careerByClub(p)) { if (!c.agg || !c.agg.apps) continue; const club = Clubs.getClubById(c.clubId); if (club && club.country) out.add(club.country); }
+        return out;
+    },
+    // languages he speaks: his nationality's (we assume all national languages), any he's learned via a
+    // move, and any from a country he's actually played in (D7)
+    _langsOf(p) {
+        const langs = new Set((this.LANGS[p.nationality] || []).concat(p._langs || []));
+        for (const country of this._countriesPlayedIn(p)) (this.LANGS[country] || []).forEach(l => langs.add(l));
+        return [...langs];
+    },
     _startSettling(p, club) {
         if (!club || !this.LANGS[club.country]) return;
+        const home = (p.facts && p.facts.home) || this._homeCountryOf(p);
+        if (club.country === home) return;                                // moving (back) home — no adjustment
         const speaks = this._langsOf(p);
-        if (this.LANGS[club.country].some(l => speaks.includes(l))) return;   // he can get by
+        const knowsLang = this.LANGS[club.country].some(l => speaks.includes(l));
         let weeks = 12 + Math.floor(Rng.next() * 7);                       // 12–18 weeks base
         if (this.hasTrait(p, 'homebody')) weeks = Math.round(weeks * 1.75);   // uprooted, and he feels it
         if (this.hasTrait(p, 'adventurer')) weeks = Math.round(weeks * 0.5);  // this is what he lives for
-        p.settling = { weeksLeft: weeks, morale: true, lang: this.LANGS[club.country][0], services: {} };
+        if (knowsLang) weeks = Math.max(1, Math.round(weeks * 0.25));      // already speaks it: 75% shorter, not skipped
+        p.settling = { weeksLeft: weeks, morale: !knowsLang, lang: this.LANGS[club.country][0], services: {} };
         GameState.addMail({
             kind: 'news', cat: 'general', subject: `${p.name} — settling in abroad`,
-            body: `${p.name} has moved to a country whose language he doesn't speak. Expect his form and mood to dip for around ${weeks} weeks while he finds his feet. Support (language course, house hunting, flying the family over) shortens it — see his page.`, ttl: 5
+            body: knowsLang
+                ? `${p.name} has moved abroad, but he already speaks the language — expect only a brief adjustment (around ${weeks} weeks) as he settles at the new club. His page has options to smooth it further.`
+                : `${p.name} has moved to a country whose language he doesn't speak. Expect his form and mood to dip for around ${weeks} weeks while he finds his feet. Support (language course, house hunting, flying the family over) shortens it — see his page.`, ttl: 5
         });
     },
     _settleTick(p) {

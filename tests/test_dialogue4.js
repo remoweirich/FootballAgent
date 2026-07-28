@@ -147,15 +147,15 @@ check('referral: warm intro pays off at signing (agent morale 85+, bond seeded)'
 `));
 
 // ---- settling in ----
-check('settling: NL -> England starts a settling period; NL -> Belgium does not', runv(`
+check('settling: NL -> England full period; NL -> Belgium only a brief one (he knows Dutch)', runv(`
   delete P.settling; P._langs = [];
   Dialogue._startSettling(P, ENG);
   const eng = !!P.settling;
   const w1 = P.settling ? P.settling.weeksLeft : 0;
   delete P.settling;
-  Dialogue._startSettling(P, BEL);   // Dutch is spoken in Belgium
-  const bel = !P.settling;
-  return eng && w1 >= 6 && bel;
+  Dialogue._startSettling(P, BEL);   // Dutch is spoken in Belgium -> 75% shorter, not skipped (D7)
+  const belW = P.settling ? P.settling.weeksLeft : 0;
+  return eng && w1 >= 6 && belW > 0 && belW <= Math.ceil(w1 * 0.5);
 `));
 check('settling: homebodies suffer longer, adventurers barely notice', runv(`
   delete P.settling;
@@ -195,13 +195,13 @@ check('settling: form drag wired into the rating engine (league.js source)', (()
   const src = fs.readFileSync(path.join(root, 'js', 'league.js'), 'utf8');
   return src.includes('if (p.settling) rating -= 0.3;');
 })());
-check('settling: after settling, a second move to the same language zone is instant', runv(`
+check('settling: a second move to the same language zone is only a brief adjustment', runv(`
   delete P.settling;
   P._langs = ['en'];
   Dialogue._startSettling(P, ENG);
-  const ok = !P.settling;
+  const w = P.settling ? P.settling.weeksLeft : 0;   // knows English now -> short, not full
   P._langs = [];
-  return ok;
+  return w > 0 && w <= 5;
 `));
 
 // ---- financial advisor (reworked: personality-gated, rare, multi-year) ----

@@ -215,6 +215,7 @@ const Attend = {
             pens: extra.pens || r.pens || null,
             et: !!extra.et,
             minutes: extra.minutes || 90,
+            regScore: extra.regScore || null,   // score at 90' (level when the final went to ET) — see timelineSpec._etGoals
             firstLeg: extra.firstLeg || null,                 // { scored, conceded } for the client's team, two-legged decider only
             targetDivision: extra.targetDivision || null,
             clients,
@@ -262,10 +263,12 @@ const Attend = {
     // The invitation letter + a short header, for the popup. Pure text.
     invitePayload(m) {
         const agent = (typeof GameState !== 'undefined' && GameState.agentName) ? GameState.agentName() : '';
-        const inviter = this._inviterSide(m);                 // whichever side the client's club is
+        const inviter = this._inviterSide(m);                 // the club with MORE of your clients invites you
         const teamName = inviter === 'home' ? m.homeName : m.awayName;
         const oppName = inviter === 'home' ? m.awayName : m.homeName;
-        const names = this._clientList(m.clients);
+        const ownClients = m.clients.filter(c => c.side === inviter);       // the inviting club's players
+        const oppClients = m.clients.filter(c => c.side !== inviter);       // your clients on the OTHER side
+        const names = this._clientList(ownClients);
         const comp = this._compTitle(m);
         let body;
         if (m.kind === 'playoff-final' && m.firstLeg && typeof LiveSim !== 'undefined' && LiveSim.playoffFinalInvite) {
@@ -276,8 +279,12 @@ const Attend = {
             body = `Dear ${agent || 'Sir/Madam'},\n\n`
                 + `${teamName} have reserved a seat for you: come and watch ${names} in the ${comp} against ${oppName}.`;
         }
-        // honest caveat when a named client is unlikely to see much of the pitch (decision 6)
-        const benchers = m.clients.filter(c => ['rotation', 'fringe', 'youth'].includes(c.squadRole));
+        // your clients on the opposing side are named separately, with their real club (D1)
+        if (oppClients.length) {
+            body += `\n\n(${this._clientList(oppClients)} also play${oppClients.length > 1 ? '' : 's'} in this game, but for ${oppName}.)`;
+        }
+        // honest caveat when a named client is unlikely to see much of the pitch (decision 6) — inviter's players only
+        const benchers = ownClients.filter(c => ['rotation', 'fringe', 'youth'].includes(c.squadRole));
         if (benchers.length) {
             const who = this._clientList(benchers);
             body += `\n\nA word of honesty: ${who} may not play much — ${benchers.length > 1 ? 'they are' : 'he is'} not a guaranteed starter — but you're welcome all the same.`;
@@ -289,7 +296,12 @@ const Attend = {
             body, teamName, oppName, competition: comp, clients: m.clients,
         };
     },
-    _inviterSide(m) { return m.clients.some(c => c.side === 'home') ? 'home' : 'away'; },
+    // the club with MORE of your clients sends the invite (a tie, or clients only one side, favours home)
+    _inviterSide(m) {
+        const h = (m.clients || []).filter(c => c.side === 'home').length;
+        const a = (m.clients || []).filter(c => c.side === 'away').length;
+        return a > h ? 'away' : 'home';
+    },
     _clientList(clients) {
         const names = [...new Set(clients.map(c => c.name))];
         if (names.length === 1) return names[0];
@@ -299,13 +311,19 @@ const Attend = {
 
     // Turn a captured match into a spec for LiveSim.buildTimeline. Only clients who actually
     // featured go into the timeline (an unplayed fringe client doesn't appear in the feed).
+    // goals scored in extra time = final score − score at 90' (0 for anything that didn't win in ET)
+    _etGoals(m) {
+        if (!m.regScore) return { home: 0, away: 0 };
+        return { home: Math.max(0, (m.hg || 0) - (m.regScore.hg || 0)), away: Math.max(0, (m.ag || 0) - (m.regScore.ag || 0)) };
+    },
     timelineSpec(m) {
         return {
             homeName: m.homeName, awayName: m.awayName,
             hg: m.hg, ag: m.ag, minutes: m.minutes,
-            // a shootout means extra time was scoreless (the goals shown are all from regulation), so
-            // keep the feed inside 90' and let the clock run on, empty, to 120 before the kicks
-            regulation: m.pens ? 90 : m.minutes,
+            // regulation events all sit inside 90'; the clock then runs on (empty for a shootout, or
+            // carrying the extra-time goals) toward `minutes`. See buildTimeline's stampWindow split.
+            regulation: Math.min(m.minutes || 90, 90),
+            etGoals: this._etGoals(m),
             clients: m.clients.filter(c => c.played).map(c => ({
                 player: { id: c.playerId, name: c.name, position: c.position, styleRole: c.styleRole },
                 side: c.side, goals: c.goals, assists: c.assists, yellow: c.yellow, red: c.red,

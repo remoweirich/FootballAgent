@@ -24,25 +24,36 @@ const Agency = {
             homeCountry: GameState.homeCountry || 'Netherlands',
             scouts: [], relationships,
             intlLicenceUntil: null,   // absWeek until which an International Scouting Licence is valid
+            intlSuspendedUntil: null, // absWeek until which scouting abroad is suspended (licence-lapse penalty)
             upgrades: { officeIndex: 0, vehicleIndex: -1, propertyIndex: -1 },
             facilities: { items: [], physios: 0, trainers: 0 },
             ledger: {}, ledgerLast: {}, ledgerAll: {}, ledgerSeason: GameState.seasonStartYear
         };
     },
-    INTL_LICENCE_COST: 20000,
-    INTL_LICENCE_WEEKS: 156,
+    INTL_LICENCE_COST: 20000,   // the 1-season fee; also the reference for lapse fines (see Sim._scoutLicence)
+    // buy/renew options: { weeks, cost, label }. Longer terms are a little cheaper per season.
+    INTL_LICENCE_OPTIONS: [
+        { weeks: 52, cost: 20000, label: '1 season' },
+        { weeks: 104, cost: 37500, label: '2 seasons' },
+        { weeks: 156, cost: 52500, label: '3 seasons' },
+    ],
     hasIntlLicence() { const a = GameState.agency; return !!(a && a.intlLicenceUntil != null && GameState.absWeek() < a.intlLicenceUntil); },
     intlLicenceWeeksLeft() { const a = GameState.agency; return (a && a.intlLicenceUntil != null) ? Math.max(0, a.intlLicenceUntil - GameState.absWeek()) : 0; },
-    buyIntlLicence() {
+    // international scouting can be suspended for a year after repeatedly ignoring a lapsed licence
+    intlSuspended() { const a = GameState.agency; return !!(a && a.intlSuspendedUntil != null && GameState.absWeek() < a.intlSuspendedUntil); },
+    intlSuspendWeeksLeft() { const a = GameState.agency; return (a && a.intlSuspendedUntil != null) ? Math.max(0, a.intlSuspendedUntil - GameState.absWeek()) : 0; },
+    buyIntlLicence(weeks) {
         const a = GameState.agency;
-        if (a.balance < this.INTL_LICENCE_COST) return { ok: false, message: `An International Scouting Licence costs €${UI.money(this.INTL_LICENCE_COST)}, but you can't afford it.` };
-        GameState.addFinance('International licence', -this.INTL_LICENCE_COST);
-        a.balance -= this.INTL_LICENCE_COST;
+        if (this.intlSuspended()) return { ok: false, message: `International scouting is suspended for ${this.intlSuspendWeeksLeft()} more week(s).` };
+        const opt = this.INTL_LICENCE_OPTIONS.find(o => o.weeks === weeks) || this.INTL_LICENCE_OPTIONS[0];
+        if (a.balance < opt.cost) return { ok: false, message: `That licence costs €${UI.money(opt.cost)}, but you can't afford it.` };
+        GameState.addFinance('International licence', -opt.cost);
+        a.balance -= opt.cost;
         // extend from now, or from the current expiry if still valid
         const from = this.hasIntlLicence() ? a.intlLicenceUntil : GameState.absWeek();
-        a.intlLicenceUntil = from + this.INTL_LICENCE_WEEKS;
-        GameState.addLog(`Bought an International Scouting Licence (−€${UI.money(this.INTL_LICENCE_COST)}, valid 3 seasons).`, 'scout');
-        return { ok: true, message: `International Scouting Licence active for 3 seasons. You can now send unassigned scouts abroad from the Scouts tab.` };
+        a.intlLicenceUntil = from + opt.weeks;
+        GameState.addLog(`Bought an International Scouting Licence (−€${UI.money(opt.cost)}, ${opt.label}).`, 'scout');
+        return { ok: true, message: `International Scouting Licence active for ${opt.label}. You can now send unassigned scouts abroad from the Scouts tab.` };
     },
     data() { return GameState.agency; },
     clients() { return GameState.players.filter(p => p.agentId === 'me' && !p.archived); },
@@ -673,7 +684,11 @@ const Agency = {
         let chance = 0.35 + surplus * 0.03 + (rel - 55) / 250
             + (['youth', 'fringe'].includes(p.squadRole) ? 0.15 : 0)
             - (['key', 'starter'].includes(p.squadRole) ? 0.20 : 0);
-        chance = Math.max(0.05, Math.min(0.92, chance));
+        // C2: a club that isn't building around him (fringe/youth — the same standing on which it refuses
+        // a renewal, "not in our plans") has no grounds to call him too important to list. So listing him
+        // is all but guaranteed for those roles — the two stances can't contradict each other.
+        if (['youth', 'fringe'].includes(p.squadRole)) chance = Math.max(chance, 0.9);
+        chance = Math.max(0.05, Math.min(0.95, chance));
         if (Rng.next() < chance) {
             p.transferListed = true;
             p._txOffersFrom = GameState.absWeek() + 1;

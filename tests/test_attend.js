@@ -88,7 +88,7 @@ check('play-off: a two-legged promotion final captures the DECIDING leg with the
   const m = Attend.pending()[0];
   Attend.openWindow(GameState._attend);   // form the window so hiding applies
   return m && m.kind==="playoff-final" && m.firstLeg && typeof m.firstLeg.scored==="number" &&
-         tie._attendId===m.id && m.minutes===90 && (m.homeId===a.id) &&
+         tie._attendId===m.id && m.minutes===(m.pens?120:90) && (m.homeId===a.id) &&   // pens tie runs to 120
          Attend.isHidden(tie._attendId);   // hidden until watched
 `));
 check('play-off: a single-match promotion final is captured (no first-leg score)', run(`

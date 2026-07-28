@@ -451,7 +451,7 @@ const Europe = {
         // a European final the agent may be invited to attend (see js/attend.js). Clock runs to 120
         // whenever it went past 90 (extra time and/or pens).
         if (typeof Attend !== 'undefined') {
-            const m = Attend.consider('europe-final', comp, a, b, r, { pens: c.ko.final.pens, et: c.ko.final.et, winner: c.ko.final.winner, minutes: (c.ko.final.pens || c.ko.final.et) ? 120 : 90, score: { hg: c.ko.final.ag, ag: c.ko.final.bg } });
+            const m = Attend.consider('europe-final', comp, a, b, r, { pens: c.ko.final.pens, et: c.ko.final.et, winner: c.ko.final.winner, minutes: (c.ko.final.pens || c.ko.final.et) ? 120 : 90, score: { hg: c.ko.final.ag, ag: c.ko.final.bg }, regScore: { hg: r.hg, ag: r.ag } });
             if (m) c.ko.final._attendId = m.id;   // hide this final's score in the Europe view until watched
         }
     },

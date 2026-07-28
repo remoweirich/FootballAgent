@@ -22,6 +22,7 @@ const LIVE_SIM = {
     CORNER_BASE: 2, CORNER_SPREAD: 6,   // corners per side: 2..7
     CORNER_EVENT_CHANCE: 0.22,      // chance a corner is narrated as a client event, not just a tick
     CORNER_EVENT_MAX: 2,            // at most this many narrated corner events per match
+    CORNER_FOLLOW_CHANCE: 0.25,     // chance a plain corner chains into a follow-up beat (header/shot, no goal)
     PLACEHOLDER_CLIENT: 'XY',
     PLACEHOLDER_TEAM: 'xy (player\'s team)',
     PLACEHOLDER_OPP: 'yx (opposition team)',
@@ -609,8 +610,11 @@ const LiveSim = {
                 if (cornerEvents < LIVE_SIM.CORNER_EVENT_MAX && rnd() < LIVE_SIM.CORNER_EVENT_CHANCE)
                     ev = this._cornerEvent(side, live(), rnd, ctxFor, used, usedPieces);
                 if (ev) cornerEvents += 1;
-                units.push([ev || { kind: 'corner', side, client: null, corner: side, events: [],
-                    lines: [`Corner — ${nameOf(side)}`] }]);
+                const unit = [ev || { kind: 'corner', side, client: null, corner: side, events: [], lines: [`Corner — ${nameOf(side)}`] }];
+                // a plain corner sometimes leads to something the moment after — a header or shot that
+                // doesn't go in (goals are the engine's to award, so this is pure flavour, no score)
+                if (!ev && rnd() < LIVE_SIM.CORNER_FOLLOW_CHANCE) unit.push(this._cornerFollow(side, rnd));
+                units.push(unit);
             }
         }
         // definitive count: whatever carries a corner flag, so it can never drift from the feed
@@ -620,23 +624,45 @@ const LiveSim = {
         // Shuffle whole units so anonymous goals aren't all last, then stamp a minute per UNIT.
         // A penalty is taken the minute after it is given away, not whenever the next slot happens
         // to fall — so the follow-up takes its parent's minute + 1 rather than a slot of its own.
-        const shuffled = this.shuffled(units, rnd);
-        // leave room at the end for the longest unit's follow-up, so a penalty drawn late still has
-        // a minute+1 to land its kick on rather than clamping onto the award's minute
-        const maxSpan = shuffled.reduce((m, u) => Math.max(m, u.length), 1);
-        const slots = this.spreadMinutes(shuffled.length, 1, Math.max(1, regMinutes - maxSpan), rnd);
+        const shuffledAll = this.shuffled(units, rnd);
+        // A final settled in EXTRA TIME was level at 90': hold its extra-time goals back into the
+        // 90'→minutes window so the score reads level at the whistle and the winner arrives after,
+        // and keep everything else inside regulation. (etGoals is 0 for every ordinary match.)
+        const otherSide = s => (s === 'home' ? 'away' : 'home');
+        const goalSideOf = u => {
+            for (const e of u) for (const ev of (e.events || [])) {
+                if (ev.tag === 'GOAL') return ev.side === 'opp' ? otherSide(e.side) : e.side;
+                if (ev.tag === 'OG') return ev.side === 'opp' ? e.side : otherSide(e.side);
+            }
+            return null;
+        };
+        let etH = (spec.etGoals && spec.etGoals.home) || 0, etA = (spec.etGoals && spec.etGoals.away) || 0;
+        const etUnits = [];
+        if (etH + etA > 0) for (const u of shuffledAll) {
+            const gs = goalSideOf(u);
+            if (gs === 'home' && etH > 0) { etUnits.push(u); etH--; }
+            else if (gs === 'away' && etA > 0) { etUnits.push(u); etA--; }
+        }
+        const etSet = new Set(etUnits);
+        const regUnits = shuffledAll.filter(u => !etSet.has(u));
         const out = [];
-        let prev = 0;
-        shuffled.forEach((unit, i) => {
-            const span = unit.length - 1;
-            let m = Math.max(slots[i] != null ? slots[i] : regMinutes - maxSpan, prev + 1);
-            m = Math.min(m, regMinutes - span);        // keep the whole unit inside regulation
-            unit.forEach((e, k) => {
-                e.minute = m + k;                      // k=1 is the spot kick: one minute later
-                prev = e.minute;
+        // stamp a list of units across [lo, hi], leaving room for the longest unit's follow-up (a late
+        // penalty still gets its minute+1 to land the kick on rather than clamping onto the award)
+        const stampWindow = (list, lo, hi) => {
+            if (!list.length) return;
+            const maxSpan = list.reduce((m, u) => Math.max(m, u.length), 1);
+            const slots = this.spreadMinutes(list.length, lo, Math.max(lo, hi - maxSpan), rnd);
+            let prev = lo - 1;
+            list.forEach((unit, i) => {
+                const span = unit.length - 1;
+                let m = Math.max(slots[i] != null ? slots[i] : hi - maxSpan, prev + 1);
+                m = Math.min(m, hi - span);
+                unit.forEach((e, k) => { e.minute = m + k; prev = e.minute; });
+                out.push(...unit);
             });
-            out.push(...unit);
-        });
+        };
+        stampWindow(regUnits, 1, regMinutes);
+        stampWindow(etUnits, regMinutes + 1, minutes);
 
         // A sent-off client's dismissal must be his LAST appearance. He was already kept out of every
         // stream after his card, but his own goal or assist (scored before he walked) may have landed
@@ -651,8 +677,35 @@ const LiveSim = {
             others.forEach((i, k) => out[i].minute = mins[k]);   // his other events take the earlier minutes
             out[rcIdx].minute = mins[mins.length - 1];           // the red takes the latest
         }
+        // An assist must never appear before its goal: a standalone assist (one narrated apart from the
+        // goal it set up — the goal itself being an anonymous team strike) can otherwise be stamped at an
+        // earlier minute than that goal, reading as "assisted a goal" while the score is still blank.
+        // Pair each side's standalone assists with its goals in order and pull any early one forward.
+        const isPlainGoal = e => (e.events || []).some(ev => ev.tag === 'GOAL' && ev.side !== 'opp');
+        const isLoneAssist = e => (e.events || []).some(ev => ev.tag === 'ASSIST') && !(e.events || []).some(ev => ev.tag === 'GOAL');
+        for (const side of ['home', 'away']) {
+            for (const a of out.filter(e => e.side === side && isLoneAssist(e))) {
+                if (out.some(e => e.side === side && isPlainGoal(e) && e.minute <= a.minute)) continue;   // a goal already precedes it
+                const later = out.filter(e => e.side === side && isPlainGoal(e) && e.minute > a.minute).sort((x, y) => x.minute - y.minute)[0];
+                if (later) { const t = a.minute; a.minute = later.minute; later.minute = t; }   // swap: assist now trails a goal, minutes stay unique
+            }
+        }
         out.sort((a, b) => a.minute - b.minute);
         return { events: out, minutes, regulation: regMinutes, statAdjust, corners };
+    },
+
+    // A short follow-up beat after a corner: a header/shot that comes to nothing (no result tags, so
+    // it never touches the banked score). Pure atmosphere, one line.
+    CORNER_FOLLOW_LINES: [
+        'The delivery picks out a head at the near post — flashed just wide!',
+        'Met firmly six yards out, but it\'s straight at the keeper.',
+        'Half-cleared to the edge, the drive back in is charged down.',
+        'Whipped in and headed over the bar from close range.',
+        'A scramble in the six-yard box — hacked off the line at the last!',
+        'Flicked on at the front post, but nobody gambled at the back stick.',
+    ],
+    _cornerFollow(side, rnd) {
+        return { kind: 'cornerfollow', side, client: null, events: [], lines: [this.CORNER_FOLLOW_LINES[Math.floor(rnd() * this.CORNER_FOLLOW_LINES.length)]] };
     },
 
     // A corner narrated as a client puzzle event. `won` is the team that has the corner. First try

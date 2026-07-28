@@ -37,9 +37,10 @@ run(`
 run(`Sim._moraleCases([]);`);
 const agentIdImmediate = runv(`return GameState.getPlayer(window.__pid).agentId`);
 check('stage-3 agent case does NOT depart the same week it is discovered (grace window applies)', agentIdImmediate === 'me');
-for (let i = 0; i < 3; i++) run(`GameState.week += 1; Sim._moraleCases([]);`);
+const graceWeeks = runv(`return (typeof MORALE !== 'undefined' && MORALE.STAGE3_AGENT_LEAVE_WEEKS) || 8`);
+for (let i = 0; i < graceWeeks + 1; i++) run(`GameState.week += 1; Sim._moraleCases([]);`);
 const agentIdAfter = runv(`return GameState.getPlayer(window.__pid).agentId`);
-check('after the 3-week grace window, the player actually leaves (agentId=null)', agentIdAfter === null);
+check('after the grace window, the player actually leaves (agentId=null)', agentIdAfter === null);
 const caseAfter = runv(`return GameState.getPlayer(window.__pid).moraleCase`);
 check('moraleCase cleared on departure', caseAfter === null);
 const repAfter = runv(`return GameState.agency.reputation`);

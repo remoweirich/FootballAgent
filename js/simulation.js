@@ -61,7 +61,7 @@ const MORALE = {
     STAGE2_TIME_ATTRACT: 25, STAGE2_CLUB_ATTRACT: 35,
     STAGE2_WAGE_CLUB_PENALTY: -20,
     STAGE2_CLUB_FEE_MULT: 0.85, STAGE2_CLUB_ASK_MULT: 0.9,
-    STAGE3_AGENT_LEAVE_WEEKS: 3,
+    STAGE3_AGENT_LEAVE_WEEKS: 8,   // grace between the breaking-point warning and actually walking out
     DEPARTURE_AGENCY_REP: -1,
 
     // ---- Phase 4: gifts + market coupling ----
@@ -214,6 +214,7 @@ const Sim = {
         this._moraleCases(events);
 
         // ---- scouts ----
+        this._scoutLicence(events);   // enforce the International Scouting Licence (warn/fine/suspend) before scouts work
         const finds = Scouts.tick();
         finds.forEach(f => {
             if (f.none) {
@@ -292,6 +293,21 @@ const Sim = {
         });
     },
 
+    // Pick a specific injury, weighted by likelihood, and roll its duration from that type's range —
+    // from the editable table (js/injuries-data.js, built from injuries.xlsx). Common knocks are short
+    // and frequent; the season-enders (ACL, Achilles, fracture) are rare and long. Falls back to the
+    // old flat list if the table isn't loaded (a minimal test harness).
+    _rollInjury() {
+        if (typeof INJURIES !== 'undefined' && INJURIES.length) {
+            const total = INJURIES.reduce((s, x) => s + (x.weight || 0), 0);
+            let r = Rng.next() * total;
+            for (const inj of INJURIES) {
+                r -= (inj.weight || 0);
+                if (r <= 0) { const span = Math.max(0, inj.maxWeeks - inj.minWeeks); return { type: inj.name, weeks: inj.minWeeks + Math.floor(Rng.next() * (span + 1)) }; }
+            }
+        }
+        return { type: INJURY_TYPES[Math.floor(Rng.next() * INJURY_TYPES.length)], weeks: 1 + Math.floor(Rng.next() * 11) };
+    },
     _injuries(events) {
         GameState.players.forEach(p => {
             if (!isSimRelevant(p)) return;   // frozen background players never get injured
@@ -306,16 +322,16 @@ const Sim = {
             }
             // small weekly injury chance, a touch higher for outfield
             if (Rng.next() < 0.0055 * ((typeof Upgrades !== 'undefined') ? Upgrades.injuryRiskMult() : 1)) {
-                const weeks = 1 + Math.floor(Rng.next() * 11);
-                p.injury = { type: INJURY_TYPES[Math.floor(Rng.next() * INJURY_TYPES.length)], weeksOut: weeks, total: weeks };
+                const inj = this._rollInjury();
+                p.injury = { type: inj.type, weeksOut: inj.weeks, total: inj.weeks };
                 // an injury HALTS the playing-time streak — it's frozen (not reset) while he's out, and
                 // no weekly tick runs during injury (see _morale). Being injured therefore neither decays
                 // his playing-time morale nor erases the run he was on; he picks it back up on his return.
                 if (p.agentId === 'me') {
-                    const t = `${p.name} picked up a ${p.injury.type} — out ~${weeks} week(s).`;
+                    const t = `${p.name} picked up a ${p.injury.type} — out ~${inj.weeks} week(s).`;
                     GameState.addLog(t, 'warn'); events.push({ type: 'warn', text: t });
                     GameState.addMail({ kind: 'news', cat: 'injury', subject: `Injury: ${p.name}`, body: t, ttl: 4 });
-                    if (typeof Dialogue !== 'undefined') Dialogue.onInjury(p, weeks);   // a long layoff earns a visit
+                    if (typeof Dialogue !== 'undefined') Dialogue.onInjury(p, inj.weeks);   // a long layoff earns a visit
                 }
             }
         });
@@ -480,6 +496,40 @@ const Sim = {
             const needsWindow = c.dim === 'club' || c.dim === 'time';
             if (c.stage < 3 && aw - c.sinceAbsWeek >= limit && (!needsWindow || transferWindowPassedBetween(c.sinceAbsWeek, aw))) this._escalateMoraleCase(p, events);
         });
+    },
+
+    // International Scouting Licence enforcement (runs weekly). Only bites if you're actually scouting
+    // abroad. Once the licence lapses: a two-week grace period (weeks 0-1) with a renewal warning, then
+    // escalating fines — €10k (week 2), €20k (week 3), €40k + a 52-week suspension (week 4) that recalls
+    // your overseas scouts. Renewing in the Agency tab (which pushes intlLicenceUntil forward) stops it.
+    _scoutLicence(events) {
+        const a = GameState.agency; if (!a || !a.scouts) return;
+        const aw = GameState.absWeek();
+        if (a.intlSuspendedUntil != null && aw >= a.intlSuspendedUntil) a.intlSuspendedUntil = null;   // suspension served
+        if (a.intlSuspendedUntil != null) return;                 // still suspended — nothing more to enforce
+        const abroad = a.scouts.filter(s => s.league);
+        if (!abroad.length || a.intlLicenceUntil == null) return; // not scouting abroad (or never licensed)
+        const over = aw - a.intlLicenceUntil;                     // <0 while valid; 0 the week it lapses
+        if (over < 0) return;
+        const renew = 'Renew it in the Agency tab to keep scouting abroad.';
+        if (over <= 1) {   // two-week grace period: a warning, no fine
+            GameState.addMail({ kind: 'news', cat: 'scout', subject: 'International Scouting Licence expired', body: `Your International Scouting Licence has expired while ${abroad.length > 1 ? 'scouts are' : 'a scout is'} still working abroad. You have a two-week grace period before fines begin. ${renew}`, ttl: 3 });
+            if (over === 0) events.push({ type: 'warn', text: 'International Scouting Licence expired — renew within two weeks.' });
+            return;
+        }
+        let fine = 0, suspend = false;
+        if (over === 2) fine = 10000; else if (over === 3) fine = 20000; else if (over === 4) { fine = 40000; suspend = true; }
+        else return;   // past week 4 without scouts recalled shouldn't happen (suspension idles them)
+        a.balance -= fine; GameState.addFinance('Licence fines', -fine);
+        if (suspend) {
+            a.intlSuspendedUntil = aw + 52;
+            abroad.forEach(s => { s.league = null; s.country = null; s.region = null; });   // recall the overseas scouts
+            GameState.addMail({ kind: 'news', cat: 'scout', subject: 'International scouting suspended', body: `You never renewed your International Scouting Licence. A final €${UI.money(fine)} fine has been levied and your right to scout abroad is suspended for 52 weeks. Your overseas scouts have been recalled.`, ttl: 10 });
+            events.push({ type: 'warn', text: `International scouting suspended for a year (−€${UI.money(fine)}).` });
+        } else {
+            GameState.addMail({ kind: 'news', cat: 'scout', subject: `Unlicensed scouting — €${UI.money(fine)} fine`, body: `You're still scouting abroad without a valid licence. A €${UI.money(fine)} fine has been levied${over === 3 ? ' — the next one doubles, then your right to scout abroad is suspended' : ''}. ${renew}`, ttl: 6 });
+            events.push({ type: 'warn', text: `Fined €${UI.money(fine)} for scouting abroad without a licence.` });
+        }
     },
 
     _escalateMoraleCase(p, events) {
@@ -770,7 +820,14 @@ const Sim = {
                 const ws = Math.max(0.15, Math.min(0.95, splits[i] + (Rng.next() - 0.5) * 0.08));
                 return { company, weekly: round(vy * ws / 52), annual: ra(vy * (1 - ws)), termSeasons: terms[i] };
             });
-            const offer = { playerId: p.id, level, options: opts, legend: loyal, hot };
+            // C3: now and then one offer really stands out — 10% of the time a random option pays ~25% more
+            let standout = false;
+            if (opts.length && Rng.next() < 0.10) {
+                const star = opts[Math.floor(Rng.next() * opts.length)];
+                star.weekly = round(star.weekly * 1.25); star.annual = ra(star.annual * 1.25); star.standout = true;
+                standout = true;
+            }
+            const offer = { playerId: p.id, level, options: opts, legend: loyal, hot, standout };
             GameState.addMail({ kind: 'sponsor', subject: `Sponsorship offers for ${p.name}`, offer, persistence: 0, ttl: 6 });
             events.push({ type: 'offer', text: `${SPONSOR_LABEL[level]} sponsors are interested in ${p.name}${loyal ? ' (loyal servant!)' : hot ? ' (in red-hot form!)' : ''} — ${opts.length === 1 ? 'an offer' : opts.length + ' offers'} to weigh up.` });
         });

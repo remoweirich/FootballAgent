@@ -3,11 +3,20 @@
 // ============================================================
 const ROLE_PLAYTIME = { youth: 0.12, fringe: 0.30, rotation: 0.45, starter: 1.0, key: 1.0 };
 const ROLE_LABEL = { youth: 'Youth', fringe: 'Hot Prospect', rotation: 'Rotation', starter: 'Starter', key: 'Star Player' };
+// Goalkeepers use their own tier names (D4): only one plays, so it's a strict depth chart.
+const GK_ROLE_LABEL = { youth: 'Youth', fringe: 'Hot Prospect', rotation: 'Back Up', starter: 'First Choice', key: 'Star Player' };
 // "Hot Prospect" only applies to players under 23; the same tier reads "Fringe" for older players
-function roleLabel(role, age) {
+function roleLabel(role, age, pos, cupKeeper) {
+    if (pos === 'GK') {
+        if (cupKeeper) return 'Cup Goalkeeper';
+        if (role === 'fringe') return (age != null && age >= 23) ? 'Fringe' : 'Hot Prospect';
+        return GK_ROLE_LABEL[role] || role;
+    }
     if (role === 'fringe') return (age != null && age >= 23) ? 'Fringe' : 'Hot Prospect';
     return ROLE_LABEL[role] || role;
 }
+// role label from a full player object (handles the GK depth chart + the Cup Goalkeeper flag)
+function roleName(p) { return roleLabel(p.squadRole, p.age, p.position, p.cupKeeper); }
 const ROLE_ORDER = ['youth', 'fringe', 'rotation', 'starter', 'key'];
 const POS_LIST = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST'];
 const ATTACK_POS = ['CAM', 'LW', 'RW', 'ST'];
@@ -94,6 +103,7 @@ const PlayerGen = {
             id: this._id(),
             name: generateName(nat), nationality: nat, nationalityFlag: getNationalityFlag(nat),
             age, position, ability, potential, peakAge, declineAge: this.declineAgeFor(peakAge),
+            peakAbility: ability,   // highest ability ever reached (tracked in weeklyTick; used by Best XI)
             formTrait: this.formTraitRoll(),
             clubId: club.id, clubTierAtJoin: club.tier,
             wage, sponsorIncome: this.sponsorBaseFor(ability),
@@ -127,6 +137,24 @@ const PlayerGen = {
             let role = frac < 0.30 ? 'key' : frac < 0.55 ? 'starter' : frac < 0.78 ? 'rotation' : 'fringe';
             if (p.age <= 19 && p.ability < (squad[Math.floor(n * 0.6)]?.ability ?? 0)) role = 'youth';
             p.squadRole = role;
+        });
+        this._assignGkDepthChart(squad);   // goalkeepers use a strict depth chart, not the outfield fractions (D4)
+    },
+    // Only one keeper plays, so a club's GKs form a proper pecking order: the No.1 (Star Player if he's
+    // clearly the club's level, else First Choice), a Back Up, and reserves. A Back Up close to the
+    // required standard sometimes becomes the Cup Goalkeeper — he plays the domestic/European cup games.
+    _assignGkDepthChart(squad) {
+        const gks = squad.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability);
+        if (!gks.length) return;
+        const club = (typeof Clubs !== 'undefined') ? Clubs.getClubById(gks[0].clubId || gks[0].onLoanAt) : null;
+        const req = club ? club.reputation : (gks[0].ability - 2);   // ability a first-choice keeper needs here
+        gks.forEach((p, i) => {
+            p.cupKeeper = false;
+            if (i === 0) p.squadRole = p.ability >= req + 2 ? 'key' : 'starter';                 // Star / First Choice
+            else if (i === 1) {
+                p.squadRole = 'rotation';                                                        // Back Up
+                if (p.ability >= req - 4 && Rng.next() < 0.33) p.cupKeeper = true;                // ...or the Cup Goalkeeper
+            } else p.squadRole = p.age <= 21 ? 'youth' : 'fringe';
         });
     },
 
@@ -235,8 +263,10 @@ const PlayerDev = {
             const play = games > 0 ? games : 0.18;
             // room to grow: a big gap develops faster, tapering gently so the ceiling stays reachable
             const gapF = Math.max(0.15, Math.min(1.25, gap / 15));
-            // each point gets harder near the top of the scale
-            const highEnd = Math.max(0.30, 1 - Math.pow(Math.max(0, p.ability - 50) / 50, 1.4));
+            // each point gets harder near the top of the scale — EXCEPT for the ~20% of players who,
+            // by luck of the draw, keep a flat curve and climb from 85→86 as readily as 65→66 (B3).
+            if (p._fastDev == null) p._fastDev = Rng.next() < 0.20;
+            const highEnd = p._fastDev ? 1 : Math.max(0.30, 1 - Math.pow(Math.max(0, p.ability - 50) / 50, 1.4));
             // form: a strong recent rating accelerates development, a poor run slows it
             let form = 1;
             const st = (typeof seasonTotals === 'function') ? seasonTotals(p, year) : null;
@@ -260,6 +290,7 @@ const PlayerDev = {
             p._dev = (p._dev || 0) - (perYear / 45) * accel;
             while (p._dev <= -1 && p.ability > 20) { p.ability -= 1; p._dev += 1; delta -= 1; }
         }
+        if (p.ability > (p.peakAbility || 0)) p.peakAbility = p.ability;   // remember his career-high ability
         if (delta !== 0 && p.agentId === 'me') recordAbilityPoint(p);
         return delta;
     }

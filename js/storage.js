@@ -22,7 +22,10 @@ const Storage = {
     DB_NAME: 'fam',
     DB_VERSION: 1,
     STORE: 'saves',
-    KEY: 'current',
+    KEY: 'current',                // the rolling autosave
+    SLOT_INDEX: 'slotIndex',       // lightweight list of the manual named saves
+    SLOT_PREFIX: 'slot:',          // per-slot full snapshots live at 'slot:<id>'
+    MAX_SLOTS: 5,                  // how many manual named saves you may keep
     LEGACY_KEY: 'fam_proto_v4',
     FLUSH_DELAY_MS: 1500,
 
@@ -49,40 +52,45 @@ const Storage = {
         });
         return this._dbPromise;
     },
-    async _idbGet() {
+    // key-addressed IDB access — the autosave lives at KEY ('current'), named saves at 'slot:<id>',
+    // and the small slot index at SLOT_INDEX. The three autosave helpers below are thin wrappers.
+    async _idbGetKey(key) {
         const db = await this._openDB(); if (!db) return null;
         return new Promise(resolve => {
             try {
                 const tx = db.transaction(this.STORE, 'readonly');
-                const req = tx.objectStore(this.STORE).get(this.KEY);
+                const req = tx.objectStore(this.STORE).get(key);
                 req.onsuccess = () => resolve(req.result != null ? req.result : null);
                 req.onerror = () => resolve(null);
             } catch (e) { resolve(null); }
         });
     },
-    async _idbPut(value) {
+    async _idbPutKey(key, value) {
         const db = await this._openDB(); if (!db) return false;
         return new Promise(resolve => {
             try {
                 const tx = db.transaction(this.STORE, 'readwrite');
-                tx.objectStore(this.STORE).put(value, this.KEY);
+                tx.objectStore(this.STORE).put(value, key);
                 tx.oncomplete = () => resolve(true);
                 tx.onerror = () => resolve(false);
                 tx.onabort = () => resolve(false);
             } catch (e) { resolve(false); }
         });
     },
-    async _idbDelete() {
+    async _idbDeleteKey(key) {
         const db = await this._openDB(); if (!db) return false;
         return new Promise(resolve => {
             try {
                 const tx = db.transaction(this.STORE, 'readwrite');
-                tx.objectStore(this.STORE).delete(this.KEY);
+                tx.objectStore(this.STORE).delete(key);
                 tx.oncomplete = () => resolve(true);
                 tx.onerror = () => resolve(false);
             } catch (e) { resolve(false); }
         });
     },
+    _idbGet() { return this._idbGetKey(this.KEY); },
+    _idbPut(value) { return this._idbPutKey(this.KEY, value); },
+    _idbDelete() { return this._idbDeleteKey(this.KEY); },
     _legacyRead() {
         try { const raw = localStorage.getItem(this.LEGACY_KEY); return raw ? JSON.parse(raw) : null; }
         catch (e) { return null; }
@@ -153,6 +161,31 @@ const Storage = {
         if (fromIdb) return true;
         return this._legacyRead() != null;
     },
+    // ---- manual named saves (the autosave above is separate; these are explicit snapshots) ----
+    // The index is a small array of { id, name, savedAt, ...summary } the caller supplies; full
+    // snapshots sit at 'slot:<id>'. IndexedDB-only (no legacy fallback) — degrades to "unavailable".
+    async listSlots() {
+        const idx = await this._idbGetKey(this.SLOT_INDEX);
+        return Array.isArray(idx) ? idx : [];
+    },
+    getSlot(id) { return this._idbGetKey(this.SLOT_PREFIX + id); },
+    async putSlot(id, state, meta) {
+        const ok = await this._idbPutKey(this.SLOT_PREFIX + id, state);
+        if (!ok) return false;
+        const idx = await this.listSlots();
+        const entry = Object.assign({ id }, meta);
+        const i = idx.findIndex(s => s.id === id);
+        if (i >= 0) idx[i] = entry; else idx.push(entry);
+        await this._idbPutKey(this.SLOT_INDEX, idx);
+        return true;
+    },
+    async deleteSlot(id) {
+        await this._idbDeleteKey(this.SLOT_PREFIX + id);
+        const idx = (await this.listSlots()).filter(s => s.id !== id);
+        await this._idbPutKey(this.SLOT_INDEX, idx);
+        return true;
+    },
+
     // One-time first-run step: if IndexedDB is empty but an old localStorage
     // save exists, copy it over, confirm it reads back, then drop the legacy copy.
     async migrateLegacy() {

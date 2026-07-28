@@ -111,42 +111,55 @@ const GameState = {
     // both UIs just calls GameState.save() synchronously, same as always. Storage.saveGame()
     // itself debounces the actual IndexedDB write (see js/storage.js) — advanceWeek() forces
     // an immediate flush (js/simulation.js), as does the app being backgrounded.
+    // Build the persistable state object. Shared by the rolling autosave (save → Storage.saveGame) and
+    // manual named saves (createNamedSave → Storage.putSlot), so both capture exactly the same shape.
+    _snapshot() {
+        // Clubs.init() rebuilds allClubs from static LEAGUES_DATA on every boot (hardcoded
+        // division/reputation), so without saving the mutable bits here, every restart
+        // silently reset the whole pyramid to its day-one layout and corrupted the next
+        // promotion/relegation (clubs "promoted" from mid-table, league sizes drifting).
+        // Static data (names/colours/etc.) stays in code - only what actually changes at
+        // runtime is persisted here, keyed by club id so saves stay forward-compatible
+        // with future club-list changes (a club present in code but absent from an old
+        // save just keeps its static default - see _restoreClubState below).
+        const clubState = {};
+        (Clubs.allClubs || []).forEach(c => {
+            clubState[c.id] = {
+                division: c.division, reputation: c.reputation,
+                anchorRep: c.anchorRep,
+                seasonDelta: c.seasonDelta, streakDir: c.streakDir, streakLen: c.streakLen
+            };
+        });
+        return {
+            week: this.week, seasonStartYear: this.seasonStartYear, homeCountry: this.homeCountry,
+            // only the players the user can ever see are saved; the anonymous background squads
+            // (~95% of the old save) are regenerated on load (see isPersistedPlayer / regenerateBackgroundSquads)
+            players: this.players.filter(isPersistedPlayer), inbox: this.inbox, log: this.log,
+            agency: this.agency, league: this.league, clubHistory: this.clubHistory,
+            clubEuropeBest: this.clubEuropeBest, debug: this.debug,
+            attendWindow: this.attendWindow,   // open "Attend the Final" viewing window, if any
+            lastSeasonReport: this.lastSeasonReport, clubState,
+            saveName: this.saveName || null,  // player-given name for this game (Settings > Save game)
+            bestXI: this.bestXI || null,      // the player's hall-of-fame XI (Clients > Best XI)
+            namedClean: !!this.namedClean,    // true = this exact state is backed up to a named slot
+            savedAt: Date.now(),              // when this snapshot was taken (shown in the Load list)
+            rngSeed: this.rngSeed,            // this game's fixed seed (anchors background-squad regen)
+            rngState: Rng.getState(),         // live stream position, so a reload keeps rolling from here
+            schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
+        };
+    },
     save() {
-        try {
-            // Clubs.init() rebuilds allClubs from static LEAGUES_DATA on every boot (hardcoded
-            // division/reputation), so without saving the mutable bits here, every restart
-            // silently reset the whole pyramid to its day-one layout and corrupted the next
-            // promotion/relegation (clubs "promoted" from mid-table, league sizes drifting).
-            // Static data (names/colours/etc.) stays in code - only what actually changes at
-            // runtime is persisted here, keyed by club id so saves stay forward-compatible
-            // with future club-list changes (a club present in code but absent from an old
-            // save just keeps its static default - see _restoreClubState below).
-            const clubState = {};
-            (Clubs.allClubs || []).forEach(c => {
-                clubState[c.id] = {
-                    division: c.division, reputation: c.reputation,
-                    anchorRep: c.anchorRep,
-                    seasonDelta: c.seasonDelta, streakDir: c.streakDir, streakLen: c.streakLen
-                };
-            });
-            Storage.saveGame({
-                week: this.week, seasonStartYear: this.seasonStartYear, homeCountry: this.homeCountry,
-                // only the players the user can ever see are saved; the anonymous background squads
-                // (~95% of the old save) are regenerated on load (see isPersistedPlayer / regenerateBackgroundSquads)
-                players: this.players.filter(isPersistedPlayer), inbox: this.inbox, log: this.log,
-                agency: this.agency, league: this.league, clubHistory: this.clubHistory,
-                clubEuropeBest: this.clubEuropeBest, debug: this.debug,
-                attendWindow: this.attendWindow,   // open "Attend the Final" viewing window, if any
-                lastSeasonReport: this.lastSeasonReport, clubState,
-                rngSeed: this.rngSeed,            // this game's fixed seed (anchors background-squad regen)
-                rngState: Rng.getState(),         // live stream position, so a reload keeps rolling from here
-                schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
-            });
-        } catch (e) { console.warn('Save failed', e); }
+        this.namedClean = false;   // any ordinary autosave = progress not yet captured in a named slot
+        try { Storage.saveGame(this._snapshot()); }
+        catch (e) { console.warn('Save failed', e); }
     },
     async load() {
         const d = await Storage.loadGame();
         if (!d) return false;
+        return this._applySaved(d);
+    },
+    // Apply a loaded state object to the live GameState. Used by load() (autosave) and loadNamedSave().
+    _applySaved(d) {
         try {
             this.week = d.week; this.seasonStartYear = d.seasonStartYear;
             this.homeCountry = d.homeCountry || (d.agency && d.agency.homeCountry) || 'Netherlands';
@@ -157,6 +170,9 @@ const GameState = {
             this.debug = !!d.debug;   // developer/debug mode (off by default)
             this.attendWindow = d.attendWindow || null;
             this.lastSeasonReport = d.lastSeasonReport || null;
+            this.saveName = d.saveName || null;
+            this.bestXI = d.bestXI || null;
+            this.namedClean = !!d.namedClean;
             // Restore the RNG: legacy saves predate the seed, so fall back to one derived from the
             // save so a given save always regenerates the same background squads. rngState (the live
             // position) is preferred; without it we reseed from rngSeed.
@@ -168,6 +184,58 @@ const GameState = {
             if (typeof regenerateBackgroundSquads === 'function') regenerateBackgroundSquads();
             return this.players.length > 0 && this.agency != null;
         } catch (e) { console.warn('Load failed', e); return false; }
+    },
+
+    // ---- manual named saves (Settings > Save game; Start > Load). The autosave above is separate. ----
+    _slotSeq: 0,
+    // summary shown in the Load list without reading a whole snapshot
+    _metaOf(d, name) {
+        return {
+            name: (name != null ? name : (d.saveName || '')) || '',
+            savedAt: d.savedAt || null,
+            week: d.week || 1,
+            seasonLabel: this.seasonLabelFor ? this.seasonLabelFor(d.seasonStartYear) : String(d.seasonStartYear || ''),
+            agency: (d.agency && d.agency.name) || '',
+            namedClean: !!d.namedClean,
+        };
+    },
+    listNamedSaves() { return Storage.listSlots ? Storage.listSlots() : Promise.resolve([]); },
+    // Snapshot the CURRENT game into a named slot. Reusing a name overwrites it; otherwise a free slot
+    // is required (max 5). Returns { ok, message, id, overwritten }.
+    async createNamedSave(name) {
+        const nm = (name || '').trim();
+        if (!nm) return { ok: false, message: 'Give the save a name.' };
+        if (!Storage.putSlot) return { ok: false, message: 'Saving is unavailable here.' };
+        const slots = await Storage.listSlots();
+        const existing = slots.find(s => (s.name || '').toLowerCase() === nm.toLowerCase());
+        if (!existing && slots.length >= Storage.MAX_SLOTS)
+            return { ok: false, message: `You already have ${Storage.MAX_SLOTS} saves. Reuse a name to overwrite, or delete one first.`, full: true };
+        const id = existing ? existing.id : 's' + Date.now().toString(36) + '-' + (++this._slotSeq);
+        this.saveName = nm;    // the live game adopts the name too, so the autosave/Continue shows it
+        this.namedClean = true;   // this exact state is now backed up to a slot
+        const state = this._snapshot();
+        const ok = await Storage.putSlot(id, state, this._metaOf(state, nm));
+        if (!ok) { this.namedClean = false; return { ok: false, message: 'Save failed.' }; }
+        Storage.saveGame(state);   // refresh the autosave so Continue/Load sees it as clean too
+        return { ok: true, id, overwritten: !!existing, message: existing ? `Overwrote “${nm}”.` : `Saved as “${nm}”.` };
+    },
+    // Load a named slot into the live game AND make it the rolling autosave, so Continue resumes it.
+    async loadNamedSave(id) {
+        if (!Storage.getSlot) return false;
+        const d = await Storage.getSlot(id);
+        if (!d) return false;
+        const ok = this._applySaved(d);
+        if (ok) {
+            this.namedClean = true;   // it came straight from a named slot — clean until you play on
+            Storage.saveGame(this._snapshot());   // becomes the rolling autosave (kept clean)
+        }
+        return ok;
+    },
+    deleteNamedSave(id) { return Storage.deleteSlot ? Storage.deleteSlot(id) : Promise.resolve(false); },
+    // Summary of the rolling autosave for the Load list (null if there isn't one).
+    async autosaveMeta() {
+        const d = await (Storage.loadGame ? Storage.loadGame() : null);
+        return d ? this._metaOf(d) : null;
     },
 
     // ---- save schema versioning ----

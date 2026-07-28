@@ -62,10 +62,13 @@ const Scouts = {
     catalogue() {
         const rep = GameState.agency.reputation;
         const base = Math.max(18, rep);
-        const q1 = this._clampQ(PlayerGen.gauss(base * 0.72, 4));
-        const q2 = this._clampQ(PlayerGen.gauss(base * 1.0, 4));
-        const q3 = Rng.next() < 0.28 ? this._clampQ(PlayerGen.gauss(base + 18, 6))   // occasional stand-out
-            : this._clampQ(PlayerGen.gauss(base * 1.28, 5));
+        // Three suggestions scaled to your standing. Recalibrated (B4) so you DON'T max out at quality 99
+        // long before the reputation cap: at ~85 rep the best on offer is mid-80s, and genuine 95–99
+        // scouts stay rare and only turn up as you approach the top of the reputation ladder.
+        const q1 = this._clampQ(PlayerGen.gauss(base * 0.70, 4));
+        const q2 = this._clampQ(PlayerGen.gauss(base * 0.86, 4));
+        const q3 = Rng.next() < 0.22 ? this._clampQ(PlayerGen.gauss(base * 1.0, 5))   // occasional stand-out
+            : this._clampQ(PlayerGen.gauss(base * 0.92, 4));
         return [q1, q2, q3].map(q => this.makeOffer(this.titleFor(q), q));
     },
     makeOffer(title, quality) {
@@ -207,6 +210,7 @@ const Scouts = {
         const ag = GameState.agency;
         const s = ag.scouts.find(x => x.id === scoutId);
         if (!s) return { ok: false, message: 'Unknown scout.' };
+        if (typeof Agency !== 'undefined' && Agency.intlSuspended && Agency.intlSuspended()) return { ok: false, message: `International scouting is suspended for ${Agency.intlSuspendWeeksLeft()} more week(s) after an unpaid licence.` };
         if (typeof Agency !== 'undefined' && !Agency.hasIntlLicence()) return { ok: false, message: 'You need a valid International Scouting Licence (buy it in the Agency tab).' };
         if (!this.intlCountries().includes(country)) return { ok: false, message: 'You can only scout abroad.' };
         if (!(COUNTRY_DIVS[country] || []).includes(division)) return { ok: false, message: 'That league is not in the chosen country.' };
@@ -257,8 +261,15 @@ const Scouts = {
     },
     // roll a talent's TRUE current ability + potential for a scout of quality q, given the prospect's age.
     rolledTalent(q, age) {
-        const [loA, hiA, centre, cap] = this.tierRanges(q);
-        let potential = Math.round(PlayerGen.gauss(centre, 8.5));
+        const [loA, hiA, , cap] = this.tierRanges(q);   // band + ceiling; centre/spread computed continuously below
+        // Potential scales continuously with scout quality — no more flat tiers where a 91 and a 99 scout
+        // find identical talent. Centre climbs from ~38 (raw q15) to 90 for the very best (q99), and the
+        // spread tightens from 8.5 down to 3.494 at the top, so an elite scout reliably centres on 90 and
+        // only rarely (~0.5%) tops out at 99. Every step of quality means better AND more consistent finds.
+        const qc = this._clamp(q, 15, 99);
+        const centre = 38 + (qc - 15) * 0.619;   // 38 @ q15  →  90 @ q99
+        const sd = 8.5 - (qc - 15) * 0.0596;     // 8.5 @ q15 →  3.494 @ q99
+        let potential = Math.round(PlayerGen.gauss(centre, sd));
         potential = Math.max(Math.max(20, loA), Math.min(cap, potential));
         // spread current ability ACROSS the tier band [loA..hiA], driven by age + potential + genuine noise
         const ageN = Math.max(0, Math.min(1, (age - 15) / 7));                 // 15y→0 .. 22y→1
@@ -270,6 +281,43 @@ const Scouts = {
         // very rare precocious teenager (only the best scouts ever see these, <0.5%)
         if (q >= 95 && age <= 18 && Rng.next() < 0.004) ability = Math.min(potential, hiA, ability + 8 + Math.floor(Rng.next() * 6));
         potential = Math.max(potential, ability);
+        return { ability, potential };
+    },
+
+    // ---- scouting brief: a target ability tier, plus optional position (B4) ----
+    // A tier sets the POTENTIAL band to aim for; the scout's quality sets how reliably he turns up a fit
+    // and how high within the band it lands. So a top scout can be pointed at a lower tier to farm
+    // low-ability/high-potential gems, and even he only occasionally unearths a superstar.
+    TIERS: {
+        any: { label: 'Any level' },
+        dev: { pot: [38, 58], label: '4th-tier prospect' },
+        pro: { pot: [55, 72], label: '3rd-tier / lower-league' },
+        top: { pot: [70, 85], label: 'top-league talent' },
+        elite: { pot: [85, 99], label: 'international superstar' },
+    },
+    _tierReliability(q, tierKey) {
+        const need = { dev: 15, pro: 35, top: 60, elite: 82 }[tierKey] || 15;
+        const cap = { dev: 0.95, pro: 0.9, top: 0.8, elite: 0.6 }[tierKey] || 0.9;   // ceiling even for a 99
+        if (q >= need) return Math.min(cap, 0.5 + (q - need) / 100);
+        return Math.max(0.04, cap * Math.pow(q / need, 2.5));                        // below the floor: rare
+    },
+    setPos(scoutId, pos) { const s = GameState.agency.scouts.find(x => x.id === scoutId); if (s) s.targetPos = pos || null; },
+    setTier(scoutId, tier) { const s = GameState.agency.scouts.find(x => x.id === scoutId); if (s) s.targetTier = tier && tier !== 'any' ? tier : null; },
+
+    // roll a talent honouring the scout's brief. Returns { ability:null } when nothing fits the chosen
+    // tier this report (which is how a mismatched brief simply yields fewer finds).
+    rolledTalentFiltered(q, age, s) {
+        let { ability, potential } = this.rolledTalent(q, age);
+        const tier = s && s.targetTier && this.TIERS[s.targetTier] && this.TIERS[s.targetTier].pot ? this.TIERS[s.targetTier] : null;
+        if (tier) {
+            if (Rng.next() > this._tierReliability(q, s.targetTier)) return { ability: null, potential: null };
+            const [lo, hi] = tier.pot;
+            const qFrac = Math.max(0, Math.min(1, (q - 20) / 79));                   // better scouts land higher in the band
+            potential = Math.round(lo + (hi - lo) * (0.30 + qFrac * 0.55) + PlayerGen.gauss(0, 4));
+            potential = Math.max(lo, Math.min(hi, potential));
+            const ageN = Math.max(0, Math.min(1, (age - 15) / 7));                   // younger => further below his ceiling
+            ability = Math.max(5, Math.min(potential, Math.round(potential * (0.35 + ageN * 0.4) + PlayerGen.gauss(0, 4))));
+        }
         return { ability, potential };
     },
 
@@ -326,10 +374,13 @@ const Scouts = {
             const batch = [];
             for (let i = 0; i < n; i++) {
                 const age = this._prospectAge(s.maxTalentAge);
-                const { ability, potential } = this.rolledTalent(effQ, age);
+                // narrowing the brief (a specific position) turns up fewer players overall (B4)
+                if (s.targetPos && Rng.next() < 0.35) continue;
+                const { ability, potential } = this.rolledTalentFiltered(effQ, age, s);
+                if (ability == null) continue;   // no player fitting the chosen tier turned up this time
                 const club = this.pickRegionalClub(pool, ability);
                 if (!club) continue;
-                const prospect = PlayerGen.makeProspect(club, { ability, potential, age });
+                const prospect = PlayerGen.makeProspect(club, { ability, potential, age, position: s.targetPos || undefined });
                 prospect.knownToAgent = true;
                 prospect.discoveredVia = 'scout:' + s.name;
                 prospect.discoveredWeek = GameState.absWeek();

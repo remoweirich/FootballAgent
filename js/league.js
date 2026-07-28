@@ -563,7 +563,7 @@ const League = {
         // the final is a match the agent may be invited to attend (see js/attend.js). It runs the
         // clock to 120 whenever it went beyond 90 (extra time and/or pens).
         if (isFinal && typeof Attend !== 'undefined') {
-            const m = Attend.consider('cup-final', compId, home, away, r, { pens: tie.pens, et: tie.et, winner: tie.winner, minutes: (tie.pens || tie.et) ? 120 : 90, score: { hg: tie.hg, ag: tie.ag } });
+            const m = Attend.consider('cup-final', compId, home, away, r, { pens: tie.pens, et: tie.et, winner: tie.winner, minutes: (tie.pens || tie.et) ? 120 : 90, score: { hg: tie.hg, ag: tie.ag }, regScore: { hg: r.hg, ag: r.ag } });
             if (m) tie._attendId = m.id;   // hide this final's score in the cup view until it's watched
         }
         return tie;
@@ -2199,7 +2199,13 @@ const League = {
         loanedIn.forEach(p => { if (p.loanRole === 'rotation' && Rng.next() > 0.65) maybeLoan.push(p); else guaranteed.push(p); });
         guaranteed.splice(5);
         const rest = available.filter(p => !guaranteed.includes(p) && !maybeLoan.includes(p));
-        const bestGK = rest.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability)[0];
+        // GK depth chart (D4): the No.1 (First Choice/Star) starts, EXCEPT the Cup Goalkeeper takes the cup
+        // games, and the Back Up gets the odd league match (~≤10% of them).
+        const gkRank = rest.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability);
+        const isCupTie = COMPETITIONS[compId] && COMPETITIONS[compId].type === 'cup';
+        let bestGK = gkRank[0];
+        if (isCupTie) { const ck = gkRank.find(g => g.cupKeeper); if (ck) bestGK = ck; }
+        else if (gkRank.length > 1 && Rng.next() < 0.08) bestGK = gkRank[1];
 
         // squad role decides how often a player features — but a loaned-in player follows the role his
         // loan deal guaranteed (a youth prospect loaned out as a star plays like a star at the loan club)
