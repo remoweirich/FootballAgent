@@ -81,7 +81,7 @@ const DialogueView = {
             // promises are concrete: pick WHAT you are promising before he answers
             const labels = { move: 'Find him a move', newContract: 'Get him a new contract', playingTime: 'Sort out his playing time', renegotiateRep: 'Renegotiate your terms' };
             const types = Agency.validPromiseTypes(this.p);
-            this.pendingChoices = types.map(t => ({ key: 'promise:' + t, label: labels[t] || t, hint: '' }))
+            this.pendingChoices = types.map(t => ({ key: 'promise:' + t, label: labels[t] || t, hint: '', say: Dialogue.SAY['promise:' + t] || '' }))
                 .concat([{ key: 'back', label: 'On second thought…', hint: '' }]);
             this._paint();
             return;
@@ -89,7 +89,7 @@ const DialogueView = {
         if (s.kind === 'prematch' && key === 'bonus') {
             // pick the size of the promised gift; it only ever costs you if they win
             this.pendingChoices = ['small', 'medium', 'large'].map(t =>
-                ({ key: 'bonus:' + t, label: `${t[0].toUpperCase() + t.slice(1)} gift · €${UI.money(Agency.giftCost(t, this.p))}`, hint: 'Paid only on a win.' }))
+                ({ key: 'bonus:' + t, label: `${t[0].toUpperCase() + t.slice(1)} gift · €${UI.money(Agency.giftCost(t, this.p))}`, hint: 'Paid only on a win.', say: Dialogue.SAY['bonus:' + t] || '' }))
                 .concat([{ key: 'back', label: 'On second thought…', hint: '' }]);
             this._paint();
             return;
@@ -97,7 +97,7 @@ const DialogueView = {
         if (key === 'back') { this.pendingChoices = this.scene.choices; this._paint(); return; }
 
         this.pendingChoices = null;
-        this._meSay(choice.label);
+        this._meSay(choice.say || choice.label);   // the agent speaks his line in full, not the button label
         let res;
         if (s.kind === 'complaint') {
             const promiseType = key.indexOf('promise:') === 0 ? key.slice(8) : null;
@@ -183,7 +183,7 @@ const DialogueView = {
         .dlg-head{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;border-bottom:.5px solid var(--line-strong);background:var(--surface)}
         .dlg-who{flex:1;min-width:0;cursor:pointer}
         .dlg-namechev{font-size:14px;color:var(--text-faint);vertical-align:middle}
-        .dlg-name{font-weight:var(--weight-semibold);font-size:var(--fs-lg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .dlg-name{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .dlg-sub{color:var(--text-muted);font-size:var(--fs-sm);margin-top:1px}
         .dlg-ava{width:38px;height:38px;border-radius:50%;background:var(--accent-fill);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:var(--weight-semibold);flex:none}
         .dlg-chat{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:8px}

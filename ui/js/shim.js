@@ -121,7 +121,9 @@ const UI = {
         const youth = (p.onLoanAt && isU21Loan(p)) || isReserveClub(effId);
         const tag = youth ? 'youth' : (p.onLoanAt ? 'loan' : null);
         const club = Clubs.getClubById(effId) || (p.onLoanAt ? Clubs.getClubById(p.clubId) : null);
-        return { club, name: this.clubName(effId), tag };
+        // the owning club, surfaced whenever he's out on loan (D5)
+        const parent = (p.onLoanAt && p.clubId && p.clubId !== effId) ? this.clubName(p.clubId) : null;
+        return { club, name: this.clubName(effId), tag, parent };
     },
 
     niceStep(hi) {

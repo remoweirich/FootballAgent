@@ -75,9 +75,9 @@ const AgencyScreen = {
 
         <div class="section-label">International Scouting Licence</div>
         <div class="fcard">
-            <div class="frow"><span class="frow__k"><i class="ti ti-license"></i>Status</span><span class="frow__v">${has ? `Active · ${Agency.intlLicenceWeeksLeft()}w left` : 'Not held'}</span></div>
-            <div style="padding:9px 0"><p class="hint" style="margin:0 0 var(--space-3)">Lets an unassigned scout work a foreign league. Valid 3 seasons (156 weeks).</p>
-            <button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyLicence()">${has ? 'Extend' : 'Buy'} — ${UI.euro(Agency.INTL_LICENCE_COST)}</button></div>
+            <div class="frow"><span class="frow__k"><i class="ti ti-license"></i>Status</span><span class="frow__v">${Agency.intlSuspended() ? `<span style="color:var(--danger)">Suspended · ${Agency.intlSuspendWeeksLeft()}w</span>` : has ? `Active · ${Agency.intlLicenceWeeksLeft()}w left` : 'Not held'}</span></div>
+            <div style="padding:9px 0"><p class="hint" style="margin:0 0 var(--space-3)">Lets an unassigned scout work a foreign league. ${Agency.intlSuspended() ? 'Suspended after an unpaid licence — you can buy again once it lifts.' : 'Renew before it lapses: after a two-week grace period, unpaid renewals draw escalating fines and eventually a 52-week suspension.'}</p>
+            ${Agency.intlSuspended() ? '' : `<div class="flex-row" style="gap:6px;flex-wrap:wrap">${Agency.INTL_LICENCE_OPTIONS.map(o => `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyLicence(${o.weeks})">${o.label} — ${UI.euro(o.cost)}</button>`).join('')}</div>`}</div>
         </div>
 
         <div class="section-label">Equipment & facilities <span class="muted" style="font-weight:400">· any order</span></div>
@@ -160,7 +160,7 @@ const AgencyScreen = {
         }
         Router.result(r.message, r.ok ? 'ok' : 'bad');
     },
-    buyLicence() { const r = Agency.buyIntlLicence(); GameState.save(); Router.refresh(); Router.result(r.message, 'ok'); },
+    buyLicence(weeks) { const r = Agency.buyIntlLicence(weeks); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     buyEquip(id) { const r = Upgrades.buyEquip(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     hireStaff(id) { const r = Upgrades.hireStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     releaseStaff(id) { const r = Upgrades.releaseStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }

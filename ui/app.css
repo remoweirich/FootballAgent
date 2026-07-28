@@ -12,7 +12,12 @@
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); }
 /* Same reasoning as .tab-bar in components.css: .screen restricts to pan-y for the
    tab-swipe gesture, so anything that scrolls itself sideways (the standings table
-   wrapper) needs to explicitly opt back into native horizontal panning. */
+   wrapper) needs to explicitly opt back into native horizontal panning. A NESTED
+   vertical scroller (a picker/sheet list with its own overflow-y) must ALSO restrict
+   to pan-y, or a horizontal drag started on one of its rows gets swallowed by that
+   scroller before the swipe handler can claim it (E2). The overflow-x rule comes
+   second so an element that scrolls BOTH ways still keeps native horizontal panning. */
+[style*="overflow-y"] { touch-action: pan-y; }
 [style*="overflow-x"] { touch-action: pan-x pan-y; }
 body { font-family: var(--font); overflow: hidden; }
 * { box-sizing: border-box; }

@@ -25,7 +25,9 @@ const Setup = {
     show() {
         const countries = (typeof REGIONS_BY_COUNTRY !== 'undefined') ? Object.keys(REGIONS_BY_COUNTRY) : ['Netherlands'];
         const opts = countries.map(c => `<option value="${c}">${c}</option>`).join('');
-        document.getElementById('app').innerHTML = `<div class="setup-wrap"><div class="setup-card">
+        document.getElementById('app').innerHTML = `<div class="setup-wrap">
+            <button onclick="StartScreen.show()" aria-label="Back to menu" style="position:absolute;top:calc(env(safe-area-inset-top,0) + 12px);left:14px;background:none;border:none;color:var(--text-secondary);font:inherit;font-size:var(--fs-sm);cursor:pointer;display:flex;align-items:center;gap:2px;z-index:2"><i class="ti ti-chevron-left"></i>Menu</button>
+            <div class="setup-card">
             <div class="setup-brand">
                 ${this.CREST}
                 <div class="setup-brand__title">Football Agent Manager</div>
@@ -89,6 +91,29 @@ const Setup = {
     // back to this explanation once the first-run setup screen was dismissed
     openHelp() {
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">How to play</div>${this.howtoHTML()}<button class="btn btn--ghost" style="width:100%;margin-top:var(--space-2)" onclick="Router.closeSheet()">Close</button>`);
+        this.idx = 0;
+        this._measureSlideHeight();
+        this.renderSlide();
+        this.wireHowto();
+    },
+
+    // Standalone version of the how-to for screens that live OUTSIDE the Router shell (Start, Settings),
+    // where Router.sheet has no layer to render into: a self-contained overlay appended to <body>.
+    openHelpOverlay() {
+        let ov = document.getElementById('helpOverlay');
+        if (ov) ov.remove();
+        ov = document.createElement('div');
+        ov.id = 'helpOverlay'; ov.className = 'help-overlay';
+        ov.innerHTML = `<div class="help-overlay__card"><div class="help-overlay__title">How to play</div>${this.howtoHTML()}<button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="document.getElementById('helpOverlay').remove()">Close</button></div>`;
+        ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+        if (!document.getElementById('helpOvCSS')) {
+            const st = document.createElement('style'); st.id = 'helpOvCSS';
+            st.textContent = `.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:90;padding:22px}
+            .help-overlay__card{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:86vh;overflow-y:auto}
+            .help-overlay__title{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);margin-bottom:10px;text-align:center}`;
+            document.head.appendChild(st);
+        }
+        document.body.appendChild(ov);
         this.idx = 0;
         this._measureSlideHeight();
         this.renderSlide();

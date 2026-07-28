@@ -45,7 +45,10 @@ const ClientsScreen = {
 
         el.innerHTML = `
         <div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4)">
-            <a class="gbtn" href="#clienthist"><i class="ti ti-history"></i>History</a>
+            <div class="flex-row" style="gap:8px">
+                <a class="gbtn" href="#clienthist"><i class="ti ti-history"></i>History</a>
+                <a class="gbtn" href="#bestxi"><i class="ti ti-shirt"></i>Best XI</a>
+            </div>
             <button class="gbtn" onclick="ClientsScreen.pickSort()"><i class="ti ti-arrows-sort"></i>${this.SORTS.find(s => s[0] === this.state.sort)[1]}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>
         </div>
         <div class="chip-row" style="margin-bottom:var(--space-4)">
@@ -70,7 +73,7 @@ const ClientsScreen = {
                         ${p.injury ? '<i class="ti ti-bandage" style="font-size:14px;color:var(--danger)"></i>' : ''}
                         ${p.retiringThisSeason ? '<span class="pill pill--gold" style="padding:1px 7px;font-size:10px">Retiring</span>' : ''}
                     </div>
-                    <div class="cl-sub"><span class="flex-row" style="gap:5px">${UI.crest(info ? info.club : club)}${teamHTML}</span><span style="color:var(--text-chevron)">·</span><span>${roleLabel(p.squadRole, p.age)}</span></div>
+                    <div class="cl-sub"><span class="flex-row" style="gap:5px">${UI.crest(info ? info.club : club)}${teamHTML}</span><span style="color:var(--text-chevron)">·</span><span>${roleName(p)}</span></div>
                 </div>
                 <div class="flex-row" style="gap:3px;margin-right:9px">${this.moraleDots(p)}</div>
                 ${UI.abilityBadge(p.ability)}

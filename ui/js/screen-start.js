@@ -1,0 +1,198 @@
+// ============================================================
+//  Start screen — the launch menu shown before anything else.
+//  Continue the most recent save, Load one of your saves, or
+//  start a New game; plus Settings, How-to, and Customize.
+//  A full-screen takeover (like Setup); runs outside the Router
+//  shell, so it manages its own markup and its own help overlay.
+// ============================================================
+const StartScreen = {
+    TITLE: 'Football Agency Simulator',   // working title — easy to change in one place
+
+    // small inline crest, reused from Setup's mark so branding stays consistent
+    CREST: `<svg viewBox="0 0 28 28" width="46" height="46" aria-hidden="true" fill="none">
+        <path d="M14 1.5 26 6.2v7.8c0 8-5.2 12.8-12 13.5-6.8-.7-12-5.5-12-13.5V6.2Z" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M14 8 19.7 12.15 17.53 18.85 10.47 18.85 8.3 12.15Z" fill="var(--accent)"/></svg>`,
+    GEAR: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>`,
+    WAND: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 5 5L8 21l-5 1 1-5Z"/><path d="m14 5 5 5"/><path d="M19 3v2M21 8h-2"/></svg>`,
+
+    async show() {
+        this._auto = (typeof GameState !== 'undefined' && GameState.autosaveMeta) ? await GameState.autosaveMeta() : null;
+        this._hasSave = !!this._auto;
+        this._injectCSS();
+        const saveLabel = this._saveLabel();
+        document.getElementById('app').innerHTML = `<div class="ss-wrap"><div class="ss-inner">
+            <div class="ss-brand">${this.CREST}<h1 class="ss-title">${UI.esc(this.TITLE)}</h1><div class="ss-tag">Build the stable. Take the cut.</div></div>
+            <div class="ss-menu">
+                <button class="ss-btn ss-btn--primary" id="ssContinue" ${this._hasSave ? '' : 'disabled'} onclick="StartScreen.resume()">
+                    <span class="ss-btn__label">Continue</span>${this._hasSave && saveLabel ? `<span class="ss-btn__sub">${UI.esc(saveLabel)}</span>` : ''}
+                </button>
+                <div class="ss-row">
+                    <button class="ss-btn" onclick="StartScreen.load()">Load</button>
+                    <button class="ss-btn" onclick="StartScreen.newGame()">New</button>
+                </div>
+            </div>
+            <div class="ss-foot">
+                <button class="ss-icon" onclick="StartScreen.settings()" aria-label="Settings">${this.GEAR}<span>Settings</span></button>
+                <button class="ss-icon" onclick="StartScreen.help()" aria-label="How to play"><span class="ss-q">?</span><span>How to play</span></button>
+                <button class="ss-icon" onclick="StartScreen.customize()" aria-label="Customize">${this.WAND}<span>Customize</span></button>
+            </div>
+        </div></div>`;
+    },
+
+    // label under the Continue button, from the autosave summary read in show()
+    _saveLabel() {
+        const a = this._auto;
+        if (!a) return 'Continue where you left off';
+        if (a.name) return a.name;
+        return `Week ${a.week}${a.seasonLabel ? ' · ' + a.seasonLabel : ''}`;
+    },
+
+    async resume() {
+        if (!this._hasSave) return;
+        if (typeof GameState.init === 'function') await GameState.init();
+        Main.afterLoad();
+    },
+    newGame() {
+        // single-save for now: warn before a New game overwrites a game in progress (guard goes away
+        // once the multi-slot backend lands)
+        if (this._hasSave) {
+            this._overlay('New game', `<p class="ss-note">You have a game in progress. Until multiple save slots arrive, starting a new game will overwrite it.</p>
+                <div class="ss-row" style="margin-top:14px">
+                    <button class="ss-btn" onclick="document.getElementById('ssOverlay').remove()">Cancel</button>
+                    <button class="ss-btn ss-btn--primary" onclick="document.getElementById('ssOverlay').remove();Setup.show()">Overwrite &amp; start</button>
+                </div>`);
+            return;
+        }
+        if (typeof Setup !== 'undefined') Setup.show();
+    },
+
+    // Load list: the rolling autosave (most recent) plus your manual named saves (up to 5).
+    async load() {
+        const auto = (typeof GameState !== 'undefined' && GameState.autosaveMeta) ? await GameState.autosaveMeta() : null;
+        const slots = (typeof GameState !== 'undefined' && GameState.listNamedSaves) ? await GameState.listNamedSaves() : [];
+        let rows = auto ? this._slotRow('auto', auto, true) : '';
+        slots.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).forEach(s => rows += this._slotRow(s.id, s, false));
+        if (!rows) rows = `<p class="ss-empty">No saved games yet — start a New game.</p>`;
+        this._overlay('Load game', `${rows}<p class="ss-note">The autosave holds your latest progress. Named saves are snapshots you make from in-game Settings — up to five.</p>`);
+    },
+    _slotRow(id, meta, isAuto) {
+        const when = this._when(meta.savedAt);
+        const title = isAuto ? (meta.name ? UI.esc(meta.name) + ' · Autosave' : 'Autosave') : UI.esc(meta.name || 'Save');
+        const sub = `${meta.agency ? UI.esc(meta.agency) + ' · ' : ''}Week ${meta.week}${meta.seasonLabel ? ' · ' + UI.esc(meta.seasonLabel) : ''}${when ? ' · ' + when : ''}`;
+        const onclick = isAuto ? 'StartScreen.resume()' : `StartScreen.loadSlot('${id}')`;
+        const del = isAuto ? '' : `<button class="ss-slotdel" onclick="event.stopPropagation();StartScreen.deleteSlot('${id}')" aria-label="Delete save">✕</button>`;
+        return `<div class="ss-slot" onclick="${onclick}"><div class="ss-slotmain"><span class="ss-slot__name">${title}</span><span class="ss-slotsub">${sub}</span></div><span class="ss-slot__go">Play</span>${del}</div>`;
+    },
+    async loadSlot(id) {
+        // if the current autosave holds progress not backed up to a slot, loading would discard it
+        if (this._auto && this._auto.namedClean === false) { this._confirmReplace(id); return; }
+        await this._doLoadSlot(id);
+    },
+    async _doLoadSlot(id) {
+        if (typeof GameState === 'undefined' || !GameState.loadNamedSave) return;
+        const ok = await GameState.loadNamedSave(id);
+        const ov = document.getElementById('ssOverlay'); if (ov) ov.remove();
+        if (ok) Main.afterLoad();
+    },
+    _confirmReplace(id) {
+        const a = this._auto;
+        const label = a && a.name ? a.name : (a ? `Week ${a.week}${a.seasonLabel ? ' · ' + a.seasonLabel : ''}` : 'your current game');
+        this._overlay('Load game', `
+            <p class="ss-note">Your current game (${UI.esc(label)}) isn't saved to a slot. Loading another save replaces it — that can't be undone.</p>
+            <div class="ss-stack">
+                <button class="ss-btn ss-btn--primary" onclick="StartScreen._saveFirst('${id}')">Save current game first</button>
+                <button class="ss-btn" onclick="StartScreen._doLoadSlot('${id}')">Load without saving</button>
+                <button class="ss-btn" onclick="document.getElementById('ssOverlay').remove()">Cancel</button>
+            </div>`);
+    },
+    // back up the current autosave to a named slot, then continue to the load
+    async _saveFirst(id) {
+        if (typeof GameState.init === 'function' && !GameState.agency) await GameState.init();   // ensure GameState = the autosave
+        const slots = (typeof GameState.listNamedSaves === 'function') ? await GameState.listNamedSaves() : [];
+        const max = (typeof Storage !== 'undefined' && Storage.MAX_SLOTS) || 5;
+        const chips = slots.length
+            ? `<div class="ss-chips">${slots.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).map(s => `<button class="ss-chip" onclick="StartScreen._useName(this)">${UI.esc(s.name)}</button>`).join('')}</div>`
+            : '';
+        this._overlay('Save current game', `
+            <p class="ss-note">Name this save (tap a name to overwrite it; up to ${max}, ${slots.length} used).</p>
+            ${chips}
+            <input id="ssSaveName" class="text-input" type="text" maxlength="32" placeholder="e.g. Ajax Rebuild" value="${UI.esc(GameState.saveName || '')}" style="margin-top:10px">
+            <div id="ssSaveErr"></div>
+            <button class="ss-btn ss-btn--primary" style="width:100%;margin-top:12px" onclick="StartScreen._saveFirstConfirm('${id}')">Save, then load</button>`);
+        setTimeout(() => { const el = document.getElementById('ssSaveName'); if (el) el.focus(); }, 30);
+    },
+    _useName(btn) { const el = document.getElementById('ssSaveName'); if (el) el.value = btn.textContent; },
+    async _saveFirstConfirm(id) {
+        const el = document.getElementById('ssSaveName');
+        const name = (el && el.value.trim()) || '';
+        const res = (typeof GameState.createNamedSave === 'function') ? await GameState.createNamedSave(name) : { ok: false, message: 'Saving is unavailable.' };
+        if (!res.ok) { const e = document.getElementById('ssSaveErr'); if (e) e.innerHTML = `<p class="ss-note" style="color:var(--state-bad);margin-top:8px">${UI.esc(res.message)}</p>`; return; }
+        await this._doLoadSlot(id);
+    },
+    async deleteSlot(id) {
+        if (typeof GameState !== 'undefined' && GameState.deleteNamedSave) await GameState.deleteNamedSave(id);
+        this.load();   // re-render the list
+    },
+    _when(ts) {
+        if (!ts) return '';
+        const diff = Date.now() - ts;
+        if (diff < 60000) return 'just now';
+        if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+        return new Date(ts).toLocaleDateString();
+    },
+    settings() { if (typeof SettingsScreen !== 'undefined') SettingsScreen.show('start'); },
+    help() { if (typeof Setup !== 'undefined' && Setup.openHelpOverlay) Setup.openHelpOverlay(); },
+    customize() {
+        this._overlay('Customize', `<p class="ss-note">Coming soon: build your own league from a template, load custom name packs to replace placeholder club names, and bring in a logo pack. You'll reach this from here and from in-game Settings.</p>`);
+    },
+
+    // a lightweight self-contained overlay (no Router shell on this screen)
+    _overlay(title, bodyHTML) {
+        let ov = document.getElementById('ssOverlay');
+        if (ov) ov.remove();
+        ov = document.createElement('div');
+        ov.id = 'ssOverlay'; ov.className = 'ss-overlay';
+        ov.innerHTML = `<div class="ss-ovcard"><div class="ss-ovtitle">${UI.esc(title)}</div><div class="ss-ovbody">${bodyHTML}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:14px" onclick="document.getElementById('ssOverlay').remove()">Close</button></div>`;
+        ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+        document.body.appendChild(ov);
+    },
+
+    _injectCSS() {
+        if (document.getElementById('ssCSS')) return;
+        const css = `
+        .ss-wrap{position:fixed;inset:0;background:radial-gradient(120% 80% at 50% 0%, rgba(52,211,153,.10), transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;padding:calc(env(safe-area-inset-top,0) + 20px) 22px calc(env(safe-area-inset-bottom,0) + 20px)}
+        .ss-inner{width:100%;max-width:400px;display:flex;flex-direction:column;min-height:min(560px,90vh)}
+        .ss-brand{text-align:center;margin-top:8vh}
+        .ss-title{font-size:26px;font-weight:var(--weight-bold);color:var(--text-bright);margin:14px 0 4px;letter-spacing:-.01em}
+        .ss-tag{color:var(--text-muted);font-size:var(--fs-sm)}
+        .ss-menu{margin-top:auto;display:flex;flex-direction:column;gap:12px}
+        .ss-row{display:flex;gap:12px}
+        .ss-btn{flex:1;background:var(--surface);border:1px solid var(--line-strong);color:var(--text);border-radius:14px;padding:15px 16px;font:inherit;font-weight:var(--weight-semibold);font-size:var(--fs-md);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+        .ss-btn:active{background:var(--surface-raised)}
+        .ss-btn:disabled{opacity:.45;cursor:default}
+        .ss-btn--primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,#04140c)}
+        .ss-btn__sub{font-weight:var(--weight-regular);font-size:var(--fs-xs);opacity:.85}
+        .ss-foot{display:flex;justify-content:space-around;gap:8px;margin-top:22px}
+        .ss-icon{background:none;border:none;color:var(--text-secondary);display:flex;flex-direction:column;align-items:center;gap:5px;font:inherit;font-size:11px;cursor:pointer;padding:8px 10px;border-radius:12px}
+        .ss-icon:active{background:var(--surface)}
+        .ss-q{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:var(--weight-bold);border:1.7px solid currentColor;border-radius:50%}
+        .ss-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:70;padding:22px}
+        .ss-ovcard{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}
+        .ss-ovtitle{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);margin-bottom:12px}
+        .ss-note{color:var(--text-muted);font-size:var(--fs-sm);line-height:1.5}
+        .ss-empty{color:var(--text-dim);text-align:center;padding:16px 0}
+        .ss-slot{width:100%;display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line-strong);border-radius:12px;padding:12px 14px;color:var(--text);font:inherit;cursor:pointer;margin-bottom:8px;text-align:left}
+        .ss-slotmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+        .ss-slot__name{font-weight:var(--weight-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .ss-slotsub{color:var(--text-muted);font-size:var(--fs-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .ss-slot__go{color:var(--accent);font-size:var(--fs-sm);font-weight:var(--weight-semibold);flex:none}
+        .ss-slotdel{flex:none;background:none;border:none;color:var(--text-faint);font-size:15px;cursor:pointer;padding:4px 2px 4px 6px;line-height:1}
+        .ss-slotdel:active{color:var(--state-bad)}
+        .ss-stack{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+        .ss-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+        .ss-chip{background:var(--surface-raised);border:1px solid var(--line-strong);color:var(--text-secondary);border-radius:999px;padding:5px 12px;font:inherit;font-size:var(--fs-sm);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}`;
+        const el = document.createElement('style'); el.id = 'ssCSS'; el.textContent = css; document.head.appendChild(el);
+    },
+};

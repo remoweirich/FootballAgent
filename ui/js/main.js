@@ -6,9 +6,8 @@ const Main = {
     async boot() {
         Clubs.init();
         await Storage.migrateLegacy();   // one-time: pull in a pre-IndexedDB localStorage save, if any
-        if (!(await GameState.hasSave())) { Setup.show(); return; }
-        await GameState.init();
-        this.afterLoad();
+        // Always land on the start menu: Continue/Load resume a save, New starts one (see screen-start.js).
+        await StartScreen.show();
     },
     afterLoad() {
         Router.start();

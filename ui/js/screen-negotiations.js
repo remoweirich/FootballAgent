@@ -147,7 +147,7 @@ Nego.transfer = function (el, m) {
         <div class="fcard">
             <div class="frow"><span class="frow__k">Player's wage</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
             <div class="frow"><span class="frow__k">Current club</span><span class="frow__v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
-            <div class="frow"><span class="frow__k">Current role</span><span class="frow__v">${Agency.isFreeAgent(p) ? '\u2014' : roleLabel(p.squadRole, p.age)}</span></div>
+            <div class="frow"><span class="frow__k">Current role</span><span class="frow__v">${Agency.isFreeAgent(p) ? '\u2014' : roleName(p)}</span></div>
             <div class="frow"><span class="frow__k">Bidding club</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
         </div>
         <p class="hint">${p.ability} OVR · ${p.age}y · ${feeLine}${o.initiatedByAgent ? ' · you pitched this' : ''}</p>
@@ -221,7 +221,7 @@ Nego.renewal = function (el, m) {
         <div class="fcard">
             <div class="frow"><span class="frow__k">Current wage</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
             <div class="frow"><span class="frow__k">Club</span><span class="frow__v">${club.name}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
-            <div class="frow"><span class="frow__k">Role · until</span><span class="frow__v">${roleLabel(p.squadRole, p.age)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
+            <div class="frow"><span class="frow__k">Role · until</span><span class="frow__v">${roleName(p)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
         </div>
         <label class="field-label">Wage: <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">(your cut <span id="negoCutVal">${UI.euro(cut(c.wage))}</span>/wk, ${p.wageCommission}%)</span></label>
         <input class="range" type="range" min="${o.proposedWage}" max="${wageMax}" step="10" value="${c.wage}" oninput="Nego.slide('${m.id}','wage',this.value)">
@@ -311,8 +311,8 @@ Nego.sponsor = function (el, m) {
     el.innerHTML = `<p class="hint">${(SPONSOR_LABEL[o.level] || 'Sponsor')} interest — pick one. It's steady weekly income against a bigger up-front lump sum. Your ${comm}% cut is shown behind each amount.</p>
         ${opts.map((opt, i) => {
         const wCut = Math.round(opt.weekly * comm / 100), aCut = Math.round((opt.annual || 0) * comm / 100);
-        return `<div class="fcard">
-                <div class="frow" style="border-bottom:.5px solid var(--line-strong)"><span class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text)">${opt.company}</span></div>
+        return `<div class="fcard"${opt.standout ? ' style="border-color:var(--accent)"' : ''}>
+                <div class="frow" style="border-bottom:.5px solid var(--line-strong)"><span class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text)">${opt.company}${opt.standout ? ' <span class="pill pill--accent" style="font-size:10px">standout offer</span>' : ''}</span></div>
                 <div class="frow"><span class="frow__k">Weekly</span><span class="frow__v">${UI.euro(opt.weekly)}/wk <span class="muted">(cut ${UI.euro(wCut)}/wk)</span></span></div>
                 <div class="frow"><span class="frow__k">Annual lump sum</span><span class="frow__v">${UI.euro(opt.annual || 0)}/yr <span class="muted">(cut ${UI.euro(aCut)}/yr)</span></span></div>
                 <div class="frow"><span class="frow__k">Term</span><span class="frow__v">${opt.termSeasons} season(s)</span></div>

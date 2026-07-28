@@ -41,7 +41,7 @@ const ClientDetail = {
             <div style="flex:1;min-width:0">
                 <div class="flex-row" style="gap:8px"><span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${p.name}</span>${p.retired ? '<span class="pill" style="padding:2px 8px">Retired</span>' : p.retiringThisSeason ? '<span class="pill pill--gold" style="padding:2px 8px">Retiring</span>' : ''}</div>
                 <div class="cl-sub" style="margin-top:5px">${UI.flag(p.nationality)} ${p.nationality} <span style="color:var(--text-chevron)">·</span> ${p.position} <span style="color:var(--text-chevron)">·</span> ${p.age}y</div>
-                <div class="cl-sub" style="margin-top:4px">${curr ? `${curr.club ? UI.crest(curr.club) : ''}${curr.club ? `<a href="${Router.link('clubs', curr.club.id)}" style="color:${curr.tag ? 'var(--info-text)' : 'var(--text-secondary)'}">${curr.name}</a>` : `<span style="color:var(--info-text)">${curr.name}</span>`}${curr.tag ? ` <span style="color:var(--info-text)">(${curr.tag})</span>` : ''} <span style="color:var(--text-chevron)">·</span> ${curr.club ? curr.club.divisionName : ''}` : (p.freeAgent ? 'Free agent' : (p.joiningClubId ? 'Joining ' + UI.clubName(p.joiningClubId) : '—'))}</div>
+                <div class="cl-sub" style="margin-top:4px">${curr ? `${curr.club ? UI.crest(curr.club) : ''}${curr.club ? `<a href="${Router.link('clubs', curr.club.id)}" style="color:${curr.tag ? 'var(--info-text)' : 'var(--text-secondary)'}">${curr.name}</a>` : `<span style="color:var(--info-text)">${curr.name}</span>`}${curr.tag ? ` <span style="color:var(--info-text)">(${curr.tag})</span>` : ''} <span style="color:var(--text-chevron)">·</span> ${curr.club ? `<a href="#" onclick="event.preventDefault();LeaguesScreen.openFor('${curr.club.division}')" style="color:var(--text-secondary)">${curr.club.divisionName}</a>` : ''}${curr.parent ? ` <span style="color:var(--text-chevron)">·</span> <span style="color:var(--text-muted)">on loan from ${UI.esc(curr.parent)}</span>` : ''}` : (p.freeAgent ? 'Free agent' : (p.joiningClubId ? 'Joining ' + UI.clubName(p.joiningClubId) : '—'))}</div>
             </div>
             ${UI.abilityBadge(p.ability, true)}
         </div>
@@ -91,7 +91,7 @@ const ClientDetail = {
         return `${statusRow}
             <div class="info-grid">
                 <div class="info"><span>Wage</span><b>${this.wageText(p)}</b></div>
-                <div class="info"><span>Role</span><b>${roleLabel(p.squadRole, p.age)}</b></div>
+                <div class="info"><span>Role</span><b>${roleName(p)}</b></div>
                 <div class="info"><span>Contract</span><b>${this.contractText(p)}</b></div>
                 <div class="info"><span>Status</span><b>${p.injury ? 'Injured' : p.onLoanAt ? 'On loan' : 'Available'}</b></div>
             </div>
@@ -135,7 +135,7 @@ const ClientDetail = {
     doSendU21(id) { Router.closeSheet(); const r = Agency.sendToU21(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqPromote(id) { const r = Agency.requestPromotion(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     reqU21Recall(id) { const r = Agency.requestU21Recall(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
-    reqRenewal(id) { const r = Agency.requestRenewalTalks(GameState.getPlayer(id)); GameState.save(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
+    reqRenewal(id) { const r = Agency.requestRenewalTalks(GameState.getPlayer(id)); GameState.save(); if (r.ok && Router.refresh) Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     checkIn(id) {
         const p = GameState.getPlayer(id);
         const gate = Dialogue.canCheckIn(p);
@@ -499,7 +499,7 @@ const ClientDetail = {
             <div class="fcard">
                 <div class="frow"><span class="frow__k"><i class="ti ti-currency-euro"></i>Wage</span><span class="frow__v">${this.wageText(p)}</span></div>
                 <div class="frow"><span class="frow__k"><i class="ti ti-calendar"></i>Until</span><span class="frow__v" style="${p.retiringThisSeason || Agency.contractSeasonsLeft(p) <= 0 ? 'color:var(--danger)' : ''}">${this.contractText(p)}</span></div>
-                <div class="frow"><span class="frow__k"><i class="ti ti-shirt"></i>Role</span><span class="frow__v">${roleLabel(p.squadRole, p.age)}</span></div>
+                <div class="frow"><span class="frow__k"><i class="ti ti-shirt"></i>Role</span><span class="frow__v">${roleName(p)}</span></div>
                 <div class="frow"><span class="frow__k"><i class="ti ti-building"></i>Club</span><span class="frow__v">${club ? club.name : '—'}</span></div>
             </div>
             <div class="section-label">Your representation</div>
