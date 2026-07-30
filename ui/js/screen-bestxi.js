@@ -115,16 +115,16 @@ const BestXI = {
                     <span class="bx-pickname">${UI.flag(p.nationality)} ${UI.esc(p.name)}</span>
                     <span class="bx-pickmeta">${UI.esc(p.position)} · ${p.ability || '—'}${era ? ' · ' + era : ''}</span></button>`;
             }).join('')
-            : `<p class="bx-empty">No client you've represented has played ${UI.esc(posLabel)}.</p>`;
-        const clear = current ? `<button class="bx-clear" onclick="BestXI.clear('${slotId}')">Remove ${UI.esc(this._shortName(this._playerName(current)))}</button>` : '';
+            : `<p class="bx-empty">${I18n.t('bestxi.noneAtPos', { pos: UI.esc(posLabel) })}</p>`;
+        const clear = current ? `<button class="bx-clear" onclick="BestXI.clear('${slotId}')">${I18n.t('bestxi.remove', { name: UI.esc(this._shortName(this._playerName(current))) })}</button>` : '';
         Router.sheet(`<div class="sheet__handle"></div>
-            <div class="sheet__title">Choose ${UI.esc(posLabel)}</div>
+            <div class="sheet__title">${I18n.t('bestxi.choose', { pos: UI.esc(posLabel) })}</div>
             ${clear}
             <div class="bx-picklist">${rows}</div>
-            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-2)" onclick="Router.closeSheet()">Close</button>`);
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-2)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
     },
     // a light "when" hint next to a name in the picker
-    _era(p) { return (!p.archived && p.agentId === 'me') ? 'current' : (p.archived ? 'former' : ''); },
+    _era(p) { return (!p.archived && p.agentId === 'me') ? I18n.t('bestxi.current') : (p.archived ? I18n.t('bestxi.former') : ''); },
     pick(slotId, pid) {
         this._state().picks[slotId] = pid;
         this._save();
@@ -149,7 +149,7 @@ const BestXI = {
             `<button class="bx-form ${st.formation === k ? 'bx-form--on' : ''}" onclick="BestXI.selectFormation('${k}')">${this.FORMATIONS[k].name}</button>`).join('')}</div>`;
 
         if (!st.formation) {
-            el.innerHTML = `${selector}<div class="bx-hint"><i class="ti ti-shirt"></i><p>Pick a formation to start building your hall-of-fame XI.</p><p class="bx-hint__sub">Then tap any position to choose from every client you've ever represented who plays there.</p></div>`;
+            el.innerHTML = `${selector}<div class="bx-hint"><i class="ti ti-shirt"></i><p>${I18n.t('bestxi.pickFormation')}</p><p class="bx-hint__sub">${I18n.t('bestxi.pickFormationSub')}</p></div>`;
             return;
         }
 
@@ -171,10 +171,10 @@ const BestXI = {
                 ${filled ? `<span class="bx-slotname">${UI.esc(this._shortName(p.name))}</span>` : ''}</button>`;
         };
         const pitch = `<div class="bx-pitch">${f.slots.map(s => tile(s, true)).join('')}</div>`;
-        const bench = `<div class="bx-benchlab">Substitutes</div><div class="bx-bench">${this.BENCH.map(s => tile(s, false)).join('')}</div>`;
+        const bench = `<div class="bx-benchlab">${I18n.t('bestxi.substitutes')}</div><div class="bx-bench">${this.BENCH.map(s => tile(s, false)).join('')}</div>`;
         const count = f.slots.filter(s => st.picks[s.id]).length + this.BENCH.filter(s => st.picks[s.id]).length;
         el.innerHTML = `${selector}
-            <p class="bx-note">Tap a position to pick from clients who played there. ${count} of ${f.slots.length + this.BENCH.length} filled · saved automatically.</p>
+            <p class="bx-note">${I18n.t('bestxi.note', { count, total: f.slots.length + this.BENCH.length })}</p>
             ${pitch}${bench}`;
     },
 
@@ -219,4 +219,4 @@ const BestXI = {
         const el = document.createElement('style'); el.id = 'bxCSS'; el.textContent = css; document.head.appendChild(el);
     },
 };
-if (typeof Router !== 'undefined') Router.register('bestxi', { isMain: false, parent: 'clients', title: 'Best XI', render(el) { BestXI.render(el); } });
+if (typeof Router !== 'undefined') Router.register('bestxi', { isMain: false, parent: 'clients', title: () => I18n.t('clients.bestXI'), render(el) { BestXI.render(el); } });

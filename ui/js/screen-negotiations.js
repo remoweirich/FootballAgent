@@ -31,18 +31,18 @@ Nego.linkifyPlayers = function (html) {
 
 // ---------------- Inbox list ----------------
 Router.register('inbox', {
-    isMain: false, title: 'Inbox',
+    isMain: false, title: () => I18n.t('common.inbox'),
     render(el) {
         // a live "Attend the Final" window gets a banner at the top of the inbox linking to the overview
         const w = (typeof Attend !== 'undefined') ? Attend.window() : null;
         const banner = (w && w.finals.length) ? `<a class="list-row" href="${Router.link('attendfinals')}" style="cursor:pointer;background:var(--gold-tint);border:1px solid var(--gold-border);margin-bottom:var(--space-3)">
             <div class="row-ico" style="background:color-mix(in srgb, var(--gold) 16%, transparent);color:var(--gold)"><i class="ti ti-ticket"></i></div>
-            <div style="flex:1;min-width:0"><div class="row-title">Finals to attend</div><div class="row-sub">${w.finals.length} invitation${w.finals.length > 1 ? 's' : ''} · ${Attend.watchesLeft()} left to watch</div></div>
+            <div style="flex:1;min-width:0"><div class="row-title">${I18n.t('nego.finalsToAttend')}</div><div class="row-sub">${I18n.t('nego.finalsSub', { n: w.finals.length, left: Attend.watchesLeft() })}</div></div>
             <i class="ti ti-chevron-right" style="color:var(--gold)"></i></a>` : '';
-        if (!GameState.inbox.length && !banner) { el.innerHTML = '<div class="empty"><div class="empty__icon"><i class="ti ti-inbox"></i></div><div class="empty__title">Inbox empty</div><div class="empty__hint">Offers, scout reports, injuries and season reviews arrive here.</div></div>'; return; }
+        if (!GameState.inbox.length && !banner) { el.innerHTML = `<div class="empty"><div class="empty__icon"><i class="ti ti-inbox"></i></div><div class="empty__title">${I18n.t('nego.inboxEmpty')}</div><div class="empty__hint">${I18n.t('nego.inboxEmptySub')}</div></div>`; return; }
         el.innerHTML = `<div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4)">
-            <span class="hint">${GameState.inbox.length} message(s) · ${GameState.unreadCount()} unread</span>
-            <div class="flex-row" style="gap:6px"><button class="gbtn" onclick="NegoInbox.markAllRead()"><i class="ti ti-checks"></i>Mark all read</button><button class="gbtn" onclick="NegoInbox.dismissAll()"><i class="ti ti-trash"></i>Dismiss all</button></div>
+            <span class="hint">${I18n.t('nego.msgCount', { n: GameState.inbox.length, unread: GameState.unreadCount() })}</span>
+            <div class="flex-row" style="gap:6px"><button class="gbtn" onclick="NegoInbox.markAllRead()"><i class="ti ti-checks"></i>${I18n.t('nego.markAllRead')}</button><button class="gbtn" onclick="NegoInbox.dismissAll()"><i class="ti ti-trash"></i>${I18n.t('nego.dismissAll')}</button></div>
         </div>${banner}
         ${GameState.inbox.map(m => {
             const off = m.offer ? Nego.mailMeta(m) : '';
@@ -67,15 +67,15 @@ const NegoInbox = {
     markAllRead() { GameState.markAllRead(); GameState.save(); Router.refresh(); },
     dismissAll() {
         if (!GameState.inbox.length) return;
-        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Dismiss all messages?</div><p class="hint">Pending offers will be cleared too.</p>
-            <div class="flex-row" style="margin-top:var(--space-5)"><button class="btn btn--ghost" onclick="Router.closeSheet()">Cancel</button><button class="btn btn--danger" onclick="NegoInbox.doDismissAll()">Dismiss all</button></div>`);
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('nego.dismissAllQ')}</div><p class="hint">${I18n.t('nego.dismissAllDesc')}</p>
+            <div class="flex-row" style="margin-top:var(--space-5)"><button class="btn btn--ghost" onclick="Router.closeSheet()">${I18n.t('common.cancel')}</button><button class="btn btn--danger" onclick="NegoInbox.doDismissAll()">${I18n.t('nego.dismissAll')}</button></div>`);
     },
     doDismissAll() { GameState.dismissAllMail(); GameState.save(); Router.closeSheet(); Router.refresh(); }
 };
 
 // ---------------- Mail detail dispatcher ----------------
 Router.register('mail', {
-    isMain: false, title: p => { const m = GameState.inbox.find(x => x.id === p[0]); return m ? m.subject : 'Message'; },
+    isMain: false, title: p => { const m = GameState.inbox.find(x => x.id === p[0]); return m ? m.subject : I18n.t('nego.message'); },
     // a message about a player belongs UNDER that player: backing out of his offers lands on him
     parent: params => {
         const pid = Nego.playerIdOf(GameState.inbox.find(x => x.id === params[0]));
@@ -118,7 +118,7 @@ Nego.goPlayer = function (playerId) {
 Nego.generic = function (el, m) {
     el.innerHTML = `<p class="hint">W${m.week} ${m.season}</p>
         <div style="color:var(--text-secondary);line-height:1.6">${this.linkifyPlayers(m.body || '')}</div>
-        <div class="flex-row" style="margin-top:var(--space-6)"><button class="btn btn--ghost" onclick="Nego.dismiss('${m.id}')"><i class="ti ti-trash"></i>Dismiss</button><button class="btn btn--primary" onclick="Router.back('inbox')">Close</button></div>`;
+        <div class="flex-row" style="margin-top:var(--space-6)"><button class="btn btn--ghost" onclick="Nego.dismiss('${m.id}')"><i class="ti ti-trash"></i>${I18n.t('nego.dismiss')}</button><button class="btn btn--primary" onclick="Router.back('inbox')">${I18n.t('common.close')}</button></div>`;
 };
 Nego.dismiss = function (id) {
     const pid = this.playerIdOf(GameState.inbox.find(m => m.id === id));
@@ -139,31 +139,31 @@ Nego.transfer = function (el, m) {
     const bonusMax = Math.max(Agency.maxSigningBonus(p, o.proposedWage), Agency.agentFeeCap(o.transferFee));
     const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
     const cut = w => Math.round(w * p.wageCommission / 100);
-    const fromLeague = Agency.isFreeAgent(p) || !from ? 'free agent (no club)' : `${from.name}, ${from.divisionName}`;
-    const feeLine = Agency.isFreeAgent(p) ? 'Free transfer.' : `Agreed fee <strong>${UI.euro(o.transferFee)}</strong>.`;
+    const fromLeague = Agency.isFreeAgent(p) || !from ? I18n.t('nego.freeAgentNoClub') : `${from.name}, ${from.divisionName}`;
+    const feeLine = Agency.isFreeAgent(p) ? I18n.t('nego.freeTransfer') : I18n.t('nego.agreedFee', { fee: UI.euro(o.transferFee) });
     const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id);
 
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
         <div class="fcard">
-            <div class="frow"><span class="frow__k">Player's wage</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
-            <div class="frow"><span class="frow__k">Current club</span><span class="frow__v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
-            <div class="frow"><span class="frow__k">Current role</span><span class="frow__v">${Agency.isFreeAgent(p) ? '\u2014' : roleName(p)}</span></div>
-            <div class="frow"><span class="frow__k">Bidding club</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.playersWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.currentClub')}</span><span class="frow__v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.currentRole')}</span><span class="frow__v">${Agency.isFreeAgent(p) ? '\u2014' : roleName(p)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.biddingClub')}</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
         </div>
-        <p class="hint">${p.ability} OVR · ${p.age}y · ${feeLine}${o.initiatedByAgent ? ' · you pitched this' : ''}</p>
-        <p style="color:var(--text-secondary);font-size:var(--fs-sm)">Put your whole proposal on the table — wage, role, length and signing bonus together.</p>
-        <label class="field-label">Wage at ${to.name}: <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">(your cut <span id="negoCutVal">${UI.euro(cut(c.wage))}</span>/wk)</span></label>
+        <p class="hint">${p.ability} OVR · ${p.age}y · ${feeLine}${o.initiatedByAgent ? I18n.t('nego.youPitched') : ''}</p>
+        <p style="color:var(--text-secondary);font-size:var(--fs-sm)">${I18n.t('nego.transferIntro')}</p>
+        <label class="field-label">${I18n.t('nego.wageAt', { club: to.name })} <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">${I18n.t('nego.yourCut', { cut: `<span id="negoCutVal">${UI.euro(cut(c.wage))}</span>` })}</span></label>
         <input class="range" type="range" min="${o.proposedWage}" max="${wageMax}" step="10" value="${c.wage}" oninput="Nego.slide('${m.id}','wage',this.value)">
-        <label class="field-label">Squad role</label>
+        <label class="field-label">${I18n.t('nego.squadRole')}</label>
         <select class="select-input" onchange="Nego.slide('${m.id}','role',this.value)">${ROLE_ORDER.map(r => `<option value="${r}" ${r === c.role ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select>
-        <label class="field-label">Contract length: <span id="negoTermVal" class="editable-val">${c.term}</span> season(s)${termCap < 6 ? ` <span class="muted">(max ${termCap} at his age, unless he's way too good for this squad)</span>` : ''}</label>
+        <label class="field-label">${I18n.t('nego.contractLength')} <span id="negoTermVal" class="editable-val">${c.term}</span>${I18n.t('nego.seasonsSuffix')}${termCap < 6 ? ` <span class="muted">${I18n.t('nego.maxTerm', { cap: termCap })}</span>` : ''}</label>
         <input class="range" type="range" min="1" max="${termCap}" value="${c.term}" oninput="Nego.slide('${m.id}','term',this.value)">
-        <label class="field-label">Your agent's fee: <span id="negoBonusVal" class="editable-val">${UI.euro(c.bonus)}</span></label>
+        <label class="field-label">${I18n.t('nego.agentFee')} <span id="negoBonusVal" class="editable-val">${UI.euro(c.bonus)}</span></label>
         <input class="range" type="range" min="0" max="${bonusMax}" step="${Math.max(10, Math.round(bonusMax / 50))}" value="${c.bonus}" oninput="Nego.slide('${m.id}','bonus',this.value)">
-        ${others.length ? `<div class="result info">Competing bids: ${others.map(x => `<a href="${Router.link('mail', x.id)}" style="color:var(--info-text)">${Clubs.getClubById(x.offer.toClubId) ? Clubs.getClubById(x.offer.toClubId).name : ''} · ${roleLabel(x.offer.role || 'rotation', p.age)}</a>`).join(' · ')}</div>` : ''}
+        ${others.length ? `<div class="result info">${I18n.t('nego.competingBids')} ${others.map(x => `<a href="${Router.link('mail', x.id)}" style="color:var(--info-text)">${Clubs.getClubById(x.offer.toClubId) ? Clubs.getClubById(x.offer.toClubId).name : ''} · ${roleLabel(x.offer.role || 'rotation', p.age)}</a>`).join(' · ')}</div>` : ''}
         <div class="flex-row" style="margin-top:var(--space-5)">
-            <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>Reject</button>
-            <button class="btn btn--primary" onclick="Nego.proposePackage('${m.id}')"><i class="ti ti-send"></i>Propose package</button>
+            <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>${I18n.t('nego.reject')}</button>
+            <button class="btn btn--primary" onclick="Nego.proposePackage('${m.id}')"><i class="ti ti-send"></i>${I18n.t('nego.proposePackage')}</button>
         </div>
         <div id="actionResult"></div>`;
 };
@@ -206,7 +206,7 @@ Nego.proposePackage = function (mailId) {
     } else {
         const cc = r.counter; c.wage = cc.wage; c.role = cc.role; c.term = cc.term; c.bonus = cc.bonus;
         Router.refresh();
-        Router.result(`${r.message}<br><span class="muted">Their package: ${UI.euro(cc.wage)}/wk · ${roleLabel(cc.role, p.age)} · ${cc.term}yr · ${UI.euro(cc.bonus)} bonus</span>`, r.status === 'close' ? 'info' : 'bad');
+        Router.result(`${r.message}<br><span class="muted">${I18n.t('nego.theirPackage', { wage: UI.euro(cc.wage), role: roleLabel(cc.role, p.age), term: cc.term, bonus: UI.euro(cc.bonus) })}</span>`, r.status === 'close' ? 'info' : 'bad');
     }
 };
 
@@ -220,21 +220,21 @@ Nego.renewal = function (el, m) {
     const cut = w => Math.round(w * p.wageCommission / 100);
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(club.id)}"</p>
         <div class="fcard">
-            <div class="frow"><span class="frow__k">Current wage</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
-            <div class="frow"><span class="frow__k">Club</span><span class="frow__v">${club.name}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
-            <div class="frow"><span class="frow__k">Role · until</span><span class="frow__v">${roleName(p)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.currentWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${club.name}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.roleUntil')}</span><span class="frow__v">${roleName(p)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
         </div>
-        <label class="field-label">Wage: <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">(your cut <span id="negoCutVal">${UI.euro(cut(c.wage))}</span>/wk, ${p.wageCommission}%)</span></label>
+        <label class="field-label">${I18n.t('nego.wage')} <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">${I18n.t('nego.yourCutPct', { cut: `<span id="negoCutVal">${UI.euro(cut(c.wage))}</span>`, pct: p.wageCommission })}</span></label>
         <input class="range" type="range" min="${o.proposedWage}" max="${wageMax}" step="10" value="${c.wage}" oninput="Nego.slide('${m.id}','wage',this.value)">
-        <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-4);width:auto" onclick="Nego.negRenewWage('${m.id}')"><i class="ti ti-send"></i>Put it to the club</button>
+        <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-4);width:auto" onclick="Nego.negRenewWage('${m.id}')"><i class="ti ti-send"></i>${I18n.t('nego.putToClub')}</button>
         <div id="wageMsg"></div>
-        <label class="field-label">Squad role at ${club.name}</label>
+        <label class="field-label">${I18n.t('nego.squadRoleAt', { club: club.name })}</label>
         <select class="select-input" onchange="Nego.slide('${m.id}','role',this.value)">${ROLE_ORDER.map(r => `<option value="${r}" ${r === c.role ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select>
-        <label class="field-label">Contract length: <span id="negoTermVal" class="editable-val">${c.term}</span> season(s)${termCap < 6 ? ` <span class="muted">(max ${termCap} at his age, unless he's way too good for this squad)</span>` : ''}</label>
+        <label class="field-label">${I18n.t('nego.contractLength')} <span id="negoTermVal" class="editable-val">${c.term}</span>${I18n.t('nego.seasonsSuffix')}${termCap < 6 ? ` <span class="muted">${I18n.t('nego.maxTerm', { cap: termCap })}</span>` : ''}</label>
         <input class="range" type="range" min="1" max="${termCap}" value="${c.term}" oninput="Nego.slide('${m.id}','term',this.value)">
         <div class="flex-row" style="margin-top:var(--space-5)">
-            <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>Decline</button>
-            <button class="btn btn--primary" onclick="Nego.acceptRenewal('${m.id}')"><i class="ti ti-check"></i>Accept renewal</button>
+            <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>${I18n.t('nego.decline')}</button>
+            <button class="btn btn--primary" onclick="Nego.acceptRenewal('${m.id}')"><i class="ti ti-check"></i>${I18n.t('nego.acceptRenewal')}</button>
         </div>
         <div id="actionResult"></div>`;
 };
@@ -270,20 +270,20 @@ Nego.loan = function (el, m) {
     if (inWindow && !c.duration) c.duration = durOpts[0].code;
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
         <div class="fcard">
-            <div class="frow"><span class="frow__k">Club</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
-            <div class="frow"><span class="frow__k">From</span><span class="frow__v">${p.clubId ? (Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : '') : ''}</span></div>
-            <div class="frow"><span class="frow__k">They propose</span><span class="frow__v">${roleLabel(o.role || 'starter', p.age)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.from')}</span><span class="frow__v">${p.clubId ? (Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : '') : ''}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.theyPropose')}</span><span class="frow__v">${roleLabel(o.role || 'starter', p.age)}</span></div>
         </div>
-        <p style="color:var(--text-secondary);font-size:var(--fs-sm)">Push for more game time — they may dig in, or give in if you persist and they trust you.</p>
-        <label class="field-label">Ask for role: <span id="negoLoanRoleVal" style="color:var(--accent-text)">${roleLabel(c.loanRole, p.age)}</span> agreed</label>
+        <p style="color:var(--text-secondary);font-size:var(--fs-sm)">${I18n.t('nego.loanIntro')}</p>
+        <label class="field-label">${I18n.t('nego.askForRole')} <span id="negoLoanRoleVal" style="color:var(--accent-text)">${roleLabel(c.loanRole, p.age)}</span> ${I18n.t('nego.roleAgreed')}</label>
         <select class="select-input" onchange="Nego.slide('${m.id}','loanRole',this.value)">${ROLE_ORDER.map(r => `<option value="${r}" ${r === c.loanRole ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select>
-        <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-4);width:auto" onclick="Nego.negLoanRole('${m.id}')"><i class="ti ti-send"></i>Put it to the club</button>
+        <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-4);width:auto" onclick="Nego.negLoanRole('${m.id}')"><i class="ti ti-send"></i>${I18n.t('nego.putToClub')}</button>
         <div id="loanMsg"></div>
-        ${others.length ? `<div class="result info">Other clubs after ${p.name}: ${others.map(x => `<a href="${Router.link('mail', x.id)}" style="color:var(--info-text)">${Clubs.getClubById(x.offer.toClubId) ? Clubs.getClubById(x.offer.toClubId).name : ''}</a>`).join(' · ')}</div>` : ''}
-        ${inWindow ? `<label class="field-label">Loan duration</label><select class="select-input" onchange="Nego.slide('${m.id}','duration',this.value)">${durOpts.map((d, i) => `<option value="${d.code}" ${d.code === c.duration ? 'selected' : ''}>${d.label}</option>`).join('')}</select>` : contractTooShort ? `<div class="result info">${p.name}'s contract with ${Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : 'his club'} doesn't leave room for a loan of any length.</div>` : `<div class="result info">Loans can only be completed during a transfer window (weeks 1–6 or 28–33).</div>`}
+        ${others.length ? `<div class="result info">${I18n.t('nego.otherClubsAfter', { name: p.name })} ${others.map(x => `<a href="${Router.link('mail', x.id)}" style="color:var(--info-text)">${Clubs.getClubById(x.offer.toClubId) ? Clubs.getClubById(x.offer.toClubId).name : ''}</a>`).join(' · ')}</div>` : ''}
+        ${inWindow ? `<label class="field-label">${I18n.t('nego.loanDuration')}</label><select class="select-input" onchange="Nego.slide('${m.id}','duration',this.value)">${durOpts.map((d, i) => `<option value="${d.code}" ${d.code === c.duration ? 'selected' : ''}>${d.label}</option>`).join('')}</select>` : contractTooShort ? `<div class="result info">${I18n.t('nego.loanContractShort', { name: p.name, club: Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : I18n.t('nego.hisClub') })}</div>` : `<div class="result info">${I18n.t('nego.loanWindowOnly')}</div>`}
         <div class="flex-row" style="margin-top:var(--space-5)">
-            <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>Decline</button>
-            ${inWindow ? `<button class="btn btn--primary" onclick="Nego.acceptLoan('${m.id}')"><i class="ti ti-check"></i>Accept loan</button>` : ''}
+            <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>${I18n.t('nego.decline')}</button>
+            ${inWindow ? `<button class="btn btn--primary" onclick="Nego.acceptLoan('${m.id}')"><i class="ti ti-check"></i>${I18n.t('nego.acceptLoan')}</button>` : ''}
         </div>
         <div id="actionResult"></div>`;
 };
@@ -310,18 +310,18 @@ Nego.sponsor = function (el, m) {
     if (!p) { this.dismiss(m.id); return; }
     const opts = o.options || [{ company: o.sponsorName, weekly: o.weeklyAmount, annual: 0, termSeasons: o.termSeasons || 1 }];
     const comm = p.sponsorCommission;
-    el.innerHTML = `<p class="hint">${(SPONSOR_LABEL[o.level] || 'Sponsor')} interest — pick one. It's steady weekly income against a bigger up-front lump sum. Your ${comm}% cut is shown behind each amount.</p>
+    el.innerHTML = `<p class="hint">${(SPONSOR_LABEL[o.level] || I18n.t('nego.sponsorWord'))} ${I18n.t('nego.sponsorIntro', { comm })}</p>
         ${opts.map((opt, i) => {
         const wCut = Math.round(opt.weekly * comm / 100), aCut = Math.round((opt.annual || 0) * comm / 100);
         return `<div class="fcard"${opt.standout ? ' style="border-color:var(--accent)"' : ''}>
-                <div class="frow" style="border-bottom:.5px solid var(--line-strong)"><span class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text)">${opt.company}${opt.standout ? ' <span class="pill pill--accent" style="font-size:10px">standout offer</span>' : ''}</span></div>
-                <div class="frow"><span class="frow__k">Weekly</span><span class="frow__v">${UI.euro(opt.weekly)}/wk <span class="muted">(cut ${UI.euro(wCut)}/wk)</span></span></div>
-                <div class="frow"><span class="frow__k">Annual lump sum</span><span class="frow__v">${UI.euro(opt.annual || 0)}/yr <span class="muted">(cut ${UI.euro(aCut)}/yr)</span></span></div>
-                <div class="frow"><span class="frow__k">Term</span><span class="frow__v">${opt.termSeasons} season(s)</span></div>
-                <div style="padding:8px 0"><button class="btn btn--primary btn--sm" onclick="Nego.acceptSponsor('${m.id}',${i})"><i class="ti ti-signature"></i>Sign this one</button></div>
+                <div class="frow" style="border-bottom:.5px solid var(--line-strong)"><span class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text)">${opt.company}${opt.standout ? ` <span class="pill pill--accent" style="font-size:10px">${I18n.t('nego.standoutOffer')}</span>` : ''}</span></div>
+                <div class="frow"><span class="frow__k">${I18n.t('nego.weekly')}</span><span class="frow__v">${UI.euro(opt.weekly)}/wk <span class="muted">${I18n.t('nego.cutWk', { cut: UI.euro(wCut) })}</span></span></div>
+                <div class="frow"><span class="frow__k">${I18n.t('nego.annualLump')}</span><span class="frow__v">${UI.euro(opt.annual || 0)}/yr <span class="muted">${I18n.t('nego.cutYr', { cut: UI.euro(aCut) })}</span></span></div>
+                <div class="frow"><span class="frow__k">${I18n.t('nego.term')}</span><span class="frow__v">${I18n.t('clienthist.seasonsN', { n: opt.termSeasons })}</span></div>
+                <div style="padding:8px 0"><button class="btn btn--primary btn--sm" onclick="Nego.acceptSponsor('${m.id}',${i})"><i class="ti ti-signature"></i>${I18n.t('nego.signThis')}</button></div>
             </div>`;
     }).join('')}
-        <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>Decline all</button>
+        <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>${I18n.t('nego.declineAll')}</button>
         <div id="actionResult"></div>`;
 };
 Nego.acceptSponsor = function (mailId, optionIndex) {

@@ -25,13 +25,13 @@ const LeaguesScreen = {
             else if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = this.euCurrentDefault();
         } else {
             const cups = COUNTRY_CUPS[country] || [];
-            tabs = [['tables', 'Tables'], ...cups, ['po', 'Play-offs']];
+            tabs = [['tables', I18n.t('leagues.tables')], ...cups, ['po', I18n.t('leagues.playoffs')]];
             if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = 'tables';
         }
-        const countryOpts = order.map(c => `<option value="${c}" ${country === c ? 'selected' : ''}>${c === 'Europe' ? '🇪🇺 Europe' : c}</option>`).join('');
+        const countryOpts = order.map(c => `<option value="${c}" ${country === c ? 'selected' : ''}>${c === 'Europe' ? '🇪🇺 ' + I18n.t('leagues.europe') : c}</option>`).join('');
         el.innerHTML = `
         <div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4)">
-            <span class="hint">${GameState.league && GameState.league.finished ? 'Season complete' : 'Season ' + GameState.seasonLabel()}</span>
+            <span class="hint">${GameState.league && GameState.league.finished ? I18n.t('leagues.seasonComplete') : I18n.t('leagues.seasonN', { label: GameState.seasonLabel() })}</span>
             <select class="select-input" style="width:auto" onchange="LeaguesScreen.setCountry(this.value)">${countryOpts}</select>
         </div>
         <div class="tab-bar tab-bar--sticky" style="margin-bottom:var(--space-4);overflow-x:auto;white-space:nowrap">${tabs.map(([k, l]) => `<button class="tab ${this.state.tab === k ? 'is-active' : ''}" onclick="LeaguesScreen.setTab('${k}')">${l}</button>`).join('')}</div>
@@ -59,7 +59,7 @@ const LeaguesScreen = {
     // "<competition> history" button linking to the standalone winners/players history page
     compHistLink(compId) {
         if (!compId) return '';
-        return `<a class="gbtn" style="margin-top:var(--space-4)" href="${Router.link('comphist', compId)}"><i class="ti ti-history"></i>${compName(compId)} history</a>`;
+        return `<a class="gbtn" style="margin-top:var(--space-4)" href="${Router.link('comphist', compId)}"><i class="ti ti-history"></i>${I18n.t('leagues.compHistLink', { comp: compName(compId) })}</a>`;
     },
 
     renderSection() {
@@ -84,11 +84,11 @@ const LeaguesScreen = {
 
     ZONE_MAP: { 'zone-promote': 'zone-promote', 'zone-relegate': 'zone-relegate', 'zone-playoff': 'zone-po-up', 'zone-releg-up': 'zone-po-up', 'zone-releg-down': 'zone-po-down' },
     standingsTable(div) {
-        if (!GameState.league || !GameState.league.tables[div]) return '<p class="muted">No table yet.</p>';
+        if (!GameState.league || !GameState.league.tables[div]) return `<p class="muted">${I18n.t('leagues.noTable')}</p>`;
         // "Attend the Final": while a title decider in this division is an unwatched invitation, the
         // whole final round is hidden — show the pre-round table (a snapshot) and no champion.
         const hidden = typeof Attend !== 'undefined' && Attend.leagueRoundHidden(div);
-        const note = hidden ? `<p class="hint" style="margin-bottom:var(--space-3)"><i class="ti ti-ticket"></i> Final matchday hidden — attend it from your inbox to see how the title is decided.</p>` : '';
+        const note = hidden ? `<p class="hint" style="margin-bottom:var(--space-3)"><i class="ti ti-ticket"></i> ${I18n.t('leagues.finalHidden')}</p>` : '';
         const rows = hidden ? (Attend.leagueSnapshot(div) || League.sortedTable(div)) : League.sortedTable(div);
         const champ = hidden ? null : (GameState.league.champions && GameState.league.champions[div]);
         const country = divCountry(div);
@@ -139,9 +139,9 @@ const LeaguesScreen = {
                 ${firstTd}<td class="club-cell">${UI.crest(c)}${c ? c.name : r.clubId}${myCount ? ` <span class="pill pill--accent" style="padding:1px 6px">${myCount}</span>` : ''}${champ === r.clubId ? ' 🏆' : ''}</td>
                 <td class="num">${r.P}</td><td class="num">${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA}</td><td class="num" style="color:var(--text)">${r.Pts}</td></tr>`;
         }).join('');
-        return `${note}<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>Club</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>
+        return `${note}<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>${I18n.t('nego.club')}</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>
             ${this.euHighlightLegend(euHL, euCupReserved)}
-            <p class="hint" style="margin-top:var(--space-3)">Direct promotion/relegation shown in full colour; play-off zones lighter. Tap a club for its honours and your players there.</p>`;
+            <p class="hint" style="margin-top:var(--space-3)">${I18n.t('leagues.tableHint')}</p>`;
     },
     // legend for the European-place strips, showing only the tiers this table actually awards
     euHighlightLegend(euHL, cupReserved) {
@@ -150,8 +150,8 @@ const LeaguesScreen = {
         const order = ['CHAMP', 'U', 'UCLq', 'UEL', 'UELq', 'UECL'];
         const items = order.filter(t => used.has(t)).map(t => `<span style="display:inline-flex;align-items:center;gap:5px"><span style="display:inline-block;width:4px;height:14px;border-radius:1px;background:${EUROPE_TAG_INFO[t].color}"></span>${EUROPE_TAG_INFO[t].label}</span>`).join('');
         if (!items) return '';
-        const cupNote = cupReserved ? '<div style="margin-top:4px">The domestic cup winner also earns a Europa League place — it only drops to the next league position if a club that has already qualified wins the cup.</div>' : '';
-        return `<div class="hint" style="margin-top:var(--space-3)"><strong>European qualification</strong><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:5px">${items}</div>${cupNote}<div style="margin-top:4px">See the <em>Europe</em> section (in the country dropdown) for the draws, tables and knockouts.</div></div>`;
+        const cupNote = cupReserved ? `<div style="margin-top:4px">${I18n.t('leagues.cupNote')}</div>` : '';
+        return `<div class="hint" style="margin-top:var(--space-3)"><strong>${I18n.t('leagues.euQualification')}</strong><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:5px">${items}</div>${cupNote}<div style="margin-top:4px">${I18n.t('leagues.seeEurope')}</div></div>`;
     },
     _raw(country, div, i, n, kind) {
         const pos = i + 1;
@@ -200,28 +200,28 @@ const LeaguesScreen = {
         // "Attend the Final": a final you're invited to but haven't watched keeps its result hidden
         // so the Competitions tab can't spoil it (see Attend / the inbox overview).
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId))
-            return `<div class="tie-block"><div class="fixture"><span class="fx-home">${lk(t.h)}</span><span class="fx-score muted" style="font-size:11px">not played yet</span><span class="fx-away">${lk(t.a)}</span></div></div>`;
-        if (t.bye) return `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${lk(t.h)}</span><span class="fx-score muted">bye</span><span class="fx-away"></span></div></div>`;
+            return `<div class="tie-block"><div class="fixture"><span class="fx-home">${lk(t.h)}</span><span class="fx-score muted" style="font-size:11px">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${lk(t.a)}</span></div></div>`;
+        if (t.bye) return `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${lk(t.h)}</span><span class="fx-score muted">${I18n.t('leagues.bye')}</span><span class="fx-away"></span></div></div>`;
         if (t.leg1) {
             const l1 = t.leg1, l2 = t.leg2;
             // decided on penalties (level on aggregate): show the definitive shootout score in red
-            const penTag = t.pens ? ` <span style="color:var(--danger);font-size:9.5px;white-space:nowrap">(pens ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
+            const penTag = t.pens ? ` <span style="color:var(--danger);font-size:9.5px;white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
             const leg = (label, l, highlight) => {
                 const hw = highlight && t.winner === l.h, aw = highlight && t.winner === l.a;
                 return `<div class="fixture fixture--labeled"><span class="fx-label">${label}${highlight ? penTag : ''}</span><span class="fx-home ${hw ? 'fx-adv' : ''}">${lk(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away ${aw ? 'fx-adv' : ''}">${lk(l.a)}</span></div>`;
             };
             // a European knockout tie can be mid-round: leg 1 played, leg 2 still to come
             if (!l2) {
-                const pending = `<div class="fixture fixture--labeled"><span class="fx-label">Leg 2</span><span class="fx-home muted">${lk(l1.a)}</span><span class="fx-score muted">· to come ·</span><span class="fx-away muted">${lk(l1.h)}</span></div>`;
-                return `<div class="tie-block">${leg('Leg 1', l1, false)}${pending}</div>`;
+                const pending = `<div class="fixture fixture--labeled"><span class="fx-label">${I18n.t('leagues.leg2')}</span><span class="fx-home muted">${lk(l1.a)}</span><span class="fx-score muted">${I18n.t('leagues.toCome')}</span><span class="fx-away muted">${lk(l1.h)}</span></div>`;
+                return `<div class="tie-block">${leg(I18n.t('leagues.leg1'), l1, false)}${pending}</div>`;
             }
-            return `<div class="tie-block">${leg('Leg 1', l1, false)}${leg('Leg 2', l2, true)}</div>`;
+            return `<div class="tie-block">${leg(I18n.t('leagues.leg1'), l1, false)}${leg(I18n.t('leagues.leg2'), l2, true)}</div>`;
         }
         const hw = t.winner === t.h, aw = t.winner === t.a;
         // single-match cup tie: penalties show the definitive shootout score, extra time a plain (ET)
         // — both in red, next to the result (the score already includes any ET goals)
-        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${League.penFixPair(t.pens.h, t.pens.a).join('–')})</span>`
-            : t.et ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(ET)</span>` : '';
+        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.h, t.pens.a).join('–')})</span>`
+            : t.et ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.etTag')})</span>` : '';
         return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}${penTag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
     // brief English explanation shown at the top of every cup view, keyed by competition
@@ -253,44 +253,44 @@ const LeaguesScreen = {
     knockoutCup(key, label) {
         const C = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
         const blurb = this.cupBlurb(key);
-        if (!C || !C.results || !C.results.length) return `${blurb}<p class="hint">${label} hasn't kicked off yet.</p>`;
-        const winner = (C.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(C))) ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(C.winner)}</strong></div>` : '';
-        const rounds = C.results.slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· wk ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
+        if (!C || !C.results || !C.results.length) return `${blurb}<p class="hint">${I18n.t('leagues.notKickedOff', { label })}</p>`;
+        const winner = (C.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(C))) ? `<div class="result ok" style="text-align:center">${I18n.t('leagues.winnerLine', { club: UI.clubName(C.winner) })}</div>` : '';
+        const rounds = C.results.slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
         return `${blurb}${winner}${rounds}`;
     },
     groupCup(key, label) {
         const K = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
         const blurb = this.cupBlurb(key);
-        if (!K || !K.groups) return `${blurb}<p class="hint">${label} hasn't started yet.</p>`;
+        if (!K || !K.groups) return `${blurb}<p class="hint">${I18n.t('leagues.notStarted', { label })}</p>`;
         const qual = key === 'llc' ? 2 : 1;   // how many per group are highlighted as qualifiers
-        const winner = (K.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(K))) ? `<div class="result ok" style="text-align:center">🏆 Winner: <strong>${UI.clubName(K.winner)}</strong></div>` : '';
+        const winner = (K.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(K))) ? `<div class="result ok" style="text-align:center">${I18n.t('leagues.winnerLine', { club: UI.clubName(K.winner) })}</div>` : '';
         const groups = K.groups.map((g, i) => {
             const t = League._kSort(g.table);
             const rows = t.map((r, j) => `<div class="frow" style="${j < qual ? 'color:var(--state-good)' : ''}"><span class="frow__k">${UI.clubName(r.clubId)}</span><span class="frow__v">${r.P}p · ${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA} · ${r.Pts}pts</span></div>`).join('');
-            return `<div class="fcard" style="padding:8px 12px"><div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);padding:4px 0">Group ${i + 1}</div>${rows}</div>`;
+            return `<div class="fcard" style="padding:8px 12px"><div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);padding:4px 0">${I18n.t('leagues.groupN', { n: i + 1 })}</div>${rows}</div>`;
         }).join('');
-        const ko = (K.results || []).slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· wk ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
-        return `${blurb}${winner}<div class="section-label">Group stage</div>${groups}${ko ? `<div class="section-label" style="margin-top:var(--space-5)">Knockout</div>${ko}` : ''}`;
+        const ko = (K.results || []).slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
+        return `${blurb}${winner}<div class="section-label">${I18n.t('leagues.groupStage')}</div>${groups}${ko ? `<div class="section-label" style="margin-top:var(--space-5)">${I18n.t('leagues.knockout')}</div>${ko}` : ''}`;
     },
 
     // ---- play-offs (this season's own only — never a stale prior-season carryover) ----
     relegTie(t) {
-        if (!t) return '<p class="muted">Not yet played (week 46).</p>';
+        if (!t) return `<p class="muted">${I18n.t('leagues.notYet46')}</p>`;
         const nm = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
         const l1 = t.leg1, l2 = t.leg2;
-        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
         // an unwatched invited decider: keep leg 2, the aggregate and the winner hidden
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId))
-            return `${leg('Leg 1', l1)}<div class="fixture fixture--labeled"><span class="fx-label">Leg 2</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">not played yet</span><span class="fx-away">${nm(l2.a)}</span></div>`;
-        return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}
-            <div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>
-            <div class="frow"><span class="frow__k">Winner</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(t.winner)}</span></div>`;
+            return `${leg(I18n.t('leagues.leg1'), l1)}<div class="fixture fixture--labeled"><span class="fx-label">${I18n.t('leagues.leg2')}</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${nm(l2.a)}</span></div>`;
+        return `${leg(I18n.t('leagues.leg1'), l1)}${leg(I18n.t('leagues.leg2'), l2)}
+            <div class="frow"><span class="frow__k">${I18n.t('leagues.aggregate')}</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('leagues.winnerLabel')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(t.winner)}</span></div>`;
     },
     playoffs(country) {
         if (country === 'Germany') {
             const G = GameState.league && GameState.league.germanReleg;
-            if (!G) return '<p class="hint">Relegation play-offs are decided in week 46.</p>';
+            if (!G) return `<p class="hint">${I18n.t('leagues.relegDecided46')}</p>`;
             return `<div class="section-label">Bundesliga / 2. Bundesliga</div><div class="fcard">${this.relegTie(G.top)}</div>
                 <div class="section-label">2. Bundesliga / 3. Liga</div><div class="fcard">${this.relegTie(G.bottom)}</div>`;
         }
@@ -298,23 +298,23 @@ const LeaguesScreen = {
             const P = GameState.league && GameState.league.playoffs;
             return ['LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'].map(div => {
                 const po = P && P[div];
-                const title = `${COMPETITIONS[div].name} — promotion play-off`;
-                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
-                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie2Leg(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+                const title = `${I18n.t('leagues.promoPlayoff', { comp: COMPETITIONS[div].name })}`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
+                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${I18n.t('leagues.semis')}</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${I18n.t('leagues.final')}</div>${this.tie2Leg(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">${I18n.t('leagues.promoted')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
         }
         if (country === 'Switzerland') {
             const bar = GameState.league && GameState.league.swissBarrage;
             const barBlock = !bar
-                ? `<div class="section-label">Barrage</div><p class="hint">Not yet played (week 46).</p>`
+                ? `<div class="section-label">Barrage</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`
                 : `<div class="section-label">Barrage — Super League / Challenge League</div><div class="fcard">${this.relegTie(bar.top)}</div>
                    <div class="section-label">Barrage — Challenge League / Promotion League</div><div class="fcard">${this.relegTie(bar.bottom)}</div>`;
             const P = GameState.league && GameState.league.playoffs;
             const poBlock = ['1.LigaCH', '2.LigaCH'].map(div => {
                 const po = P && P[div];
-                const title = `${COMPETITIONS[div].name} — promotion play-off`;
-                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
-                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie2Leg(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+                const title = `${I18n.t('leagues.promoPlayoff', { comp: COMPETITIONS[div].name })}`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
+                return `<div class="section-label">${title}</div><div class="fcard"><div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${I18n.t('leagues.semis')}</div>${(po.sf || []).map(t => this.tie2Leg(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${I18n.t('leagues.final')}</div>${this.tie2Leg(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">${I18n.t('leagues.promoted')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
             return barBlock + poBlock;
         }
@@ -324,15 +324,15 @@ const LeaguesScreen = {
             const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
             const brackets = ['Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'].map(div => {
                 const po = P && P[div];
-                const title = `${COMPETITIONS[div].name} — promotion play-off`;
-                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
-                return `<div class="section-label">${title}</div><div class="fcard">${hd('Round 1')}${this.tie(po.g1)}${hd('Round 2 (barrage qualifier)')}${this.tie(po.g2)}${po.winner ? `<div class="frow"><span class="frow__k">Into the barrage</span><span class="frow__v" style="color:var(--info-text)">${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+                const title = `${I18n.t('leagues.promoPlayoff', { comp: COMPETITIONS[div].name })}`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
+                return `<div class="section-label">${title}</div><div class="fcard">${hd(I18n.t('leagues.round1'))}${this.tie(po.g1)}${hd(I18n.t('leagues.round2barrage'))}${this.tie(po.g2)}${po.winner ? `<div class="frow"><span class="frow__k">${I18n.t('leagues.intoBarrage')}</span><span class="frow__v" style="color:var(--info-text)">${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
             const BAR = [['L1L2', 'Ligue 1 / Ligue 2'], ['L2L3', 'Ligue 2 / Ligue 3'], ['L3L4', 'Ligue 3 / Ligue 4'], ['L4L5', 'Ligue 4 / Ligue 5']];
             const barrages = BAR.map(([k, label]) => {
                 const t = bar && bar[k];
-                if (!t) return `<div class="section-label">${label} barrage</div><p class="hint">Not yet played (week 46).</p>`;
-                return `<div class="section-label">${label} barrage</div><div class="fcard">${this.relegTie(t)}<p class="hint">Winner plays in the higher division next season.</p></div>`;
+                if (!t) return `<div class="section-label">${label} barrage</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
+                return `<div class="section-label">${label} barrage</div><div class="fcard">${this.relegTie(t)}<p class="hint">${I18n.t('leagues.winnerHigherDiv')}</p></div>`;
             }).join('');
             return brackets + barrages;
         }
@@ -341,23 +341,23 @@ const LeaguesScreen = {
             const pout = GameState.league && GameState.league.italianPlayout;
             const promo = ['SerieB', 'SerieC', 'SerieD'].map(div => {
                 const po = P && P[div];
-                const title = `${COMPETITIONS[div].name} — promotion play-off`;
-                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
+                const title = `${I18n.t('leagues.promoPlayoff', { comp: COMPETITIONS[div].name })}`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
                 const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
-                const qf = po.qf ? `${hd('Qualifiers')}${po.qf.map(t => this.tie(t)).join('')}` : '';
-                return `<div class="section-label">${title}</div><div class="fcard">${qf}${hd('Semi-finals')}${(po.sf || []).map(t => this.tie(t)).join('')}${hd('Final')}${this.tie(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+                const qf = po.qf ? `${hd(I18n.t('leagues.qualifiers'))}${po.qf.map(t => this.tie(t)).join('')}` : '';
+                return `<div class="section-label">${title}</div><div class="fcard">${qf}${hd(I18n.t('leagues.semis'))}${(po.sf || []).map(t => this.tie(t)).join('')}${hd(I18n.t('leagues.final'))}${this.tie(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">${I18n.t('leagues.promoted')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
             const playout = ['SerieB', 'SerieC'].map(div => {
                 const po = pout && pout[div];
-                const title = `${COMPETITIONS[div].name} — relegation play-out`;
-                if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
-                return `<div class="section-label">${title}</div><div class="fcard">${this.relegTie(po.tie)}<div class="frow"><span class="frow__k">Relegated</span><span class="frow__v" style="color:var(--state-bad)">▼ ${UI.clubName(po.relegated)}</span></div></div>`;
+                const title = `${I18n.t('leagues.relegPlayout', { comp: COMPETITIONS[div].name })}`;
+                if (!po) return `<div class="section-label">${title}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
+                return `<div class="section-label">${title}</div><div class="fcard">${this.relegTie(po.tie)}<div class="frow"><span class="frow__k">${I18n.t('leagues.relegated')}</span><span class="frow__v" style="color:var(--state-bad)">▼ ${UI.clubName(po.relegated)}</span></div></div>`;
             }).join('');
             return promo + playout;
         }
         if (country === 'Portugal') {
             const PO = GameState.league && GameState.league.ptPlayoffs;
-            if (!PO) return '<p class="hint">Promotion/relegation play-offs are decided in week 46.</p>';
+            if (!PO) return `<p class="hint">${I18n.t('leagues.promRelegDecided46')}</p>`;
             const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
             const block = (label, tie, note) => `<div class="section-label">${label}</div><div class="fcard">${this.relegTie(tie)}${note ? `<p class="hint">${note}</p>` : ''}</div>`;
             const lp = block('Liga Portugal play-off', PO.lpPlayoff, 'Primeira Liga 16th vs Liga Portugal 2 3rd — the winner plays in the Primeira Liga next season.');
@@ -371,7 +371,7 @@ const LeaguesScreen = {
         }
         if (country === 'Belgium') {
             const PO = GameState.league && GameState.league.bePlayoffs;
-            if (!PO) return '<p class="hint">Promotion/relegation play-offs are decided in week 46.</p>';
+            if (!PO) return `<p class="hint">${I18n.t('leagues.promRelegDecided46')}</p>`;
             const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
             const block = (label, tie, note) => `<div class="section-label">${label}</div><div class="fcard">${this.relegTie(tie)}${note ? `<p class="hint">${note}</p>` : ''}</div>`;
             const pro = block('Pro League play-off', PO.proPlayoff, 'Pro League 16th vs Challenger Pro League 3rd — the winner plays in the Pro League next season.');
@@ -387,10 +387,10 @@ const LeaguesScreen = {
         const divs = (COUNTRY_DIVS[country] || []).slice(1);
         return divs.map(div => {
             const po = P && P[div];
-            const title = `${COMPETITIONS[div].name} — promotion play-off`;
-            if (!po) return `<div class="section-label">${title}</div><p class="hint">Not yet played (week 46).</p>`;
-            const elim = po.elim ? `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Eliminators</div>${po.elim.map(t => this.tie(t)).join('')}` : '';
-            return `<div class="section-label">${title}</div><div class="fcard">${elim}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Semi-finals</div>${(po.sf || []).map(t => this.tie(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">Final</div>${this.tie(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">Promoted</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
+            const title = `${I18n.t('leagues.promoPlayoff', { comp: COMPETITIONS[div].name })}`;
+            if (!po) return `<div class="section-label">${title}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
+            const elim = po.elim ? `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${I18n.t('leagues.eliminators')}</div>${po.elim.map(t => this.tie(t)).join('')}` : '';
+            return `<div class="section-label">${title}</div><div class="fcard">${elim}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${I18n.t('leagues.semis')}</div>${(po.sf || []).map(t => this.tie(t)).join('')}<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${I18n.t('leagues.final')}</div>${this.tie(po.final)}${po.winner && !(typeof Attend !== 'undefined' && Attend.poFinalHidden(po.final)) ? `<div class="frow"><span class="frow__k">${I18n.t('leagues.promoted')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
         }).join('');
     },
     tie2Leg(t) {
@@ -400,10 +400,10 @@ const LeaguesScreen = {
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
         // an unwatched invited play-off decider: leg 1 already happened, but keep leg 2 + aggregate hidden
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId)) {
-            return `${leg('Leg 1', l1)}<div class="fixture fixture--labeled"><span class="fx-label">Leg 2</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">not played yet</span><span class="fx-away">${nm(l2.a)}</span></div>`;
+            return `${leg(I18n.t('leagues.leg1'), l1)}<div class="fixture fixture--labeled"><span class="fx-label">${I18n.t('leagues.leg2')}</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${nm(l2.a)}</span></div>`;
         }
-        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(pens ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
-        return `${leg('Leg 1', l1)}${leg('Leg 2', l2)}<div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>`;
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
+        return `${leg(I18n.t('leagues.leg1'), l1)}${leg(I18n.t('leagues.leg2'), l2)}<div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>`;
     },
 
     // ---- UEFA competitions (UCL / UEL / UECL) — global, not tied to the selected country ----
@@ -429,35 +429,35 @@ const LeaguesScreen = {
         const ed = this.currentEurope();
         if (!ed) {   // season 1: the competitions haven't been seeded yet
             const next = GameState.seasonLabelFor(GameState.seasonStartYear + 1);
-            return `<div class="fcard" style="padding:16px"><div class="section-label" style="margin-top:0">European competitions</div>
-                <p class="muted">The Champions League, Europa League and Conference League begin next season (${next}). Their line-ups are seeded from this season's final league tables and domestic cup winners, so there's nothing to contest in your first campaign — check back once the new season starts.</p></div>`;
+            return `<div class="fcard" style="padding:16px"><div class="section-label" style="margin-top:0">${I18n.t('leagues.euComps')}</div>
+                <p class="muted">${I18n.t('leagues.euIntro', { next })}</p></div>`;
         }
         let comp = this.state.euComp; if (!ed.comps[comp]) comp = 'UCL';
         const c = ed.comps[comp];
         const live = GameState.league && GameState.league.europe;
-        const seasonNote = live ? '' : '<p class="hint" style="margin-bottom:var(--space-3)">Showing last season\'s competitions.</p>';
+        const seasonNote = live ? '' : `<p class="hint" style="margin-bottom:var(--space-3)">${I18n.t('leagues.lastSeasonComps')}</p>`;
         const dd = `<select class="select-input" style="margin-bottom:var(--space-3)" onchange="LeaguesScreen.setEuComp(this.value)">${[['UCL', 'Champions League'], ['UEL', 'Europa League'], ['UECL', 'Conference League']].map(([k, l]) => `<option value="${k}" ${comp === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
         const icon = (typeof europeTrophyIcon === 'function') ? europeTrophyIcon(comp) : '🏆';
         const euHidden = c.ko && c.ko.final && c.ko.final._attendId && typeof Attend !== 'undefined' && Attend.isHidden(c.ko.final._attendId);
-        const winner = (c.ko && c.ko.winner && !euHidden) ? `<div class="result ok" style="text-align:center;margin-bottom:var(--space-3)">${icon} ${(COMPETITIONS[comp] || {}).name} winner: <strong>${UI.clubName(c.ko.winner)}</strong></div>` : '';
+        const winner = (c.ko && c.ko.winner && !euHidden) ? `<div class="result ok" style="text-align:center;margin-bottom:var(--space-3)">${icon} ${I18n.t('leagues.euWinnerLine', { comp: (COMPETITIONS[comp] || {}).name, club: UI.clubName(c.ko.winner) })}</div>` : '';
         const tabs = this.euTabs(c);
         let stage = this.state.tab; if (!tabs.some(t => t[0] === stage)) stage = this.euDefaultTab(c);
         return seasonNote + dd + winner + this.euStage(c, comp, stage) + this.compHistLink(comp);
     },
     euTabs(c) {
         const t = [];
-        if (c.qual && c.qual.rounds.length) t.push(['qual', 'Qualifiers']);
-        if (c.table) t.push(['lp', 'Table']);
-        if (c.schedule) t.push(['fixtures', 'Fixtures']);
+        if (c.qual && c.qual.rounds.length) t.push(['qual', I18n.t('leagues.qualifiersTab')]);
+        if (c.table) t.push(['lp', I18n.t('leagues.tableTab')]);
+        if (c.schedule) t.push(['fixtures', I18n.t('leagues.fixturesTab')]);
         if (c.ko) {
-            if (c.ko.po) t.push(['po', 'Knockout Play-offs']);
-            if (c.ko.r16) t.push(['r16', 'Round of 16']);
-            if (c.ko.qf) t.push(['qf', 'Quarter-finals']);
-            if (c.ko.sf) t.push(['sf', 'Semi-finals']);
-            if (c.ko.final) t.push(['final', 'Final']);
-            if (c.ko.r16) t.push(['bracket', 'Bracket']);
+            if (c.ko.po) t.push(['po', I18n.t('leagues.koPlayoffsTab')]);
+            if (c.ko.r16) t.push(['r16', I18n.t('leagues.r16Tab')]);
+            if (c.ko.qf) t.push(['qf', I18n.t('leagues.qfTab')]);
+            if (c.ko.sf) t.push(['sf', I18n.t('leagues.sfTab')]);
+            if (c.ko.final) t.push(['final', I18n.t('leagues.finalTab')]);
+            if (c.ko.r16) t.push(['bracket', I18n.t('leagues.bracketTab')]);
         }
-        return t.length ? t : [['qual', 'Qualifiers']];
+        return t.length ? t : [['qual', I18n.t('leagues.qualifiersTab')]];
     },
     euDefaultTab(c) {   // the current stage: latest knockout round, else the league phase, else qualifying
         if (c.ko) { for (const k of ['final', 'sf', 'qf', 'r16', 'po']) if (c.ko[k]) return k; }
@@ -466,17 +466,17 @@ const LeaguesScreen = {
     },
     euStage(c, comp, stage) {
         switch (stage) {
-            case 'lp': return (c.table ? this.euTable(c) : '<p class="hint">The league-phase draw is made after qualifying (week 11).</p>') + (c.pots ? `<details style="margin-top:var(--space-4)"><summary class="section-label" style="cursor:pointer;list-style:revert">Seeding pots</summary>${this.euPots(c)}</details>` : '');
+            case 'lp': return (c.table ? this.euTable(c) : `<p class="hint">${I18n.t('leagues.lpDrawNote')}</p>`) + (c.pots ? `<details style="margin-top:var(--space-4)"><summary class="section-label" style="cursor:pointer;list-style:revert">${I18n.t('leagues.seedingPots')}</summary>${this.euPots(c)}</details>` : '');
             case 'fixtures': return this.euFixtures(c);
-            case 'po': return this.euRound(c, 'po', 'Knockout play-off', this._euCal('knockoutPO', 34));
-            case 'r16': return this.euRound(c, 'r16', 'Round of 16', this._euCal('R16', 37));
-            case 'qf': return this.euRound(c, 'qf', 'Quarter-finals', this._euCal('QF', 41));
-            case 'sf': return this.euRound(c, 'sf', 'Semi-finals', this._euCal('SF', 44));
+            case 'po': return this.euRound(c, 'po', I18n.t('leagues.koPlayoffLabel'), this._euCal('knockoutPO', 34));
+            case 'r16': return this.euRound(c, 'r16', I18n.t('leagues.r16Tab'), this._euCal('R16', 37));
+            case 'qf': return this.euRound(c, 'qf', I18n.t('leagues.qfTab'), this._euCal('QF', 41));
+            case 'sf': return this.euRound(c, 'sf', I18n.t('leagues.sfTab'), this._euCal('SF', 44));
             case 'final': return this.euFinalView(c);
             case 'bracket': return this.euBracketTree(c);
             case 'qual': default: {
                 const firstWk = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.qualifying[comp] && EUROPE_DATA.qualifying[comp].rounds[0] && EUROPE_DATA.qualifying[comp].rounds[0].week) || 1;
-                return `<p class="hint" style="margin-bottom:var(--space-3)">${this.EU_BLURB[comp]}</p>` + (this.euQualifying(c) || `<p class="hint">Qualifying begins in week ${firstWk}.</p>`);
+                return `<p class="hint" style="margin-bottom:var(--space-3)">${this.EU_BLURB[comp]}</p>` + (this.euQualifying(c) || `<p class="hint">${I18n.t('leagues.qualBegins', { wk: firstWk })}</p>`);
             }
         }
     },
@@ -488,14 +488,14 @@ const LeaguesScreen = {
     },
     euRound(c, key, label, wk) {
         const r = c.ko && c.ko[key];
-        if (!r) return `<p class="hint">${label} is drawn in week ${wk}.</p>`;
-        return `<div class="section-label">${label} <span class="muted" style="font-weight:400">· legs wk ${wk} &amp; ${wk + 1}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`;
+        if (!r) return `<p class="hint">${I18n.t('leagues.drawnWk', { label, wk })}</p>`;
+        return `<div class="section-label">${label} <span class="muted" style="font-weight:400">${I18n.t('leagues.legsWk', { wk, wk1: wk + 1 })}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`;
     },
     euFinalView(c) {
         const f = c.ko && c.ko.final;
         const finalWk = this._euCal('final', 47);
-        if (!f) return `<p class="hint">The final is a single match at a neutral venue in week ${finalWk}.</p>`;
-        return `<div class="section-label">Final <span class="muted" style="font-weight:400">· neutral venue · wk ${finalWk}</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens, et: f.et, _attendId: f._attendId })}</div>`;
+        if (!f) return `<p class="hint">${I18n.t('leagues.finalNeutral', { wk: finalWk })}</p>`;
+        return `<div class="section-label">${I18n.t('leagues.final')} <span class="muted" style="font-weight:400">${I18n.t('leagues.finalNeutralLabel', { wk: finalWk })}</span></div><div class="fcard">${this.tie({ h: f.a, a: f.b, hg: f.ag, ag: f.bg, winner: f.winner, pens: f.pens, et: f.et, _attendId: f._attendId })}</div>`;
     },
     // horizontal bracket from the Round of 16 to the final — every club's path, scroll to follow it
     euBracketTree(c) {
@@ -510,11 +510,11 @@ const LeaguesScreen = {
         const box = (aid, bid, winId, aPh, bPh) => `<div style="border:1px solid rgba(128,128,128,.28);border-radius:8px;overflow:hidden;background:rgba(128,128,128,.06)">${side(aid, aPh, winId)}<div style="border-top:1px solid rgba(128,128,128,.28)"></div>${side(bid, bPh, winId)}</div>`;
         const col = (title, cells) => `<div style="display:flex;flex-direction:column;min-width:148px;flex:none"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:center;margin-bottom:8px">${title}</div><div style="display:flex;flex-direction:column;justify-content:space-around;gap:8px;flex:1;min-height:470px">${cells}</div></div>`;
         const cR16 = r16.ties.map(t => box(t.a, t.b, t.winner)).join('');
-        const cQF = [0, 1, 2, 3].map(i => box(w(r16, 2 * i), w(r16, 2 * i + 1), qf && qf.winners ? qf.winners[i] : null, 'R16 winner', 'R16 winner')).join('');
-        const cSF = [0, 1].map(i => box(qf ? w(qf, 2 * i) : null, qf ? w(qf, 2 * i + 1) : null, sf && sf.winners ? sf.winners[i] : null, 'QF winner', 'QF winner')).join('');
-        const cF = box(sf ? w(sf, 0) : null, sf ? w(sf, 1) : null, fin ? fin.winner : null, 'SF winner', 'SF winner');
-        return `<p class="hint" style="margin-bottom:var(--space-3)">Every club's path from the Round of 16 to the final — scroll sideways to follow it.</p>
-            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><div style="display:flex;gap:14px;min-width:max-content;padding:2px 2px 6px">${col('Round of 16', cR16)}${col('Quarter-finals', cQF)}${col('Semi-finals', cSF)}${col('Final', cF)}</div></div>`;
+        const cQF = [0, 1, 2, 3].map(i => box(w(r16, 2 * i), w(r16, 2 * i + 1), qf && qf.winners ? qf.winners[i] : null, I18n.t('leagues.r16winner'), I18n.t('leagues.r16winner'))).join('');
+        const cSF = [0, 1].map(i => box(qf ? w(qf, 2 * i) : null, qf ? w(qf, 2 * i + 1) : null, sf && sf.winners ? sf.winners[i] : null, I18n.t('leagues.qfwinner'), I18n.t('leagues.qfwinner'))).join('');
+        const cF = box(sf ? w(sf, 0) : null, sf ? w(sf, 1) : null, fin ? fin.winner : null, I18n.t('leagues.sfwinner'), I18n.t('leagues.sfwinner'));
+        return `<p class="hint" style="margin-bottom:var(--space-3)">${I18n.t('leagues.everyPath')}</p>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><div style="display:flex;gap:14px;min-width:max-content;padding:2px 2px 6px">${col(I18n.t('leagues.r16Tab'), cR16)}${col(I18n.t('leagues.qfTab'), cQF)}${col(I18n.t('leagues.sfTab'), cSF)}${col(I18n.t('leagues.final'), cF)}</div></div>`;
     },
     euClubCell(id) {
         const real = Clubs.getClubById(id);
@@ -533,44 +533,44 @@ const LeaguesScreen = {
         }).join('');
         const dot = col => `<span style="display:inline-block;width:4px;height:14px;border-radius:1px;background:${col}"></span>`;
         const legend = `<div class="hint" style="margin-top:var(--space-3);display:flex;gap:14px;flex-wrap:wrap">
-            <span style="display:inline-flex;align-items:center;gap:5px">${dot('#16A34A')} 1st–8th · Round of 16</span>
-            <span style="display:inline-flex;align-items:center;gap:5px">${dot('#2563EB')} 9th–24th · knockout play-off</span>
-            <span>25th–36th · eliminated</span></div>`;
-        const done = c.ranked ? '' : `<p class="hint" style="margin-top:2px">Played ${c.mdPlayed}/8 matchdays.</p>`;
+            <span style="display:inline-flex;align-items:center;gap:5px">${dot('#16A34A')} ${I18n.t('leagues.legend1')}</span>
+            <span style="display:inline-flex;align-items:center;gap:5px">${dot('#2563EB')} ${I18n.t('leagues.legend2')}</span>
+            <span>${I18n.t('leagues.legend3')}</span></div>`;
+        const done = c.ranked ? '' : `<p class="hint" style="margin-top:2px">${I18n.t('leagues.playedMd', { n: c.mdPlayed })}</p>`;
         const lpWeeks = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase) || [];
-        const weeksNote = lpWeeks.length ? `<p class="hint" style="margin:0 0 var(--space-2)">Matchdays 1–8 play in weeks ${lpWeeks.join(', ')}.</p>` : '';
-        return `<div class="section-label">League phase</div>${weeksNote}<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>Club</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>${legend}${done}`;
+        const weeksNote = lpWeeks.length ? `<p class="hint" style="margin:0 0 var(--space-2)">${I18n.t('leagues.mdWeeks', { weeks: lpWeeks.join(', ') })}</p>` : '';
+        return `<div class="section-label">${I18n.t('leagues.leaguePhase')}</div>${weeksNote}<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>${I18n.t('nego.club')}</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>${legend}${done}`;
     },
     // League-phase fixtures, one matchday at a time (dropdown top-right). Shows results if played,
     // otherwise the drawn pairing — every club plays exactly once each matchday.
     euFixtures(c) {
-        if (!c.schedule) return '<p class="hint">Fixtures appear once the league-phase draw is made (week 11).</p>';
+        if (!c.schedule) return `<p class="hint">${I18n.t('leagues.fixturesDraw')}</p>`;
         let md = this.state.euMd; if (!md || md < 1 || md > 8) md = Math.max(1, c.mdPlayed || 1);
         const played = md <= (c.mdPlayed || 0);
         const lpWeeks = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase) || [];
         const wk = lpWeeks[md - 1];
         const header = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
-            <div class="section-label" style="margin:0">Matchday ${md}${wk ? ` <span class="muted" style="font-weight:400">· wk ${wk}</span>` : ''}${played ? '' : ' <span class="muted" style="font-weight:400">· not played yet</span>'}</div>
-            <select class="select-input" style="width:auto" onchange="LeaguesScreen.setEuMd(+this.value)">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}" ${n === md ? 'selected' : ''}>Matchday ${n}${lpWeeks[n - 1] ? ' · wk ' + lpWeeks[n - 1] : ''}</option>`).join('')}</select>
+            <div class="section-label" style="margin:0">${I18n.t('leagues.matchdayN', { n: md })}${wk ? ` <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${wk}</span>` : ''}${played ? '' : ` <span class="muted" style="font-weight:400">${I18n.t('leagues.notPlayedYetTag')}</span>`}</div>
+            <select class="select-input" style="width:auto" onchange="LeaguesScreen.setEuMd(+this.value)">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}" ${n === md ? 'selected' : ''}>${I18n.t('leagues.matchdayN', { n })}${lpWeeks[n - 1] ? ' · ' + I18n.t('leagues.wkShort') + ' ' + lpWeeks[n - 1] : ''}</option>`).join('')}</select>
         </div>`;
         const list = played ? (c.mdResults[md - 1] || { matches: [] }).matches.map(x => [x.h, x.a, x.hg, x.ag]) : (c.schedule[md - 1] || []).map(([h, a]) => [h, a, null, null]);
         const lk = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
         const fx = list.map(([h, a, hg, ag]) => {
-            const score = hg == null ? '<span class="fx-score muted">vs</span>' : `<span class="fx-score">${hg}–${ag}</span>`;
+            const score = hg == null ? `<span class="fx-score muted">${I18n.t('livesim.vs')}</span>` : `<span class="fx-score">${hg}–${ag}</span>`;
             const hw = hg != null && hg > ag, aw = hg != null && ag > hg;
             return `<div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(h)}</span>${score}<span class="fx-away ${aw ? 'fx-win' : ''}">${lk(a)}</span></div>`;
         }).join('');
-        return header + `<div class="fcard">${fx || '<p class="hint">No fixtures.</p>'}</div>`;
+        return header + `<div class="fcard">${fx || `<p class="hint">${I18n.t('leagues.noFixtures')}</p>`}</div>`;
     },
     euPots(c) {
-        return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${c.pots.map((p, i) => `<div class="fcard" style="padding:8px 12px"><div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);padding:4px 0">Pot ${i + 1}</div>${p.map(id => `<div class="frow" style="padding:2px 0"><span class="frow__k" style="font-size:12px">${UI.clubName(id)}</span><span class="frow__v muted" style="font-size:11px">${Europe.repOf(id)}</span></div>`).join('')}</div>`).join('')}</div>`;
+        return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${c.pots.map((p, i) => `<div class="fcard" style="padding:8px 12px"><div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);padding:4px 0">${I18n.t('leagues.potN', { n: i + 1 })}</div>${p.map(id => `<div class="frow" style="padding:2px 0"><span class="frow__k" style="font-size:12px">${UI.clubName(id)}</span><span class="frow__v muted" style="font-size:11px">${Europe.repOf(id)}</span></div>`).join('')}</div>`).join('')}</div>`;
     },
     euQualifying(c) {
         if (!c.qual || !c.qual.rounds.length) return '';
-        return c.qual.rounds.map(r => `<div class="section-label" style="margin-top:var(--space-3)">Round ${r.round} <span class="muted" style="font-weight:400">· wk ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}${(r.byes || []).map(b => `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${UI.clubName(b)}</span><span class="fx-score muted">bye</span><span class="fx-away"></span></div></div>`).join('')}</div>`).join('');
+        return c.qual.rounds.map(r => `<div class="section-label" style="margin-top:var(--space-3)">${I18n.t('leagues.roundN', { n: r.round })} <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}${(r.byes || []).map(b => `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${UI.clubName(b)}</span><span class="fx-score muted">${I18n.t('leagues.bye')}</span><span class="fx-away"></span></div></div>`).join('')}</div>`).join('');
     }
 };
-Router.register('leagues', { isMain: true, title: 'Leagues', render(el) { LeaguesScreen.render(el); } });
+Router.register('leagues', { isMain: true, title: () => I18n.t('nav.leagues'), render(el) { LeaguesScreen.render(el); } });
 
 // ============================================================
 //  Competition history — one page per competition (league, cup or
@@ -584,12 +584,12 @@ const CompHistory = {
 
     render(el, compId) {
         const comp = COMPETITIONS[compId];
-        if (!comp) { el.innerHTML = '<div class="empty"><div class="empty__title">Unknown competition</div></div>'; return; }
+        if (!comp) { el.innerHTML = `<div class="empty"><div class="empty__title">${I18n.t('leagues.unknownComp')}</div></div>`; return; }
         const ctx = this.ctx(compId);
         if (!['winners', 'players'].includes(ctx.tab)) ctx.tab = 'winners';
         const isCont = comp.type === 'cont';
         const icon = (isCont && typeof europeTrophyIcon === 'function' && europeTrophyIcon(compId)) || '<i class="ti ti-trophy" style="color:var(--gold);font-size:20px"></i>';
-        const tabs = [['winners', 'Winners'], ['players', 'Clients']];
+        const tabs = [['winners', I18n.t('leagues.winnersTab')], ['players', I18n.t('nav.clients')]];
         el.innerHTML = `
         <div class="flex-row" style="gap:8px;margin-bottom:var(--space-2)">${icon}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${comp.name}</span></div>
         <p class="hint" style="margin-bottom:var(--space-4)">${this.subtitle(comp.type)}</p>
@@ -598,9 +598,9 @@ const CompHistory = {
     },
     setTab(compId, t) { this.ctx(compId).tab = t; Router.refresh(); },
     subtitle(type) {
-        return type === 'cont' ? 'Roll of honour and every client who has featured in the competition.'
-            : type === 'cup' ? 'Past cup winners and every client who has featured in the competition.'
-                : 'Champions and every client who has played in the division.';
+        return type === 'cont' ? I18n.t('leagues.subCont')
+            : type === 'cup' ? I18n.t('leagues.subCup')
+                : I18n.t('leagues.subLeague');
     },
 
     // ---- winners ----
@@ -617,14 +617,14 @@ const CompHistory = {
     },
     winnersHTML(compId) {
         const w = this.winnersOf(compId);
-        if (!w.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-trophy"></i></div><div class="empty__title">No winners yet</div><div class="empty__hint">This competition hasn't been decided in a completed season yet.</div></div>`;
+        if (!w.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-trophy"></i></div><div class="empty__title">${I18n.t('leagues.noWinners')}</div><div class="empty__hint">${I18n.t('leagues.noWinnersSub')}</div></div>`;
         const tally = {}; w.forEach(x => tally[x.clubId] = (tally[x.clubId] || 0) + 1);
         const crest = cid => UI.crest(Clubs.getClubById(cid) || { name: UI.clubName(cid), colors: { primary: '#5A626D' } });
         const most = Object.entries(tally).sort((a, b) => b[1] - a[1] || UI.clubName(a[0]).localeCompare(UI.clubName(b[0]))).slice(0, 6)
-            .map(([cid, n]) => `<a href="${Router.link('clubs', cid)}" class="frow" style="cursor:pointer"><span class="frow__k">${crest(cid)}${UI.clubName(cid)}</span><span class="frow__v">${n} title${n > 1 ? 's' : ''}</span></a>`).join('');
+            .map(([cid, n]) => `<a href="${Router.link('clubs', cid)}" class="frow" style="cursor:pointer"><span class="frow__k">${crest(cid)}${UI.clubName(cid)}</span><span class="frow__v">${I18n.t('leagues.titlesN', { n })}</span></a>`).join('');
         const roll = w.map(x => `<a href="${Router.link('clubs', x.clubId)}" class="frow" style="cursor:pointer"><span class="frow__k">${GameState.seasonLabelFor(x.year)}</span><span class="frow__v">${crest(x.clubId)}${UI.clubName(x.clubId)}</span></a>`).join('');
-        return `<div class="section-label">Most titles</div><div class="fcard" style="margin-top:var(--space-2)">${most}</div>
-            <div class="section-label" style="margin-top:var(--space-4)">Roll of honour</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${roll}</div>`;
+        return `<div class="section-label">${I18n.t('leagues.mostTitles')}</div><div class="fcard" style="margin-top:var(--space-2)">${most}</div>
+            <div class="section-label" style="margin-top:var(--space-4)">${I18n.t('leagues.rollOfHonour')}</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${roll}</div>`;
     },
 
     // ---- clients who featured ----
@@ -643,29 +643,29 @@ const CompHistory = {
     },
     playersHTML(compId) {
         const ctx = this.ctx(compId), rows = this.sortedPlayers(compId);
-        const sortBtn = `<button class="gbtn" onclick="CompHistory.pickSort('${compId}')"><i class="ti ti-arrows-sort"></i>${this.SORTS.find(s => s[0] === ctx.sort)[1]}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>`;
+        const sortBtn = `<button class="gbtn" onclick="CompHistory.pickSort('${compId}')"><i class="ti ti-arrows-sort"></i>${I18n.t('leagues.sort.' + ctx.sort)}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>`;
         return `<div class="flex-row" style="justify-content:flex-end;margin-bottom:var(--space-3)">${sortBtn}</div><div id="comphistPlayers">${this.playerListHTML(rows, ctx)}</div>`;
     },
     playerListHTML(rows, ctx) {
-        if (!rows.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-users"></i></div><div class="empty__title">No clients yet</div><div class="empty__hint">None of your clients (past or present) have featured in this competition.</div></div>`;
+        if (!rows.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-users"></i></div><div class="empty__title">${I18n.t('leagues.noClientsComp')}</div><div class="empty__hint">${I18n.t('leagues.noClientsCompSub')}</div></div>`;
         const disc = ['yellow', 'red'].includes(ctx.sort);
         return rows.map(r => {
             const gk = r.p.position === 'GK';
-            const line = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${gk ? r.cs + ' cs' : r.goals + ' g'} · ${r.assists} a`;
+            const line = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${gk ? r.cs + ' ' + I18n.t('common.csShort') : r.goals + ' ' + I18n.t('common.goalsShort')} · ${r.assists} ${I18n.t('common.assistsShort')}`;
             return `<a href="${Router.link('client', r.p.id)}" class="list-row" style="cursor:pointer">
-                <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${r.p.name}</div><div class="row-sub">${r.p.position} · ${r.apps} apps${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
+                <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${r.p.name}</div><div class="row-sub">${r.p.position} · ${r.apps} ${I18n.t('common.appsShort')}${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
                 <div style="text-align:right;font-size:12px;color:var(--text-muted)">${line}<br>${UI.ratingText(r.avg)}</div></a>`;
         }).join('');
     },
     // same "stays open" sort picker used elsewhere (ClientHistory.pickSort)
     pickSort(compId) {
-        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Sort clients</div>
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('clients.sortTitle')}</div>
             <div id="sortPickerBody">${this.sortPickerRows(compId)}</div>
-            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">Done</button>`);
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.done')}</button>`);
     },
     sortPickerRows(compId) {
         const ctx = this.ctx(compId);
-        return this.SORTS.map(([id, label]) => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="CompHistory.setSort('${compId}','${id}')"><span style="flex:1;color:var(--text)">${label}</span>${ctx.sort === id ? `<i class="ti ${ctx.dir === 'asc' ? 'ti-sort-ascending' : 'ti-sort-descending'}" style="color:var(--accent)"></i>` : ''}</button>`).join('');
+        return this.SORTS.map(([id, label]) => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="CompHistory.setSort('${compId}','${id}')"><span style="flex:1;color:var(--text)">${I18n.t('leagues.sort.' + id)}</span>${ctx.sort === id ? `<i class="ti ${ctx.dir === 'asc' ? 'ti-sort-ascending' : 'ti-sort-descending'}" style="color:var(--accent)"></i>` : ''}</button>`).join('');
     },
     setSort(compId, id) {
         const ctx = this.ctx(compId);
@@ -675,4 +675,4 @@ const CompHistory = {
         const list = document.getElementById('comphistPlayers'); if (list) list.innerHTML = this.playerListHTML(this.sortedPlayers(compId), ctx);
     }
 };
-Router.register('comphist', { isMain: false, parent: 'leagues', title: params => (COMPETITIONS[params[0]] || {}).name || 'Competition', render(el, params) { CompHistory.render(el, params[0]); } });
+Router.register('comphist', { isMain: false, parent: 'leagues', title: params => (COMPETITIONS[params[0]] || {}).name || I18n.t('leagues.competition'), render(el, params) { CompHistory.render(el, params[0]); } });

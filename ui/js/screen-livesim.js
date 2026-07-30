@@ -278,9 +278,9 @@ const LiveView = {
         document.getElementById('app').innerHTML = `<div class="lv-wrap">
             <div class="lv-board" id="lvBoard"></div>
             <div class="lv-tabs">
-                <button class="lv-tab" data-t="feed" onclick="LiveView._setTab('feed')">Feed</button>
-                <button class="lv-tab" data-t="stats" onclick="LiveView._setTab('stats')">Stats</button>
-                <button class="lv-tab" data-t="clients" onclick="LiveView._setTab('clients')">Clients</button>
+                <button class="lv-tab" data-t="feed" onclick="LiveView._setTab('feed')">${I18n.t('livesim.tab.feed')}</button>
+                <button class="lv-tab" data-t="stats" onclick="LiveView._setTab('stats')">${I18n.t('livesim.tab.stats')}</button>
+                <button class="lv-tab" data-t="clients" onclick="LiveView._setTab('clients')">${I18n.t('livesim.tab.clients')}</button>
             </div>
             <div class="lv-body" id="lvBody"></div>
         </div>`;
@@ -292,10 +292,10 @@ const LiveView = {
     _clockLabel() {
         const mins = this.timeline.minutes, c = Math.min(this.s.clock, mins);
         const shown = Math.floor(c);
-        if (this.s.phase === 'shootout') return "PENS";
-        if (this.s.done) return "FT";
+        if (this.s.phase === 'shootout') return I18n.t('livesim.pens');
+        if (this.s.done) return I18n.t('livesim.ft');
         if (shown >= 90 && mins === 90) return "90+" + Math.min(5, Math.max(1, shown - 89)) + "'";
-        if (mins > 90 && shown >= 90) return "ET " + shown + "'";   // extra time
+        if (mins > 90 && shown >= 90) return I18n.t('livesim.etPrefix') + shown + "'";   // extra time
         return shown + "'";
     },
 
@@ -322,16 +322,16 @@ const LiveView = {
         let ctrl, banner = '';
         if (st.done) {
             const won = m.winner === this._inviterId();
-            const decided = m.pens ? `pens ${League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–')}` : m.et ? 'after extra time' : '';
-            banner = `<div class="lv-ftbanner">${won ? '🏆 ' : ''}Full time${decided ? ` · <span style="color:var(--danger-text)">${decided}</span>` : ''}</div>`;
-            ctrl = `<div class="lv-ctrl"><button class="btn btn--primary" style="flex:1" onclick="LiveView._done()">Leave</button></div>`;
+            const decided = m.pens ? I18n.t('livesim.pensScore', { score: League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–') }) : m.et ? I18n.t('livesim.afterET') : '';
+            banner = `<div class="lv-ftbanner">${won ? '🏆 ' : ''}${I18n.t('livesim.fullTime')}${decided ? ` · <span style="color:var(--danger-text)">${decided}</span>` : ''}</div>`;
+            ctrl = `<div class="lv-ctrl"><button class="btn btn--primary" style="flex:1" onclick="LiveView._done()">${I18n.t('livesim.leave')}</button></div>`;
         } else if (st.phase === 'shootout') {
             ctrl = '';   // the shootout plays itself out — no controls
         } else {
             ctrl = `<div class="lv-ctrl">
                 <button class="lv-sp ${st.paused ? 'on' : ''}" onclick="LiveView.togglePause()"><i class="ti ti-player-pause"></i></button>
                 ${speedBtn(1, '1×')}${speedBtn(2, '2×')}${speedBtn(4, '4×')}
-                <button class="lv-sp" onclick="LiveView.skip()">Result ⏭</button>
+                <button class="lv-sp" onclick="LiveView.skip()">${I18n.t('livesim.result')} ⏭</button>
             </div>`;
         }
         b.innerHTML = `
@@ -350,7 +350,7 @@ const LiveView = {
         const marks = side => pen.kicks.filter(k => k.side === side)
             .map(k => `<span class="lv-penmk">${k.revealed ? (k.scored ? '⚽' : '✗') : '○'}</span>`).join('');
         const row = (name, side, tot) => `<div class="lv-penrow"><span class="lv-penteam">${UI.esc(name)}</span><span class="lv-penmks">${marks(side)}</span><span class="lv-pentot">${tot}</span></div>`;
-        return `<div class="lv-pens"><div class="lv-penttl">Penalty shootout</div>${row(m.homeName, 'home', pen.h)}${row(m.awayName, 'away', pen.a)}</div>`;
+        return `<div class="lv-pens"><div class="lv-penttl">${I18n.t('livesim.penaltyShootout')}</div>${row(m.homeName, 'home', pen.h)}${row(m.awayName, 'away', pen.a)}</div>`;
     },
     _paintBody() {
         document.querySelectorAll('.lv-tab').forEach(el => el.classList.toggle('on', el.dataset.t === this.tab));
@@ -367,7 +367,7 @@ const LiveView = {
     },
 
     _feedHTML() {
-        if (!this.feed.length) return `<p class="lv-empty">Kick-off…</p>`;
+        if (!this.feed.length) return `<p class="lv-empty">${I18n.t('livesim.kickoff')}</p>`;
         return this.feed.map(e => {
             const client = e.client || (e.kind === 'chain' && e.chain && e.chain.pieces[0].player);
             const accent = client ? ' lv-ev--client' : '';
@@ -391,11 +391,11 @@ const LiveView = {
         const row = (label, h, a) => `<div class="lv-strow"><span class="lv-stv">${h}</span><span class="lv-stl">${label}</span><span class="lv-stv">${a}</span></div>`;
         const bar = `<div class="lv-possbar"><div class="lv-possfill" style="width:${possH}%"></div></div>`;
         return `<div class="lv-stats">
-            ${row('Possession', possH + '%', (100 - possH) + '%')}${bar}
-            ${row('Shots', this.statAt(F.shots.home, p), this.statAt(F.shots.away, p))}
-            ${row('On target', this.statAt(F.sot.home, p), this.statAt(F.sot.away, p))}
-            ${row('Corners', cor.home, cor.away)}
-            ${row('Fouls', this.statAt(F.fouls.home, p), this.statAt(F.fouls.away, p))}
+            ${row(I18n.t('livesim.stat.possession'), possH + '%', (100 - possH) + '%')}${bar}
+            ${row(I18n.t('livesim.stat.shots'), this.statAt(F.shots.home, p), this.statAt(F.shots.away, p))}
+            ${row(I18n.t('livesim.stat.onTarget'), this.statAt(F.sot.home, p), this.statAt(F.sot.away, p))}
+            ${row(I18n.t('livesim.stat.corners'), cor.home, cor.away)}
+            ${row(I18n.t('livesim.stat.fouls'), this.statAt(F.fouls.home, p), this.statAt(F.fouls.away, p))}
             ${row('🟨', yr.home.y, yr.away.y)}
             ${row('🟥', yr.home.r, yr.away.r)}
         </div>`;
@@ -410,14 +410,14 @@ const LiveView = {
             const r = this.ratingAt(c.rating, p);
             const rc = r >= 7 ? 'var(--state-good)' : r < 6.5 ? 'var(--state-bad)' : 'var(--text-secondary)';
             const badge = c.side === 'home' ? this.match.homeName : this.match.awayName;
-            const line = [t.g ? `${t.g} ⚽` : '', t.a ? `${t.a} A` : '', t.shots ? `${t.shots} sh` : '', t.y ? `🟨` : '', t.r ? `🟥` : ''].filter(Boolean).join(' · ') || 'no stats yet';
+            const line = [t.g ? `${t.g} ⚽` : '', t.a ? `${t.a} A` : '', t.shots ? `${t.shots} ${I18n.t('livesim.shotsShort')}` : '', t.y ? `🟨` : '', t.r ? `🟥` : ''].filter(Boolean).join(' · ') || I18n.t('livesim.noStatsYet');
             return `<div class="lv-cl"><div class="lv-clhead"><span class="lv-clname">${UI.esc(c.name)}</span><span class="lv-clrate" style="color:${rc}">${r.toFixed(1)}</span></div>
                 <div class="lv-clsub">${UI.esc(c.position)} · ${UI.esc(badge)}</div>
                 <div class="lv-clstat">${line}</div></div>`;
         };
         let html = played.map(card).join('');
-        if (benched.length) html += `<div class="lv-benchnote">${benched.map(c => UI.esc(c.name)).join(', ')} did not feature.</div>`;
-        return `<div class="lv-clients">${html || '<p class="lv-empty">No clients on the pitch.</p>'}</div>`;
+        if (benched.length) html += `<div class="lv-benchnote">${I18n.t('livesim.didNotFeature', { names: benched.map(c => UI.esc(c.name)).join(', ') })}</div>`;
+        return `<div class="lv-clients">${html || `<p class="lv-empty">${I18n.t('livesim.noClientsPitch')}</p>`}</div>`;
     },
 
     _inviterId() { const c = this.match.clients.find(x => x.side === 'home'); return c ? this.match.homeId : this.match.awayId; },
@@ -493,7 +493,7 @@ const LiveView = {
 const AttendOverview = {
     render(el) {
         const w = (typeof Attend !== 'undefined') ? Attend.window() : null;
-        if (!w || !w.finals.length) { el.innerHTML = '<p class="hint" style="text-align:center;padding:28px 0">No finals to attend right now.</p>'; return; }
+        if (!w || !w.finals.length) { el.innerHTML = `<p class="hint" style="text-align:center;padding:28px 0">${I18n.t('livesim.noFinalsNow')}</p>`; return; }
         const left = Attend.watchesLeft();
         const rows = w.finals.map((m, i) => {
             const revealed = Attend.isRevealed(i), watchable = Attend.isWatchable(i);
@@ -501,22 +501,22 @@ const AttendOverview = {
             const when = (m.day && m.time) ? `${m.day} · ${m.time}` : '';
             let action;
             if (revealed) {
-                const note = m.pens ? ` (pens ${League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–')})` : m.et ? ' (ET)' : '';
+                const note = m.pens ? I18n.t('livesim.pensNote', { score: League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–') }) : m.et ? I18n.t('livesim.etNote') : '';
                 action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></div>`;
             } else if (watchable) {
-                action = `<button class="btn btn--primary lv-ov-btn" onclick="AttendOverview.watch(${i})">Attend</button>`;
+                action = `<button class="btn btn--primary lv-ov-btn" onclick="AttendOverview.watch(${i})">${I18n.t('livesim.attend')}</button>`;
             } else {
-                const reason = Attend.watchBlockReason(i) || 'in the past';
+                const reason = Attend.watchBlockReason(i) || I18n.t('livesim.inThePast');
                 action = `<div class="lv-ov-locked"><i class="ti ti-lock"></i> ${reason}</div>`;
             }
             return `<div class="lv-ov-card">
                 ${when ? `<div class="lv-ov-when">${when}</div>` : ''}
-                <div class="lv-ov-fix">${UI.esc(m.homeName)} <span style="color:var(--text-dim)">vs</span> ${UI.esc(m.awayName)}</div>
+                <div class="lv-ov-fix">${UI.esc(m.homeName)} <span style="color:var(--text-dim)">${I18n.t('livesim.vs')}</span> ${UI.esc(m.awayName)}</div>
                 <div class="lv-ov-comp">${UI.esc(comp)}</div>
                 ${action}</div>`;
         }).join('');
         this._injectOverviewCSS();
-        el.innerHTML = `<p class="hint" style="margin-bottom:var(--space-4)">You're invited to ${w.finals.length} final${w.finals.length > 1 ? 's' : ''} — ${left} left to watch. They play least-prestigious first; once you attend a later one you can't go back to an earlier, and unwatched results reveal when you advance the week.</p>${rows}`;
+        el.innerHTML = `<p class="hint" style="margin-bottom:var(--space-4)">${I18n.t('livesim.overviewIntro', { n: w.finals.length, left })}</p>${rows}`;
     },
     watch(i) {
         const w = (typeof Attend !== 'undefined') ? Attend.window() : null;
@@ -547,4 +547,4 @@ const AttendOverview = {
         const el = document.createElement('style'); el.id = 'lvOvCSS'; el.textContent = css; document.head.appendChild(el);
     },
 };
-Router.register('attendfinals', { isMain: false, parent: 'inbox', title: 'Finals to attend', render(el) { AttendOverview.render(el); } });
+Router.register('attendfinals', { isMain: false, parent: 'inbox', title: () => I18n.t('nego.finalsToAttend'), render(el) { AttendOverview.render(el); } });

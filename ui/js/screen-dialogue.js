@@ -25,7 +25,7 @@ const DialogueView = {
         } else if (scene.kind === 'gift') {
             this._clientSay(scene.react ? scene.react.text : '...', () => this._offer(scene.choices));
         } else if (scene.kind === 'prematch') {
-            this._sysNote('The dressing room, an hour before kickoff.');
+            this._sysNote(I18n.t('dialogue.dressingRoom'));
             this._clientSay(scene.open ? scene.open.text : '...', () => this._offer(scene.choices));
         } else if (scene.kind === 'postmatch') {
             (scene.notes || []).forEach(n => this._sysNote(n));
@@ -79,18 +79,18 @@ const DialogueView = {
         if (key === 'leave') { this.leave(); return; }
         if (s.kind === 'complaint' && key === 'promise') {
             // promises are concrete: pick WHAT you are promising before he answers
-            const labels = { move: 'Find him a move', newContract: 'Get him a new contract', playingTime: 'Sort out his playing time', renegotiateRep: 'Renegotiate your terms' };
+            const labels = { move: I18n.t('dialogue.promise.move'), newContract: I18n.t('dialogue.promise.newContract'), playingTime: I18n.t('dialogue.promise.playingTime'), renegotiateRep: I18n.t('dialogue.promise.renegotiateRep') };
             const types = Agency.validPromiseTypes(this.p);
             this.pendingChoices = types.map(t => ({ key: 'promise:' + t, label: labels[t] || t, hint: '', say: Dialogue.SAY['promise:' + t] || '' }))
-                .concat([{ key: 'back', label: 'On second thought…', hint: '' }]);
+                .concat([{ key: 'back', label: I18n.t('dialogue.secondThought'), hint: '' }]);
             this._paint();
             return;
         }
         if (s.kind === 'prematch' && key === 'bonus') {
             // pick the size of the promised gift; it only ever costs you if they win
             this.pendingChoices = ['small', 'medium', 'large'].map(t =>
-                ({ key: 'bonus:' + t, label: `${t[0].toUpperCase() + t.slice(1)} gift · €${UI.money(Agency.giftCost(t, this.p))}`, hint: 'Paid only on a win.', say: Dialogue.SAY['bonus:' + t] || '' }))
-                .concat([{ key: 'back', label: 'On second thought…', hint: '' }]);
+                ({ key: 'bonus:' + t, label: I18n.t('dialogue.gift.' + t, { amount: UI.money(Agency.giftCost(t, this.p)) }), hint: I18n.t('dialogue.gift.hint'), say: Dialogue.SAY['bonus:' + t] || '' }))
+                .concat([{ key: 'back', label: I18n.t('dialogue.secondThought'), hint: '' }]);
             this._paint();
             return;
         }
@@ -116,19 +116,19 @@ const DialogueView = {
         } else if (s.kind === 'moment') {
             res = Dialogue.resolveMoment(this.p, s, key);
         }
-        if (!res || !res.ok) { this._sysNote((res && res.message) || 'That did not work.'); this._offer(s.choices); return; }
+        if (!res || !res.ok) { this._sysNote((res && res.message) || I18n.t('dialogue.didntWork')); this._offer(s.choices); return; }
         GameState.save();
         this._clientSay(res.reply ? res.reply.text : '…', () => {
             if (res.note) this._sysNote(res.note);
-            if (res.revealed) this._sysNote(`You're getting to know him: ${res.revealed}`);
-            if (res.closed) this._sysNote('He has dropped the complaint.');
-            const leaveLabel = s.kind === 'gift' ? 'Leave him to it'
-                : s.kind === 'prematch' ? 'Head to your seat'
-                : s.kind === 'postmatch' ? (s.won ? 'Leave him to celebrate' : 'Leave him be')
-                : s.kind === 'farewell' ? 'Wish him well'
-                : s.kind === 'checkin' ? 'Let him get back to it'
-                : s.kind === 'moment' ? (s.momentType === 'injury' ? 'Wish him a speedy recovery' : 'Leave him to it')
-                : 'End the conversation';
+            if (res.revealed) this._sysNote(I18n.t('dialogue.gettingToKnow', { revealed: res.revealed }));
+            if (res.closed) this._sysNote(I18n.t('dialogue.droppedComplaint'));
+            const leaveLabel = s.kind === 'gift' ? I18n.t('dialogue.leave.gift')
+                : s.kind === 'prematch' ? I18n.t('dialogue.leave.prematch')
+                : s.kind === 'postmatch' ? (s.won ? I18n.t('dialogue.leave.winCelebrate') : I18n.t('dialogue.leave.lose'))
+                : s.kind === 'farewell' ? I18n.t('dialogue.leave.farewell')
+                : s.kind === 'checkin' ? I18n.t('dialogue.leave.checkin')
+                : s.kind === 'moment' ? (s.momentType === 'injury' ? I18n.t('dialogue.leave.injury') : I18n.t('dialogue.leave.gift'))
+                : I18n.t('dialogue.leave.default');
             this._offer([{ key: 'leave', label: leaveLabel, hint: '' }]);
         });
     },
@@ -148,10 +148,10 @@ const DialogueView = {
         const club = Clubs.getClubById(effectiveClubId(p));
         document.getElementById('app').innerHTML = `<div class="dlg-wrap">
             <div class="dlg-head">
-                <button class="icon-btn" onclick="DialogueView.leave()" aria-label="Close"><i class="ti ti-x" style="font-size:20px"></i></button>
-                <div class="dlg-who" onclick="DialogueView.viewPlayer()" role="button" title="View profile">
+                <button class="icon-btn" onclick="DialogueView.leave()" aria-label="${I18n.t('common.close')}"><i class="ti ti-x" style="font-size:20px"></i></button>
+                <div class="dlg-who" onclick="DialogueView.viewPlayer()" role="button" title="${I18n.t('dialogue.viewProfile')}">
                     <div class="dlg-name">${UI.flag(p.nationality)} ${UI.esc(p.name)} <i class="ti ti-chevron-right dlg-namechev"></i></div>
-                    <div class="dlg-sub">${p.position} · ${club ? UI.esc(club.name) : 'no club'}</div>
+                    <div class="dlg-sub">${p.position} · ${club ? UI.esc(club.name) : I18n.t('dialogue.noClub')}</div>
                 </div>
                 <div class="dlg-ava" onclick="DialogueView.viewPlayer()">${(p.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('')}</div>
             </div>

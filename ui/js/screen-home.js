@@ -21,7 +21,7 @@ Home.needsAttention = function () {
         const c = p.moraleCase;
         if (c) {
             const aw = GameState.absWeek();
-            const dimLabel = (ClientDetail.MORALE_DIM_LABEL[c.dim] || c.dim).toLowerCase();
+            const dimLabel = ClientDetail.dimLabel(c.dim).toLowerCase();
             if (aw === c.sinceAbsWeek) {
                 if (c.stage === 1) items.push({ icon: 'ti-flag', color: 'var(--info)', title: I18n.t('home.attn.newComplaint'), sub: I18n.t('home.attn.newComplaintSub', { name: p.name, dim: dimLabel }), go: `client/${p.id}` });
                 else items.push({ icon: 'ti-trending-down', color: 'var(--warning)', title: I18n.t('home.attn.escalated'), sub: I18n.t('home.attn.escalatedSub', { name: p.name, dim: dimLabel }), go: `client/${p.id}` });
