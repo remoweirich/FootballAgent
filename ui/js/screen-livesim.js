@@ -78,11 +78,13 @@ const LiveView = {
         this.s = { clock: 0, speed: 1, paused: false, revealed: 0, done: false, reveal: null, phase: 'match' };
         this.score = { home: 0, away: 0 };
         this.pen = null; this._penDone = false;   // penalty shootout (two-leg / ET finals)
+        this._endWhistled = false;                 // reset the final-whistle SFX guard per match
         this.feed = [];
         // running per-client tallies for the panel, keyed by playerId
         this.tally = {};
         for (const c of match.clients) if (c.played) this.tally[c.playerId] = { g: 0, a: 0, y: 0, r: 0, shots: 0 };
         this._renderShell();
+        if (typeof Sound !== 'undefined') Sound.play('whistle1');   // kick-off
         this._timer = setInterval(() => this._tick(), this.TICK_MS);
     },
 
@@ -159,6 +161,7 @@ const LiveView = {
     // full time (or the end of extra time). If the tie was settled on penalties, play the shootout
     // before finishing; otherwise bank the result straight away.
     _matchEnded() {
+        if (!this._endWhistled && typeof Sound !== 'undefined') { Sound.play('whistle2'); this._endWhistled = true; }   // final whistle
         if (this.match.pens && !this._penDone) { this._startShootout(); return; }
         this._finish();
     },
@@ -223,6 +226,7 @@ const LiveView = {
         if ((d.home + d.away) > 0 && !this._skipping && !this.s.done) {
             this.s.hold = Date.now() + this.GOAL_HOLD_MS;
             this._goalFlash();
+            if (typeof Sound !== 'undefined') Sound.play('goal');
         }
         for (const ev of e.events || []) {
             if (!ev.player) continue;

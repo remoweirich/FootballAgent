@@ -200,6 +200,7 @@ Nego.proposePackage = function (mailId) {
         const pid = p.id;
         const ar = Agency.acceptTransfer(m, r.counter.wage, r.counter.role, r.counter.term, r.counter.bonus);
         GameState.save();
+        if (typeof Sound !== 'undefined') Sound.play('cash');
         Router.result(`${r.message}<br><span class="muted">${ar.message}</span>`, 'ok');
         setTimeout(() => Nego.goPlayer(pid), 900);
     } else {
@@ -250,6 +251,7 @@ Nego.acceptRenewal = function (mailId) {
     const pid = this.playerIdOf(m);
     const r = Agency.acceptRenewal(m, c.wage, c.role, c.term);
     GameState.save();
+    if (r.ok && typeof Sound !== 'undefined') Sound.play('cash');
     Router.result(r.message, r.ok ? 'ok' : 'bad');
     if (r.ok) setTimeout(() => Nego.goPlayer(pid), 900);
 };
@@ -327,6 +329,7 @@ Nego.acceptSponsor = function (mailId, optionIndex) {
     const pid = this.playerIdOf(m);
     const r = Agency.acceptSponsor(m, optionIndex);
     GameState.save();
+    if (r.ok && typeof Sound !== 'undefined') Sound.play('cash');
     Router.result(r.message, r.ok ? 'ok' : 'bad');
     if (r.ok) setTimeout(() => Nego.goPlayer(pid), 900);
 };
