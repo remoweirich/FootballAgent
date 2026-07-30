@@ -160,16 +160,16 @@ const Router = {
 
     inboxButton() {
         const unread = (typeof GameState !== 'undefined' && GameState.unreadCount) ? GameState.unreadCount() : 0;
-        return `<a class="icon-btn" href="#inbox" aria-label="Inbox"><i class="ti ti-inbox" style="font-size:18px"></i>${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</a>`;
+        return `<a class="icon-btn" href="#inbox" aria-label="${I18n.t('common.inbox')}"><i class="ti ti-inbox" style="font-size:18px"></i>${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</a>`;
     },
     // the gear opens Settings (which now holds the how-to that used to live on this '?'). Inline SVG so
     // it needs no new glyph in the trimmed self-hosted icon font.
     settingsButton() {
-        return `<a class="icon-btn" href="#" onclick="event.preventDefault();SettingsScreen.show('game')" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></a>`;
+        return `<a class="icon-btn" href="#" onclick="event.preventDefault();SettingsScreen.show('game')" aria-label="${I18n.t('common.settings')}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></a>`;
     },
     navHTML(active) {
         return `<nav class="bottom-nav">${this.NAV.map(([id, icon, label]) =>
-            `<a class="nav-item ${active === id ? 'is-active' : ''}" href="#${id}"><i class="ti ${icon}" style="font-size:var(--nav-icon)"></i><span>${label}</span></a>`).join('')}</nav>`;
+            `<a class="nav-item ${active === id ? 'is-active' : ''}" href="#${id}"><i class="ti ${icon}" style="font-size:var(--nav-icon)"></i><span>${I18n.t('nav.' + id)}</span></a>`).join('')}</nav>`;
     },
 
     // persistent Balance / this-week ± / Reputation strip — sits in the top bar itself, between the
@@ -181,7 +181,7 @@ const Router = {
         const net = this.lastWeekNet;
         const netColor = net == null ? 'var(--text-faint)' : net >= 0 ? 'var(--state-good)' : 'var(--state-bad)';
         const netText = net == null ? '—' : (net >= 0 ? '+€' : '−€') + UI.abbr(Math.abs(net));
-        return `<a class="hdr-finance" href="#finance" aria-label="Finances">
+        return `<a class="hdr-finance" href="#finance" aria-label="${I18n.t('common.finances')}">
             <span class="hf-item"><i class="ti ti-wallet"></i>${UI.eabbr(ag.balance)}</span>
             <span class="hf-item" style="color:${netColor}"><i class="ti ${net == null || net >= 0 ? 'ti-trending-up' : 'ti-trending-down'}"></i>${netText}</span>
             <span class="hf-item"><i class="ti ti-award"></i>${Math.round(ag.reputation)}</span>
@@ -194,7 +194,7 @@ const Router = {
         if (def.isMain) {
             chrome = `<div class="app-bar"><span class="app-bar__title app-bar__title--shrink">${this.title(def, params)}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
         } else {
-            chrome = `<div class="push-bar"><button class="push-bar__back" onclick="Router.back()" aria-label="Back"><i class="ti ti-chevron-left" style="font-size:24px"></i></button><span class="push-bar__title">${this.title(def, params)}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
+            chrome = `<div class="push-bar"><button class="push-bar__back" onclick="Router.back()" aria-label="${I18n.t('common.back')}"><i class="ti ti-chevron-left" style="font-size:24px"></i></button><span class="push-bar__title">${this.title(def, params)}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
         }
         app.innerHTML = `<div class="screen ${def.isMain ? '' : 'screen--push'}">${chrome}<div id="screenBody"></div></div>${def.isMain ? this.navHTML(name) : ''}<div id="sheetLayer"></div><div id="modalLayer"></div>`;
         def.render(document.getElementById('screenBody'), params || []);

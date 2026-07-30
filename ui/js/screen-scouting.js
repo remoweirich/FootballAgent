@@ -7,7 +7,7 @@ const ScoutingScreen = {
 
     render(el) {
         el.innerHTML = `<div class="tab-bar" style="margin-bottom:var(--space-4)">
-            ${[['finds', 'Finds'], ['scouts', 'Your scouts'], ['market', 'Hire']].map(([k, l]) => `<button class="tab ${this.tab === k ? 'is-active' : ''}" onclick="ScoutingScreen.setTab('${k}')">${l}</button>`).join('')}
+            ${[['finds', I18n.t('scouting.tab.finds')], ['scouts', I18n.t('scouting.tab.scouts')], ['market', I18n.t('scouting.tab.market')]].map(([k, l]) => `<button class="tab ${this.tab === k ? 'is-active' : ''}" onclick="ScoutingScreen.setTab('${k}')">${l}</button>`).join('')}
         </div>
         <div id="scoutSection"></div>`;
         this.renderSection();
@@ -23,16 +23,16 @@ const ScoutingScreen = {
     // ---------------- Finds (unsigned talent) ----------------
     finds() {
         const list = GameState.players.filter(p => p.knownToAgent && p.agentId == null && !p.dismissedTalent && !p.archived && p.age <= 22).sort((a, b) => b.ability - a.ability);
-        if (!list.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-file-text"></i></div><div class="empty__title">No finds yet</div><div class="empty__hint">Reports land here once a scout finishes an assignment.</div><button class="btn btn--accent-outline btn--sm empty__cta" onclick="ScoutingScreen.setTab('market')"><i class="ti ti-user-plus"></i>Hire a scout</button></div>`;
-        return `<p class="hint" style="margin-bottom:var(--space-4)">Young players you've come to know. Tap one to view him, or clear ones you're not chasing.</p>` +
+        if (!list.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-file-text"></i></div><div class="empty__title">${I18n.t('scouting.noFinds')}</div><div class="empty__hint">${I18n.t('scouting.noFindsSub')}</div><button class="btn btn--accent-outline btn--sm empty__cta" onclick="ScoutingScreen.setTab('market')"><i class="ti ti-user-plus"></i>${I18n.t('scouting.hireScout')}</button></div>`;
+        return `<p class="hint" style="margin-bottom:var(--space-4)">${I18n.t('scouting.findsIntro')}</p>` +
             list.map(p => {
                 const club = Clubs.getClubById(p.clubId);
                 const isNew = p.discoveredWeek != null && (GameState.absWeek() - p.discoveredWeek) < 3;
                 return `<a href="${Router.link('client', p.id)}" class="cl-card" style="display:block;position:relative">
-                    <button onclick="event.preventDefault();event.stopPropagation();ScoutingScreen.remove('${p.id}')" style="position:absolute;top:8px;right:8px;background:none;border:0;color:var(--text-dim);font-size:16px;cursor:pointer;z-index:1" aria-label="Remove"><i class="ti ti-x"></i></button>
+                    <button onclick="event.preventDefault();event.stopPropagation();ScoutingScreen.remove('${p.id}')" style="position:absolute;top:8px;right:8px;background:none;border:0;color:var(--text-dim);font-size:16px;cursor:pointer;z-index:1" aria-label="${I18n.t('common.remove')}"><i class="ti ti-x"></i></button>
                     <div class="flex-row">
                         <div style="flex:1;min-width:0">
-                            <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.flag(p.nationality)} ${p.name}</span><span style="font-size:12px;color:var(--text-faint)">${p.age}y</span>${isNew ? '<span class="pill pill--accent" style="padding:1px 7px;font-size:10px">NEW</span>' : ''}</div>
+                            <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.flag(p.nationality)} ${p.name}</span><span style="font-size:12px;color:var(--text-faint)">${p.age}y</span>${isNew ? `<span class="pill pill--accent" style="padding:1px 7px;font-size:10px">${I18n.t('scouting.new')}</span>` : ''}</div>
                             <div class="cl-sub">${p.position} <span style="color:var(--text-chevron)">·</span> <span class="flex-row" style="gap:5px;display:inline-flex">${UI.crest(club)}${club ? club.name : '—'}</span></div>
                         </div>
                         ${UI.abilityBadge(p.ability)}
@@ -45,46 +45,46 @@ const ScoutingScreen = {
     // ---------------- Your scouts ----------------
     yourScouts() {
         const ag = GameState.agency;
-        if (!ag.scouts.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-user-plus"></i></div><div class="empty__title">No scouts hired</div><div class="empty__hint">Hire one to start finding talent.</div><button class="btn btn--accent-outline btn--sm empty__cta" onclick="ScoutingScreen.setTab('market')"><i class="ti ti-user-plus"></i>Hire a scout</button></div>`;
+        if (!ag.scouts.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-user-plus"></i></div><div class="empty__title">${I18n.t('scouting.noScouts')}</div><div class="empty__hint">${I18n.t('scouting.noScoutsSub')}</div><button class="btn btn--accent-outline btn--sm empty__cta" onclick="ScoutingScreen.setTab('market')"><i class="ti ti-user-plus"></i>${I18n.t('scouting.hireScout')}</button></div>`;
         const hc = GameState.homeCountry || 'Netherlands';
         const homeRegions = regionsForCountry(hc);
         const hasLic = Agency.hasIntlLicence();
-        return `<p class="hint" style="margin-bottom:var(--space-4)">Assign a scout to a home region — or, with a licence, a foreign league. A report arrives every 6–7 weeks.</p>` +
+        return `<p class="hint" style="margin-bottom:var(--space-4)">${I18n.t('scouting.scoutsIntro')}</p>` +
             ag.scouts.map(s => {
-                const scope = s.league ? `${(COMPETITIONS[s.league] || {}).name || s.league} · ${s.country}` : s.region ? regionName(s.region) : 'Unassigned';
-                const regionOpts = homeRegions.map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${r.name} — ${UI.euro(Scouts.regionReportCost(r.id))}/report</option>`).join('');
+                const scope = s.league ? `${(COMPETITIONS[s.league] || {}).name || s.league} · ${s.country}` : s.region ? regionName(s.region) : I18n.t('scouting.unassigned');
+                const regionOpts = homeRegions.map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${r.name} — ${UI.euro(Scouts.regionReportCost(r.id))}${I18n.t('scouting.perReport')}</option>`).join('');
                 const intl = hasLic ? (() => {
                     const countries = Scouts.intlCountries();
                     const selC = (s.country && countries.includes(s.country)) ? s.country : countries[0];
                     return `<select class="select-input" id="intlC_${s.id}" onchange="ScoutingScreen.onIntlCountry('${s.id}')">${countries.map(c => `<option value="${c}" ${selC === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
                         <select class="select-input" id="intlL_${s.id}" style="margin-top:var(--space-2)">${this.intlLeagueOptions(selC, s.league, s.quality)}</select>
-                        <button class="btn btn--accent-outline btn--sm" style="margin-top:var(--space-2);width:auto" onclick="ScoutingScreen.assignLeague('${s.id}')">Send abroad</button>`;
-                })() : `<p class="hint">Buy an International Scouting Licence (Agency tab) to send scouts abroad.</p>`;
+                        <button class="btn btn--accent-outline btn--sm" style="margin-top:var(--space-2);width:auto" onclick="ScoutingScreen.assignLeague('${s.id}')">${I18n.t('scouting.sendAbroad')}</button>`;
+                })() : `<p class="hint">${I18n.t('scouting.needLicence')}</p>`;
                 return `<div class="card" style="margin-bottom:var(--space-3)">
                     <div class="flex-row" style="justify-content:space-between">
                         <div><div class="row-title">${s.name}</div><div class="row-sub">${s.title} · ${scope}</div></div>
                         ${UI.abilityBadge(s.quality)}
                     </div>
                     <div class="info-grid" style="margin:var(--space-3) 0">
-                        <div class="info"><span>Wage</span><b>${UI.euro(s.weeklyCost)}/wk</b></div>
-                        <div class="info"><span>Next report</span><b>${(s.region || s.league) ? '~' + s.weeksUntilFind + 'w' : 'idle'}</b></div>
+                        <div class="info"><span>${I18n.t('scouting.wage')}</span><b>${UI.euro(s.weeklyCost)}/wk</b></div>
+                        <div class="info"><span>${I18n.t('scouting.nextReport')}</span><b>${(s.region || s.league) ? '~' + s.weeksUntilFind + 'w' : I18n.t('scouting.idle')}</b></div>
                     </div>
-                    <label class="field-label">Home region</label>
+                    <label class="field-label">${I18n.t('scouting.homeRegion')}</label>
                     <select class="select-input" id="rg_${s.id}">${regionOpts}</select>
                     <div class="flex-row" style="margin:var(--space-2) 0 var(--space-3)">
-                        <button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ScoutingScreen.assignRegion('${s.id}')">${s.region ? 'Reassign' : 'Assign'}</button>
-                        <button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.viewSelectedRegion('${s.id}')"><i class="ti ti-eye"></i>View clubs</button>
+                        <button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ScoutingScreen.assignRegion('${s.id}')">${s.region ? I18n.t('scouting.reassign') : I18n.t('scouting.assign')}</button>
+                        <button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.viewSelectedRegion('${s.id}')"><i class="ti ti-eye"></i>${I18n.t('scouting.viewClubs')}</button>
                     </div>
-                    <label class="field-label">International</label>${intl}
-                    <label class="field-label">Max talent age</label>
+                    <label class="field-label">${I18n.t('scouting.international')}</label>${intl}
+                    <label class="field-label">${I18n.t('scouting.maxAge')}</label>
                     <select class="select-input" onchange="ScoutingScreen.setAge('${s.id}',this.value)">${[15, 16, 17, 18, 19, 20, 21, 22].map(a => `<option value="${a}" ${(s.maxTalentAge || 22) === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
-                    <label class="field-label">Target position</label>
-                    <select class="select-input" onchange="ScoutingScreen.setPos('${s.id}',this.value)"><option value="" ${!s.targetPos ? 'selected' : ''}>Any position</option>${(typeof POS_LIST !== 'undefined' ? POS_LIST : []).map(pos => `<option value="${pos}" ${s.targetPos === pos ? 'selected' : ''}>${pos}</option>`).join('')}</select>
-                    <label class="field-label">Target level <span class="muted" style="font-weight:400">· narrows the search (fewer, more specific finds)</span></label>
+                    <label class="field-label">${I18n.t('scouting.targetPos')}</label>
+                    <select class="select-input" onchange="ScoutingScreen.setPos('${s.id}',this.value)"><option value="" ${!s.targetPos ? 'selected' : ''}>${I18n.t('scouting.anyPosition')}</option>${(typeof POS_LIST !== 'undefined' ? POS_LIST : []).map(pos => `<option value="${pos}" ${s.targetPos === pos ? 'selected' : ''}>${pos}</option>`).join('')}</select>
+                    <label class="field-label">${I18n.t('scouting.targetLevel')} <span class="muted" style="font-weight:400">${I18n.t('scouting.targetLevelHint')}</span></label>
                     <select class="select-input" onchange="ScoutingScreen.setTier('${s.id}',this.value)">${Object.entries(Scouts.TIERS).map(([k, t]) => `<option value="${k}" ${(s.targetTier || 'any') === k ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
                     <div class="flex-row" style="margin-top:var(--space-3)">
-                        ${(s.region || s.league) ? `<button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.setIdle('${s.id}')"><i class="ti ti-x"></i>Set idle</button>` : ''}
-                        <button class="btn btn--danger btn--sm" style="width:auto" onclick="ScoutingScreen.release('${s.id}')">Release</button>
+                        ${(s.region || s.league) ? `<button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.setIdle('${s.id}')"><i class="ti ti-x"></i>${I18n.t('scouting.setIdle')}</button>` : ''}
+                        <button class="btn btn--danger btn--sm" style="width:auto" onclick="ScoutingScreen.release('${s.id}')">${I18n.t('agency.release')}</button>
                     </div>
                 </div>`;
             }).join('') + `<div id="actionResult"></div>`;
@@ -94,7 +94,7 @@ const ScoutingScreen = {
         return divs.map(d => {
             const minQ = Scouts.minScoutQualityFor(d);
             const tooLow = scoutQuality != null && scoutQuality < minQ;
-            return `<option value="${d}" ${selectedDiv === d ? 'selected' : ''} ${tooLow ? 'disabled' : ''}>${(COMPETITIONS[d] || {}).name || d} — ${UI.euro(Scouts.intlLeagueCost(d))}/report · needs ${minQ}${tooLow ? ' 🔒' : ''}</option>`;
+            return `<option value="${d}" ${selectedDiv === d ? 'selected' : ''} ${tooLow ? 'disabled' : ''}>${(COMPETITIONS[d] || {}).name || d} — ${UI.euro(Scouts.intlLeagueCost(d))}${I18n.t('scouting.perReport')} · ${I18n.t('scouting.needsQ', { q: minQ })}${tooLow ? ' 🔒' : ''}</option>`;
         }).join('');
     },
     onIntlCountry(scoutId) {
@@ -130,30 +130,30 @@ const ScoutingScreen = {
                 ${UI.abilityBadge(o.quality)}
             </div>
             <div class="info-grid" style="margin:var(--space-3) 0">
-                <div class="info"><span>Wage</span><b>${UI.euro(o.weeklyCost)}/wk</b></div>
-                <div class="info"><span>Find quality</span><b>${o.quality < 18 ? 'Very low' : o.quality < 35 ? 'Low' : o.quality < 55 ? 'Decent' : 'High'}</b></div>
+                <div class="info"><span>${I18n.t('scouting.wage')}</span><b>${UI.euro(o.weeklyCost)}/wk</b></div>
+                <div class="info"><span>${I18n.t('scouting.findQuality')}</span><b>${o.quality < 18 ? I18n.t('scouting.q.veryLow') : o.quality < 35 ? I18n.t('scouting.q.low') : o.quality < 55 ? I18n.t('scouting.q.decent') : I18n.t('scouting.q.high')}</b></div>
             </div>
-            <button class="btn btn--primary" onclick='ScoutingScreen.hire(${JSON.stringify(o).replace(/'/g, "&#39;")})'>Hire</button>
+            <button class="btn btn--primary" onclick='ScoutingScreen.hire(${JSON.stringify(o).replace(/'/g, "&#39;")})'>${I18n.t('agency.hire')}</button>
         </div>`).join('');
         const hc = GameState.homeCountry || 'Netherlands';
         const regTable = regionsForCountry(hc).map(r => `<button class="frow" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ScoutingScreen.showRegionClubs('${UI.esc(r.id)}')"><span class="frow__k">${regionName(r.id)} <span class="muted">${r.blurb || ''}</span></span><span class="frow__v flex-row" style="gap:5px">${UI.euro(Scouts.regionReportCost(r.id))} <i class="ti ti-chevron-right" style="color:var(--text-faint);font-size:13px"></i></span></button>`).join('');
-        return `<p class="hint" style="margin-bottom:var(--space-4)">Better scouts only take you seriously as your reputation grows. This shortlist refreshes every 2 weeks.</p>
+        return `<p class="hint" style="margin-bottom:var(--space-4)">${I18n.t('scouting.marketIntro')}</p>
             ${rows}<div id="actionResult"></div>
-            <div class="section-label" style="margin-top:var(--space-5)">${hc} region cost <span class="muted" style="font-weight:400">(per report · tap to see clubs)</span></div>
+            <div class="section-label" style="margin-top:var(--space-5)">${I18n.t('scouting.regionCost', { country: hc })} <span class="muted" style="font-weight:400">${I18n.t('scouting.regionCostHint')}</span></div>
             <div class="fcard">${regTable}</div>`;
     },
     // clubs that live in a scouting region — the pool a scout posted there draws finds from
     showRegionClubs(regionId) {
         const clubs = Clubs.getClubsByRegion(regionId).slice().sort((a, b) => b.reputation - a.reputation);
         const rows = clubs.length
-            ? clubs.map(c => `<a href="${Router.link('clubs', c.id)}" class="frow" style="cursor:pointer" onclick="Router.closeSheet()"><span class="frow__k flex-row" style="gap:8px">${UI.crest(c)}${c.name}</span><span class="frow__v muted">${c.divisionName || ''} · rep ${c.reputation}</span></a>`).join('')
-            : '<p class="muted">No clubs are based in this region.</p>';
+            ? clubs.map(c => `<a href="${Router.link('clubs', c.id)}" class="frow" style="cursor:pointer" onclick="Router.closeSheet()"><span class="frow__k flex-row" style="gap:8px">${UI.crest(c)}${c.name}</span><span class="frow__v muted">${c.divisionName || ''} · ${I18n.t('agency.eff.rep')} ${c.reputation}</span></a>`).join('')
+            : `<p class="muted">${I18n.t('scouting.noRegionClubs')}</p>`;
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${regionName(regionId)}</div>
-            <p class="hint">${clubs.length} club${clubs.length === 1 ? '' : 's'} · ${UI.euro(Scouts.regionReportCost(regionId))} per scouting report</p>
+            <p class="hint">${I18n.t('scouting.clubsN', { n: clubs.length })} · ${UI.euro(Scouts.regionReportCost(regionId))} ${I18n.t('scouting.perScoutingReport')}</p>
             <div style="max-height:60vh;overflow-y:auto">${rows}</div>
-            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">Close</button>`);
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
     },
     viewSelectedRegion(scoutId) { const sel = document.getElementById('rg_' + scoutId); if (sel) this.showRegionClubs(sel.value); },
     hire(o) { const r = Scouts.hire(o); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }
 };
-Router.register('scouting', { isMain: true, title: 'Scouting', render(el) { ScoutingScreen.render(el); } });
+Router.register('scouting', { isMain: true, title: () => I18n.t('nav.scouting'), render(el) { ScoutingScreen.render(el); } });

@@ -36,66 +36,66 @@ const AgencyScreen = {
 
         el.innerHTML = `
         <div class="info-grid" style="margin-bottom:var(--space-5)">
-            <div class="info"><span><i class="ti ti-star"></i>Reputation</span><b>${Math.round(ag.reputation)}<span class="muted" style="font-size:11px">/${Agency.repLimit()}</span></b></div>
-            <a class="info" href="#clients" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-users"></i>Clients <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${Agency.clients().length}<span class="muted" style="font-size:11px">/${Agency.capacity()}</span></b></a>
-            <a class="info" href="#scouting" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-zoom-scan"></i>Scouts <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${ag.scouts.length}<span class="muted" style="font-size:11px">/${Upgrades.maxScouts()}</span></b></a>
-            <div class="info"><span><i class="ti ti-broadcast"></i>Sponsor reach</span><b>${sl}</b></div>
+            <div class="info"><span><i class="ti ti-star"></i>${I18n.t('agency.reputation')}</span><b>${Math.round(ag.reputation)}<span class="muted" style="font-size:11px">/${Agency.repLimit()}</span></b></div>
+            <a class="info" href="#clients" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-users"></i>${I18n.t('nav.clients')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${Agency.clients().length}<span class="muted" style="font-size:11px">/${Agency.capacity()}</span></b></a>
+            <a class="info" href="#scouting" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-zoom-scan"></i>${I18n.t('agency.scouts')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${ag.scouts.length}<span class="muted" style="font-size:11px">/${Upgrades.maxScouts()}</span></b></a>
+            <div class="info"><span><i class="ti ti-broadcast"></i>${I18n.t('agency.sponsorReach')}</span><b>${sl}</b></div>
         </div>
         <a class="list-row" href="#finance" style="cursor:pointer;justify-content:space-between;margin-bottom:var(--space-5)">
-            <span class="flex-row" style="gap:8px"><i class="ti ti-currency-euro" style="color:var(--accent)"></i><span class="row-title">Finances</span></span>
+            <span class="flex-row" style="gap:8px"><i class="ti ti-currency-euro" style="color:var(--accent)"></i><span class="row-title">${I18n.t('common.finances')}</span></span>
             <i class="ti ti-chevron-right row-chev"></i>
         </a>
 
-        <div class="section-label">Office <span class="muted" style="font-weight:400">· weekly running cost</span></div>
+        <div class="section-label">${I18n.t('agency.office')} <span class="muted" style="font-weight:400">${I18n.t('agency.weeklyCost')}</span></div>
         <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('office')">
             <div class="tier__body tier__body--current">
                 <div class="pic pic--current"><i class="ti ${this.iconFor('office', Upgrades.state().officeIndex)}"></i></div>
-                <div style="flex:1"><div class="tier__name">${off.name}</div><div class="tier__benefit muted">Rep ${off.repLimit} · ${off.maxScouts} scout(s) · ${sl} · ${UI.euro(off.weekly)}/wk</div></div>
+                <div style="flex:1"><div class="tier__name">${off.name}</div><div class="tier__benefit muted">${I18n.t('agency.repShort')} ${off.repLimit} · ${I18n.t('agency.scoutsN', { n: off.maxScouts })} · ${sl} · ${UI.euro(off.weekly)}/wk</div></div>
                 <i class="ti ti-chevron-right row-chev"></i>
             </div>
         </a>
 
-        <div class="section-label">Vehicles <span class="muted" style="font-weight:400">· buy in order</span></div>
+        <div class="section-label">${I18n.t('agency.vehicles')} <span class="muted" style="font-weight:400">${I18n.t('agency.buyInOrder')}</span></div>
         <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('vehicle')">
             <div class="tier__body ${vNext ? '' : 'tier__body--current'}">
                 <div class="pic ${vNext ? 'pic--locked' : 'pic--current'}"><i class="ti ${this.iconFor('vehicle', vNext ? Upgrades.state().vehicleIndex + 1 : Upgrades.state().vehicleIndex)}"></i></div>
-                <div style="flex:1"><div class="tier__name">${Upgrades.ownedVehicles().length} owned</div><div class="tier__benefit muted">${vNext ? `Next: ${vNext.name} — ${UI.euro(vNext.price)}` : 'Full garage'}</div></div>
+                <div style="flex:1"><div class="tier__name">${I18n.t('agency.ownedN', { n: Upgrades.ownedVehicles().length })}</div><div class="tier__benefit muted">${vNext ? I18n.t('agency.next', { name: vNext.name, price: UI.euro(vNext.price) }) : I18n.t('agency.fullGarage')}</div></div>
                 <i class="ti ti-chevron-right row-chev"></i>
             </div>
         </a>
 
-        <div class="section-label">Properties <span class="muted" style="font-weight:400">· buy in order</span></div>
+        <div class="section-label">${I18n.t('agency.properties')} <span class="muted" style="font-weight:400">${I18n.t('agency.buyInOrder')}</span></div>
         <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('property')">
             <div class="tier__body ${pNext ? '' : 'tier__body--current'}">
                 <div class="pic ${pNext ? 'pic--locked' : 'pic--current'}"><i class="ti ${this.iconFor('property', pNext ? Upgrades.state().propertyIndex + 1 : Upgrades.state().propertyIndex)}"></i></div>
-                <div style="flex:1"><div class="tier__name">${Upgrades.ownedProperties().length} owned</div><div class="tier__benefit muted">${pNext ? `Next: ${pNext.name} — ${UI.euro(pNext.price)}` : 'You own the Skyscraper'}</div></div>
+                <div style="flex:1"><div class="tier__name">${I18n.t('agency.ownedN', { n: Upgrades.ownedProperties().length })}</div><div class="tier__benefit muted">${pNext ? I18n.t('agency.next', { name: pNext.name, price: UI.euro(pNext.price) }) : I18n.t('agency.ownAllProps')}</div></div>
                 <i class="ti ti-chevron-right row-chev"></i>
             </div>
         </a>
 
-        <div class="section-label">International Scouting Licence</div>
+        <div class="section-label">${I18n.t('agency.intlLicence')}</div>
         <div class="fcard">
-            <div class="frow"><span class="frow__k"><i class="ti ti-license"></i>Status</span><span class="frow__v">${Agency.intlSuspended() ? `<span style="color:var(--danger)">Suspended · ${Agency.intlSuspendWeeksLeft()}w</span>` : has ? `Active · ${Agency.intlLicenceWeeksLeft()}w left` : 'Not held'}</span></div>
-            <div style="padding:9px 0"><p class="hint" style="margin:0 0 var(--space-3)">Lets an unassigned scout work a foreign league. ${Agency.intlSuspended() ? 'Suspended after an unpaid licence — you can buy again once it lifts.' : 'Renew before it lapses: after a two-week grace period, unpaid renewals draw escalating fines and eventually a 52-week suspension.'}</p>
+            <div class="frow"><span class="frow__k"><i class="ti ti-license"></i>${I18n.t('agency.status')}</span><span class="frow__v">${Agency.intlSuspended() ? `<span style="color:var(--danger)">${I18n.t('agency.suspendedW', { w: Agency.intlSuspendWeeksLeft() })}</span>` : has ? I18n.t('agency.activeW', { w: Agency.intlLicenceWeeksLeft() }) : I18n.t('agency.notHeld')}</span></div>
+            <div style="padding:9px 0"><p class="hint" style="margin:0 0 var(--space-3)">${I18n.t('agency.licenceHint')}${Agency.intlSuspended() ? I18n.t('agency.licenceSuspendedHint') : I18n.t('agency.licenceRenewHint')}</p>
             ${Agency.intlSuspended() ? '' : `<div class="flex-row" style="gap:6px;flex-wrap:wrap">${Agency.INTL_LICENCE_OPTIONS.map(o => `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyLicence(${o.weeks})">${o.label} — ${UI.euro(o.cost)}</button>`).join('')}</div>`}</div>
         </div>
 
-        <div class="section-label">Equipment & facilities <span class="muted" style="font-weight:400">· any order</span></div>
+        <div class="section-label">${I18n.t('agency.equipment')} <span class="muted" style="font-weight:400">${I18n.t('agency.anyOrder')}</span></div>
         <div class="gap-3" style="display:flex;flex-direction:column;margin-bottom:var(--space-5)">${this.equipCards()}</div>
 
-        <div class="section-label">Staff</div>
+        <div class="section-label">${I18n.t('agency.staff')}</div>
         <div class="gap-3" style="display:flex;flex-direction:column;margin-bottom:var(--space-6)">${this.staffCards()}</div>
 
-        <div class="section-label">Danger zone</div>
-        <button class="btn btn--danger" onclick="AgencyScreen.confirmReset()"><i class="ti ti-trash"></i>Reset save</button>
+        <div class="section-label">${I18n.t('agency.dangerZone')}</div>
+        <button class="btn btn--danger" onclick="AgencyScreen.confirmReset()"><i class="ti ti-trash"></i>${I18n.t('agency.resetSave')}</button>
         <div id="actionResult"></div>`;
     },
     confirmReset() {
-        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">Reset your save?</div>
-            <p class="hint">This permanently deletes your agency, clients, scouts and every season played. There's no undo.</p>
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('agency.resetQ')}</div>
+            <p class="hint">${I18n.t('agency.resetDesc')}</p>
             <div class="flex-row" style="margin-top:var(--space-5)">
-                <button class="btn btn--ghost" onclick="Router.closeSheet()">Cancel</button>
-                <button class="btn btn--danger" onclick="AgencyScreen.doReset()"><i class="ti ti-trash"></i>Delete everything</button>
+                <button class="btn btn--ghost" onclick="Router.closeSheet()">${I18n.t('common.cancel')}</button>
+                <button class="btn btn--danger" onclick="AgencyScreen.doReset()"><i class="ti ti-trash"></i>${I18n.t('agency.deleteAll')}</button>
             </div>`);
     },
     doReset() { GameState.hardReset(); },
@@ -103,12 +103,12 @@ const AgencyScreen = {
     equipCards() {
         return EQUIPMENT.map(e => {
             const owned = Upgrades.ownsEquip(e.id);
-            const eff = [e.dev ? `+${e.dev}% dev` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% injury` : '', e.rep ? `+${e.rep} rep` : '', e.weekly ? `${UI.euro(e.weekly)}/wk` : '', e.expires ? `expires ${e.expires}y` : ''].filter(Boolean).join(' · ');
+            const eff = [e.dev ? `+${e.dev}% ${I18n.t('agency.eff.dev')}` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% ${I18n.t('agency.eff.injury')}` : '', e.rep ? `+${e.rep} ${I18n.t('agency.eff.rep')}` : '', e.weekly ? `${UI.euro(e.weekly)}/wk` : '', e.expires ? I18n.t('agency.eff.expires', { y: e.expires }) : ''].filter(Boolean).join(' · ');
             return `<div class="card">
                 <div class="flex-row" style="justify-content:space-between">
                     <div class="flex-row" style="gap:10px">
                         <div class="pic ${owned ? 'pic--owned' : ''}"><i class="ti ${AGENCY_PICS.equipment[e.id] || 'ti-tool'}"></i></div>
-                        <div><div class="row-title">${e.name} ${owned ? '<span class="pill pill--accent">owned</span>' : ''}</div><div class="row-sub">${eff}</div></div>
+                        <div><div class="row-title">${e.name} ${owned ? `<span class="pill pill--accent">${I18n.t('common.owned')}</span>` : ''}</div><div class="row-sub">${eff}</div></div>
                     </div>
                     ${owned ? '' : `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyEquip('${e.id}')">${UI.euro(e.price)}</button>`}
                 </div></div>`;
@@ -117,7 +117,7 @@ const AgencyScreen = {
     staffCards() {
         return STAFF.map(s => {
             const n = Upgrades.staffCount(s.id);
-            const eff = [s.dev ? `+${s.dev}% dev` : '', s.injury ? `${s.injury}% injury` : '', s.rep ? `+${s.rep} rep` : '', `restocks ${s.yearlyName}/yr`].filter(Boolean).join(' · ');
+            const eff = [s.dev ? `+${s.dev}% ${I18n.t('agency.eff.dev')}` : '', s.injury ? `${s.injury}% ${I18n.t('agency.eff.injury')}` : '', s.rep ? `+${s.rep} ${I18n.t('agency.eff.rep')}` : '', I18n.t('agency.eff.restocks', { name: s.yearlyName })].filter(Boolean).join(' · ');
             return `<div class="card">
                 <div class="flex-row" style="justify-content:space-between">
                     <div class="flex-row" style="gap:10px">
@@ -125,8 +125,8 @@ const AgencyScreen = {
                         <div><div class="row-title">${s.name} <span class="pill">${n}/${s.max}</span></div><div class="row-sub">${UI.euro(s.weekly)}/wk · ${eff}</div></div>
                     </div>
                     <div class="flex-row" style="gap:6px">
-                        <button class="btn btn--accent-outline btn--sm" style="width:auto" ${n >= s.max ? 'disabled' : ''} onclick="AgencyScreen.hireStaff('${s.id}')">Hire</button>
-                        <button class="btn btn--ghost btn--sm" style="width:auto" ${n <= 0 ? 'disabled' : ''} onclick="AgencyScreen.releaseStaff('${s.id}')">Release</button>
+                        <button class="btn btn--accent-outline btn--sm" style="width:auto" ${n >= s.max ? 'disabled' : ''} onclick="AgencyScreen.hireStaff('${s.id}')">${I18n.t('agency.hire')}</button>
+                        <button class="btn btn--ghost btn--sm" style="width:auto" ${n <= 0 ? 'disabled' : ''} onclick="AgencyScreen.releaseStaff('${s.id}')">${I18n.t('agency.release')}</button>
                     </div>
                 </div></div>`;
         }).join('');
@@ -138,15 +138,15 @@ const AgencyScreen = {
         const rows = LIST.map((item, i) => {
             const state = i < idx ? 'owned' : i === idx ? 'current' : i === idx + 1 ? 'buyable' : 'locked';
             const price = kind === 'office' ? item.weekly * 4 : item.price;
-            const meta = kind === 'office' ? `Rep ${item.repLimit} · ${item.maxScouts} scout(s) · ${SPONSOR_LABEL[item.sponsor]} · ${UI.euro(item.weekly)}/wk`
-                : `+${item.repLimit} rep · +${item.players} clients${item.scoutDiscount ? ` · −${Math.round(item.scoutDiscount * 100)}% scouting` : ''}`;
+            const meta = kind === 'office' ? `${I18n.t('agency.repShort')} ${item.repLimit} · ${I18n.t('agency.scoutsN', { n: item.maxScouts })} · ${SPONSOR_LABEL[item.sponsor]} · ${UI.euro(item.weekly)}/wk`
+                : `+${item.repLimit} ${I18n.t('agency.eff.rep')} · +${item.players} ${I18n.t('agency.clientsShort')}${item.scoutDiscount ? ` · −${Math.round(item.scoutDiscount * 100)}% ${I18n.t('agency.scoutingShort')}` : ''}`;
             const cls = state === 'current' ? 'tier__body--current' : state === 'locked' ? 'tier__body--locked' : '';
             const pic = state === 'owned' ? 'pic--owned' : state === 'current' ? 'pic--current' : state === 'locked' ? 'pic--locked' : '';
-            const action = state === 'buyable' ? `<button class="btn btn--primary btn--sm" style="width:auto" onclick="AgencyScreen.buy('${kind}')">${kind === 'office' ? 'Move in — ' : 'Buy — '}${UI.euro(price)}</button>`
-                : state === 'current' ? '<span class="pill pill--accent">current</span>' : state === 'owned' ? '<span class="pill">owned</span>' : '<i class="ti ti-lock" style="color:var(--text-dim)"></i>';
+            const action = state === 'buyable' ? `<button class="btn btn--primary btn--sm" style="width:auto" onclick="AgencyScreen.buy('${kind}')">${kind === 'office' ? I18n.t('agency.moveIn') : I18n.t('agency.buyPrefix')}${UI.euro(price)}</button>`
+                : state === 'current' ? `<span class="pill pill--accent">${I18n.t('common.current')}</span>` : state === 'owned' ? `<span class="pill">${I18n.t('common.owned')}</span>` : '<i class="ti ti-lock" style="color:var(--text-dim)"></i>';
             return `<div class="tier" style="margin-bottom:var(--space-3)"><div class="tier__body ${cls}"><div class="pic ${pic}"><i class="ti ${this.iconFor(kind, i)}"></i></div><div style="flex:1"><div class="tier__name">${item.name}</div><div class="tier__benefit muted">${meta}</div></div>${action}</div></div>`;
         }).join('');
-        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${kind[0].toUpperCase() + kind.slice(1)} ladder</div>
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('agency.ladder' + kind[0].toUpperCase() + kind.slice(1))}</div>
             <div style="max-height:60vh;overflow-y:auto">${rows}</div>
             <div id="actionResult"></div>`);
     },
@@ -165,4 +165,4 @@ const AgencyScreen = {
     hireStaff(id) { const r = Upgrades.hireStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     releaseStaff(id) { const r = Upgrades.releaseStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }
 };
-Router.register('agency', { isMain: true, title: 'Agency', render(el) { AgencyScreen.render(el); } });
+Router.register('agency', { isMain: true, title: () => I18n.t('nav.agency'), render(el) { AgencyScreen.render(el); } });

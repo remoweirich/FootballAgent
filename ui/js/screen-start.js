@@ -21,30 +21,31 @@ const StartScreen = {
         this._injectCSS();
         const saveLabel = this._saveLabel();
         document.getElementById('app').innerHTML = `<div class="ss-wrap"><div class="ss-inner">
-            <div class="ss-brand">${this.CREST}<h1 class="ss-title">${UI.esc(this.TITLE)}</h1><div class="ss-tag">Build the stable. Take the cut.</div></div>
+            <div class="ss-brand">${this.CREST}<h1 class="ss-title">${UI.esc(this.TITLE)}</h1><div class="ss-tag">${I18n.t('start.tagline')}</div></div>
             <div class="ss-menu">
                 <button class="ss-btn ss-btn--primary" id="ssContinue" ${this._hasSave ? '' : 'disabled'} onclick="StartScreen.resume()">
-                    <span class="ss-btn__label">Continue</span>${this._hasSave && saveLabel ? `<span class="ss-btn__sub">${UI.esc(saveLabel)}</span>` : ''}
+                    <span class="ss-btn__label">${I18n.t('start.continue')}</span>${this._hasSave && saveLabel ? `<span class="ss-btn__sub">${UI.esc(saveLabel)}</span>` : ''}
                 </button>
                 <div class="ss-row">
-                    <button class="ss-btn" onclick="StartScreen.load()">Load</button>
-                    <button class="ss-btn" onclick="StartScreen.newGame()">New</button>
+                    <button class="ss-btn" onclick="StartScreen.load()">${I18n.t('start.load')}</button>
+                    <button class="ss-btn" onclick="StartScreen.newGame()">${I18n.t('start.new')}</button>
                 </div>
             </div>
             <div class="ss-foot">
-                <button class="ss-icon" onclick="StartScreen.settings()" aria-label="Settings">${this.GEAR}<span>Settings</span></button>
-                <button class="ss-icon" onclick="StartScreen.help()" aria-label="How to play"><span class="ss-q">?</span><span>How to play</span></button>
-                <button class="ss-icon" onclick="StartScreen.customize()" aria-label="Customize">${this.WAND}<span>Customize</span></button>
+                <button class="ss-icon" onclick="StartScreen.settings()" aria-label="${I18n.t('common.settings')}">${this.GEAR}<span>${I18n.t('common.settings')}</span></button>
+                <button class="ss-icon" onclick="StartScreen.help()" aria-label="${I18n.t('common.howToPlay')}"><span class="ss-q">?</span><span>${I18n.t('common.howToPlay')}</span></button>
+                <button class="ss-icon" onclick="StartScreen.customize()" aria-label="${I18n.t('common.customize')}">${this.WAND}<span>${I18n.t('common.customize')}</span></button>
             </div>
         </div></div>`;
+        if (typeof Sound !== 'undefined') Sound.startPlaylist();
     },
 
     // label under the Continue button, from the autosave summary read in show()
     _saveLabel() {
         const a = this._auto;
-        if (!a) return 'Continue where you left off';
+        if (!a) return I18n.t('start.continueEmpty');
         if (a.name) return a.name;
-        return `Week ${a.week}${a.seasonLabel ? ' · ' + a.seasonLabel : ''}`;
+        return I18n.t('common.weekN', { n: a.week }) + (a.seasonLabel ? ' · ' + a.seasonLabel : '');
     },
 
     async resume() {
@@ -56,10 +57,10 @@ const StartScreen = {
         // single-save for now: warn before a New game overwrites a game in progress (guard goes away
         // once the multi-slot backend lands)
         if (this._hasSave) {
-            this._overlay('New game', `<p class="ss-note">You have a game in progress. Until multiple save slots arrive, starting a new game will overwrite it.</p>
+            this._overlay(I18n.t('start.newGame'), `<p class="ss-note">${I18n.t('start.newGameWarn')}</p>
                 <div class="ss-row" style="margin-top:14px">
-                    <button class="ss-btn" onclick="document.getElementById('ssOverlay').remove()">Cancel</button>
-                    <button class="ss-btn ss-btn--primary" onclick="document.getElementById('ssOverlay').remove();Setup.show()">Overwrite &amp; start</button>
+                    <button class="ss-btn" onclick="document.getElementById('ssOverlay').remove()">${I18n.t('common.cancel')}</button>
+                    <button class="ss-btn ss-btn--primary" onclick="document.getElementById('ssOverlay').remove();Setup.show()">${I18n.t('start.overwriteStart')}</button>
                 </div>`);
             return;
         }
@@ -72,16 +73,16 @@ const StartScreen = {
         const slots = (typeof GameState !== 'undefined' && GameState.listNamedSaves) ? await GameState.listNamedSaves() : [];
         let rows = auto ? this._slotRow('auto', auto, true) : '';
         slots.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).forEach(s => rows += this._slotRow(s.id, s, false));
-        if (!rows) rows = `<p class="ss-empty">No saved games yet — start a New game.</p>`;
-        this._overlay('Load game', `${rows}<p class="ss-note">The autosave holds your latest progress. Named saves are snapshots you make from in-game Settings — up to five.</p>`);
+        if (!rows) rows = `<p class="ss-empty">${I18n.t('start.noSaves')}</p>`;
+        this._overlay(I18n.t('start.loadGame'), `${rows}<p class="ss-note">${I18n.t('start.loadNote')}</p>`);
     },
     _slotRow(id, meta, isAuto) {
         const when = this._when(meta.savedAt);
-        const title = isAuto ? (meta.name ? UI.esc(meta.name) + ' · Autosave' : 'Autosave') : UI.esc(meta.name || 'Save');
-        const sub = `${meta.agency ? UI.esc(meta.agency) + ' · ' : ''}Week ${meta.week}${meta.seasonLabel ? ' · ' + UI.esc(meta.seasonLabel) : ''}${when ? ' · ' + when : ''}`;
+        const title = isAuto ? (meta.name ? UI.esc(meta.name) + ' · ' + I18n.t('start.autosave') : I18n.t('start.autosave')) : UI.esc(meta.name || I18n.t('start.saveDefault'));
+        const sub = `${meta.agency ? UI.esc(meta.agency) + ' · ' : ''}${I18n.t('common.weekN', { n: meta.week })}${meta.seasonLabel ? ' · ' + UI.esc(meta.seasonLabel) : ''}${when ? ' · ' + when : ''}`;
         const onclick = isAuto ? 'StartScreen.resume()' : `StartScreen.loadSlot('${id}')`;
-        const del = isAuto ? '' : `<button class="ss-slotdel" onclick="event.stopPropagation();StartScreen.deleteSlot('${id}')" aria-label="Delete save">✕</button>`;
-        return `<div class="ss-slot" onclick="${onclick}"><div class="ss-slotmain"><span class="ss-slot__name">${title}</span><span class="ss-slotsub">${sub}</span></div><span class="ss-slot__go">Play</span>${del}</div>`;
+        const del = isAuto ? '' : `<button class="ss-slotdel" onclick="event.stopPropagation();StartScreen.deleteSlot('${id}')" aria-label="${I18n.t('common.deleteSave')}">✕</button>`;
+        return `<div class="ss-slot" onclick="${onclick}"><div class="ss-slotmain"><span class="ss-slot__name">${title}</span><span class="ss-slotsub">${sub}</span></div><span class="ss-slot__go">${I18n.t('common.play')}</span>${del}</div>`;
     },
     async loadSlot(id) {
         // if the current autosave holds progress not backed up to a slot, loading would discard it
@@ -96,13 +97,13 @@ const StartScreen = {
     },
     _confirmReplace(id) {
         const a = this._auto;
-        const label = a && a.name ? a.name : (a ? `Week ${a.week}${a.seasonLabel ? ' · ' + a.seasonLabel : ''}` : 'your current game');
-        this._overlay('Load game', `
-            <p class="ss-note">Your current game (${UI.esc(label)}) isn't saved to a slot. Loading another save replaces it — that can't be undone.</p>
+        const label = a && a.name ? a.name : (a ? I18n.t('common.weekN', { n: a.week }) + (a.seasonLabel ? ' · ' + a.seasonLabel : '') : '');
+        this._overlay(I18n.t('start.loadGame'), `
+            <p class="ss-note">${I18n.t('start.confirmReplaceNote', { label: UI.esc(label) })}</p>
             <div class="ss-stack">
-                <button class="ss-btn ss-btn--primary" onclick="StartScreen._saveFirst('${id}')">Save current game first</button>
-                <button class="ss-btn" onclick="StartScreen._doLoadSlot('${id}')">Load without saving</button>
-                <button class="ss-btn" onclick="document.getElementById('ssOverlay').remove()">Cancel</button>
+                <button class="ss-btn ss-btn--primary" onclick="StartScreen._saveFirst('${id}')">${I18n.t('start.saveFirst')}</button>
+                <button class="ss-btn" onclick="StartScreen._doLoadSlot('${id}')">${I18n.t('start.loadWithoutSaving')}</button>
+                <button class="ss-btn" onclick="document.getElementById('ssOverlay').remove()">${I18n.t('common.cancel')}</button>
             </div>`);
     },
     // back up the current autosave to a named slot, then continue to the load
@@ -113,19 +114,19 @@ const StartScreen = {
         const chips = slots.length
             ? `<div class="ss-chips">${slots.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).map(s => `<button class="ss-chip" onclick="StartScreen._useName(this)">${UI.esc(s.name)}</button>`).join('')}</div>`
             : '';
-        this._overlay('Save current game', `
-            <p class="ss-note">Name this save (tap a name to overwrite it; up to ${max}, ${slots.length} used).</p>
+        this._overlay(I18n.t('start.saveCurrent'), `
+            <p class="ss-note">${I18n.t('start.saveNameNote', { max, used: slots.length })}</p>
             ${chips}
-            <input id="ssSaveName" class="text-input" type="text" maxlength="32" placeholder="e.g. Ajax Rebuild" value="${UI.esc(GameState.saveName || '')}" style="margin-top:10px">
+            <input id="ssSaveName" class="text-input" type="text" maxlength="32" placeholder="${I18n.t('start.savePlaceholder')}" value="${UI.esc(GameState.saveName || '')}" style="margin-top:10px">
             <div id="ssSaveErr"></div>
-            <button class="ss-btn ss-btn--primary" style="width:100%;margin-top:12px" onclick="StartScreen._saveFirstConfirm('${id}')">Save, then load</button>`);
+            <button class="ss-btn ss-btn--primary" style="width:100%;margin-top:12px" onclick="StartScreen._saveFirstConfirm('${id}')">${I18n.t('start.saveThenLoad')}</button>`);
         setTimeout(() => { const el = document.getElementById('ssSaveName'); if (el) el.focus(); }, 30);
     },
     _useName(btn) { const el = document.getElementById('ssSaveName'); if (el) el.value = btn.textContent; },
     async _saveFirstConfirm(id) {
         const el = document.getElementById('ssSaveName');
         const name = (el && el.value.trim()) || '';
-        const res = (typeof GameState.createNamedSave === 'function') ? await GameState.createNamedSave(name) : { ok: false, message: 'Saving is unavailable.' };
+        const res = (typeof GameState.createNamedSave === 'function') ? await GameState.createNamedSave(name) : { ok: false, message: I18n.t('start.saveUnavailable') };
         if (!res.ok) { const e = document.getElementById('ssSaveErr'); if (e) e.innerHTML = `<p class="ss-note" style="color:var(--state-bad);margin-top:8px">${UI.esc(res.message)}</p>`; return; }
         await this._doLoadSlot(id);
     },
@@ -144,7 +145,7 @@ const StartScreen = {
     settings() { if (typeof SettingsScreen !== 'undefined') SettingsScreen.show('start'); },
     help() { if (typeof Setup !== 'undefined' && Setup.openHelpOverlay) Setup.openHelpOverlay(); },
     customize() {
-        this._overlay('Customize', `<p class="ss-note">Coming soon: build your own league from a template, load custom name packs to replace placeholder club names, and bring in a logo pack. You'll reach this from here and from in-game Settings.</p>`);
+        this._overlay(I18n.t('common.customize'), `<p class="ss-note">${I18n.t('start.customizeSoon')}</p>`);
     },
 
     // a lightweight self-contained overlay (no Router shell on this screen)
@@ -154,7 +155,7 @@ const StartScreen = {
         ov = document.createElement('div');
         ov.id = 'ssOverlay'; ov.className = 'ss-overlay';
         ov.innerHTML = `<div class="ss-ovcard"><div class="ss-ovtitle">${UI.esc(title)}</div><div class="ss-ovbody">${bodyHTML}</div>
-            <button class="btn btn--ghost" style="width:100%;margin-top:14px" onclick="document.getElementById('ssOverlay').remove()">Close</button></div>`;
+            <button class="btn btn--ghost" style="width:100%;margin-top:14px" onclick="document.getElementById('ssOverlay').remove()">${I18n.t('common.close')}</button></div>`;
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
         document.body.appendChild(ov);
     },
