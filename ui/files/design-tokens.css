@@ -126,3 +126,68 @@
   --nav-clear: var(--nav-h);   /* scroll clearance above the fixed bottom nav */
   --cta-dock-h: 66px;  /* Home's fixed "Advance week" dock height, for extra scroll clearance */
 }
+
+/* ============================================================
+   Light theme — stamped on <html data-theme="light"> by js/prefs.js.
+   Only the COLOUR tokens are overridden; spacing, radii, type and
+   component sizes inherit from :root. The mint accent FILL and its
+   dark ink are kept (a mint button with dark-green text reads well
+   on white); only accent TEXT/tints and the colours that wash out
+   on a white card are re-tuned. Safe to hand-tweak while proofing.
+   ============================================================ */
+:root[data-theme="light"] {
+  /* ---- Core surfaces: white cards on a soft grey canvas ---- */
+  --bg:             #F3F5F8;
+  --surface:        #FFFFFF;
+  --surface-raised: #EDF0F4;
+  --surface-sunken: #E7EBF0;
+  --nav-bg:         #FFFFFF;
+
+  /* ---- Hairlines: dark on light ---- */
+  --line:        rgba(15,23,32,.10);
+  --line-strong: rgba(15,23,32,.14);
+  --line-faint:  rgba(15,23,32,.07);
+
+  /* ---- Text ramp: darkest is primary ---- */
+  --text:           #161B22;
+  --text-bright:    #232A33;  /* titles / bright icons (strongest) */
+  --text-secondary: #4B5563;
+  --text-muted:     #5B6675;
+  --text-faint:     #737E8C;
+  --text-dim:       #8A94A1;
+  --text-chevron:   #A6AEB9;
+
+  /* ---- Accent (mint): keep --accent + --accent-ink; retune text/tints for white ---- */
+  --accent-text:   #0B8F63;
+  --accent-text-2: #0A7E58;
+  --accent-tint:   rgba(52,211,153,.16);
+  --accent-fill:   rgba(52,211,153,.10);
+  --accent-border: rgba(52,211,153,.42);
+
+  /* ---- Semantic: deepened for contrast on white ---- */
+  --danger:        #E23A4E;
+  --danger-text:   #C42638;
+  --danger-tint:   rgba(226,58,78,.10);
+  --danger-border: rgba(226,58,78,.30);
+  --warning:       #C6820B;
+  --info:          #2563EB;
+  --info-text:     #2A57C4;
+  --gold:          #B7860F;
+  --gold-tint:     rgba(183,134,15,.14);
+  --gold-border:   rgba(183,134,15,.34);
+
+  /* ---- State tones (rating / morale) ---- */
+  --state-good: #0E9F72;
+  --state-mid:  #C6820B;
+  --state-bad:  #E23A4E;
+  --track:      #DDE3EA;
+  --grid:       #E6EBF0;
+
+  /* ---- Ability bands: keep hues; darken the two that wash out on white ---- */
+  --ability-3: #C9A21E;  /* yellow */
+  --ability-4: #8A6BE6;  /* violet */
+
+  /* ---- Standings zones: deepen the light play-off tints so they read on white ---- */
+  --zone-po-up:   #34C77E;
+  --zone-po-down: #EE7B7B;
+}
