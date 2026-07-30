@@ -9,3 +9,12 @@ android/capacitor-cordova-android-plugins/build/
 android/local.properties
 *.apk
 *.aab
+
+# Bundled audio binaries — kept local, not versioned (they ship into the APK but
+# are large). Drop them into ui/assets/audio/ per that folder's README; the build
+# regenerates ui/js/music-manifest.js from whatever is present.
+ui/assets/audio/**/*.mp3
+ui/assets/audio/**/*.ogg
+ui/assets/audio/**/*.m4a
+ui/assets/audio/**/*.aac
+ui/assets/audio/**/*.wav
