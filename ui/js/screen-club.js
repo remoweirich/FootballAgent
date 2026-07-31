@@ -68,6 +68,7 @@ const ClubScreen = {
         el.innerHTML = `
         <div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest(c, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${c.name}</span></div>
         <p class="hint" style="margin-top:-8px"><a href="#leagues" onclick="LeaguesScreen.openFor('${c.division}');return false" style="color:var(--info-text);text-decoration:underline;text-underline-offset:2px">${c.divisionName}</a> · ${I18n.t('common.reputation')} ${c.reputation}</p>
+        <div style="margin:var(--space-2) 0 var(--space-4)">${UI.relBadge(c.id)}</div>
         <div class="section-label">${I18n.t('club.honours')}</div>
         <div style="margin:var(--space-2) 0 var(--space-4)">${honours}</div>
         <div class="section-label">${I18n.t('club.recentFinishes')}</div>

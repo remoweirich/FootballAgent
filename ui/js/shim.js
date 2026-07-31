@@ -105,6 +105,22 @@ const UI = {
         </svg>`;
     },
 
+    // ---- agency↔club relationship indicator (club page + negotiation headers) ----
+    // 0–100, banded to match Agency.greetingFor's thresholds (75 / 55 / 35 / 18).
+    relBadge(clubId) {
+        if (typeof Agency === 'undefined' || clubId == null) return '';
+        const v = Math.max(0, Math.min(100, Math.round(Agency.relationship(clubId))));
+        const tier = v >= 75 ? 'warm' : v >= 55 ? 'friendly' : v >= 35 ? 'neutral' : v >= 18 ? 'cool' : 'cold';
+        const cvar = (tier === 'warm' || tier === 'friendly') ? '--state-good' : tier === 'neutral' ? '--state-mid' : '--state-bad';
+        const label = (typeof I18n !== 'undefined') ? I18n.t('rel.' + tier) : tier;
+        const title = (typeof I18n !== 'undefined') ? I18n.t('rel.title') : 'Relationship';
+        return `<span title="${title}: ${v}/100" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm)">
+            <i class="ti ti-heart-handshake" style="color:var(${cvar})"></i>
+            <span style="color:var(${cvar});font-weight:var(--weight-semibold)">${label}</span>
+            <span style="width:44px;height:5px;border-radius:5px;background:var(--line-strong);overflow:hidden;display:inline-block"><span style="display:block;height:100%;width:${v}%;background:var(${cvar})"></span></span>
+            <span class="muted" style="font-size:11px">${v}</span></span>`;
+    },
+
     clubName(id) {
         if (typeof id === 'string' && id.indexOf('u21') === 0) { const parent = id.split(':')[1], c = parent && Clubs.getClubById(parent); return c ? youthTeamName(c) : 'U21'; }
         const c = Clubs.getClubById(id); if (c) return c.name;

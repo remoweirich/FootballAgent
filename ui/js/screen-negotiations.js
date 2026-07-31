@@ -144,6 +144,7 @@ Nego.transfer = function (el, m) {
     const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id);
 
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
+        <div style="margin:6px 0 var(--space-3)">${UI.relBadge(to.id)}</div>
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.playersWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentClub')}</span><span class="frow__v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
@@ -262,6 +263,7 @@ Nego.renewal = function (el, m) {
     const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
     const cut = w => Math.round(w * p.wageCommission / 100);
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(club.id)}"</p>
+        <div style="margin:6px 0 var(--space-3)">${UI.relBadge(club.id)}</div>
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${club.name}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
@@ -324,6 +326,7 @@ Nego.loan = function (el, m) {
     const contractTooShort = durOpts.length === 0 && Agency.loanDurationOptions().length > 0;
     if (inWindow && !c.duration) c.duration = durOpts[0].code;
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
+        <div style="margin:6px 0 var(--space-3)">${UI.relBadge(to.id)}</div>
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.from')}</span><span class="frow__v">${p.clubId ? (Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : '') : ''}</span></div>

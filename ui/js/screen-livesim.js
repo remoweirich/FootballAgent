@@ -20,7 +20,7 @@ const LiveView = {
     other: s => (s === 'home' ? 'away' : 'home'),
 
     // card/goal symbols for the feed tags and the panels
-    TAG_SYM: { GOAL: '⚽', OG: '⚽', ASSIST: 'A', YC: '🟨', Y2C: '🟨🟥', RC: '🟥', PENMISS: '✗', PENSAVE: '🧤', PENWON: 'PK', PENCONC: 'PK' },
+    TAG_SYM: { GOAL: '⚽', OG: '⚽', ASSIST: 'A', YC: '🟨', Y2C: '🟨🟥', RC: '🟥', PENMISS: '❌', PENSAVE: '🧤', PENWON: 'PK', PENCONC: 'PK' },
     tagSym(t) { return this.TAG_SYM[t] || t; },
 
     // ---------- pure helpers (no DOM) ----------
@@ -348,7 +348,7 @@ const LiveView = {
     _penHTML() {
         const m = this.match, pen = this.pen;
         const marks = side => pen.kicks.filter(k => k.side === side)
-            .map(k => `<span class="lv-penmk">${k.revealed ? (k.scored ? '⚽' : '✗') : '○'}</span>`).join('');
+            .map(k => `<span class="lv-penmk">${k.revealed ? (k.scored ? '⚽' : '❌') : '○'}</span>`).join('');
         const row = (name, side, tot) => `<div class="lv-penrow"><span class="lv-penteam">${UI.esc(name)}</span><span class="lv-penmks">${marks(side)}</span><span class="lv-pentot">${tot}</span></div>`;
         return `<div class="lv-pens"><div class="lv-penttl">${I18n.t('livesim.penaltyShootout')}</div>${row(m.homeName, 'home', pen.h)}${row(m.awayName, 'away', pen.a)}</div>`;
     },

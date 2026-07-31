@@ -112,6 +112,17 @@ const Sound = {
         this._fade(0, () => { this._stopEl(this._music); this._music = null; });
     },
     skip() { this.next(); },
+    // jump straight to a chosen track and play it now (Settings: tap a song). Rotation carries on
+    // afterwards with the enabled tracks. Playing a currently-disabled track is a one-off preview.
+    playTrack(file) {
+        const t = this.allTracks().find(x => x.file === file);
+        if (!t) return;
+        this._wantPlay = true; this._unlocked = true;   // it's a user gesture
+        this._stopEl(this._music); this._music = null;
+        this._queue = [t].concat(this._shuffle(this.enabledTracks().filter(x => x.file !== file)));
+        this._qi = 0;
+        this._playCurrent();
+    },
     next() {
         this._stopEl(this._music); this._music = null;
         if (!this._wantPlay) return;

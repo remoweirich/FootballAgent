@@ -43,12 +43,15 @@ const SettingsScreen = {
             <div class="set-seg">${langs.map(l => `<button class="set-seg__btn${curLang === l.code ? ' is-on' : ''}" onclick="SettingsScreen.setLang('${l.code}')">${l.name}</button>`).join('')}</div></div>`;
         // Per-track enable/disable list (only shown when bundled music exists)
         const tracks = (typeof Sound !== 'undefined') ? Sound.allTracks() : [];
-        const trackGroup = tracks.length ? `<div class="set-heading">${I18n.t('settings.musicTracks')}</div>
+        const trackGroup = tracks.length ? `<div class="set-heading" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span>${I18n.t('settings.musicTracks')}</span>
+            <button class="gbtn" onclick="SettingsScreen.skipTrack()"><i class="ti ti-player-track-next"></i>${I18n.t('settings.skipTrack')}</button></div>
             <div class="set-group">${tracks.map(tk => {
                 const on = Sound.trackEnabled(tk.file);
-                return `<button class="set-row" onclick="SettingsScreen.toggleTrack('${encodeURIComponent(tk.file)}')">
-                    <i class="ti ti-music set-row__ico"></i><span class="set-row__label">${UI.esc(tk.name)}</span>
-                    <span class="set-check${on ? ' is-on' : ''}"></span></button>`;
+                const enc = encodeURIComponent(tk.file);
+                return `<div class="set-row" style="cursor:pointer" onclick="SettingsScreen.playTrack('${enc}')">
+                    <i class="ti ti-player-play set-row__ico"></i><span class="set-row__label">${UI.esc(tk.name)}</span>
+                    <span class="set-check${on ? ' is-on' : ''}" onclick="event.stopPropagation();SettingsScreen.toggleTrack('${enc}')"></span></div>`;
             }).join('')}</div>` : '';
         document.getElementById('app').innerHTML = `<div class="set-wrap">
             <div class="set-bar">
@@ -115,6 +118,8 @@ const SettingsScreen = {
         if (typeof Sound !== 'undefined') Sound.setTrackEnabled(file, !Sound.trackEnabled(file));
         this._reshow();
     },
+    playTrack(fileEnc) { if (typeof Sound !== 'undefined') Sound.playTrack(decodeURIComponent(fileEnc)); this._reshow(); },
+    skipTrack() { if (typeof Sound !== 'undefined') Sound.skip(); },
 
     // Name the current game. The multi-slot backend isn't in yet; for now this labels the running
     // autosave (the name rides along in the save) so the future Load screen has something to show.
