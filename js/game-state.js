@@ -64,6 +64,14 @@ const GameState = {
         // it rides along in every save (see save/load) and also anchors background-squad regen.
         this.rngSeed = (Date.now() >>> 0) || 1;
         Rng.seed(this.rngSeed);
+        // A new game is a new game: no prior save may bleed into it. Rebuild the club pyramid to its
+        // day-one static layout (reputation/anchorRep/division/form all reset), and clear every
+        // per-save trace — competition & club history, European best-runs, last-season report,
+        // inbox, log and any live "Attend the Final" window.
+        if (typeof Clubs !== 'undefined' && Clubs.init) Clubs.init();
+        this.inbox = []; this.log = [];
+        this.clubHistory = {}; this.clubEuropeBest = {};
+        this.lastSeasonReport = null; this.attendWindow = null; this.league = null;
         this.players = PlayerGen.generatePool();
         Agency.init();
         this.agency.name = (name && name.trim()) ? name.trim() : 'Your Agency';
