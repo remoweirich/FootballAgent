@@ -40,7 +40,10 @@ const LeaguesScreen = {
     },
     setCountry(c) { this.state.country = c; this.state.tab = (c === 'Europe') ? null : 'tables'; this.state.division = null; this.state.euAutoTab = true; Router.refresh(); },
     setTab(t) { this.state.tab = t; if (this.state.country === 'Europe') this.state.euAutoTab = false; Router.refresh(); },   // a manual pick stops auto-following the phase
-    setDivision(d) { this.state.division = d; this.renderSection(); },
+    setDivision(d) { this.state.division = d; this.state.leagueMd = null; this.renderSection(); },
+    setLeagueView(v) { this.state.leagueView = v; this.state.leagueMd = null; this.renderSection(); },
+    setLeagueMd(n) { this.state.leagueMd = n; this.renderSection(); },
+    setCupView(v) { this.state.cupView = v; this.renderSection(); },
     setEuComp(k) { this.state.euComp = k; Router.refresh(); },   // phases are synchronised across comps, so keep the current tab
     setEuMd(n) { this.state.euMd = n; this.renderSection(); },
     // deep-link into this screen for a domestic division (used from the club page's competition link)
@@ -70,15 +73,24 @@ const LeaguesScreen = {
         } else if (tab === 'tables') {
             const divs = COUNTRY_DIVS[country];
             if (!divs.includes(this.state.division)) this.state.division = divs[0];
+            const fixturesView = this.state.leagueView === 'fixtures';
+            const toggle = `<div class="tab-bar" style="margin-bottom:var(--space-3)"><button class="tab ${!fixturesView ? 'is-active' : ''}" onclick="LeaguesScreen.setLeagueView('table')">${I18n.t('leagues.tableTab')}</button><button class="tab ${fixturesView ? 'is-active' : ''}" onclick="LeaguesScreen.setLeagueView('fixtures')">${I18n.t('leagues.fixturesTab')}</button></div>`;
             body.innerHTML = `<select class="select-input" style="margin-bottom:var(--space-4)" onchange="LeaguesScreen.setDivision(this.value)">
                 ${divs.map(d => `<option value="${d}" ${this.state.division === d ? 'selected' : ''}>${COMPETITIONS[d].name}</option>`).join('')}</select>
-                <div id="lgStandings">${this.standingsTable(this.state.division)}</div>${this.compHistLink(this.state.division)}`;
+                ${toggle}
+                <div id="lgStandings">${fixturesView ? this.leagueFixtures(this.state.division) : this.standingsTable(this.state.division)}</div>${this.compHistLink(this.state.division)}`;
         } else if (tab === 'po') {
             body.innerHTML = this.playoffs(country);
         } else {
             const key = tab, label = (cups => { const f = cups.find(c => c[0] === tab); return f ? f[1] : tab; })(COUNTRY_CUPS[country] || []);
             const comp = GameState.league && GameState.league[key];
-            body.innerHTML = ((comp && comp.groups) ? this.groupCup(key, label) : this.knockoutCup(key, label)) + this.compHistLink(this.CUP_KEY_COMP[key]);
+            const C = comp || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
+            // the bracket becomes available once a knockout round of 16/8/4 teams (8/4/2 ties) has been drawn
+            const bracketable = !!(C && C.results && C.results.some(r => [8, 4, 2].includes((r.ties || []).length)));
+            const bracketView = bracketable && this.state.cupView === 'bracket';
+            const toggle = bracketable ? `<div class="tab-bar" style="margin-bottom:var(--space-3)"><button class="tab ${!bracketView ? 'is-active' : ''}" onclick="LeaguesScreen.setCupView('rounds')">${I18n.t('leagues.cupRoundsTab')}</button><button class="tab ${bracketView ? 'is-active' : ''}" onclick="LeaguesScreen.setCupView('bracket')">${I18n.t('leagues.bracketTab')}</button></div>` : '';
+            const bodyHtml = bracketView ? this.cupBracket(C) : ((comp && comp.groups) ? this.groupCup(key, label) : this.knockoutCup(key, label));
+            body.innerHTML = toggle + bodyHtml + this.compHistLink(this.CUP_KEY_COMP[key]);
         }
     },
 
@@ -250,6 +262,52 @@ const LeaguesScreen = {
         }).join('');
         const ko = (K.results || []).slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
         return `${blurb}${winner}<div class="section-label">${I18n.t('leagues.groupStage')}</div>${groups}${ko ? `<div class="section-label" style="margin-top:var(--space-5)">${I18n.t('leagues.knockout')}</div>${ko}` : ''}`;
+    },
+
+    // ---- per-league fixtures, one matchday at a time (dropdown top-right) ----
+    // Domestic leagues keep only the fixture schedule and the aggregate table (individual match
+    // scores aren't stored), so this shows the pairings for every matchday; played matchdays are
+    // tagged. The full round-robin already lives in GameState.league.schedule, so this is cheap.
+    leagueFixtures(div) {
+        const L = GameState.league, s = L && L.schedule && L.schedule[div];
+        if (!s || !s.length) return `<p class="hint">${I18n.t('leagues.fixturesDraw')}</p>`;
+        const total = s.length, done = (L.mdIndex && L.mdIndex[div]) || 0;
+        let md = this.state.leagueMd; if (!md || md < 1 || md > total) md = Math.min(total, done + 1);
+        const played = md <= done;
+        const opts = Array.from({ length: total }, (_, i) => `<option value="${i + 1}" ${i + 1 === md ? 'selected' : ''}>${I18n.t('leagues.matchdayN', { n: i + 1 })}</option>`).join('');
+        const header = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
+            <div class="section-label" style="margin:0">${I18n.t('leagues.matchdayN', { n: md })}${played ? ` <span class="muted" style="font-weight:400">${I18n.t('leagues.playedTag')}</span>` : ''}</div>
+            <select class="select-input" style="width:auto" onchange="LeaguesScreen.setLeagueMd(+this.value)">${opts}</select></div>`;
+        const lk = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
+        const fx = (s[md - 1] || []).map(([h, a]) => `<div class="fixture"><span class="fx-home">${lk(h)}</span><span class="fx-score muted">${I18n.t('livesim.vs')}</span><span class="fx-away">${lk(a)}</span></div>`).join('');
+        return header + `<div class="fcard">${fx || `<p class="hint">${I18n.t('leagues.noFixtures')}</p>`}</div>`;
+    },
+    // ---- national-cup bracket (Round of 16 → final), mirroring the European bracket ----
+    // Only kicks in once the field has narrowed to 16/8/4 (8/4/2 ties); each column is the round's
+    // actual ties (winner highlighted), with placeholders for rounds not yet drawn.
+    cupBracket(C) {
+        if (!C || !C.results || !C.results.length) return `<p class="hint">${I18n.t('leagues.cupBracketLater')}</p>`;
+        const byN = {};
+        C.results.forEach(r => { const n = (r.ties || []).length; if (n === 8 || n === 4 || n === 2 || n === 1) byN[n] = r; });
+        const start = byN[8] ? 8 : byN[4] ? 4 : byN[2] ? 2 : 0;
+        if (!start) return `<p class="hint">${I18n.t('leagues.cupBracketLater')}</p>`;
+        const pair = t => t.bye ? [t.h, null, t.h] : t.leg1 ? [t.leg1.h, t.leg1.a, t.winner] : [t.h, t.a, t.winner];
+        const side = (id, winId) => {
+            const win = id && winId && id === winId;
+            const txt = id ? UI.clubName(id) : I18n.t('leagues.tbd');
+            return `<div style="padding:6px 9px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${win ? 'font-weight:700;color:#16A34A' : (id ? '' : 'color:var(--text-secondary)')}">${txt}</div>`;
+        };
+        const box = (aid, bid, winId) => `<div style="border:1px solid rgba(128,128,128,.28);border-radius:8px;overflow:hidden;background:rgba(128,128,128,.06)">${side(aid, winId)}<div style="border-top:1px solid rgba(128,128,128,.28)"></div>${side(bid, winId)}</div>`;
+        const col = (title, cells) => `<div style="display:flex;flex-direction:column;min-width:150px;flex:none"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:center;margin-bottom:8px">${title}</div><div style="display:flex;flex-direction:column;justify-content:space-around;gap:8px;flex:1;min-height:470px">${cells}</div></div>`;
+        const labelKey = { 8: 'r16Tab', 4: 'qfTab', 2: 'sfTab', 1: 'final' };
+        const cols = [];
+        for (let n = start; n >= 1; n = n / 2) {
+            const r = byN[n];
+            const cells = r ? r.ties.map(t => box(...pair(t))).join('') : Array.from({ length: n }, () => box(null, null, null)).join('');
+            cols.push(col(I18n.t('leagues.' + labelKey[n]), cells));
+        }
+        return `<p class="hint" style="margin-bottom:var(--space-3)">${I18n.t('leagues.everyPath')}</p>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><div style="display:flex;gap:14px;min-width:max-content;padding:2px 2px 6px">${cols.join('')}</div></div>`;
     },
 
     // ---- play-offs (this season's own only — never a stale prior-season carryover) ----
