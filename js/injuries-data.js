@@ -18,19 +18,43 @@ const INJURIES = [
   "category": "Bruise"
  },
  {
-  "id": "ankle",
+  "id": "ankle1",
   "name": "Ankle sprain",
   "weight": 12,
-  "minWeeks": 2,
+  "minWeeks": 1,
   "maxWeeks": 5,
   "category": "Ligament"
  },
  {
-  "id": "ham",
+  "id": "ankle2",
+  "name": "Ankle ligament tear",
+  "weight": 5,
+  "minWeeks": 6,
+  "maxWeeks": 9,
+  "category": "Ligament"
+ },
+ {
+  "id": "ham1",
   "name": "Hamstring strain",
-  "weight": 11,
+  "weight": 12,
+  "minWeeks": 1,
+  "maxWeeks": 3,
+  "category": "Muscle"
+ },
+ {
+  "id": "ham2",
+  "name": "Hamstring strain",
+  "weight": 10,
   "minWeeks": 3,
-  "maxWeeks": 6,
+  "maxWeeks": 7,
+  "category": "Muscle"
+ },
+ {
+  "id": "ham3",
+  "name": "Hamstring tear",
+  "weight": 4,
+  "minWeeks": 8,
+  "maxWeeks": 24,
   "category": "Muscle"
  },
  {
@@ -38,7 +62,7 @@ const INJURIES = [
   "name": "Groin strain",
   "weight": 9,
   "minWeeks": 2,
-  "maxWeeks": 5,
+  "maxWeeks": 6,
   "category": "Muscle"
  },
  {
@@ -46,7 +70,7 @@ const INJURIES = [
   "name": "Calf strain",
   "weight": 8,
   "minWeeks": 2,
-  "maxWeeks": 4,
+  "maxWeeks": 6,
   "category": "Muscle"
  },
  {
@@ -54,7 +78,7 @@ const INJURIES = [
   "name": "Hip flexor strain",
   "weight": 6,
   "minWeeks": 2,
-  "maxWeeks": 4,
+  "maxWeeks": 5,
   "category": "Muscle"
  },
  {
@@ -66,12 +90,36 @@ const INJURIES = [
   "category": "Illness"
  },
  {
+  "id": "appendicitis",
+  "name": "Appendicitis",
+  "weight": 3,
+  "minWeeks": 3,
+  "maxWeeks": 5,
+  "category": "Illness"
+ },
+ {
   "id": "back",
   "name": "Back spasm",
   "weight": 5,
   "minWeeks": 1,
   "maxWeeks": 3,
   "category": "Muscle"
+ },
+ {
+  "id": "lower_back",
+  "name": "Lower back injury",
+  "weight": 5,
+  "minWeeks": 2,
+  "maxWeeks": 5,
+  "category": "Muscle"
+ },
+ {
+  "id": "diskhernia",
+  "name": "Herniated disc",
+  "weight": 2,
+  "minWeeks": 12,
+  "maxWeeks": 36,
+  "category": "Cartilage"
  },
  {
   "id": "toe",
@@ -86,7 +134,7 @@ const INJURIES = [
   "name": "Thigh strain",
   "weight": 5,
   "minWeeks": 2,
-  "maxWeeks": 4,
+  "maxWeeks": 5,
   "category": "Muscle"
  },
  {
@@ -110,7 +158,15 @@ const INJURIES = [
   "name": "Knee ligament (MCL)",
   "weight": 4,
   "minWeeks": 5,
-  "maxWeeks": 9,
+  "maxWeeks": 10,
+  "category": "Ligament"
+ },
+ {
+  "id": "jumpers-knee",
+  "name": "Jumper's knee",
+  "weight": 4,
+  "minWeeks": 4,
+  "maxWeeks": 10,
   "category": "Ligament"
  },
  {
@@ -126,15 +182,15 @@ const INJURIES = [
   "name": "Knee cartilage (meniscus)",
   "weight": 3,
   "minWeeks": 8,
-  "maxWeeks": 14,
+  "maxWeeks": 18,
   "category": "Cartilage"
  },
  {
   "id": "face",
   "name": "Facial fracture",
   "weight": 2,
-  "minWeeks": 1,
-  "maxWeeks": 3,
+  "minWeeks": 2,
+  "maxWeeks": 4,
   "category": "Bone"
  },
  {
@@ -154,6 +210,14 @@ const INJURIES = [
   "category": "Joint"
  },
  {
+  "id": "dislocation-finger",
+  "name": "Dislocated finger",
+  "weight": 2,
+  "minWeeks": 3,
+  "maxWeeks": 8,
+  "category": "Joint"
+ },
+ {
   "id": "fracture",
   "name": "Fractured leg",
   "weight": 1,
@@ -165,17 +229,57 @@ const INJURIES = [
   "id": "achilles",
   "name": "Achilles rupture",
   "weight": 1,
-  "minWeeks": 22,
-  "maxWeeks": 36,
+  "minWeeks": 32,
+  "maxWeeks": 46,
   "category": "Tendon"
  },
  {
   "id": "acl",
   "name": "Cruciate ligament (ACL)",
   "weight": 1,
-  "minWeeks": 24,
-  "maxWeeks": 40,
+  "minWeeks": 36,
+  "maxWeeks": 52,
   "category": "Ligament"
+ },
+ {
+  "id": "broken-hand",
+  "name": "Broken hand",
+  "weight": 1,
+  "minWeeks": 6,
+  "maxWeeks": 8,
+  "category": "Bone"
+ },
+ {
+  "id": "broken-collarbone",
+  "name": "Clavicle fracture",
+  "weight": 3,
+  "minWeeks": 8,
+  "maxWeeks": 12,
+  "category": "Bone"
+ },
+ {
+  "id": "broken-nose",
+  "name": "Broken nose",
+  "weight": 3,
+  "minWeeks": 3,
+  "maxWeeks": 6,
+  "category": "Bone"
+ },
+ {
+  "id": "broken-coccyx",
+  "name": "Broken tailbone",
+  "weight": 2,
+  "minWeeks": 8,
+  "maxWeeks": 13,
+  "category": "Bone"
+ },
+ {
+  "id": "broken-heel",
+  "name": "Broken heel bone",
+  "weight": 2,
+  "minWeeks": 20,
+  "maxWeeks": 44,
+  "category": "Bone"
  }
 ];
 if (typeof module !== 'undefined' && module.exports) module.exports = { INJURIES };

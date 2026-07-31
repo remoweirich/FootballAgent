@@ -15,7 +15,11 @@ const NAMES_DATABASE = {
 	"Pascal", "Ludovic", "Guillaume", "George", "Damian", "Noah", "Noel", "Karl", "Karli", "Hans", "Peter", "Hanspeter", "Ueli",
 	"Ferdinand", "Arno", "Michael", "Mike", "Mika", "Micha", "Martin", "Tinu", "Tino", "Valentin", "Alex", "Alexander", "Jan",
 	"Sven", "Gian", "Kai", "Silas", "Paul", "Mario", "Timon", "Ben", "Benny", "Benjamin", "Adam",
-	"Dario", "Albian", "Albin", "Ardon", "Kujtim", "Sindri", "Teijo", "Lindrit", "Sergio", "Fritz"
+	"Dario", "Albian", "Albin", "Ardon", "Kujtim", "Sindri", "Teijo", "Lindrit", "Sergio", "Fritz", "Peter", "Pedro", "Mike", "Nika", "Niklas", "Sam", "Samuel", "Christoph",
+    "Mario", "Luca", "Lukas", "Nino", "Linus", "Liam", "Andrin", "Marco", "Remo", "Patrick", "Louis", "Florian", "Damian", "Damiano", "Jan", "Dennis", "Alex", "Alessandro",
+    "Carlo", "Matteo", "Gregor", "Yann", "Manu", "Manuel", "Sven", "Philip", "Jonathan", "Pascal", "Robin", "Robby", "Toby", "Tobi", "Tobias", "Arno", "Steven",
+    "Jason", "Kristian", "Yannick", "Yanick", "Janik", "Jannik", "Yannik", "Jaros", "Wolfgang", "Jean-Pierre", "Jean", "Raúl", "Ramon", "Timon", "Nick", "Niko", "Nico",
+    "Benny", "Ben", "Benjamin", "Benni", "Benno", "Hugo", "Simon", "Jonas", "Julian", "Jules", "Dan", "Dani", "Jannis", "Patrick", "Pär", "Gianni", "Gianluca"
     ],
     "lastNames": [
         "Müller", "Meier", "Schmid", "Keller", "Weber", "Huber", "Schneider", "Meyer", "Steiner", "Fischer",
@@ -34,7 +38,16 @@ const NAMES_DATABASE = {
 	"Schneiter", "Dzemaili", "Neziraj", "Camus", "Comaran", "Sanches", "Koindredi", "Studer", "Farkas", "Schmuki", "Rohner",
 	"Gavillet", "Martim", "Martin", "Ferrari", "Fontana", "Stäheli", "Stadel", "Schönbächler", "Stocker", "Zuberbühler",
 	"Maissen", "Cavegn", "Wyss", "Schweizer", "Marthaler", "Berner", "Basler", "Burgener", "Degen", "Alpsteg", "Peter", 
-	"Bieri", "Gasser", "Gashi", "Siegenthaler", "Vogt", "Küng", "Kuhn", "Odermatt", "Andermatt", "Chapuis", "Chautems", "Clement"
+	"Bieri", "Gasser", "Gashi", "Siegenthaler", "Vogt", "Küng", "Kuhn", "Odermatt", "Andermatt", "Chapuis", "Chautems", "Clement", "Schweizer",
+    "Schwarz", "Wies", "Leu", "Stark", "Grollimann", "Branner", "Riemann", "Birmanns", "Birs", "Kaul", "Wiesmann", "Pohl", "Hauser", "Bachmann",
+    "Pfannenstiel", "Hitzfeld", "Kuhn", "Gartenmann", "Gärtner", "Hanggärtner", "Petkovic", "Turkyilmaz", "Yilmaz", "Peterhans", "Peter", "Lukas",
+    "Meyer", "Frey", "Spielmann", "Stocker", "Walker", "Sommaruga", "Zurbriggen", "Brügger", "Gut", "Stolz", "Derrer", "Ebneter", "Ebert", "Blum", "Rüti",
+    "Siegenthaler", "Palacios", "Häusler", "Buschor", "Bächlin", "Knecht", "Specht", "Speyer", "Speier", "Rösli", "Spörri", "Stettler", "Bosshard",
+    "Vieli", "Birrer", "Platz", "von Moos", "Zwarts", "Jost", "Keller", "Schär", "Kromer", "Gloor", "Neuber", "Zimmermann", "Turgut", "Petruccelli",
+    "Schneuwly", "Mentzel", "Ilie", "Wehrli", "Claman", "Hamberger", "Brandenburger", "Magnini", "Merk", "Stämpfli", "Kunz", "Hinz", "Kunz", "Diezi",
+    "Schneider", "Klabunde", "Sauter", "Zuber", "Grüninger", "Waser", "Guerreiro", "Roffler", "Amberg", "Stahl", "Beldi", "Veri", "Vollenweider", "Hänsli",
+    "Denzler", "Geiser", "Ammann", "Barletta", "Mitteregger", "Kaiser", "Hungerbühler", "Ziebold", "Weber", "Römelin", "Winter", "Reller", "Wanner",
+    "Aliotta", "Büchel", "Büchler", "Gachnang"
     ]
 },
    "Brazil": {
@@ -291,7 +304,8 @@ const NAMES_DATABASE = {
         "Luca", "Marco", "Matteo", "Alessandro", "Lorenzo", "Francesco", "Andrea", "Davide", "Simone", "Stefano",
         "Alexander", "Daniel", "David", "Samuel", "Nathan", "Benjamin", "Gabriel", "Joshua", "Matthew", "Michael",
         "Chen", "Wei", "Ming", "Yang", "Hao", "Jun", "Lei", "Jian", "Feng", "Kai", "Mees", "Sem", "Noud",
-        "Jasper", "Pepijn", "Koen", "Luuk", "Ties", "Daniël", "Joost", "Casper", "Reinier", "Hidde"
+        "Jasper", "Pepijn", "Koen", "Luuk", "Ties", "Daniël", "Joost", "Casper", "Reinier", "Hidde", "Daan", "Sem", "Siem",
+        "Luuk", "Robin", "Robbie", "Rob", ""
     ],
     lastNames: [
         "de Jong", "Jansen", "de Vries", "van den Berg", "van Dijk", "Janssen", "Visser", "Smit", "Meijer", "van der Vliert",
@@ -311,7 +325,9 @@ const NAMES_DATABASE = {
         "van Rijn", "van der Berg", "Timmermans", "Groen", "Jonker", "van Loon", "Kramer", "van der Heijden", "Driessen", "Maas",
         "Silva", "Santos", "Oliveira", "Pereira", "Costa", "Ferreira", "Rodrigues", "Alves", "Sousa", "Gomes", "Hartman", "Frants",
         "de Leeuw", "van Dalen", "Bosman", "Hermans", "van Os", "Mol", "Kloopmans", "Stam", "Lubbers", "Rietveld", "Huissen", 	"Koeman", "Blind", "Kaptijn", "Koen", "Graaneberg", "Kreeftman", "Hubers", "Stevens", "Kwado", "Propper", "Archaoui",
-        "van Beek", "van der Heide", "Hoekstra", "Bosch", "Vink", "Schouten", "de Lange", "van Wijk", "Koning", "van der Poel"
+        "van Beek", "van der Heide", "Hoekstra", "Bosch", "Vink", "Schouten", "de Lange", "van Wijk", "Koning", "van der Poel", "Broersma", "Krips", "van Dellen",
+        "Zwarts", "Smits", "Zwarts", "van Niekerk", "Wienhoven", "Krips", "Peters", "de Jong", "Jansen", "Janssen", "Peters", "de Jong", "de Tempe", "Overvelde", 
+        "Kussy", "Peters", "Bregman", "Huijssen"
     ]
 },
     "Portugal": {
