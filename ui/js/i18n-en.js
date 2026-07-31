@@ -17,7 +17,7 @@ I18n.register('en', {
     'common.finances': 'Finances',
 
     // ---- bottom navigation ----
-    'nav.leagues': 'Leagues',
+    'nav.leagues': 'Competitions',
     'nav.clients': 'Clients',
     'nav.home': 'Home',
     'nav.scouting': 'Scouting',

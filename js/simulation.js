@@ -217,16 +217,23 @@ const Sim = {
         this._scoutLicence(events);   // enforce the International Scouting Licence (warn/fine/suspend) before scouts work
         const finds = Scouts.tick();
         finds.forEach(f => {
+            // an idle / home scout carries no region id — fall back to the found player's country,
+            // the assigned league's country, or the agency's home country so the mail never reads "null"
+            const region = (f.region && regionName(f.region))
+                || (f.players && f.players[0] && (Clubs.getClubById(f.players[0].clubId) || {}).country)
+                || f.country
+                || (f.league && (((Clubs.getClubsByDivision(f.league) || [])[0]) || {}).country)
+                || GameState.homeCountry || '';
             if (f.none) {
-                const t = I18n.t('sim.scoutNone', { scout: f.scout, region: regionName(f.region) });
+                const t = I18n.t('sim.scoutNone', { scout: f.scout, region });
                 GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
-                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.scoutNoneSubj', { region: regionName(f.region) }), body: I18n.t('sim.scoutNoneBody', { t }), ttl: 3 });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.scoutNoneSubj', { region }), body: I18n.t('sim.scoutNoneBody', { t }), ttl: 3 });
                 return;
             }
             const names = f.players.map(pl => `${pl.name} (${pl.position}, ${pl.ability} OVR — ${Clubs.getClubById(pl.clubId)?.name})`).join('; ');
-            const t = I18n.t('sim.scoutFound', { scout: f.scout, region: regionName(f.region), n: f.players.length, cost: f.cost ? I18n.t('sim.scoutCost', { amt: UI.money(f.cost) }) : '', names });
+            const t = I18n.t('sim.scoutFound', { scout: f.scout, region, n: f.players.length, cost: f.cost ? I18n.t('sim.scoutCost', { amt: UI.money(f.cost) }) : '', names });
             GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
-            GameState.addMail({ kind: 'news', subject: I18n.t('sim.scoutFoundSubj', { region: regionName(f.region), n: f.players.length }), body: t, ttl: 4 });
+            GameState.addMail({ kind: 'news', subject: I18n.t('sim.scoutFoundSubj', { region, n: f.players.length }), body: t, ttl: 4 });
         });
 
         // ---- finances ----

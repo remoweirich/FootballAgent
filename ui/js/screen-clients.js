@@ -73,7 +73,7 @@ const ClientsScreen = {
                         ${p.injury ? '<i class="ti ti-bandage" style="font-size:14px;color:var(--danger)"></i>' : ''}
                         ${p.retiringThisSeason ? `<span class="pill pill--gold" style="padding:1px 7px;font-size:10px">${I18n.t('clients.retiring')}</span>` : ''}
                     </div>
-                    <div class="cl-sub"><span class="flex-row" style="gap:5px">${UI.crest(info ? info.club : club)}${teamHTML}</span><span style="color:var(--text-chevron)">·</span><span>${roleName(p)}</span></div>
+                    <div class="cl-sub"><span class="flex-row" style="gap:5px">${UI.crest(info ? info.club : club)}${teamHTML}</span><span style="color:var(--text-chevron)">·</span><span>${p.position}</span><span style="color:var(--text-chevron)">·</span><span>${roleName(p)}</span></div>
                 </div>
                 <div class="flex-row" style="gap:3px;margin-right:9px">${this.moraleDots(p)}</div>
                 ${UI.abilityBadge(p.ability)}

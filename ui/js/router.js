@@ -7,7 +7,7 @@
 // ============================================================
 const Router = {
     NAV: [
-        ['leagues', 'ti-trophy', 'Leagues'],
+        ['leagues', 'ti-trophy', 'Competitions'],
         ['clients', 'ti-users', 'Clients'],
         ['home', 'ti-home', 'Home'],
         ['scouting', 'ti-search', 'Scouting'],

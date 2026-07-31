@@ -1094,6 +1094,7 @@ const Agency = {
         if (role && !this.roleAcceptable(p, club, role))
             return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: club.name, name: p.name, role: roleLabel(role, p.age, p.position), ceil: roleLabel(this.clubRoleCeiling(p, club), p.age, p.position) }) };
         p.wage = agreedWage; p.contractUntilSeason = GameState.seasonStartYear + term; p.freeAgent = false; p._renewSeason = GameState.seasonStartYear;
+        p.transferListed = false; p.loanListed = false; p._loanOk = false;   // committing to a new deal takes him off the market
         if (role && ROLE_ORDER.includes(role)) p.squadRole = role;
         p.cupKeeper = p.position === 'GK' && !!opts.cupKeeper && role === 'rotation';   // Cup Goalkeeper (GK Back Up only)
         recordWagePoint(p);

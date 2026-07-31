@@ -18,7 +18,9 @@ const NATIONALITY_ISO = {
     Norway: 'no', Peru: 'pe', Poland: 'pl', Portugal: 'pt', Romania: 'ro', Rwanda: 'rw',
     Scotland: 'gb-sct', Senegal: 'sn', Serbia: 'rs', Slovakia: 'sk', Slovenia: 'si', 'South Africa': 'za',
     'South Korea': 'kr', Spain: 'es', Sweden: 'se', Switzerland: 'ch', Tunisia: 'tn', Turkey: 'tr',
-    USA: 'us', Uganda: 'ug', Ukraine: 'ua', Uruguay: 'uy', Wales: 'gb-wls'
+    USA: 'us', Uganda: 'ug', Ukraine: 'ua', Uruguay: 'uy', Wales: 'gb-wls',
+    Russia: 'ru', Suriname: 'sr', 'Cape Verde': 'cv', Angola: 'ao', 'Guinea-Bissau': 'gw',
+    Jamaica: 'jm', Pakistan: 'pk', Paraguay: 'py', Bolivia: 'bo', Iran: 'ir'
 };
 
 const UI = {
