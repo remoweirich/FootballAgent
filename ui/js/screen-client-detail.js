@@ -405,7 +405,7 @@ const ClientDetail = {
         if (s) {
             settle = `<div class="hint" style="margin-bottom:var(--space-2)">${I18n.t('cd.settleHint', { w: s.weeksLeft, mood: s.morale ? I18n.t('cd.andMood') : '' })}</div>
                 <div class="flex-row" style="flex-wrap:wrap;margin-bottom:var(--space-3)">
-                    ${btn('language', s.services.language ? I18n.t('cd.done') : null)}
+                    ${s.knowsLang ? '' : btn('language', s.services.language ? I18n.t('cd.done') : null)}
                     ${btn('house', !s.morale ? I18n.t('cd.done') : null)}
                     ${btn('family', s.services.family ? I18n.t('cd.done') : null)}
                 </div>`;

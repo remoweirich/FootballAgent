@@ -1104,7 +1104,13 @@ const Agency = {
         // renewals stay NEUTRAL (no fee to weigh), so goodwill is the neutral +2, plus the fast-deal
         // bonus when it was wrapped up inside the first couple of rounds (see concludeRelDelta)
         this.changeRelationship(club.id, this.concludeRelDelta('NEUTRAL', o.neg ? o.neg.round : 1));
-        p.morale.wage = Math.min(100, p.morale.wage + 10); p.morale.club = Math.min(100, p.morale.club + MORALE.CLUB_RENEW_BOOST);
+        // a renewal only fully settles his wage grievance if it actually clears "underpaid"; if he
+        // re-signs for love of the club but is still below market, the raise is only a small comfort
+        const mkt = PlayerGen.wageFor(p.ability, Math.max(club.reputation, p.ability));
+        p.morale.wage = (agreedWage / Math.max(1, mkt) >= MORALE.WAGE_FAIR_FROM)
+            ? Math.max(p.morale.wage, 85)
+            : Math.min(100, p.morale.wage + 8);
+        p.morale.club = Math.min(100, p.morale.club + MORALE.CLUB_RENEW_BOOST);
         this._checkPromiseKept(p, ['newContract', 'renegotiateRep']);
         this._creditAgentAction(p, MORALE.AGENT_DEAL_BONUS);
         GameState.removeMail(mail.id);
@@ -1132,6 +1138,8 @@ const Agency = {
         p.onLoanAt = borrower.id; p.loanUntilSeason = end.until; p.loanMid = end.mid; p.loanListed = false; p.loanRole = r; p._loanOk = false;
         // scoped to the loan spell (auto-ignored once he's back home): a keeper loaned in as Back Up who takes the cup ties
         p.loanCupKeeper = p.position === 'GK' && !!cupKeeper && r === 'rotation';
+        // a (shorter) settling-in at the loan club; an immediate loan cancels any settling at the parent club
+        if (typeof Dialogue !== 'undefined') Dialogue.onLoanStarted(p, borrower.id);
         if (p.morale) { p.morale.time = MORALE.TIME_RESET_ON_MOVE; }
         p._playStreak = 0; p._benchStreak = 0;
         this.changeRelationship(borrower.id, +2);

@@ -24,6 +24,8 @@ const MORALE = {
 
     MAX_WEEKLY_DIM_DRIFT: 5,   // anti-spiral: caps the weekly drift-to-target step, per dimension
     CLUB_DOWN_MULT: 0.25,      // club morale DECAYS at quarter speed (recovery runs full speed)
+    WAGE_FAIR_FROM: 0.9,       // at/above this fraction of his market-for-ability wage he feels fairly paid
+    WAGE_UNDERPAID_DECAY: 2.2, // weekly wage-morale erosion when underpaid, scaled by how far below fair he is
     CLUB_LOCK_UNDER_AGE: 18, CLUB_LOCK_VALUE: 80,   // U18s don't resent their club yet: pinned at 80
 
     TROPHY_CLUB: 12, TROPHY_AGENT: 8,
@@ -368,13 +370,17 @@ const Sim = {
             // ---- club / wage: unchanged target-drift model, now anti-spiral clamped ----
             const rep = club ? club.reputation : 50;
             const clubTarget = Math.max(20, Math.min(95, 50 + (rep - p.ability) * 1.5));
-            let wageTarget;
+            let wageTarget, payRatio = null;
             if (Agency.isFreeAgent(p)) {
                 wageTarget = 15;
             } else {
-                const bench = PlayerGen.wageFor(p.ability, club ? club.reputation : 45);
-                const wRatio = p.wage / Math.max(1, bench);
-                wageTarget = Math.max(20, Math.min(95, 30 + wRatio * 50));
+                // he knows his market value: what he'd command at a club at HIS level, not merely his
+                // current one — so a strong player stuck on a weak club's wages knows he's underpaid.
+                const market = PlayerGen.wageFor(p.ability, Math.max(club ? club.reputation : 0, p.ability));
+                payRatio = p.wage / Math.max(1, market);
+                wageTarget = payRatio >= 1
+                    ? Math.min(95, 78 + (payRatio - 1) * 40)         // fairly/over-paid: high, climbs a little with surplus
+                    : Math.max(0, 78 - (1 - payRatio) * 150);        // underpaid: target sinks (0.9→63, 0.8→48, 0.6→18)
             }
             const drift = (target, cur, downMult = 1) => {
                 let d = (target - cur) * 0.1;
@@ -387,6 +393,10 @@ const Sim = {
             if (p.age < MORALE.CLUB_LOCK_UNDER_AGE) p.morale.club = MORALE.CLUB_LOCK_VALUE;
             else p.morale.club = drift(clubTarget, p.morale.club, MORALE.CLUB_DOWN_MULT);
             p.morale.wage = drift(wageTarget, p.morale.wage);
+            // a genuine underpayment keeps nagging: a small steady erosion on top of the drift, so wage
+            // morale doesn't just settle — the more underpaid, the faster it slides (but never fast)
+            if (payRatio != null && payRatio < MORALE.WAGE_FAIR_FROM)
+                p.morale.wage = Math.max(0, p.morale.wage - MORALE.WAGE_UNDERPAID_DECAY * (MORALE.WAGE_FAIR_FROM - payRatio));
 
             // ---- time: discrete streak-based ticks. Playing always counts in his favour;
             // NOT playing only counts against him when matches were actually possible -

@@ -811,6 +811,13 @@ const Dialogue = {
         }
         this._startSettling(p, Clubs.getClubById(toClubId));   // a language barrier means an adjustment period
     },
+    // called when a loan is agreed (see Agency.acceptLoanOffer): a shorter settling-in at the loan
+    // club, and any settling at the club he just joined is cancelled — he's only passing through
+    onLoanStarted(p, borrowerId) {
+        if (p.agentId !== 'me') return;
+        delete p.settling;
+        this._startSettling(p, Clubs.getClubById(borrowerId), { loan: true });
+    },
     // called when a long injury lands (see Sim._injuries)
     onInjury(p, weeks) {
         if (p.agentId !== 'me' || weeks < 6) return;
@@ -1028,7 +1035,7 @@ const Dialogue = {
         for (const country of this._countriesPlayedIn(p)) (this.LANGS[country] || []).forEach(l => langs.add(l));
         return [...langs];
     },
-    _startSettling(p, club) {
+    _startSettling(p, club, opts = {}) {
         if (!club || !this.LANGS[club.country]) return;
         const home = (p.facts && p.facts.home) || this._homeCountryOf(p);
         if (club.country === home) return;                                // moving (back) home — no adjustment
@@ -1038,7 +1045,8 @@ const Dialogue = {
         if (this.hasTrait(p, 'homebody')) weeks = Math.round(weeks * 1.75);   // uprooted, and he feels it
         if (this.hasTrait(p, 'adventurer')) weeks = Math.round(weeks * 0.5);  // this is what he lives for
         if (knowsLang) weeks = Math.max(1, Math.round(weeks * 0.25));      // already speaks it: 75% shorter, not skipped
-        p.settling = { weeksLeft: weeks, morale: !knowsLang, lang: this.LANGS[club.country][0], services: {} };
+        if (opts.loan) weeks = Math.max(1, Math.round(weeks * 0.5));       // a loan is temporary — he knows he'll be off again soon
+        p.settling = { weeksLeft: weeks, morale: !knowsLang, knowsLang, lang: this.LANGS[club.country][0], services: {}, loan: !!opts.loan };
         GameState.addMail({
             kind: 'news', cat: 'general', subject: I18n.t('dlg.settle.subj', { name: p.name }),
             body: knowsLang
@@ -1120,7 +1128,8 @@ const Dialogue = {
         if (GameState.agency.balance < svc.cost) return { ok: false, message: I18n.t('dlg.notEnough', { amt: UI.money(svc.cost) }) };
         const s = p.settling;
         if (kind === 'language') {
-            if (!s || s.services.language) return { ok: false, message: I18n.t('dlg.svc.noUse') };
+            // no course if he already speaks the language — nothing to teach him
+            if (!s || s.services.language || s.knowsLang) return { ok: false, message: I18n.t('dlg.svc.noUse') };
             s.services.language = true; s.weeksLeft = Math.max(1, Math.ceil(s.weeksLeft / 2));
         } else if (kind === 'house') {
             if (!s || !s.morale) return { ok: false, message: I18n.t('dlg.svc.noUse') };
