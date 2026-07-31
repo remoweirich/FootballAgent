@@ -1471,6 +1471,30 @@ const DIALOGUE_DATA = {
    "variant": "any",
    "personality": "humble",
    "text": "That's kind of you. It gets lonely out here sometimes, you know."
+  },
+  {
+   "id": "K028",
+   "beat": "open",
+   "choice": "",
+   "variant": "any",
+   "personality": "any",
+   "text": "Good to see you, {agent}! What did you want to talk about?"
+  },
+  {
+   "id": "K029",
+   "beat": "open",
+   "choice": "",
+   "variant": "any",
+   "personality": "any",
+   "text": "Hey, how are you? I hope you don't come begging for money! Kidding, of course, what's going on?"
+  },
+  {
+   "id": "K030",
+   "beat": "open",
+   "choice": "",
+   "variant": "any",
+   "personality": "any",
+   "text": "Nice of you to reach out, what did you want to speak with me about?"
   }
  ],
  "moments": [

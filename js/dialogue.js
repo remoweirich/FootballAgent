@@ -41,8 +41,8 @@ const Dialogue = {
         const pe = p.personality;
         if (!pe) return null;
         const parts = [];
-        if (pe.revP) parts.push(this.POLE_LABEL[pe.primary]);
-        if (pe.revS) parts.push(this.POLE_LABEL[pe.secondary]);
+        if (pe.revP) parts.push(this.poleLabel(pe.primary));
+        if (pe.revS) parts.push(this.poleLabel(pe.secondary));
         return parts.length ? parts.join(' · ') : null;
     },
     hasTrait(p, pole) {
@@ -56,8 +56,8 @@ const Dialogue = {
             if (pe.primary === forcePole && !pe.revP) { pe.revP = true; return this.POLE_LABEL[forcePole]; }
             if (pe.secondary === forcePole && !pe.revS) { pe.revS = true; return this.POLE_LABEL[forcePole]; }
         }
-        if (!pe.revP && Rng.next() < 0.6) { pe.revP = true; return this.POLE_LABEL[pe.primary]; }
-        if (pe.revP && !pe.revS && Rng.next() < 0.4) { pe.revS = true; return this.POLE_LABEL[pe.secondary]; }
+        if (!pe.revP && Rng.next() < 0.6) { pe.revP = true; return this.poleLabel(pe.primary); }
+        if (pe.revP && !pe.revS && Rng.next() < 0.4) { pe.revS = true; return this.poleLabel(pe.secondary); }
         return null;
     },
 
@@ -80,12 +80,14 @@ const Dialogue = {
         p.bond = Math.max(0, Math.min(100, before + delta));
         const tb = this.tierOf(before), ta = this.tierOf(p.bond);
         if (ta !== tb && p.bond > before) {
-            GameState.addLog(`${p.name} now sees you as more than an agent (${ta}).`, 'morale');
+            GameState.addLog(I18n.t('dlg.bond.log', { name: p.name, tier: this.tierLabel(ta) }), 'morale');
             // growing trust loosens the tongue: crossing a tier, he volunteers something personal
             const vol = p.archived ? '' : this._volunteerFact(p);
+            const rel = I18n.t('dlg.bond.rel.' + ta.toLowerCase());
+            const whyTxt = why ? ' (' + this._tk('dlg.why.' + why, why) + ')' : '';
             GameState.addMail({
-                kind: 'news', cat: 'morale', subject: `${p.name} — ${ta.toLowerCase()}`,
-                body: `Your relationship with ${p.name} has grown. He now treats you as ${ta === 'Trusted' ? 'someone he trusts' : ta === 'Confidant' ? 'a confidant' : 'family'}.${why ? ' (' + why + ')' : ''}${vol}`, ttl: 4
+                kind: 'news', cat: 'morale', subject: I18n.t('dlg.bond.subj', { name: p.name, tier: this.tierLabel(ta) }),
+                body: I18n.t('dlg.bond.body', { name: p.name, rel, extra: whyTxt + vol }), ttl: 4
             });
         }
         // a big shared moment at Confidant+ sometimes moves him to give something back (Phase 4)
@@ -104,9 +106,31 @@ const Dialogue = {
             .replace(/\{club\}/g, club ? club.name : 'the club')
             .replace(/\{agent\}/g, agent)
             .replace(/\{position\}/g, p.position || '');
-        if (extra) for (const k of Object.keys(extra)) out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), extra[k]);
+        if (extra) for (const k of Object.keys(extra)) {
+            let v = extra[k];
+            // localize discovered "vocabulary" values (hobby, keepsake, occasion, ...) at fill time,
+            // so a value stored/generated in one language still reads right in the current locale
+            if (this._isDe() && DIALOGUE_DE.vocab && DIALOGUE_DE.vocab[v]) v = DIALOGUE_DE.vocab[v];
+            out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), v);
+        }
         return out;
     },
+    // German dialogue lives in a parallel data file (js/dialogue-data-de.js, `DIALOGUE_DE`), keyed by
+    // the same stable line ids; any line without a translation falls back to the English workbook text.
+    _isDe() { return typeof I18n !== 'undefined' && I18n.locale === 'de' && typeof DIALOGUE_DE !== 'undefined'; },
+    _deTxt(row) { return (this._isDe() && DIALOGUE_DE.lines && DIALOGUE_DE.lines[row.id]) || row.text; },
+    // localized "{n} appearances" / "{n} career goals" milestone label (frozen when the moment is queued)
+    _mileText(kind, n) {
+        if (this._isDe() && DIALOGUE_DE.mile && DIALOGUE_DE.mile[kind]) return DIALOGUE_DE.mile[kind].replace('{n}', n);
+        return kind === 'apps' ? `${n} appearances` : `${n} career goals`;
+    },
+    // localized display for the identifier-keyed engine values (personality poles, bond tiers, services);
+    // each falls back to its English source, so the underlying keys stay stable for the game logic
+    _tk(key, fallback) { const s = (typeof I18n !== 'undefined') ? I18n.t(key) : key; return s === key ? fallback : s; },
+    poleLabel(key) { return this._tk('dlg.pers.' + key, this.POLE_LABEL[key] || key); },
+    tierLabel(name) { return this._tk('dlg.tier.' + String(name).toLowerCase(), name); },
+    serviceLabel(kind) { return this._tk('dlg.svc.' + kind, (this.SERVICES[kind] || {}).label); },
+    locVocab(v) { return (this._isDe() && DIALOGUE_DE.vocab && DIALOGUE_DE.vocab[v]) || v; },
     // Prefer lines written for his personality over generic ones, and avoid anything he has said
     // recently. Falls back gracefully: personality pool -> any pool -> ignore the seen-filter.
     _pick(rows, p, extra) {
@@ -120,13 +144,16 @@ const Dialogue = {
         const fresh = pool.filter(r => !seen.includes(r.id));
         const row = (fresh.length ? fresh : pool)[Math.floor(Rng.next() * (fresh.length ? fresh.length : pool.length))];
         p._linesSeen = seen.concat(row.id).slice(-40);
-        return { id: row.id, text: this.fill(row.text, p, extra) };
+        return { id: row.id, text: this.fill(this._deTxt(row), p, extra) };
     },
 
     choiceLabel(scene, choice) {
         const r = (DIALOGUE_DATA.choices || []).find(c => c.scene === scene && c.choice === choice);
-        const say = this.SAY[scene + ':' + choice] || '';
-        return r ? { label: r.label, hint: r.hint, say } : { label: choice, hint: '', say };
+        const de = this._isDe() ? DIALOGUE_DE : null;
+        const dc = de && de.choices && de.choices[scene + '|' + choice];
+        const say = (de && de.say && de.say[scene + ':' + choice]) || this.SAY[scene + ':' + choice] || '';
+        if (r) return { label: (dc && dc.label) || r.label, hint: (dc && dc.hint) || r.hint, say };
+        return { label: (dc && dc.label) || choice, hint: (dc && dc.hint) || '', say };
     },
     // What the AGENT actually SAYS when you pick a choice — full prose, so his side of the chat reads
     // like real speech instead of a stage direction ("Listen" → an actual line). The buttons keep their
@@ -207,7 +234,7 @@ const Dialogue = {
     // Apply a complaint-scene choice. Returns { reply: {id,text}, ok, revealed, closed }.
     // For 'promise', promiseType must be one of Agency.validPromiseTypes(p).
     resolveComplaint(p, choiceKey, promiseType) {
-        const c = p.moraleCase; if (!c) return { ok: false, message: 'No open case.' };
+        const c = p.moraleCase; if (!c) return { ok: false, message: I18n.t('dlg.talk.noCase') };
         const aw = GameState.absWeek();
         const M = (typeof MORALE !== 'undefined') ? MORALE : { TALK_AGENT_BONUS: 6 };
         const replies = (choice, outcome) => DIALOGUE_DATA.complaint.filter(r => r.beat === 'reply'
@@ -217,7 +244,7 @@ const Dialogue = {
         if (choiceKey === 'listen') {
             p.morale.agent = Math.min(100, p.morale.agent + (M.TALK_AGENT_BONUS || 6));
             c.sinceAbsWeek += 2;                       // being heard buys patience
-            GameState.addLog(`Talked things through with ${p.name}.`, 'morale');
+            GameState.addLog(I18n.t('dlg.talk.through', { name: p.name }), 'morale');
         } else if (choiceKey === 'promise') {
             const r = Agency.makePromise(p, promiseType);
             if (!r.ok) return { ok: false, message: r.message };
@@ -228,20 +255,20 @@ const Dialogue = {
             if (res.good) {
                 p.moraleCase = null; closed = true;    // he accepts your view; the matter is dropped
                 p.morale.agent = Math.min(100, p.morale.agent + 4);
-                this.addBond(p, 2, 'he respects a straight answer');
-                GameState.addLog(`Talked ${p.name} out of his complaint.`, 'morale');
+                this.addBond(p, 2, 'straightAnswer');
+                GameState.addLog(I18n.t('dlg.talk.resolved', { name: p.name }), 'morale');
             } else {
                 p.morale[c.dim] = Math.max(0, p.morale[c.dim] - 4);
                 p.morale.agent = Math.max(0, p.morale.agent - 3);
                 c.sinceAbsWeek -= 2;                   // you made it worse
-                GameState.addLog(`The talk with ${p.name} went badly.`, 'morale');
+                GameState.addLog(I18n.t('dlg.talk.badly', { name: p.name }), 'morale');
             }
         } else if (choiceKey === 'deflect') {
             outcome = 'bad';
             c.sinceAbsWeek += 2;                       // bought time
             p.morale.agent = Math.max(0, p.morale.agent - 2);   // at a price
         } else {
-            return { ok: false, message: 'Unknown choice.' };
+            return { ok: false, message: I18n.t('dlg.talk.unknownChoice') };
         }
         p._talkCooldownAbs = aw;
         const reply = this._pick(replies(choiceKey, outcome), p);
@@ -322,7 +349,7 @@ const Dialogue = {
             && r.choice === choice && (r.outcome === outcome || r.outcome === 'any'));
         if (choiceKey === 'bonus') {
             const cost = Agency.giftCost(bonusTier, p);
-            if (GameState.agency.balance < cost) return { ok: false, message: `You can't cover a ${bonusTier} gift right now (€${UI.money(cost)}).` };
+            if (GameState.agency.balance < cost) return { ok: false, message: I18n.t('dlg.gift.cantCover', { tier: I18n.t('dlg.giftSize.' + bonusTier), amt: UI.money(cost) }) };
             p._finalTalk = { matchId: scene.matchId, choice: 'bonus', matched: false, bonusTier };
             return { ok: true, reply: this._pick(replies('bonus', 'any'), p, extra), outcome: 'good', revealed: null };
         }
@@ -346,8 +373,8 @@ const Dialogue = {
                     GameState.addFinance('Gifts & relationships', -cost);
                     // an EARNED gift lands half again as hard, and never rings hollow
                     p.morale.agent = Math.min(100, p.morale.agent + Math.round(Agency.giftBoost(talk.bonusTier) * 1.5));
-                    this.addBond(p, 3, 'you kept your word on the win bonus');
-                    GameState.addLog(`Paid ${p.name} his promised win bonus (−€${UI.money(cost)}).`, 'info');
+                    this.addBond(p, 3, 'winBonus');
+                    GameState.addLog(I18n.t('dlg.gift.paidBonus', { name: p.name, amt: UI.money(cost) }), 'info');
                     notes.push(`You kept your promise: the ${talk.bonusTier} gift is his (−€${UI.money(cost)}).`);
                 } else {
                     notes.push('The win bonus stays in your pocket. Not the way you wanted to save money.');
@@ -369,7 +396,7 @@ const Dialogue = {
             const cost = Agency.giftCost('medium', p);
             GameState.agency.balance -= cost;
             GameState.addFinance('Gifts & relationships', -cost);
-            this.addBond(p, 4, 'the night was on you');
+            this.addBond(p, 4, 'nightOnYou');
             p.morale.agent = Math.min(100, p.morale.agent + 4);
             note = `The night is on you (−€${UI.money(cost)}).`;
         } else if (this.choiceMatches(p, choiceKey)) {
@@ -611,10 +638,17 @@ const Dialogue = {
     // ("I want to {ambition}", "To {ambition}? Done.") — so never "his career" in the first person.
     ambitionText(p) {
         const f = this.ensureFacts(p), a = f.ambition;
-        const fav = f.favClub.clubId ? this._clubName(f.favClub.clubId) : 'the club I grew up on';
+        const de = this._isDe() ? DIALOGUE_DE.amb : null;
+        const fav = f.favClub.clubId ? this._clubName(f.favClub.clubId) : (de ? de.favFallback : 'the club I grew up on');
+        const league = this.LEAGUE_NAMES[a.div] || (de ? de.leagueFallback : 'a bigger league');
+        const club = a.clubId ? this._clubName(a.clubId) : (de ? de.clubFallback : 'a big club');
+        if (de) {
+            const t = de.types[a.type];
+            return t ? t.replace('{league}', league).replace('{club}', club).replace('{fav}', fav).replace('{target}', a.target) : de.dflt;
+        }
         return {
-            league: `play in ${this.LEAGUE_NAMES[a.div] || 'a bigger league'} someday`,
-            dreamclub: `play for ${a.clubId ? this._clubName(a.clubId) : 'a big club'} one day`,
+            league: `play in ${league} someday`,
+            dreamclub: `play for ${club} one day`,
             boyhood: `finish where it began, at ${fav}`,
             title: 'win a league title', cup: 'lift a cup', europe: 'play in Europe',
             goals: `reach ${a.target} career goals`,
@@ -624,18 +658,19 @@ const Dialogue = {
     },
     ambitionProgress(p) {
         const a = this.ensureFacts(p).ambition;
-        if (a.fulfilled) return 'fulfilled' + (a.year ? ' in ' + GameState.seasonLabelFor(a.year) : '');
+        if (a.fulfilled) return I18n.t('dlg.ambProg.fulfilled') + (a.year ? I18n.t('dlg.ambProg.inYear', { year: GameState.seasonLabelFor(a.year) }) : '');
         const club = Clubs.getClubById(effectiveClubId(p));
+        const div = club ? ((COMPETITIONS[club.division] || {}).name || club.division) : null;
         switch (a.type) {
-            case 'league': return club ? `now in ${(COMPETITIONS[club.division] || {}).name || club.division}` : 'no club';
-            case 'dreamclub': return 'not there yet';
-            case 'boyhood': return 'the door there is still open';
-            case 'topflight': return club ? `currently: ${(COMPETITIONS[club.division] || {}).name || club.division}` : 'no club';
-            case 'title': return 'no league title yet';
-            case 'cup': return 'no cup win yet';
-            case 'europe': return 'no European football yet';
-            case 'goals': return `${(typeof careerTotal === 'function') ? careerTotal(p).goals : 0}/${a.target} career goals`;
-            case 'abroad': return 'still playing at home';
+            case 'league': return club ? I18n.t('dlg.ambProg.nowIn', { div }) : I18n.t('dlg.ambProg.noClub');
+            case 'dreamclub': return I18n.t('dlg.ambProg.notYet');
+            case 'boyhood': return I18n.t('dlg.ambProg.doorOpen');
+            case 'topflight': return club ? I18n.t('dlg.ambProg.currently', { div }) : I18n.t('dlg.ambProg.noClub');
+            case 'title': return I18n.t('dlg.ambProg.noTitle');
+            case 'cup': return I18n.t('dlg.ambProg.noCup');
+            case 'europe': return I18n.t('dlg.ambProg.noEurope');
+            case 'goals': return I18n.t('dlg.ambProg.goals', { n: (typeof careerTotal === 'function') ? careerTotal(p).goals : 0, target: a.target });
+            case 'abroad': return I18n.t('dlg.ambProg.atHome');
             default: return '';
         }
     },
@@ -645,11 +680,11 @@ const Dialogue = {
         if (f.favClub.clubId && !f.favClub.discovered) {
             f.favClub.discovered = true;
             const c = Clubs.getClubById(f.favClub.clubId);
-            return ` He also let something slip: his boyhood club is ${c ? c.name : 'a club back home'}.`;
+            return I18n.t('dlg.vol.boyhood', { club: c ? c.name : I18n.t('dlg.clubBackHome') });
         }
         if (!f.ambition.discovered) {
             f.ambition.discovered = true;
-            return ` He also opened up about what drives him: he wants to ${this.ambitionText(p)}.`;
+            return I18n.t('dlg.vol.ambition', { amb: this.ambitionText(p) });
         }
         return '';
     },
@@ -727,8 +762,8 @@ const Dialogue = {
                 const offer = (pri, entry) => { if (!best || pri > best.pri) best = { pri, entry }; };
                 if (p._mile.a === 0 && t.apps > 0) offer(1, { type: 'debut', playerId: p.id });
                 if (p._mile.g === 0 && t.goals > 0) offer(2, { type: 'firstgoal', playerId: p.id });
-                this.APPS_MARKS.forEach((m, i) => { if (p._mile.a < m && t.apps >= m) offer(3 + i, { type: 'milestone', playerId: p.id, milestone: `${m} appearances` }); });
-                this.GOAL_MARKS.forEach((m, i) => { if (p._mile.g < m && t.goals >= m) offer(6 + i, { type: 'milestone', playerId: p.id, milestone: `${m} career goals` }); });
+                this.APPS_MARKS.forEach((m, i) => { if (p._mile.a < m && t.apps >= m) offer(3 + i, { type: 'milestone', playerId: p.id, milestone: this._mileText('apps', m) }); });
+                this.GOAL_MARKS.forEach((m, i) => { if (p._mile.g < m && t.goals >= m) offer(6 + i, { type: 'milestone', playerId: p.id, milestone: this._mileText('goals', m) }); });
                 if (best) this.queueMoment(best.entry);
                 p._mile = { a: t.apps, g: t.goals };
             }
@@ -760,7 +795,7 @@ const Dialogue = {
         const f = p.facts; if (!f || !f.ambition || f.ambition.type !== 'boyhood' || f.ambition.fulfilled) return;
         if (f.favClub.clubId && effectiveClubId(p) === f.favClub.clubId) {
             f.ambition.fulfilled = true; f.ambition.year = GameState.seasonStartYear;
-            this.addBond(p, 4, 'he finished where his heart always was');
+            this.addBond(p, 4, 'boyhoodFinish');
         }
     },
     // called by Agency._finalizeTransfer: a client only calls after a move that MEANS something — a
@@ -793,12 +828,12 @@ const Dialogue = {
         if (entry.type === 'ambition') extra.ambition = this.ambitionText(p);
         if (entry.type === 'referral') extra.mate = (GameState.getPlayer(entry.mateId) || {}).name || 'a team-mate';
         // the big ones pay out on arrival, so the numbers are right even if the scene is skipped
-        if (entry.type === 'dreammove' && !entry._paid) { this.addBond(p, 8, 'you made his boyhood dream real'); entry._paid = true; }
-        if (entry.type === 'ambition' && !entry._paid) { this.addBond(p, 6, 'his ambition, delivered'); Agency.bumpRep(1); entry._paid = true; }
+        if (entry.type === 'dreammove' && !entry._paid) { this.addBond(p, 8, 'dreamMove'); entry._paid = true; }
+        if (entry.type === 'ambition' && !entry._paid) { this.addBond(p, 6, 'ambitionDelivered'); Agency.bumpRep(1); entry._paid = true; }
         if (entry.type === 'thanks' && !entry._paid) {
             entry._paid = true;
             if (entry.gift === 'money') {
-                extra.thing = `an envelope. Inside: €${UI.money(entry.value)} toward the agency`;
+                extra.thing = (this._isDe() && DIALOGUE_DE.envelope) ? DIALOGUE_DE.envelope.replace('{amt}', UI.money(entry.value)) : `an envelope. Inside: €${UI.money(entry.value)} toward the agency`;
                 GameState.agency.balance += entry.value;
                 GameState.addFinance('Gifts from clients', entry.value);
                 notes.push(`He covered €${UI.money(entry.value)} of the agency's costs.`);
@@ -853,7 +888,7 @@ const Dialogue = {
             // visiting him in person costs travel money, scaled by how far away he plays
             const cost = this.visitCost(p);
             GameState.agency.balance -= cost; GameState.addFinance('Gifts & relationships', -cost);
-            this.addBond(p, 3, 'you showed up when it mattered'); p.morale.agent = Math.min(100, p.morale.agent + 2);
+            this.addBond(p, 3, 'showedUp'); p.morale.agent = Math.min(100, p.morale.agent + 2);
             note = `You made the trip to see him (−€${UI.money(cost)}).`;
         }
         else if (key === 'flowers') {
@@ -870,10 +905,10 @@ const Dialogue = {
             if (matched) { this.addBond(p, 1); p.morale.agent = Math.min(100, p.morale.agent + 1); }
         } else if (key === 'attend') {
             const cost = 2000;
-            if (GameState.agency.balance < cost) return { ok: false, message: `You can't cover the trip right now (€${UI.money(cost)}).` };
+            if (GameState.agency.balance < cost) return { ok: false, message: I18n.t('dlg.trip.cantCover', { amt: UI.money(cost) }) };
             GameState.agency.balance -= cost;
             GameState.addFinance('Gifts & relationships', -cost);
-            this.addBond(p, 4, 'you showed up for his big day');
+            this.addBond(p, 4, 'bigDay');
             p.morale.agent = Math.min(100, p.morale.agent + 3);
             note = `A weekend well spent (−€${UI.money(cost)}).`;
         } else if (key === 'gift') {
@@ -919,12 +954,12 @@ const Dialogue = {
         }
         if (this.bondOf(p) < 50 || p._tipSeason === year) return false;
         p._tipSeason = year; p._tipUntil = aw + 2;
-        const what = { time: "the gaffer's freezing me out", club: "my head isn't right at this club", wage: "my money situation is eating at me", agent: "I need more from you than I'm getting" }[dim] || 'something';
+        const what = { time: I18n.t('dlg.tip.time'), club: I18n.t('dlg.tip.club'), wage: I18n.t('dlg.tip.wage'), agent: I18n.t('dlg.tip.agent') }[dim] || I18n.t('dlg.tip.something');
         GameState.addMail({
-            kind: 'news', cat: 'morale', subject: `${p.name} pulled you aside`,
-            body: `${p.name}, quietly, after training: "Listen. ${what.charAt(0).toUpperCase() + what.slice(1)}. I'm not going public with it, not yet. But sort it, yeah?" You have a head start before this becomes a formal complaint.`, ttl: 4
+            kind: 'news', cat: 'morale', subject: I18n.t('dlg.tip.subj', { name: p.name }),
+            body: I18n.t('dlg.tip.body', { name: p.name, what: what.charAt(0).toUpperCase() + what.slice(1) }), ttl: 4
         });
-        GameState.addLog(`${p.name} tipped you off before making it official.`, 'morale');
+        GameState.addLog(I18n.t('dlg.tip.log', { name: p.name }), 'morale');
         return true;
     },
     // Season-rollover social calendar: wedding/christening invitations (Confidant+) and, at Family,
@@ -937,7 +972,7 @@ const Dialogue = {
             // a financial-advisor contract that has just run out: remind the agent to renew it
             if (p._finAdvisorUntil != null && year >= p._finAdvisorUntil) {
                 delete p._finAdvisorUntil;
-                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} — advisor contract expired`, body: `The financial advisor you arranged for ${p.name} has reached the end of his contract. ${p.name} is one to keep an eye on with money — renew it from his page if you want him covered.`, ttl: 6 });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('dlg.adv.expiredSubj', { name: p.name }), body: I18n.t('dlg.adv.expiredBody', { name: p.name }), ttl: 6 });
             }
             if (bond >= 50 && f.family.discovered) {
                 if (f.family.status === 'partner' && !p._evWedding && Rng.next() < 0.25) {
@@ -954,7 +989,7 @@ const Dialogue = {
                     p._referSeason = year;
                     mate.knownToAgent = true; mate.discoveredVia = 'referral'; mate._warmIntro = p.id;
                     this.queueMoment({ type: 'referral', playerId: p.id, mateId: mate.id });
-                    GameState.addLog(`${p.name} recommended ${mate.name} to you.`, 'sign');
+                    GameState.addLog(I18n.t('dlg.referLog', { name: p.name, mate: mate.name }), 'sign');
                 }
             }
             // family life moves on over the years: single → partner → kids. A change re-opens the topic
@@ -1005,10 +1040,10 @@ const Dialogue = {
         if (knowsLang) weeks = Math.max(1, Math.round(weeks * 0.25));      // already speaks it: 75% shorter, not skipped
         p.settling = { weeksLeft: weeks, morale: !knowsLang, lang: this.LANGS[club.country][0], services: {} };
         GameState.addMail({
-            kind: 'news', cat: 'general', subject: `${p.name} — settling in abroad`,
+            kind: 'news', cat: 'general', subject: I18n.t('dlg.settle.subj', { name: p.name }),
             body: knowsLang
-                ? `${p.name} has moved abroad, but he already speaks the language — expect only a brief adjustment (around ${weeks} weeks) as he settles at the new club. His page has options to smooth it further.`
-                : `${p.name} has moved to a country whose language he doesn't speak. Expect his form and mood to dip for around ${weeks} weeks while he finds his feet. Support (language course, house hunting, flying the family over) shortens it — see his page.`, ttl: 5
+                ? I18n.t('dlg.settle.bodyKnows', { name: p.name, weeks })
+                : I18n.t('dlg.settle.bodyNo', { name: p.name, weeks }), ttl: 5
         });
     },
     _settleTick(p) {
@@ -1018,7 +1053,7 @@ const Dialogue = {
         if (s.weeksLeft <= 0) {
             p._langs = (p._langs || []).concat(s.lang);   // he leaves the period with the language
             delete p.settling;
-            GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} has settled in`, body: `${p.name} is over the worst of the move: the language is coming along and life abroad finally feels like home. His form should recover now.`, ttl: 3 });
+            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('dlg.settle.doneSubj', { name: p.name }), body: I18n.t('dlg.settle.doneBody', { name: p.name }), ttl: 3 });
         }
     },
     // Only certain temperaments are loose with money: the flashy showman and the impulsive hothead.
@@ -1039,15 +1074,15 @@ const Dialogue = {
         if (Rng.next() > this.MONEY_TROUBLE_WEEKLY) return;
         if (this.advisorEngaged(p)) {
             if (Rng.next() < 0.5) {
-                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} — advisor earns his keep`, body: `${p.name}'s financial advisor steered him away from a "guaranteed" investment that turned out to be anything but. Money and mood intact. ${p.name} knows who arranged that advisor.`, ttl: 3 });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('dlg.adv.earnsSubj', { name: p.name }), body: I18n.t('dlg.adv.earnsBody', { name: p.name }), ttl: 3 });
                 this.addBond(p, 1);
             }
             return;
         }
         p.morale.wage = Math.max(0, p.morale.wage - 12);
         p.morale.agent = Math.max(0, p.morale.agent - 4);
-        const flavour = this.hasTrait(p, 'showman') ? 'chasing the high life' : 'on an impulsive punt';
-        GameState.addMail({ kind: 'news', cat: 'morale', subject: `${p.name} — bad investment`, body: `${p.name} sank money into a scheme a team-mate recommended, ${flavour}. It has collapsed, and it stings: his mood around money has taken a real hit. A financial advisor would have caught it — he's the type who needs one.`, ttl: 5 });
+        const flavour = this.hasTrait(p, 'showman') ? I18n.t('dlg.money.flavourShowman') : I18n.t('dlg.money.flavourImpulse');
+        GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('dlg.money.badSubj', { name: p.name }), body: I18n.t('dlg.money.badBody', { name: p.name, flavour }), ttl: 5 });
         this._maybeReveal(p, this._moneyRiskPole(p));   // the incident lays his reckless streak bare
     },
     // the concierge menu (client page): each purchase is the agent doing his real job
@@ -1068,7 +1103,7 @@ const Dialogue = {
     hireAdvisor(p, years) {
         years = Math.max(1, Math.min(5, years || 1));
         const cost = this.advisorCost(years);
-        if (GameState.agency.balance < cost) return { ok: false, message: `Not enough money (€${UI.money(cost)}).` };
+        if (GameState.agency.balance < cost) return { ok: false, message: I18n.t('dlg.notEnough', { amt: UI.money(cost) }) };
         // extends from the current end if he's already covered, otherwise from this season
         const from = this.advisorEngaged(p) ? p._finAdvisorUntil : GameState.seasonStartYear;
         p._finAdvisorUntil = from + years;
@@ -1076,34 +1111,34 @@ const Dialogue = {
         GameState.addFinance('Client support', -cost);
         this.addBond(p, 1);
         const through = GameState.seasonLabelFor(p._finAdvisorUntil - 1);
-        GameState.addLog(`Financial advisor engaged for ${p.name}, ${years} season(s) through ${through} (−€${UI.money(cost)}).`, 'info');
-        return { ok: true, message: `Financial advisor engaged for ${p.name} through ${through} (−€${UI.money(cost)}).` };
+        GameState.addLog(I18n.t('dlg.adv.engagedLog', { name: p.name, years, through, amt: UI.money(cost) }), 'info');
+        return { ok: true, message: I18n.t('dlg.adv.engagedMsg', { name: p.name, through, amt: UI.money(cost) }) };
     },
     buyService(p, kind, years) {
         if (kind === 'advisor') return this.hireAdvisor(p, years);
-        const svc = this.SERVICES[kind]; if (!svc) return { ok: false, message: 'Unknown service.' };
-        if (GameState.agency.balance < svc.cost) return { ok: false, message: `Not enough money (€${UI.money(svc.cost)}).` };
+        const svc = this.SERVICES[kind]; if (!svc) return { ok: false, message: I18n.t('dlg.svc.unknown') };
+        if (GameState.agency.balance < svc.cost) return { ok: false, message: I18n.t('dlg.notEnough', { amt: UI.money(svc.cost) }) };
         const s = p.settling;
         if (kind === 'language') {
-            if (!s || s.services.language) return { ok: false, message: 'No use for that right now.' };
+            if (!s || s.services.language) return { ok: false, message: I18n.t('dlg.svc.noUse') };
             s.services.language = true; s.weeksLeft = Math.max(1, Math.ceil(s.weeksLeft / 2));
         } else if (kind === 'house') {
-            if (!s || !s.morale) return { ok: false, message: 'No use for that right now.' };
+            if (!s || !s.morale) return { ok: false, message: I18n.t('dlg.svc.noUse') };
             s.morale = false; s.services.house = true;
         } else if (kind === 'family') {
             const f = this.ensureFacts(p);
-            if (!s || s.services.family) return { ok: false, message: 'No use for that right now.' };
-            if (!f.family.discovered || f.family.status === 'single') return { ok: false, message: 'As far as you know there is no family to fly over. Ask him about life sometime.' };
+            if (!s || s.services.family) return { ok: false, message: I18n.t('dlg.svc.noUse') };
+            if (!f.family.discovered || f.family.status === 'single') return { ok: false, message: I18n.t('dlg.svc.noFamily') };
             s.services.family = true; s.weeksLeft = Math.max(1, Math.ceil(s.weeksLeft / 3));
         } else if (kind === 'media') {
-            if (p._mediaTrained) return { ok: false, message: 'He has already done his media training.' };
+            if (p._mediaTrained) return { ok: false, message: I18n.t('dlg.svc.mediaDone') };
             p._mediaTrained = true;
         }
         GameState.agency.balance -= svc.cost;
         GameState.addFinance('Client support', -svc.cost);
         this.addBond(p, 1);
-        GameState.addLog(`${svc.label} arranged for ${p.name} (−€${UI.money(svc.cost)}).`, 'info');
-        return { ok: true, message: `${svc.label} arranged for ${p.name} (−€${UI.money(svc.cost)}).` };
+        GameState.addLog(I18n.t('dlg.svc.arranged', { svc: this.serviceLabel(kind), name: p.name, amt: UI.money(svc.cost) }), 'info');
+        return { ok: true, message: I18n.t('dlg.svc.arranged', { svc: this.serviceLabel(kind), name: p.name, amt: UI.money(svc.cost) }) };
     }
 };
 

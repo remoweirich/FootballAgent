@@ -360,8 +360,8 @@ const ClientDetail = {
         const tierCol = bond >= 75 ? 'var(--gold)' : bond >= 50 ? 'var(--accent)' : bond >= 25 ? 'var(--info-text)' : 'var(--text-muted)';
         return `<div class="section-label">${I18n.t('cd.yourBond')}</div>
             <div class="fcard" style="margin-bottom:var(--space-4)">
-                <div class="frow"><span class="frow__k"><i class="ti ti-heart-handshake" style="color:${tierCol}"></i>${tier}</span>
-                    <span class="frow__v muted">${next ? I18n.t('cd.toNextTier', { n: next[0] - bond, tier: next[1] }) : I18n.t('cd.closeAsItGets')}</span></div>
+                <div class="frow"><span class="frow__k"><i class="ti ti-heart-handshake" style="color:${tierCol}"></i>${Dialogue.tierLabel(tier)}</span>
+                    <span class="frow__v muted">${next ? I18n.t('cd.toNextTier', { n: next[0] - bond, tier: Dialogue.tierLabel(next[1]) }) : I18n.t('cd.closeAsItGets')}</span></div>
                 <div style="height:6px;border-radius:3px;background:var(--line-strong);margin:2px 0 9px;overflow:hidden">
                     <div style="height:100%;width:${bond}%;background:${tierCol};border-radius:3px"></div>
                 </div>
@@ -386,9 +386,9 @@ const ClientDetail = {
             ? `${UI.esc(Dialogue.ambitionText(p))} <span class="${amb.fulfilled ? '' : 'muted'}" style="${amb.fulfilled ? 'color:var(--gold)' : ''}">· ${UI.esc(Dialogue.ambitionProgress(p))}</span>`
             : ask]);
         rows.push(['ti-home-heart', I18n.t('cd.life'), f.family.discovered
-            ? (f.family.status === 'single' ? I18n.t('cd.family.single') : f.family.status === 'partner' ? I18n.t('cd.family.partner') : I18n.t('cd.family.kids')) + (f.hobby.discovered ? ` · ${I18n.t('cd.into', { hobby: UI.esc(f.hobby.name) })}` : '')
+            ? (f.family.status === 'single' ? I18n.t('cd.family.single') : f.family.status === 'partner' ? I18n.t('cd.family.partner') : I18n.t('cd.family.kids')) + (f.hobby.discovered ? ` · ${I18n.t('cd.into', { hobby: UI.esc(Dialogue.locVocab(f.hobby.name)) })}` : '')
             : ask]);
-        (f.keepsakes || []).forEach(k => rows.push(['ti-gift', I18n.t('cd.fromHim'), `${UI.esc(k.text)} <span class="muted">(${GameState.seasonLabelFor(k.year)})</span>`]));
+        (f.keepsakes || []).forEach(k => rows.push(['ti-gift', I18n.t('cd.fromHim'), `${UI.esc(Dialogue.locVocab(k.text))} <span class="muted">(${GameState.seasonLabelFor(k.year)})</span>`]));
         return rows.map(([ico, k, v]) => `<div class="frow"><span class="frow__k"><i class="ti ${ico}"></i>${k}</span><span class="frow__v">${v}</span></div>`).join('');
     },
     // Concierge: the agent as life-manager. Settling-in support appears only while it can help;
@@ -399,7 +399,7 @@ const ClientDetail = {
         const S = Dialogue.SERVICES, s = p.settling;
         const btn = (kind, state) => {
             const svc = S[kind];
-            return `<button class="btn btn--ghost btn--sm" ${state ? 'disabled' : ''} onclick="ClientDetail.support('${p.id}','${kind}')"><i class="ti ti-lifebuoy"></i>${svc.label} · ${state || UI.euro(svc.cost)}</button>`;
+            return `<button class="btn btn--ghost btn--sm" ${state ? 'disabled' : ''} onclick="ClientDetail.support('${p.id}','${kind}')"><i class="ti ti-lifebuoy"></i>${Dialogue.serviceLabel(kind)} · ${state || UI.euro(svc.cost)}</button>`;
         };
         let settle = '';
         if (s) {
