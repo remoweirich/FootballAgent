@@ -48,6 +48,14 @@ I18n.register('de', {
     'nego.tr.close': '„Wir sind fast am Ziel, {bits}.{hint}“',
     'nego.tr.counter': '„{bits}.{hint}“',
     'nego.tr.walkout': '„Wir haben lange genug hin und her verhandelt. Wir konzentrieren uns auf andere Optionen; der Deal für {name} ist vom Tisch.“',
+    // --- Verhandlung: Profil-x-Geduld-Tonlagen (agency.js negLine); leere Zellen greifen auf oben zurück ---
+    'nego.line.transfer.Wildcat.med': '„Sie pokern hoch, das spüren wir beide. {bits}.{hint}“',
+    'nego.line.transfer.Wildcat.high': '„Schluss mit den Spielchen. Unser letztes Wort: €{wage}/Wo., {role}, {term} Jahre, €{bonus}. Nehmen oder lassen.“',
+    'nego.line.transfer.Parasite.med': '„Es geht um SEIN Gehalt, nicht um Ihre Prämie. {bits}.{hint}“',
+    'nego.line.transfer.Parasite.high': '„Wir finanzieren nicht Ihre Provision. Letztes Paket: €{wage}/Wo., {role}, {term} Jahre, €{bonus}.“',
+    'nego.line.transfer.Champion.med': '„Sie kämpfen für den Spieler, das rechnen wir Ihnen an. {bits}.{hint}“',
+    'nego.line.transfer.Optimizer.med': '„Eine vernünftige Forderung. Konkret: {bits}.{hint}“',
+    'nego.line.renewal.NEUTRAL.high': '„Das zieht sich. €{amt}/Wo., und dabei bleibt es.“',
     // --- Agentur: gemeinsame Kurz-Hinweise / Fragmente ---
     'ag.notClient': 'Nicht Ihr Klient.',
     'ag.unknownClub': 'Unbekannter Klub.',

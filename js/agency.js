@@ -107,6 +107,51 @@ const Agency = {
         return neg.threat >= NEGO.THREAT_MAX || neg.round > NEGO.ROUND_CAP;
     },
 
+    // ---------- Pass 2: how the agent is playing this deal ----------
+    // Four archetypes drawn from the fee/wage/concession shape of the offer. They never gate money
+    // or trust directly (the keystone budget already does that) — they only modulate how fast the
+    // club loses patience (profileMod), and the goodwill delta when the deal concludes.
+    profileMod(profile) {
+        return profile === 'Wildcat' ? 3.0 : profile === 'Champion' ? 0.5 : profile === 'Optimizer' ? 0.6 : 1.0;
+    },
+    // how far the agent has walked his wage ask down from the opening round (0 = stubborn, 1 = met them)
+    _concession(neg) {
+        const h = neg && neg.history;
+        if (!h || h.length < 2) return 0;
+        const first = h[0].w, last = h[h.length - 1].w;
+        if (first <= 0) return 0;
+        return Math.max(0, Math.min(1, ((first - last) / first) / 0.25));   // giving back ~25% reads as "met them"
+    },
+    // classify the CURRENT package -> { profile, rGreed, rWage, vConcess }. Only transfers carry a fee,
+    // so this is a transfer-flow tool; renewals stay NEUTRAL.
+    classifyOffer(p, club, pkg, neg) {
+        const term = Math.max(1, Math.min(6, pkg.term || 3));
+        const W = Math.max(1, pkg.wage || 0), F = pkg.bonus || 0;
+        const rGreed = (F / term) / (W * 52);                              // amortized fee vs annual wage
+        const rWage = W / Math.max(1, (neg && neg.wInitial) || W);         // how far above the club's opening wage
+        const vConcess = this._concession(neg);
+        const termOk = pkg.term >= 2 && pkg.term <= this.maxContractTerm(p, club);
+        let profile = 'NEUTRAL';
+        if (rGreed > 0.25 && rWage < 1.15) profile = 'Parasite';           // fat fee, take-home barely moves
+        else if (rGreed < 0.08 && rWage > 1.25) profile = 'Champion';      // waives fee to push the player's wage
+        else if (rWage > 1.35 && rGreed > 0.20 && vConcess < 0.1) profile = 'Wildcat';   // greedy AND stubborn
+        else if (termOk && vConcess >= 0.3) profile = 'Optimizer';         // sensible length, willing to meet them
+        return { profile, rGreed, rWage, vConcess };
+    },
+    // goodwill change when a deal is AGREED (walkout is handled inline at -20 / -15 after an ultimatum)
+    concludeRelDelta(profile, rounds) {
+        let d = profile === 'Champion' ? 6 : profile === 'Wildcat' ? -6 : profile === 'Parasite' ? 0 : 2;
+        if (rounds <= 2) d += 4;   // a fast, clean deal is its own goodwill
+        return d;
+    },
+    // Pass 3: data-driven club line for (profile × threat band × context), keyed nego.line.<ctx>.<profile>.<band>.
+    // Returns '' when no line is authored for that cell, so callers fall back to the generic counter/final string.
+    negLine(profile, band, context, vars) {
+        const k = 'nego.line.' + context + '.' + profile + '.' + band;
+        const v = I18n.t(k, vars || {});
+        return v === k ? '' : v;
+    },
+
     // ---------- request cooldowns: stop re-asking the same thing repeatedly to force a lucky roll ----------
     // one attempt per player+action per week; the answer stands until at least the next week
     onCooldown(p, action) {
@@ -713,11 +758,14 @@ const Agency = {
         const counter = Math.max(p.wage, Math.round(cap / 10) * 10, neg.lastCounter || 0);
         neg.lastCounter = counter;
         if (walk) {
-            this.changeRelationship(club.id, NEGO.WALKOUT_REL);
+            this.changeRelationship(club.id, neg._ultimatum ? -15 : NEGO.WALKOUT_REL);
             return { status: 'walkout', neg, message: I18n.t('nego.wage.walkout', { name: p.name }) };
         }
+        // Pass 3: renewals stay NEUTRAL; a data line for this band replaces the generic counter where authored
+        const band = this.threatBand(neg.threat);
+        const flavor = this.negLine('NEUTRAL', band, 'renewal', { amt: UI.money(counter) });
         if (requested <= cap * 1.12) return { status: 'counter', counter, neg, message: I18n.t('nego.wage.close', { amt: UI.money(counter) }) };
-        return { status: 'counter', counter, neg, message: requested > cap * 1.5 ? I18n.t('nego.wage.counterHigh', { amt: UI.money(counter) }) : I18n.t('nego.wage.counter', { amt: UI.money(counter) }) };
+        return { status: 'counter', counter, neg, message: flavor || (requested > cap * 1.5 ? I18n.t('nego.wage.counterHigh', { amt: UI.money(counter) }) : I18n.t('nego.wage.counter', { amt: UI.money(counter) })) };
     },
     // negotiate loan game time: ask above the club's comfort level and they may dig in — or, with a good
     // relationship and persistence, eventually relent. Sometimes they stay stubborn.
@@ -800,10 +848,19 @@ const Agency = {
     evaluateTransfer(p, club, pkg, neg) {
         const term = Math.max(1, Math.min(6, pkg.term || 3));
         const termFactor = 1 + (3 - term) * 0.05;                 // a shorter deal -> they'll stretch the wage
-        const maxWage = Math.round(this.maxClubWage(p, club) * termFactor / 10) * 10;
+        const baseMaxWage = Math.round(this.maxClubWage(p, club) * termFactor / 10) * 10;
         const roleCeil = this.clubRoleCeiling(p, club);
         const roleOk = ROLE_ORDER.indexOf(pkg.role) <= ROLE_ORDER.indexOf(roleCeil);
-        const feeCeil = this.clubBonusWillingness(p, club, Math.min(pkg.wage, maxWage), pkg.fee);
+        const feeCeil = this.clubBonusWillingness(p, club, Math.min(pkg.wage, baseMaxWage), pkg.fee);
+
+        neg = this.initNeg(neg, club, baseMaxWage);
+        neg.history.push({ w: pkg.wage, f: pkg.bonus || 0 });     // recorded before we classify this round
+        const cls = this.classifyOffer(p, club, pkg, neg);
+        neg.profile = cls.profile;
+        neg.profileMod = this.profileMod(cls.profile);
+
+        // Champion generosity (Part C): waive the fee to push the player's wage and the club flexes the pool
+        const maxWage = cls.profile === 'Champion' ? Math.round(baseMaxWage * 1.08 / 10) * 10 : baseMaxWage;
         // KEYSTONE (A.1): the agent fee is amortized over the deal and eats into the wage room —
         // one implicit budget, so asking a fat fee visibly lowers the wage the club will accept.
         const feeAnnual = (pkg.bonus || 0) / term;
@@ -812,17 +869,15 @@ const Agency = {
         const wageOk = pkg.wage <= effMaxWage, bonusOk = (pkg.bonus || 0) <= feeCeil;
         const counter = { wage: Math.min(pkg.wage, effMaxWage), role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, feeCeil) };
 
-        neg = this.initNeg(neg, club, maxWage);
-        neg.history.push({ w: pkg.wage, f: pkg.bonus || 0 });     // recorded for the Pass-2 classifier
-
         if (wageOk && roleOk && bonusOk) {
             const lines = [I18n.t('nego.tr.accept1', { name: p.name }), I18n.t('nego.tr.accept2', { name: p.name }), I18n.t('nego.tr.accept3')];
             return { status: 'accept', counter, neg, message: lines[Math.floor(Rng.next() * lines.length)] };
         }
 
-        // the club had to push back — it loses patience; at the ceiling it walks
+        // the club had to push back — it loses patience; at the ceiling it walks. Walking away from an
+        // ultimatum the club had already spelled out stings a little less than a cold walkout.
         if (this.bumpThreat(neg, club)) {
-            this.changeRelationship(club.id, NEGO.WALKOUT_REL);
+            this.changeRelationship(club.id, neg._ultimatum ? -15 : NEGO.WALKOUT_REL);
             return { status: 'walkout', counter, neg, message: I18n.t('nego.tr.walkout', { name: p.name }) };
         }
 
@@ -831,12 +886,17 @@ const Agency = {
         if (!roleOk) bits.push(I18n.t('nego.tr.bitRole', { ceil: roleLabel(roleCeil, p.age), role: roleLabel(pkg.role, p.age) }));
         if (!bonusOk) bits.push(I18n.t('nego.tr.bitBonus', { bonus: UI.money(pkg.bonus || 0), max: UI.money(feeCeil) }));
         const hint = (!wageOk && term > 1) ? I18n.t('nego.tr.hint') : '';
+        const vars = { bits: bits.join('; '), hint, wage: UI.money(counter.wage), role: roleLabel(counter.role, p.age), term, bonus: UI.money(counter.bonus) };
         // out of patience -> a take-it-or-leave-it final package instead of another soft counter
-        if (this.threatBand(neg.threat) === 'high')
-            return { status: 'final', counter, neg, message: I18n.t('nego.tr.final', { wage: UI.money(counter.wage), role: roleLabel(counter.role, p.age), term, bonus: UI.money(counter.bonus) }) };
+        if (this.threatBand(neg.threat) === 'high') {
+            neg._ultimatum = true;
+            return { status: 'final', counter, neg, message: this.negLine(cls.profile, 'high', 'transfer', vars) || I18n.t('nego.tr.final', vars) };
+        }
+        // Pass 3: the club's counter takes on the profile's tone where a line is authored, else stays generic
+        const flavor = this.negLine(cls.profile, 'med', 'transfer', vars);
         const wageClose = pkg.wage <= effMaxWage * 1.08, bonusClose = (pkg.bonus || 0) <= feeCeil * 1.12;
-        if (roleOk && wageClose && bonusClose) return { status: 'close', counter, neg, message: I18n.t('nego.tr.close', { bits: bits.join('; '), hint }) };
-        return { status: 'counter', counter, neg, message: I18n.t('nego.tr.counter', { bits: bits.join('; '), hint }) };
+        if (roleOk && wageClose && bonusClose) return { status: 'close', counter, neg, message: I18n.t('nego.tr.close', vars) };
+        return { status: 'counter', counter, neg, message: flavor || I18n.t('nego.tr.counter', vars) };
     },
 
     // Phase 2 (morale rework): a transfer/renewal/loan/sponsor deal concluded by the agent is
@@ -915,6 +975,14 @@ const Agency = {
         // the signing bonus is banked at signature, not when he reports for duty
         GameState.agency.balance += reqBonus; GameState.addFinance('Transfer & loan bonuses', reqBonus);
 
+        // Pass 2: goodwill at conclusion reflects HOW the deal was struck (profile + speed). Forced
+        // moves went over the agent's head, so they carry no negotiated goodwill (finalize gives them
+        // the old flat +4 instead).
+        if (!opts.forced) {
+            const neg = o.neg;
+            this.changeRelationship(toClub.id, this.concludeRelDelta(neg ? neg.profile : 'NEUTRAL', neg ? neg.round : 1));
+        }
+
         GameState.removeMail(mail.id);
         // agreeing a move kills every other open approach for him: rival bids AND any contract-renewal
         // proposal from the club he's leaving (that deal is moot the moment he's agreed to go)
@@ -960,7 +1028,9 @@ const Agency = {
         recordWagePoint(p);
 
         if (fromClub) this.changeRelationship(fromClub.id, pkg.initiatedByAgent ? +1 : +3);
-        this.changeRelationship(toClub.id, +4);
+        // agent-negotiated deals already booked their conclusion goodwill in acceptTransfer (profile-based);
+        // forced moves never passed through it, so they keep the old flat handshake bump here
+        if (pkg.forced) this.changeRelationship(toClub.id, +4);
         Agency.bumpRep(movingUp ? 3 + Rng.next() * 3 : 1);
         // his call after signing — and if this is the club he supported as a boy, THE call (js/dialogue.js)
         if (typeof Dialogue !== 'undefined') Dialogue.onTransferCompleted(p, toClub.id);
@@ -1023,7 +1093,9 @@ const Agency = {
         p.wage = agreedWage; p.contractUntilSeason = GameState.seasonStartYear + term; p.freeAgent = false; p._renewSeason = GameState.seasonStartYear;
         if (role && ROLE_ORDER.includes(role)) p.squadRole = role;
         recordWagePoint(p);
-        this.changeRelationship(club.id, +2);
+        // renewals stay NEUTRAL (no fee to weigh), so goodwill is the neutral +2, plus the fast-deal
+        // bonus when it was wrapped up inside the first couple of rounds (see concludeRelDelta)
+        this.changeRelationship(club.id, this.concludeRelDelta('NEUTRAL', o.neg ? o.neg.round : 1));
         p.morale.wage = Math.min(100, p.morale.wage + 10); p.morale.club = Math.min(100, p.morale.club + MORALE.CLUB_RENEW_BOOST);
         this._checkPromiseKept(p, ['newContract', 'renegotiateRep']);
         this._creditAgentAction(p, MORALE.AGENT_DEAL_BONUS);

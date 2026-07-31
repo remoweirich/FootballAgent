@@ -52,6 +52,14 @@ I18n.register('en', {
     'nego.tr.close': '“We\'re almost there — {bits}.{hint}”',
     'nego.tr.counter': '“{bits}.{hint}”',
     'nego.tr.walkout': '“We\'ve gone back and forth long enough. We\'re moving on to other options; the deal for {name} is off.”',
+    // --- negotiation: profile x threat-band flavour lines (agency.js negLine); '' cells fall back above ---
+    'nego.line.transfer.Wildcat.med': '“You\'re driving a hard bargain and we both feel it — {bits}.{hint}”',
+    'nego.line.transfer.Wildcat.high': '“We\'re done playing games. Final word: €{wage}/wk, {role}, {term}yr, €{bonus}. Take it or leave it.”',
+    'nego.line.transfer.Parasite.med': '“Let\'s keep this about his wage, not your fee. {bits}.{hint}”',
+    'nego.line.transfer.Parasite.high': '“We won\'t bankroll your commission. Final package: €{wage}/wk, {role}, {term}yr, €{bonus}.”',
+    'nego.line.transfer.Champion.med': '“You\'re fighting for the player and we respect that. {bits}.{hint}”',
+    'nego.line.transfer.Optimizer.med': '“A sensible ask. To be precise: {bits}.{hint}”',
+    'nego.line.renewal.NEUTRAL.high': '“This has dragged on. €{amt}/wk, and that\'s where we hold.”',
     // --- agency: shared short guards / fragments ---
     'ag.notClient': 'Not your client.',
     'ag.unknownClub': 'Unknown club.',
