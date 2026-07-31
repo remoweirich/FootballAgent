@@ -81,7 +81,7 @@ const ScoutingScreen = {
                     <label class="field-label">${I18n.t('scouting.targetPos')}</label>
                     <select class="select-input" onchange="ScoutingScreen.setPos('${s.id}',this.value)"><option value="" ${!s.targetPos ? 'selected' : ''}>${I18n.t('scouting.anyPosition')}</option>${(typeof POS_LIST !== 'undefined' ? POS_LIST : []).map(pos => `<option value="${pos}" ${s.targetPos === pos ? 'selected' : ''}>${pos}</option>`).join('')}</select>
                     <label class="field-label">${I18n.t('scouting.targetLevel')} <span class="muted" style="font-weight:400">${I18n.t('scouting.targetLevelHint')}</span></label>
-                    <select class="select-input" onchange="ScoutingScreen.setTier('${s.id}',this.value)">${Object.entries(Scouts.TIERS).map(([k, t]) => `<option value="${k}" ${(s.targetTier || 'any') === k ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
+                    <select class="select-input" onchange="ScoutingScreen.setTier('${s.id}',this.value)">${Object.entries(Scouts.TIERS).map(([k, t]) => `<option value="${k}" ${(s.targetTier || 'any') === k ? 'selected' : ''}>${Scouts.tierLabel(k)}</option>`).join('')}</select>
                     <div class="flex-row" style="margin-top:var(--space-3)">
                         ${(s.region || s.league) ? `<button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.setIdle('${s.id}')"><i class="ti ti-x"></i>${I18n.t('scouting.setIdle')}</button>` : ''}
                         <button class="btn btn--danger btn--sm" style="width:auto" onclick="ScoutingScreen.release('${s.id}')">${I18n.t('agency.release')}</button>

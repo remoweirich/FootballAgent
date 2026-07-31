@@ -1,6 +1,6 @@
 const vm=require('vm'),fs=require('fs'),path=require('path');
 const base=require('path').join(__dirname, '..', 'js') + '/';
-const files=['storage.js','rng.js','names-data.js','clubs.js','players.js','game-state.js','upgrades.js','scouting.js','league.js','scouts.js','agency.js','simulation.js'];
+const files=['i18n.js','i18n-en.js','i18n-de.js','storage.js','rng.js','names-data.js','clubs.js','players.js','game-state.js','upgrades.js','scouting.js','league.js','scouts.js','agency.js','simulation.js'];
 function idb(){return{open(){const r={result:null,onsuccess:null};setTimeout(()=>{r.result={objectStoreNames:{contains:()=>true},createObjectStore(){return{}},transaction(){return{objectStore:()=>({get(){return{}},put(){return{}},delete(){return{}}})}}};if(r.onsuccess)r.onsuccess()},0);return r}}}
 const sb={console:{log(){},warn(){},error(){}},setTimeout,clearTimeout,Math,Date,JSON,indexedDB:idb(),localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{addEventListener(){}},window:{addEventListener(){}},UI:{money:n=>String(Math.round(n||0))}};
 vm.createContext(sb);

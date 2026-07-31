@@ -467,6 +467,13 @@ const Europe = {
 
     // furthest stage a club reached in a competition, as an index into STAGE_LABELS (higher = further)
     STAGE_LABELS: ['Qualifying', 'League phase', 'Knockout play-off', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Winner'],
+    // localized stage label ('eu.stage.<i>'), falling back to the English STAGE_LABELS entry
+    stageLabel(i) {
+        const raw = this.STAGE_LABELS[i];
+        if (i == null || typeof I18n === 'undefined') return raw;
+        const s = I18n.t('eu.stage.' + i);
+        return s === 'eu.stage.' + i ? raw : s;
+    },
     // { compId: { clubId: stageIndex } } for a FINISHED edition — the best result each club achieved
     bestStages(edition) {
         const out = {};

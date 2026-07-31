@@ -77,7 +77,7 @@ const AgencyScreen = {
         <div class="fcard">
             <div class="frow"><span class="frow__k"><i class="ti ti-license"></i>${I18n.t('agency.status')}</span><span class="frow__v">${Agency.intlSuspended() ? `<span style="color:var(--danger)">${I18n.t('agency.suspendedW', { w: Agency.intlSuspendWeeksLeft() })}</span>` : has ? I18n.t('agency.activeW', { w: Agency.intlLicenceWeeksLeft() }) : I18n.t('agency.notHeld')}</span></div>
             <div style="padding:9px 0"><p class="hint" style="margin:0 0 var(--space-3)">${I18n.t('agency.licenceHint')}${Agency.intlSuspended() ? I18n.t('agency.licenceSuspendedHint') : I18n.t('agency.licenceRenewHint')}</p>
-            ${Agency.intlSuspended() ? '' : `<div class="flex-row" style="gap:6px;flex-wrap:wrap">${Agency.INTL_LICENCE_OPTIONS.map(o => `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyLicence(${o.weeks})">${o.label} — ${UI.euro(o.cost)}</button>`).join('')}</div>`}</div>
+            ${Agency.intlSuspended() ? '' : `<div class="flex-row" style="gap:6px;flex-wrap:wrap">${Agency.INTL_LICENCE_OPTIONS.map(o => `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyLicence(${o.weeks})">${Agency.durLabel(o.label)} — ${UI.euro(o.cost)}</button>`).join('')}</div>`}</div>
         </div>
 
         <div class="section-label">${I18n.t('agency.equipment')} <span class="muted" style="font-weight:400">${I18n.t('agency.anyOrder')}</span></div>

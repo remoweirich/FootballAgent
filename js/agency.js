@@ -44,16 +44,16 @@ const Agency = {
     intlSuspendWeeksLeft() { const a = GameState.agency; return (a && a.intlSuspendedUntil != null) ? Math.max(0, a.intlSuspendedUntil - GameState.absWeek()) : 0; },
     buyIntlLicence(weeks) {
         const a = GameState.agency;
-        if (this.intlSuspended()) return { ok: false, message: `International scouting is suspended for ${this.intlSuspendWeeksLeft()} more week(s).` };
+        if (this.intlSuspended()) return { ok: false, message: I18n.t('ag.lic.suspended', { n: this.intlSuspendWeeksLeft() }) };
         const opt = this.INTL_LICENCE_OPTIONS.find(o => o.weeks === weeks) || this.INTL_LICENCE_OPTIONS[0];
-        if (a.balance < opt.cost) return { ok: false, message: `That licence costs €${UI.money(opt.cost)}, but you can't afford it.` };
+        if (a.balance < opt.cost) return { ok: false, message: I18n.t('ag.lic.cost', { amt: UI.money(opt.cost) }) };
         GameState.addFinance('International licence', -opt.cost);
         a.balance -= opt.cost;
         // extend from now, or from the current expiry if still valid
         const from = this.hasIntlLicence() ? a.intlLicenceUntil : GameState.absWeek();
         a.intlLicenceUntil = from + opt.weeks;
-        GameState.addLog(`Bought an International Scouting Licence (−€${UI.money(opt.cost)}, ${opt.label}).`, 'scout');
-        return { ok: true, message: `International Scouting Licence active for ${opt.label}. You can now send unassigned scouts abroad from the Scouts tab.` };
+        GameState.addLog(I18n.t('ag.log.licence', { amt: UI.money(opt.cost), label: this.durLabel(opt.label) }), 'scout');
+        return { ok: true, message: I18n.t('ag.lic.active', { label: this.durLabel(opt.label) }) };
     },
     data() { return GameState.agency; },
     clients() { return GameState.players.filter(p => p.agentId === 'me' && !p.archived); },
@@ -77,14 +77,14 @@ const Agency = {
 
     // ---------- signing eligibility ----------
     canSign(p) {
-        if (!p) return { ok: false, reason: 'No player selected.' };
-        if (p.agentId === 'me') return { ok: false, reason: 'Already one of your clients.' };
-        if (p.agentId) return { ok: false, reason: 'Represented by another agent.' };
-        if (p.noTalkUntil && p.noTalkUntil > GameState.absWeek()) return { ok: false, reason: `“I don't want to talk with you right now.” (~${p.noTalkUntil - GameState.absWeek()} weeks)` };
-        if (p.age >= 23) return { ok: false, reason: 'You can only sign players under 23 who can still develop.' };
-        if (this.atCapacity()) return { ok: false, reason: `Your agency is at capacity (${this.capacity()} clients). Release someone first.` };
+        if (!p) return { ok: false, reason: I18n.t('ag.sign.noPlayer') };
+        if (p.agentId === 'me') return { ok: false, reason: I18n.t('ag.sign.already') };
+        if (p.agentId) return { ok: false, reason: I18n.t('ag.sign.otherAgent') };
+        if (p.noTalkUntil && p.noTalkUntil > GameState.absWeek()) return { ok: false, reason: I18n.t('ag.sign.noTalkWeeks', { n: p.noTalkUntil - GameState.absWeek() }) };
+        if (p.age >= 23) return { ok: false, reason: I18n.t('ag.sign.under23') };
+        if (this.atCapacity()) return { ok: false, reason: I18n.t('ag.sign.capacity', { n: this.capacity() }) };
         const ceiling = GameState.agency.reputation + 12;
-        if (p.ability > ceiling) return { ok: false, reason: "This player won't sign with a low-reputation agency yet." };
+        if (p.ability > ceiling) return { ok: false, reason: I18n.t('ag.sign.lowRep') };
         return { ok: true };
     },
 
@@ -118,17 +118,17 @@ const Agency = {
     // multi-step representation negotiation. term 1..10; longer term => higher tolerance.
     negotiateSign(p, wage, sponsor, term, round = 1) {
         const aw = GameState.absWeek();
-        if (p.noTalkUntil && p.noTalkUntil > aw) return { status: 'cold', message: `“I don't want to talk with you right now.”` };
+        if (p.noTalkUntil && p.noTalkUntil > aw) return { status: 'cold', message: I18n.t('ag.noTalk') };
         const max = this.maxSignCommissions(p, term);
         const wageOver = wage - max.wage, sponsorOver = sponsor - max.sponsor;
         if (wageOver <= 0 && sponsorOver <= 0) {
-            const lines = ['“That works for me — let’s do it.”', '“Fair enough. You’ve got yourself a client.”', '“I’m happy with that. Let’s get to work.”'];
+            const lines = [I18n.t('nego.sign.accept1'), I18n.t('nego.sign.accept2'), I18n.t('nego.sign.accept3')];
             return { status: 'accept', message: lines[Math.floor(Rng.next() * lines.length)] };
         }
         if (round >= 4) {
             const weeks = 5 + Math.floor(Rng.next() * 6);
             p.noTalkUntil = aw + weeks;
-            return { status: 'walk', weeks, message: `“We're going round in circles. I don't want to discuss this again for a while.”` };
+            return { status: 'walk', weeks, message: I18n.t('ag.walkAway') };
         }
         // a longer commitment lets him stomach a bigger cut
         const suggestTerm = Math.min(10, term + 2);
@@ -138,14 +138,14 @@ const Agency = {
         const shortTerm = term <= 4;
         if (wageOver > 0 && sponsorOver > 0)
             msg = shortTerm
-                ? `“I don't want to give you that much of my wages and sponsorships for only ${term} year${term > 1 ? 's' : ''} of guaranteed representation.”`
-                : `“Those cuts are too steep — both the wage and the sponsorship slice are more than I'll accept.”`;
+                ? I18n.t('nego.sign.bothShort', { yrs: this.yrs(term) })
+                : I18n.t('nego.sign.bothLong');
         else if (wageOver > 0)
             msg = shortTerm
-                ? `“${Math.round(wage)}% of my wages for just ${term} year${term > 1 ? 's' : ''}? That's too much for too little security.”`
-                : `“That's a bigger slice of my wages than I'm willing to give up.”`;
+                ? I18n.t('nego.sign.wageShort', { pct: Math.round(wage), yrs: this.yrs(term) })
+                : I18n.t('nego.sign.wageLong');
         else
-            msg = `“Your cut of my sponsorship deals is too steep for my liking.”`;
+            msg = I18n.t('nego.sign.sponsorOnly');
         return {
             status: 'counter', message: msg,
             counter: {
@@ -186,9 +186,9 @@ const Agency = {
             if (p.morale) p.morale.agent = Math.max(p.morale.agent, 85);
             p.bond = Math.max(p.bond || 0, 12);
             delete p._warmIntro;
-            GameState.addLog(`${p.name} joined on a team-mate's recommendation — he arrives already trusting you.`, 'sign');
+            GameState.addLog(I18n.t('ag.log.signWarm', { name: p.name }), 'sign');
         }
-        GameState.addLog(`Signed ${p.name} — ${wage}% wage / ${sponsor}% sponsor, ${term} season(s).`, 'sign');
+        GameState.addLog(I18n.t('ag.log.signed', { name: p.name, wage, sponsor, term }), 'sign');
     },
 
     // ---------- loans: interested clubs come to you ----------
@@ -214,10 +214,10 @@ const Agency = {
     },
 
     requestLoan(p) {
-        if (p.pendingTransfer) return { ok: false, message: `${p.name} has already agreed a transfer — no loans until that's done.` };
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (p.onLoanAt && !isU21Loan(p)) return { ok: false, message: `${p.name} is already away.` };
-        if (this.onCooldown(p, 'loan')) return { ok: false, message: `You've already asked about a loan for ${p.name} this week — give it until next week.` };
+        if (p.pendingTransfer) return { ok: false, message: I18n.t('ag.loan.pendingTransfer', { name: p.name }) };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
+        if (p.onLoanAt && !isU21Loan(p)) return { ok: false, message: I18n.t('ag.alreadyAway', { name: p.name }) };
+        if (this.onCooldown(p, 'loan')) return { ok: false, message: I18n.t('ag.loan.cooldown', { name: p.name }) };
         this.setCooldown(p, 'loan');
         const cands = Clubs.allClubs.filter(c => {
             if (c.id === p.clubId) return false;
@@ -227,7 +227,7 @@ const Agency = {
             return true;
         });
         if (!cands.length) {
-            return { ok: false, message: `No senior club can give ${p.name} regular minutes right now. Send him to your U21 instead to keep developing.` };
+            return { ok: false, message: I18n.t('ag.loan.noSenior', { name: p.name }) };
         }
         // the parent club must sanction the loan first
         const parent = Clubs.getClubById(p.clubId);
@@ -242,24 +242,24 @@ const Agency = {
         sanction = Math.max(floor, Math.min(0.95, sanction));
         if (Rng.next() > sanction) {
             this.changeRelationship(p.clubId, -1);
-            GameState.addMail({ kind: 'news', cat: 'general', subject: `${parent ? parent.name : 'His club'} on a loan for ${p.name}`, body: `${parent ? parent.name : 'His club'} would rather keep ${p.name} around for now and won't sanction a loan. Try again later or build the relationship.`, ttl: 4 });
-            return { ok: false, message: `${parent ? parent.name : 'His club'} won't sanction a loan for ${p.name} right now.` };
+            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.loanRefusedSubj', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), body: I18n.t('ag.mail.loanRefusedBody', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 4 });
+            return { ok: false, message: I18n.t('ag.loan.refused', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }) };
         }
         p._pendingLoan = { from: GameState.absWeek() + 1, picks };
         p._loanOk = true;   // the club has sanctioned a loan — you can now also shop him out on loan to clubs of your choosing
         p.loanListed = true; // reflected as a read-only "Loan-listed" indicator on his page
-        GameState.addMail({ kind: 'news', cat: 'general', subject: `${parent ? parent.name : 'His club'} open to loaning ${p.name}`, body: `${parent ? parent.name : 'His club'} are happy to let ${p.name} go out on loan for game time. Interested clubs will be in touch over the coming week — or shop him out to specific clubs yourself.`, ttl: 5 });
-        return { ok: true, message: `${parent ? parent.name : 'His club'} sanction the loan. Offers will start arriving next week — or shop him to clubs of your choosing on loan.` };
+        GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.loanOpenSubj', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), body: I18n.t('ag.mail.loanOpenBody', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 5 });
+        return { ok: true, message: I18n.t('ag.loan.sanctioned', { club: parent ? parent.name : I18n.t('ag.hisClub') }) };
     },
     _u21ClubReaction(p, clubName, dest) {
         const lines = [
-            `We agree that ${p.name} could benefit from youth-team football.`,
-            `Game time with ${dest} will do ${p.name} the world of good.`,
-            `Good call — ${p.name} needs minutes, and he'll get them at ${dest}.`,
-            `${p.name} will sharpen up against tough opposition at ${dest}.`,
-            `Sensible. We'd rather ${p.name} play regularly than warm our bench.`
+            I18n.t('ag.mail.u21ok1', { name: p.name }),
+            I18n.t('ag.mail.u21ok2', { name: p.name, dest }),
+            I18n.t('ag.mail.u21ok3', { name: p.name, dest }),
+            I18n.t('ag.mail.u21ok4', { name: p.name, dest }),
+            I18n.t('ag.mail.u21ok5', { name: p.name })
         ];
-        GameState.addMail({ kind: 'news', subject: `${clubName} on ${p.name}`, body: lines[Math.floor(Rng.next() * lines.length)], ttl: 3 });
+        GameState.addMail({ kind: 'news', subject: I18n.t('ag.mail.onSubj', { club: clubName, name: p.name }), body: lines[Math.floor(Rng.next() * lines.length)], ttl: 3 });
     },
     _u21Consent(p) {
         const rel = this.relationship(p.clubId);
@@ -270,36 +270,36 @@ const Agency = {
         return Math.max(0.08, Math.min(0.95, chance));
     },
     sendToU21(p) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (p.onLoanAt) return { ok: false, message: `${p.name} is already away.` };
-        if (p.age > 21) return { ok: false, message: `${p.name} is ${p.age} — only players aged 21 or under can drop to a youth/U21 side.` };
-        if (isReserveClub(p.clubId)) return { ok: false, message: `${p.name} already plays for a reserve side (${Clubs.getClubById(p.clubId)?.name}); he can't be sent down further. You can request a promotion to the senior team instead.` };
-        if (this.onCooldown(p, 'u21send')) return { ok: false, message: `You've already raised this with the club this week — give it until next week.` };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
+        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.alreadyAway', { name: p.name }) };
+        if (p.age > 21) return { ok: false, message: I18n.t('ag.u21.tooOld', { name: p.name, age: p.age }) };
+        if (isReserveClub(p.clubId)) return { ok: false, message: I18n.t('ag.u21.alreadyReserve', { name: p.name, club: Clubs.getClubById(p.clubId)?.name }) };
+        if (this.onCooldown(p, 'u21send')) return { ok: false, message: I18n.t('ag.u21.cooldown') };
         this.setCooldown(p, 'u21send');
         const seniorName = Clubs.getClubById(p.clubId)?.name || '';
         // the club has to agree to drop him to the youth/reserve setup
         if (Rng.next() > this._u21Consent(p)) {
             this.changeRelationship(p.clubId, -1);
             const no = [
-                `We disagree — ${p.name} is part of our first-team plans and stays with the senior squad.`,
-                `We disagree. We need ${p.name} around the first team right now.`,
-                `Not for us — ${p.name} won't be going down to the youth side at the moment.`
+                I18n.t('ag.mail.u21no1', { name: p.name }),
+                I18n.t('ag.mail.u21no2', { name: p.name }),
+                I18n.t('ag.mail.u21no3', { name: p.name })
             ];
-            GameState.addMail({ kind: 'news', cat: 'general', subject: `${seniorName} on ${p.name}`, body: no[Math.floor(Rng.next() * no.length)], ttl: 4 });
-            return { ok: false, message: `${seniorName} won't sanction sending ${p.name} to the youth side right now.` };
+            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.onSubj', { club: seniorName, name: p.name }), body: no[Math.floor(Rng.next() * no.length)], ttl: 4 });
+            return { ok: false, message: I18n.t('ag.u21.refused', { club: seniorName, name: p.name }) };
         }
         const reserve = reserveClubFor(p.clubId);
         if (reserve) {
             p.onLoanAt = reserve.id; p.loanUntilSeason = GameState.seasonStartYear; p.loanMid = false; p.loanRole = 'starter';
-            GameState.addLog(`${p.name} sent to ${reserve.name} (reserves).`, 'loan');
+            GameState.addLog(I18n.t('ag.log.sentReserves', { name: p.name, club: reserve.name }), 'loan');
             this._u21ClubReaction(p, seniorName, reserve.name);
-            return { ok: true, message: `${p.name} joined ${reserve.name}; he'll feature in their league games. He returns to the senior side at the end of the season.` };
+            return { ok: true, message: I18n.t('ag.u21.joinedReserve', { name: p.name, club: reserve.name }) };
         }
         p.onLoanAt = 'u21:' + p.clubId; p.loanUntilSeason = GameState.seasonStartYear; p.loanMid = false; p.loanRole = 'starter';
         const jong = youthTeamName(p.clubId);
-        GameState.addLog(`${p.name} sent to ${jong}.`, 'loan');
+        GameState.addLog(I18n.t('ag.log.sentJong', { name: p.name, club: jong }), 'loan');
         this._u21ClubReaction(p, seniorName, jong);
-        return { ok: true, message: `${p.name} joined ${jong}. He'll play youth-league games to develop — they appear in his history but don't count toward senior appearances.` };
+        return { ok: true, message: I18n.t('ag.u21.joinedJong', { name: p.name, club: jong }) };
     },
     // Sub-professional youth wage: below this, a promotion earns a proper first-team contract; at or
     // above it he's already on pro money and is simply pulled up on his existing deal.
@@ -324,35 +324,35 @@ const Agency = {
     // a client at a reserve side can ask to be pulled up to the senior team — possible any time of
     // year (an internal move within the same club family, nothing to do with the transfer window)
     requestPromotion(p) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (!isReserveClub(p.clubId)) return { ok: false, message: `${p.name} isn't at a reserve side.` };
-        if (p.onLoanAt) return { ok: false, message: `${p.name} is currently away on loan.` };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
+        if (!isReserveClub(p.clubId)) return { ok: false, message: I18n.t('ag.promote.notReserve', { name: p.name }) };
+        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.promote.away', { name: p.name }) };
         const parent = parentClubForReserve(p.clubId);
-        if (!parent) return { ok: false, message: `No senior side is linked to ${Clubs.getClubById(p.clubId)?.name}.` };
+        if (!parent) return { ok: false, message: I18n.t('ag.promote.noParent', { club: Clubs.getClubById(p.clubId)?.name }) };
         const res = this._promoteToSenior(p, parent);
-        GameState.addLog(`${p.name} promoted to ${parent.name}${res.pro ? ` on a first-team deal (€${UI.money(res.wage)}/wk)` : ''}.`, 'sign');
+        GameState.addLog(I18n.t('ag.log.promoted', { name: p.name, club: parent.name, pro: res.pro ? I18n.t('ag.log.promotedPro', { wage: UI.money(res.wage) }) : '' }), 'sign');
         GameState.addMail({
-            kind: 'news', cat: 'general', subject: `${parent.name} promote ${p.name}`,
+            kind: 'news', cat: 'general', subject: I18n.t('ag.mail.promoteSubj', { club: parent.name, name: p.name }),
             body: res.pro
-                ? `${parent.name} have promoted ${p.name} from the reserves to the senior squad and handed him his first professional contract — €${UI.money(res.wage)}/wk.`
-                : `${parent.name} have promoted ${p.name} from the reserves to the senior squad. Already on professional terms, he steps up on his existing deal with no renegotiation.`, ttl: 4
+                ? I18n.t('ag.mail.promoteBodyPro', { club: parent.name, name: p.name, wage: UI.money(res.wage) })
+                : I18n.t('ag.mail.promoteBodyNoPro', { club: parent.name, name: p.name }), ttl: 4
         });
         return {
             ok: true, message: res.pro
-                ? `${p.name} is promoted to ${parent.name} on a professional deal (€${UI.money(res.wage)}/wk).`
-                : `${p.name} is promoted to ${parent.name} — pulled up on his existing deal, no renegotiation.`
+                ? I18n.t('ag.promote.donePro', { name: p.name, club: parent.name, wage: UI.money(res.wage) })
+                : I18n.t('ag.promote.doneNoPro', { name: p.name, club: parent.name })
         };
     },
     // ask the parent club to pull a player back up from the U21/reserves early (e.g. to loan him out properly)
     requestU21Recall(p) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (!p.onLoanAt || !(isU21Loan(p) || isReserveClub(p.onLoanAt))) return { ok: false, message: `${p.name} isn't out with a youth/reserve side.` };
-        if (this.onCooldown(p, 'u21recall')) return { ok: false, message: `You've already asked about this this week — give it until next week.` };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
+        if (!p.onLoanAt || !(isU21Loan(p) || isReserveClub(p.onLoanAt))) return { ok: false, message: I18n.t('ag.recall.notYouth', { name: p.name }) };
+        if (this.onCooldown(p, 'u21recall')) return { ok: false, message: I18n.t('ag.recall.cooldown') };
         this.setCooldown(p, 'u21recall');
         const club = Clubs.getClubById(p.clubId);
         const dest = Clubs.getClubById(p.onLoanAt);
         const destName = dest ? dest.name : youthTeamName(p.clubId);
-        const clubName = club ? club.name : 'His club';
+        const clubName = club ? club.name : I18n.t('ag.hisClub');
         const rel = this.relationship(p.clubId);
         let chance = 0.35 + (rel - 55) / 200 + (['starter', 'key'].includes(p.squadRole) ? 0.15 : -0.1);
         chance = Math.max(0.08, Math.min(0.85, chance));
@@ -367,14 +367,14 @@ const Agency = {
                 p.wage = pro; p.contractUntilSeason = GameState.seasonStartYear + 2;
                 if (p.agentId === 'me' && typeof recordWagePoint === 'function') recordWagePoint(p);
                 if (p.agentId === 'me' && typeof Dialogue !== 'undefined') Dialogue.queueMoment({ type: 'procontract', playerId: p.id });
-                proNote = ` on a professional deal (€${UI.money(pro)}/wk)`;
+                proNote = I18n.t('ag.recall.proNote', { amt: UI.money(pro) });
             }
-            GameState.addLog(`${clubName} recalled ${p.name} from ${destName} at your request${proNote}.`, 'info');
-            GameState.addMail({ kind: 'news', cat: 'general', subject: `${clubName} recall ${p.name}`, body: `At your request, ${clubName} have pulled ${p.name} back up from ${destName} to the first-team squad${proNote}.`, ttl: 4 });
-            return { ok: true, message: `${clubName} recall ${p.name} from ${destName} — he's back with the senior squad${proNote}.` };
+            GameState.addLog(I18n.t('ag.log.recalled', { club: clubName, name: p.name, dest: destName, pro: proNote }), 'info');
+            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.recallSubj', { club: clubName, name: p.name }), body: I18n.t('ag.mail.recallBody', { club: clubName, name: p.name, dest: destName, pro: proNote }), ttl: 4 });
+            return { ok: true, message: I18n.t('ag.recall.done', { club: clubName, name: p.name, dest: destName, pro: proNote }) };
         }
         this.changeRelationship(p.clubId, -1);
-        return { ok: false, message: `${clubName} would rather ${p.name} keep developing at ${destName} for now.` };
+        return { ok: false, message: I18n.t('ag.recall.declined', { club: clubName, name: p.name, dest: destName }) };
     },
     // loan duration options depend on the open window (summer: any; winter: half-steps only).
     // Pass the player to also drop any duration that would run past his parent-club contract
@@ -391,6 +391,16 @@ const Agency = {
         if (p && p.contractUntilSeason != null) opts = opts.filter(o => this.computeLoanEnd(o.code).until < p.contractUntilSeason);
         return opts;
     },
+    // localized label for a licence/loan duration option ('dur.<slug>'), falling back to the English label
+    DUR_SLUG: { '1 season': 's1', '2 seasons': 's2', '3 seasons': 's3', 'Half season': 'half', '1.5 seasons': 's15', 'Rest of season': 'rest', 'Next season': 'next', 'Through next season': 'through' },
+    durLabel(en) {
+        const slug = this.DUR_SLUG[en];
+        if (!slug || typeof I18n === 'undefined') return en;
+        const s = I18n.t('dur.' + slug);
+        return s === 'dur.' + slug ? en : s;
+    },
+    // localized "N year"/"N years" count phrase
+    yrs(n) { return I18n.t(n === 1 ? 'unit.yr' : 'unit.yrs', { n }); },
     // returns { until, mid } describing when the loan ends
     computeLoanEnd(code) {
         const Y = GameState.seasonStartYear, w = GameState.week, summer = (w >= 1 && w <= 6);
@@ -415,14 +425,14 @@ const Agency = {
 
     // ---------- shop player to ANY club, in any country ----------
     shopPlayer(p, targetClubId) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
         // out on loan (or with the reserves): nobody talks about a permanent move until he's back
-        if (p.onLoanAt) return { ok: false, message: `${p.name} is away on loan at ${UI.clubName ? UI.clubName(p.onLoanAt) : 'another club'} — clubs won't discuss a permanent move until he's back.` };
+        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.shop.awayLoan', { name: p.name, club: UI.clubName ? UI.clubName(p.onLoanAt) : I18n.t('ag.anotherClub') }) };
         const parent = Clubs.getClubById(p.clubId);
         const target = Clubs.getClubById(targetClubId);
-        if (!target) return { ok: false, message: 'Unknown club.' };
-        if (target.id === p.clubId) return { ok: true, interested: false, message: `${target.name} already have him.` };
-        if (this.onCooldown(p, 'shop:' + target.id)) return { ok: false, message: `${target.name} already heard your pitch for ${p.name} this week — try again next week.` };
+        if (!target) return { ok: false, message: I18n.t('ag.unknownClub') };
+        if (target.id === p.clubId) return { ok: true, interested: false, message: I18n.t('ag.alreadyHave', { target: target.name }) };
+        if (this.onCooldown(p, 'shop:' + target.id)) return { ok: false, message: I18n.t('ag.shop.cooldown', { target: target.name, name: p.name }) };
         this.setCooldown(p, 'shop:' + target.id);
 
         const potRead = p.potential + Math.round((Rng.next() - 0.5) * 16);
@@ -466,8 +476,8 @@ const Agency = {
         const offer = this._offerObj(p, parent ? parent.id : null, target.id, fee, { initiatedByAgent: true });
         // a wage-tight club that still bites offers what it CAN pay — a low-wage contract
         if (wageTight) offer.proposedWage = Math.max(30, Math.round(this.maxClubWage(p, target) * (0.85 + Rng.next() * 0.1) / 10) * 10);
-        GameState.addMail({ kind: 'transfer', subject: free ? `${target.name} offer ${p.name} a contract` : `${target.name} want ${p.name}`, offer, persistence: 1, ttl: 2 });
-        GameState.addLog(free ? `${target.name} offer ${p.name} a deal (€${UI.money(offer.proposedWage)}/wk).` : `${target.name} tabled €${UI.money(fee)} for ${p.name}.`, 'offer');
+        GameState.addMail({ kind: 'transfer', subject: free ? I18n.t('ag.mail.offerContractSubj', { target: target.name, name: p.name }) : I18n.t('ag.mail.offerWantSubj', { target: target.name, name: p.name }), offer, persistence: 1, ttl: 2 });
+        GameState.addLog(free ? I18n.t('ag.log.offerFree', { target: target.name, name: p.name, wage: UI.money(offer.proposedWage) }) : I18n.t('ag.log.offerFee', { target: target.name, fee: UI.money(fee), name: p.name }), 'offer');
         const tail = free ? `offering €${UI.money(offer.proposedWage)}/wk${wageTight ? ' (a reduced deal — his usual wages are a stretch for them)' : ''}` : `offer in your inbox (€${UI.money(fee)})`;
         return { ok: true, interested: true, message: msg + `${target.name} are interested — ${tail}.` };
     },
@@ -478,34 +488,34 @@ const Agency = {
 
     // ---------- shop player OUT ON LOAN to a chosen club ----------
     shopPlayerLoan(p, targetClubId) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (p.pendingTransfer) return { ok: false, message: `${p.name} has already agreed a transfer — no loan.` };
-        if (p.onLoanAt && !isU21Loan(p)) return { ok: false, message: `${p.name} is already out on loan.` };
-        if (!p._loanOk) return { ok: false, message: `${Clubs.getClubById(p.clubId)?.name || 'His club'} haven't sanctioned a loan yet — use “Request loan” first.` };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
+        if (p.pendingTransfer) return { ok: false, message: I18n.t('ag.loanShop.pendingTransfer', { name: p.name }) };
+        if (p.onLoanAt && !isU21Loan(p)) return { ok: false, message: I18n.t('ag.loanShop.alreadyOut', { name: p.name }) };
+        if (!p._loanOk) return { ok: false, message: I18n.t('ag.loanShop.notSanctioned', { club: Clubs.getClubById(p.clubId)?.name || I18n.t('ag.hisClub') }) };
         const target = Clubs.getClubById(targetClubId);
-        if (!target) return { ok: false, message: 'Unknown club.' };
-        if (target.id === p.clubId) return { ok: true, interested: false, message: `${target.name} already have him.` };
-        if (this.clubHasMyPlayerAtPos(target.id, p.position, p.id)) return { ok: true, interested: false, message: `${target.name} already have one of your players in that position.` };
-        if (this.onCooldown(p, 'loanshop:' + target.id)) return { ok: false, message: `${target.name} already heard your loan pitch for ${p.name} this week — try again next week.` };
+        if (!target) return { ok: false, message: I18n.t('ag.unknownClub') };
+        if (target.id === p.clubId) return { ok: true, interested: false, message: I18n.t('ag.alreadyHave', { target: target.name }) };
+        if (this.clubHasMyPlayerAtPos(target.id, p.position, p.id)) return { ok: true, interested: false, message: I18n.t('ag.loanShop.samePos', { target: target.name }) };
+        if (this.onCooldown(p, 'loanshop:' + target.id)) return { ok: false, message: I18n.t('ag.loanShop.cooldown', { target: target.name, name: p.name }) };
         this.setCooldown(p, 'loanshop:' + target.id);
         const role = this.maxRoleAt(p, target);
         if (!(role === 'key' || role === 'starter' || role === 'rotation'))
-            return { ok: true, interested: false, message: `${target.name} can't promise ${p.name} enough game time to take him on loan.` };
+            return { ok: true, interested: false, message: I18n.t('ag.loanShop.noGameTime', { target: target.name, name: p.name }) };
         // loans bite a little more readily than permanent deals (lower commitment), but still selective
-        if (Rng.next() >= 0.42) return { ok: true, interested: false, message: `${target.name} passed on a loan for ${p.name} this time.` };
+        if (Rng.next() >= 0.42) return { ok: true, interested: false, message: I18n.t('ag.loanShop.passed', { target: target.name, name: p.name }) };
         if (GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id && m.offer.toClubId === target.id))
-            return { ok: true, interested: false, message: `${target.name} already have a loan offer in for ${p.name}.` };
-        GameState.addMail({ kind: 'loan', subject: `${target.name} want ${p.name} on loan`, offer: { playerId: p.id, fromClubId: p.clubId, toClubId: target.id, role }, persistence: 0, ttl: 3 });
-        GameState.addLog(`${target.name} enquire about ${p.name} on loan.`, 'offer');
-        return { ok: true, interested: true, message: `${target.name} want ${p.name} on loan — offer in your inbox.` };
+            return { ok: true, interested: false, message: I18n.t('ag.loanShop.existing', { target: target.name, name: p.name }) };
+        GameState.addMail({ kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: target.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: target.id, role }, persistence: 0, ttl: 3 });
+        GameState.addLog(I18n.t('ag.log.loanEnquiry', { target: target.name, name: p.name }), 'offer');
+        return { ok: true, interested: true, message: I18n.t('ag.loanShop.want', { target: target.name, name: p.name }) };
     },
 
     // ---------- contract renewal request (to parent club) ----------
     requestRenewalTalks(p) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
         const club = Clubs.getClubById(p.clubId);
-        if (!club) return { ok: false, message: 'No club.' };
-        if (this.onCooldown(p, 'renewal')) return { ok: false, message: `${club.name} already gave you an answer on a new deal this week — wait until next week before raising it again.` };
+        if (!club) return { ok: false, message: I18n.t('ag.noClub') };
+        if (this.onCooldown(p, 'renewal')) return { ok: false, message: I18n.t('ag.renew.cooldown', { club: club.name }) };
         this.setCooldown(p, 'renewal');
         // a stage-2+ wage case means he's formally demanded this renewal — a refusal now visibly
         // sours his view of the club, on top of the normal rejection
@@ -519,8 +529,8 @@ const Agency = {
         const proposedWage = Math.max(p.wage + 10, this.offeredWage(p, club, { loyalty: true, jitter: false }));
         const proposedTermSeasons = Math.min(2 + Math.floor(Rng.next() * 2), this.maxContractTerm(p, club));
         const offer = { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons };
-        GameState.addMail({ kind: 'renewal', subject: `Renewal terms for ${p.name} at ${club.name}`, offer, persistence: 0, ttl: 3 });
-        return { ok: true, message: `${club.name} are open to talks — proposal in your inbox.` };
+        GameState.addMail({ kind: 'renewal', subject: I18n.t('ag.mail.renewalSubj', { name: p.name, club: club.name }), offer, persistence: 0, ttl: 3 });
+        return { ok: true, message: I18n.t('ag.renew.open', { club: club.name }) };
     },
 
     // How much a raw ability-to-potential gap should move a price, scaled down for low-ability
@@ -635,11 +645,11 @@ const Agency = {
     // greeting reflects how the club feels about you
     greetingFor(clubId) {
         const rel = this.relationship(clubId);
-        if (rel >= 75) return "Always a pleasure to see you.";
-        if (rel >= 55) return "Good to see you again.";
-        if (rel >= 35) return "Nice to meet you.";
-        if (rel >= 18) return "Let's keep this businesslike.";
-        return "Not you again…";
+        if (rel >= 75) return I18n.t('nego.greet.warm');
+        if (rel >= 55) return I18n.t('nego.greet.friendly');
+        if (rel >= 35) return I18n.t('nego.greet.neutral');
+        if (rel >= 18) return I18n.t('nego.greet.cool');
+        return I18n.t('nego.greet.cold');
     },
     // wage the club will accept depends on player value AND your relationship; no hard ceiling shown to you
     negotiateWage(p, club, requested, round = 1, lastCounter = null) {
@@ -647,37 +657,37 @@ const Agency = {
         // last round is a done deal (the per-round patience penalty used to shrink the cap
         // below the club's own previous counter, producing a 650 -> 640 -> 630... death spiral)
         if (lastCounter != null && requested <= lastCounter)
-            return { status: 'accept', message: `€${UI.money(requested)}/wk as discussed — we have a deal.` };
+            return { status: 'accept', message: I18n.t('nego.wage.acceptDiscussed', { amt: UI.money(requested) }) };
         const rel = this.relationship(club ? club.id : null);
         const base = this.maxClubWage(p, club);
         const room = base * (1 + Math.max(-0.10, Math.min(0.45, (rel - 55) / 110)));   // a bit more give than before
         const cap = Math.round(room) - (round - 1) * Math.round(p.wage * 0.03);
-        if (requested <= cap) return { status: 'accept', message: round === 1 ? `We can do €${UI.money(requested)}/wk — agreed.` : `Alright, €${UI.money(requested)}/wk. We have a deal.` };
+        if (requested <= cap) return { status: 'accept', message: round === 1 ? I18n.t('nego.wage.acceptR1', { amt: UI.money(requested) }) : I18n.t('nego.wage.acceptRn', { amt: UI.money(requested) }) };
         const counter = Math.max(p.wage, Math.round(cap / 10) * 10, lastCounter || 0);
-        if (requested <= cap * 1.12) return { status: 'counter', counter, message: `We're close — we can stretch to €${UI.money(counter)}/wk.` };
-        if (round >= 5) return { status: 'reject', message: `We aren't prepared to pay that much for ${p.name}.` };
-        return { status: 'counter', counter, message: requested > cap * 1.5 ? `That is far too much. €${UI.money(counter)}/wk is our ceiling.` : `That's too much — we could do €${UI.money(counter)}/wk.` };
+        if (requested <= cap * 1.12) return { status: 'counter', counter, message: I18n.t('nego.wage.close', { amt: UI.money(counter) }) };
+        if (round >= 5) return { status: 'reject', message: I18n.t('nego.wage.reject', { name: p.name }) };
+        return { status: 'counter', counter, message: requested > cap * 1.5 ? I18n.t('nego.wage.counterHigh', { amt: UI.money(counter) }) : I18n.t('nego.wage.counter', { amt: UI.money(counter) }) };
     },
     // negotiate loan game time: ask above the club's comfort level and they may dig in — or, with a good
     // relationship and persistence, eventually relent. Sometimes they stay stubborn.
     negotiateLoanRole(p, club, requested, round = 1) {
         const ceil = this.clubRoleCeiling(p, club);
         const reqIdx = ROLE_ORDER.indexOf(requested), ceilIdx = ROLE_ORDER.indexOf(ceil);
-        if (reqIdx <= ceilIdx) return { status: 'accept', role: requested, message: `Agreed — ${p.name} joins as ${roleLabel(requested, p.age)}.` };
+        if (reqIdx <= ceilIdx) return { status: 'accept', role: requested, message: I18n.t('nego.loanRole.accept', { name: p.name, role: roleLabel(requested, p.age) }) };
         const rel = this.relationship(club ? club.id : null);
         const concede = Math.max(0, Math.min(0.85, 0.12 + (rel - 55) / 200 + (round - 1) * 0.22 - (reqIdx - ceilIdx - 1) * 0.28));
-        if (Rng.next() < concede) return { status: 'accept', role: requested, message: `Alright — we'll let ${p.name} play as ${roleLabel(requested, p.age)}.` };
-        if (round >= 4) return { status: 'final', role: ceil, message: `That's our final word — ${roleLabel(ceil, p.age)} at most for ${p.name}.` };
-        return { status: 'counter', role: ceil, message: `We see ${p.name} more as a ${roleLabel(ceil, p.age)}, not a ${roleLabel(requested, p.age)}.` };
+        if (Rng.next() < concede) return { status: 'accept', role: requested, message: I18n.t('nego.loanRole.relent', { name: p.name, role: roleLabel(requested, p.age) }) };
+        if (round >= 4) return { status: 'final', role: ceil, message: I18n.t('nego.loanRole.final', { role: roleLabel(ceil, p.age), name: p.name }) };
+        return { status: 'counter', role: ceil, message: I18n.t('nego.loanRole.counter', { name: p.name, role: roleLabel(ceil, p.age), reqRole: roleLabel(requested, p.age) }) };
     },
     // ask the club to transfer-list your player; they may agree (more offers) or keep him
     requestTransferListing(p) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
-        if (p.onLoanAt) return { ok: false, message: `${p.name} is away on loan.` };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
+        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.txlist.away', { name: p.name }) };
         const club = Clubs.getClubById(p.clubId);
-        if (!club) return { ok: false, message: `${p.name} has no club to list him.` };
-        if (p.transferListed) return { ok: false, message: `${p.name} is already transfer-listed.` };
-        if (this.onCooldown(p, 'txlist')) return { ok: false, message: `${club.name} already answered this week — wait until next week before asking again.` };
+        if (!club) return { ok: false, message: I18n.t('ag.txlist.noClub', { name: p.name }) };
+        if (p.transferListed) return { ok: false, message: I18n.t('ag.txlist.already', { name: p.name }) };
+        if (this.onCooldown(p, 'txlist')) return { ok: false, message: I18n.t('ag.txlist.cooldown', { club: club.name }) };
         this.setCooldown(p, 'txlist');
         const rel = this.relationship(club.id);
         const surplus = club.reputation - p.ability;     // >0 => player below club level (easier to release)
@@ -692,12 +702,12 @@ const Agency = {
         if (Rng.next() < chance) {
             p.transferListed = true;
             p._txOffersFrom = GameState.absWeek() + 1;
-            GameState.addLog(`${club.name} agreed to transfer-list ${p.name}.`, 'info');
-            GameState.addMail({ kind: 'news', subject: `${p.name} transfer-listed`, body: `${club.name} have agreed to list ${p.name}. Expect interested clubs to start coming in from next week.`, ttl: 5 });
-            return { ok: true, message: `${club.name} agree to list ${p.name} — offers should start arriving next week.` };
+            GameState.addLog(I18n.t('ag.log.txlistAgreed', { club: club.name, name: p.name }), 'info');
+            GameState.addMail({ kind: 'news', subject: I18n.t('ag.mail.txlistSubj', { name: p.name }), body: I18n.t('ag.mail.txlistBody', { club: club.name, name: p.name }), ttl: 5 });
+            return { ok: true, message: I18n.t('ag.txlist.agreed', { club: club.name, name: p.name }) };
         }
         this.changeRelationship(club.id, -1);
-        return { ok: false, message: `${club.name} rate ${p.name} and won't list him right now. Try again later or build the relationship.` };
+        return { ok: false, message: I18n.t('ag.txlist.refused', { club: club.name, name: p.name }) };
     },
     // highest role the club will hand this player (relationship nudges it by up to one step)
     clubRoleCeiling(p, club) {
@@ -746,19 +756,19 @@ const Agency = {
         const counter = { wage: Math.min(pkg.wage, maxWage), role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, maxBonus) };
 
         if (wageOk && roleOk && bonusOk) {
-            const lines = [`“Good — we've got a deal for ${p.name}.”`, `“That package works for us. Welcome aboard, ${p.name}.”`, `“Agreed on all counts. Let's get it signed.”`];
+            const lines = [I18n.t('nego.tr.accept1', { name: p.name }), I18n.t('nego.tr.accept2', { name: p.name }), I18n.t('nego.tr.accept3')];
             return { status: 'accept', counter, message: lines[Math.floor(Rng.next() * lines.length)] };
         }
-        if (round >= 4) return { status: 'final', counter, message: `“This is our final package: €${UI.money(counter.wage)}/wk, ${roleLabel(counter.role, p.age)}, ${term}yr, €${UI.money(counter.bonus)} bonus. Take it or leave it.”` };
+        if (round >= 4) return { status: 'final', counter, message: I18n.t('nego.tr.final', { wage: UI.money(counter.wage), role: roleLabel(counter.role, p.age), term, bonus: UI.money(counter.bonus) }) };
 
         const bits = [];
-        if (!wageOk) bits.push(`€${UI.money(pkg.wage)}/wk is more than we'll pay — we can do €${UI.money(maxWage)}`);
-        if (!roleOk) bits.push(`we see him as a ${roleLabel(roleCeil, p.age)}, not a ${roleLabel(pkg.role, p.age)}`);
-        if (!bonusOk) bits.push(`the €${UI.money(pkg.bonus || 0)} signing bonus is steep — €${UI.money(maxBonus)} is our limit`);
+        if (!wageOk) bits.push(I18n.t('nego.tr.bitWage', { req: UI.money(pkg.wage), max: UI.money(maxWage) }));
+        if (!roleOk) bits.push(I18n.t('nego.tr.bitRole', { ceil: roleLabel(roleCeil, p.age), role: roleLabel(pkg.role, p.age) }));
+        if (!bonusOk) bits.push(I18n.t('nego.tr.bitBonus', { bonus: UI.money(pkg.bonus || 0), max: UI.money(maxBonus) }));
         const wageClose = pkg.wage <= maxWage * 1.08, bonusClose = (pkg.bonus || 0) <= maxBonus * 1.12;
-        const hint = (!wageOk && term > 1) ? ` On a shorter contract we could push the wage higher.` : '';
-        if (roleOk && wageClose && bonusClose) return { status: 'close', counter, message: `“We're almost there — ${bits.join('; ')}.${hint}”` };
-        return { status: 'counter', counter, message: `“${bits.join('; ')}.${hint}”` };
+        const hint = (!wageOk && term > 1) ? I18n.t('nego.tr.hint') : '';
+        if (roleOk && wageClose && bonusClose) return { status: 'close', counter, message: I18n.t('nego.tr.close', { bits: bits.join('; '), hint }) };
+        return { status: 'counter', counter, message: I18n.t('nego.tr.counter', { bits: bits.join('; '), hint }) };
     },
 
     // Phase 2 (morale rework): a transfer/renewal/loan/sponsor deal concluded by the agent is
@@ -780,18 +790,18 @@ const Agency = {
         if (!c || !c.promise || !fulfillTypes.includes(c.promise.type)) return;
         p.morale[c.dim] = Math.min(100, p.morale[c.dim] + MORALE.PROMISE_KEPT_DIM);
         p.morale.agent = Math.min(100, p.morale.agent + MORALE.PROMISE_KEPT_AGENT);
-        GameState.addMail({ kind: 'news', cat: 'morale', subject: `${p.name} — promise kept`, body: `${p.name}: "You came through for me. I appreciate it."`, ttl: 4 });
+        GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('ag.mail.promiseKeptSubj', { name: p.name }), body: I18n.t('ag.mail.promiseKeptBody', { name: p.name }), ttl: 4 });
         p.moraleCase = null;
         this._checkPromiseKeptBondHook(p);
     },
 
     acceptTransfer(mail, agreedWage, role, termSeasons, signingBonus, opts = {}) {
         const o = mail.offer, p = GameState.getPlayer(o.playerId);
-        if (!p) return { ok: false, message: 'Player gone.' };
+        if (!p) return { ok: false, message: I18n.t('ag.playerGone') };
         const toClub = Clubs.getClubById(o.toClubId), fromClub = Clubs.getClubById(o.fromClubId);
-        if (!toClub) return { ok: false, message: 'Club gone.' };
-        if (p.onLoanAt) return { ok: false, message: `${p.name} is out on loan/with the reserves — he can't be transferred until he's back. He returns at the end of the season.` };
-        if (p.pendingTransfer) return { ok: false, message: `${p.name} has already agreed a move to ${Clubs.getClubById(p.pendingTransfer.toClubId)?.name || 'another club'} — it completes when the transfer window opens.` };
+        if (!toClub) return { ok: false, message: I18n.t('ag.clubGone') };
+        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.tr.onLoan', { name: p.name }) };
+        if (p.pendingTransfer) return { ok: false, message: I18n.t('ag.tr.pending', { name: p.name, club: Clubs.getClubById(p.pendingTransfer.toClubId)?.name || I18n.t('ag.anotherClub') }) };
         const term = Math.max(1, Math.min(6, termSeasons || 3));
 
         // deals can be AGREED any week, but the move itself only happens inside a transfer
@@ -803,7 +813,7 @@ const Agency = {
         // at most one actual transfer per transfer window
         const winKey = GameState.transferWindowKey ? GameState.transferWindowKey() : null;
         if (windowOpen && winKey && p._txWindow === winKey)
-            return { ok: false, message: `${p.name} has already changed clubs this transfer window — he can move again in the next window.` };
+            return { ok: false, message: I18n.t('ag.tr.windowUsed', { name: p.name }) };
 
         // max two senior clubs per season
         const yr = GameState.seasonStartYear;
@@ -811,20 +821,20 @@ const Agency = {
         Object.values(p.stats[yr] || {}).forEach(st => { if (!st.youth && !isReserveClub(st.clubId)) seniorSet.add(st.clubId); });
         if (p.clubId && !isReserveClub(p.clubId)) seniorSet.add(p.clubId);
         if (windowOpen && !o.internal && !isReserveClub(toClub.id) && !seniorSet.has(toClub.id) && seniorSet.size >= 2)
-            return { ok: false, message: `${p.name} has already turned out for two clubs this season — he can't join a third until next season.` };
+            return { ok: false, message: I18n.t('ag.tr.twoClubs', { name: p.name }) };
 
         // clubs won't commit long term to an ageing player unless he clearly outclasses the squad
         const termCap = this.maxContractTerm(p, toClub);
         if (term > termCap)
-            return { ok: false, message: `${toClub.name} won't commit to ${term} years for a player his age — at most ${termCap}. Lower the length and try again.` };
+            return { ok: false, message: I18n.t('ag.deal.termTooLong', { club: toClub.name, term, cap: termCap }) };
 
         // the club won't hand out any role / signing bonus you ask for
         if (role && !this.roleAcceptable(p, toClub, role))
-            return { ok: false, message: `${toClub.name} won't give ${p.name} a ${roleLabel(role, p.age)} role — the most they'll offer is ${roleLabel(this.clubRoleCeiling(p, toClub), p.age)}. Lower the role and try again.` };
+            return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: toClub.name, name: p.name, role: roleLabel(role, p.age), ceil: roleLabel(this.clubRoleCeiling(p, toClub), p.age) }) };
         const reqBonus = Math.max(0, Math.round(signingBonus || 0));
         const okBonus = this.clubBonusWillingness(p, toClub, agreedWage, o.transferFee);
         if (reqBonus > okBonus)
-            return { ok: false, message: `${toClub.name} won't pay a €${UI.money(reqBonus)} signing bonus for ${p.name} — they'll go to about €${UI.money(okBonus)}. Lower it and try again.` };
+            return { ok: false, message: I18n.t('ag.tr.bonusTooHigh', { club: toClub.name, bonus: UI.money(reqBonus), name: p.name, ok: UI.money(okBonus) }) };
 
         const wasFree = this.isFreeAgent(p);
         const pkg = {
@@ -857,8 +867,8 @@ const Agency = {
             pkg.credited = true;
             const openWk = (GameState.week >= 7 && GameState.week <= 27) ? 28 : 1;
             const myCut = Math.round(agreedWage * p.wageCommission / 100);
-            GameState.addLog(`${p.name} agreed a move to ${toClub.name} — completes when the window opens (week ${openWk}).`, 'transfer');
-            return { ok: true, message: `Agreed — ${p.name} joins ${toClub.name} when the transfer window opens (week ${openWk}); until then he plays on at ${fromClub ? fromClub.name : 'his current club'}. ${wasFree ? 'Free transfer. ' : ''}Signing bonus €${UI.money(reqBonus)} banked; your cut will be €${UI.money(myCut)}/wk once he moves.`, bonus: reqBonus };
+            GameState.addLog(I18n.t('ag.log.moveAgreed', { name: p.name, club: toClub.name, week: openWk }), 'transfer');
+            return { ok: true, message: I18n.t('ag.tr.agreed', { name: p.name, club: toClub.name, week: openWk, from: fromClub ? fromClub.name : I18n.t('ag.currentClub'), free: wasFree ? I18n.t('ag.freeTransfer') : '', bonus: UI.money(reqBonus), cut: UI.money(myCut) }), bonus: reqBonus };
         }
         return this._finalizeTransfer(p, pkg);
     },
@@ -867,7 +877,7 @@ const Agency = {
     // agreed inside a window, or from completePendingTransfers() the week a window opens.
     _finalizeTransfer(p, pkg) {
         const toClub = Clubs.getClubById(pkg.toClubId), fromClub = pkg.fromClubId ? Clubs.getClubById(pkg.fromClubId) : null;
-        if (!toClub) { delete p.pendingTransfer; delete p.joiningClubId; return { ok: false, message: 'Club gone.' }; }
+        if (!toClub) { delete p.pendingTransfer; delete p.joiningClubId; return { ok: false, message: I18n.t('ag.clubGone') }; }
         const movingUp = !!(fromClub && toClub.reputation > fromClub.reputation);
         if (!p.history) p.history = { ability: [], wage: [], fees: [] };
         p.history.fees.push({ t: GameState.absWeek(), age: careerAge(p), value: pkg.fee, fromId: pkg.fromClubId, toId: pkg.toClubId });
@@ -909,9 +919,9 @@ const Agency = {
             // and _lastAgentActionAbs deliberately stays untouched (see _creditAgentAction)
             if (!pkg.forced) this._creditAgentAction(p, MORALE.AGENT_DEAL_BONUS);
         }
-        GameState.addLog(`${p.name} → ${toClub.name} for €${UI.money(pkg.fee)} (signing bonus €${UI.money(pkg.bonus)}).`, 'transfer');
+        GameState.addLog(I18n.t('ag.log.moveDone', { name: p.name, club: toClub.name, fee: UI.money(pkg.fee), bonus: UI.money(pkg.bonus) }), 'transfer');
         const myCut = Math.round(pkg.wage * p.wageCommission / 100);
-        return { ok: true, message: `${p.name} joins ${toClub.name} as ${roleLabel(p.squadRole, p.age)} until ${GameState.seasonLabelFor(p.contractUntilSeason)}. ${pkg.wasFree ? 'Free transfer. ' : ''}Signing bonus €${UI.money(pkg.bonus)}; your cut €${UI.money(myCut)}/wk.`, bonus: pkg.bonus };
+        return { ok: true, message: I18n.t('ag.tr.completed', { name: p.name, club: toClub.name, role: roleLabel(p.squadRole, p.age), until: GameState.seasonLabelFor(p.contractUntilSeason), free: pkg.wasFree ? I18n.t('ag.freeTransfer') : '', bonus: UI.money(pkg.bonus), cut: UI.money(myCut) }), bonus: pkg.bonus };
     },
 
     // called by Sim.advanceWeek the week a transfer window opens
@@ -923,7 +933,7 @@ const Agency = {
             const toClub = Clubs.getClubById(pkg.toClubId);
             const r = this._finalizeTransfer(p, pkg);
             if (r.ok && p.agentId === 'me') {
-                GameState.addMail({ kind: 'news', cat: 'general', subject: `${p.name} completes his move`, body: `The transfer window is open and ${p.name}'s agreed move has gone through. ${r.message}`, ttl: 4 });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.moveDoneSubj', { name: p.name }), body: I18n.t('ag.mail.moveDoneBody', { name: p.name, msg: r.message }), ttl: 4 });
                 if (events) events.push({ type: 'transfer', text: `${p.name}'s move to ${toClub ? toClub.name : 'his new club'} is complete.` });
             }
         });
@@ -932,16 +942,16 @@ const Agency = {
     acceptRenewal(mail, agreedWage, role, termSeasons) {
         const o = mail.offer, p = GameState.getPlayer(o.playerId);
         const club = Clubs.getClubById(o.clubId);
-        if (!p || !club) return { ok: false, message: 'Gone.' };
-        if (p.pendingTransfer) return { ok: false, message: `${p.name} has already agreed a move away — a renewal is off the table.` };
+        if (!p || !club) return { ok: false, message: I18n.t('ag.gone') };
+        if (p.pendingTransfer) return { ok: false, message: I18n.t('ag.renew.movingAway', { name: p.name }) };
         const term = Math.max(1, Math.min(6, termSeasons || o.proposedTermSeasons || 2));
         if (p._renewSeason === GameState.seasonStartYear)
-            return { ok: false, message: `${p.name}'s deal has already been renegotiated this season — you can revisit it next season.` };
+            return { ok: false, message: I18n.t('ag.renew.alreadyDone', { name: p.name }) };
         const termCap = this.maxContractTerm(p, club);
         if (term > termCap)
-            return { ok: false, message: `${club.name} won't commit to ${term} years for a player his age — at most ${termCap}. Lower the length and try again.` };
+            return { ok: false, message: I18n.t('ag.deal.termTooLong', { club: club.name, term, cap: termCap }) };
         if (role && !this.roleAcceptable(p, club, role))
-            return { ok: false, message: `${club.name} won't give ${p.name} a ${roleLabel(role, p.age)} role — the most they'll offer is ${roleLabel(this.clubRoleCeiling(p, club), p.age)}. Lower the role and try again.` };
+            return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: club.name, name: p.name, role: roleLabel(role, p.age), ceil: roleLabel(this.clubRoleCeiling(p, club), p.age) }) };
         p.wage = agreedWage; p.contractUntilSeason = GameState.seasonStartYear + term; p.freeAgent = false; p._renewSeason = GameState.seasonStartYear;
         if (role && ROLE_ORDER.includes(role)) p.squadRole = role;
         recordWagePoint(p);
@@ -953,18 +963,18 @@ const Agency = {
         // He has just committed: every bid on the table dies with the signature. Clubs that still
         // want him have to come back with a fresh (and better) offer.
         GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'transfer' && m.offer && m.offer.playerId === p.id));
-        GameState.addLog(`${p.name} renewed at ${club.name}: €${UI.money(agreedWage)}/wk until ${GameState.seasonLabelFor(p.contractUntilSeason)} (${roleLabel(p.squadRole, p.age)}).`, 'contract');
-        return { ok: true, message: `Renewed: €${UI.money(agreedWage)}/wk as ${roleLabel(p.squadRole, p.age)} until end of ${GameState.seasonLabelFor(p.contractUntilSeason)}.` };
+        GameState.addLog(I18n.t('ag.log.renewed', { name: p.name, club: club.name, wage: UI.money(agreedWage), until: GameState.seasonLabelFor(p.contractUntilSeason), role: roleLabel(p.squadRole, p.age) }), 'contract');
+        return { ok: true, message: I18n.t('ag.renew.done', { wage: UI.money(agreedWage), role: roleLabel(p.squadRole, p.age), until: GameState.seasonLabelFor(p.contractUntilSeason) }) };
     },
 
     acceptLoanOffer(mail, role, durationCode) {
         const o = mail.offer, p = GameState.getPlayer(o.playerId);
         const borrower = Clubs.getClubById(o.toClubId);
-        if (!p || !borrower) return { ok: false, message: 'Gone.' };
-        if (p.pendingTransfer) return { ok: false, message: `${p.name} has already agreed a transfer — he can't go out on loan first.` };
+        if (!p || !borrower) return { ok: false, message: I18n.t('ag.gone') };
+        if (p.pendingTransfer) return { ok: false, message: I18n.t('ag.loan.acceptPending', { name: p.name }) };
         const r = role || o.role || 'starter';
         const opts = this.loanDurationOptions(p);
-        if (!opts.length) return { ok: false, message: `${p.name}'s contract with his current club doesn't leave room for a loan of any length.` };
+        if (!opts.length) return { ok: false, message: I18n.t('ag.loan.noRoom', { name: p.name }) };
         const code = (durationCode && opts.find(o2 => o2.code === durationCode)) ? durationCode : opts[0].code;
         const end = this.computeLoanEnd(code);
         // capture BEFORE the move resets his playing-time context — the bonus is for fixing a
@@ -980,9 +990,9 @@ const Agency = {
         else this._creditAgentAction(p, 0);   // still counts as contact for the neglect clock, just no bonus
         GameState.removeMail(mail.id);
         GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'loan' && m.offer.playerId === p.id));
-        const durLabel = (opts.find(o2 => o2.code === code) || {}).label || code;
-        GameState.addLog(`${p.name} loaned to ${borrower.name} as ${roleLabel(r, p.age)} (${durLabel}).`, 'loan');
-        return { ok: true, message: `${p.name} is on loan at ${borrower.name} (${roleLabel(r, p.age)}, ${durLabel}).` };
+        const durLabel = this.durLabel((opts.find(o2 => o2.code === code) || {}).label || code);
+        GameState.addLog(I18n.t('ag.log.loaned', { name: p.name, club: borrower.name, role: roleLabel(r, p.age), dur: durLabel }), 'loan');
+        return { ok: true, message: I18n.t('ag.loan.done', { name: p.name, club: borrower.name, role: roleLabel(r, p.age), dur: durLabel }) };
     },
 
     // sponsor deals still running this season or later
@@ -990,13 +1000,13 @@ const Agency = {
     MAX_SPONSORS: 2,
     acceptSponsor(mail, optionIndex = 0) {
         const o = mail.offer, p = GameState.getPlayer(o.playerId);
-        if (!p) return { ok: false, message: 'Gone.' };
-        if (this.activeSponsorCount(p) >= this.MAX_SPONSORS) return { ok: false, message: `${p.name} already carries ${this.MAX_SPONSORS} sponsorship deals — the most a player can hold at once. Let one run out first.` };
+        if (!p) return { ok: false, message: I18n.t('ag.gone') };
+        if (this.activeSponsorCount(p) >= this.MAX_SPONSORS) return { ok: false, message: I18n.t('ag.sponsor.max', { name: p.name, n: this.MAX_SPONSORS }) };
         const opt = (o.options && o.options[optionIndex]) || (o.weeklyAmount != null ? { company: o.sponsorName, weekly: o.weeklyAmount, annual: 0, termSeasons: o.termSeasons || 1 } : null);
-        if (!opt) return { ok: false, message: 'Offer expired.' };
+        if (!opt) return { ok: false, message: I18n.t('ag.sponsor.expired') };
         // never two active deals from the same brand (a stale offer could name one he has since signed)
         if ((p.sponsorDeals || []).some(d => d.company === opt.company && d.untilSeason >= GameState.seasonStartYear))
-            return { ok: false, message: `${p.name} already has an active deal with ${opt.company}.` };
+            return { ok: false, message: I18n.t('ag.sponsor.dupe', { name: p.name, company: opt.company }) };
         p.sponsorIncome += opt.weekly;
         if (!p.sponsorDeals) p.sponsorDeals = [];
         p.sponsorDeals.push({ company: opt.company, weekly: opt.weekly, annual: opt.annual, untilSeason: GameState.seasonStartYear + opt.termSeasons });
@@ -1006,8 +1016,8 @@ const Agency = {
         this._creditAgentAction(p, 6);   // unchanged +6 bump, now also resets the neglect clock (Phase 2)
         GameState.removeMail(mail.id);
         const weeklyCut = Math.round(opt.weekly * p.sponsorCommission / 100);
-        GameState.addLog(`${p.name} signed ${opt.company}: +€${UI.money(opt.weekly)}/wk${opt.annual ? ' + €' + UI.money(opt.annual) + '/yr' : ''} for ${opt.termSeasons} season(s).`, 'sign');
-        return { ok: true, message: `${p.name} signs with ${opt.company}: €${UI.money(opt.weekly)}/wk${opt.annual ? ' plus a €' + UI.money(opt.annual) + '/yr lump sum' : ''} for ${opt.termSeasons} season(s). Your ${p.sponsorCommission}% = €${UI.money(weeklyCut)}/wk${annualCut ? ' + €' + UI.money(annualCut) + '/yr' : ''}.` };
+        GameState.addLog(I18n.t('ag.log.sponsorSigned', { name: p.name, company: opt.company, weekly: UI.money(opt.weekly), annual: opt.annual ? I18n.t('ag.log.plusAnnual', { amt: UI.money(opt.annual) }) : '', terms: opt.termSeasons }), 'sign');
+        return { ok: true, message: I18n.t('ag.sponsor.signed', { name: p.name, company: opt.company, weekly: UI.money(opt.weekly), lump: opt.annual ? I18n.t('ag.sponsor.lump', { amt: UI.money(opt.annual) }) : '', terms: opt.termSeasons, pct: p.sponsorCommission, cut: UI.money(weeklyCut), annualCut: annualCut ? I18n.t('ag.sponsor.annualCut', { amt: UI.money(annualCut) }) : '' }) };
     },
 
     declineMail(mail) { GameState.removeMail(mail.id); },
@@ -1016,35 +1026,35 @@ const Agency = {
     recoverInjury(p) {
         if (!p.injury) return;
         p.injuryHistory.push({ type: p.injury.type, weeks: p.injury.total, season: GameState.seasonLabel() });
-        const t = `${p.name} has recovered from ${p.injury.type}.`;
-        GameState.addLog(t, 'info'); GameState.addMail({ kind: 'news', cat: 'injury', subject: `${p.name} fit again`, body: t, ttl: 2 });
+        const t = I18n.t('ag.log.recovered', { name: p.name, type: p.injury.type });
+        GameState.addLog(t, 'info'); GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 });
         p.injury = null;
     },
     treatPhysio(p) {
-        if (!p.injury) return { ok: false, message: `${p.name} is fully fit.` };
+        if (!p.injury) return { ok: false, message: I18n.t('ag.fullyFit', { name: p.name }) };
         const aw = GameState.absWeek();
-        if (p.injury.treatedWeek === aw) return { ok: false, message: `${p.name} has already had treatment this week.` };
-        if (GameState.agency.balance < 1000) return { ok: false, message: 'Physio costs €1,000 — not enough cash.' };
+        if (p.injury.treatedWeek === aw) return { ok: false, message: I18n.t('ag.physio.treated', { name: p.name }) };
+        if (GameState.agency.balance < 1000) return { ok: false, message: I18n.t('ag.physio.cost') };
         GameState.agency.balance -= 1000; GameState.addFinance('Physio treatments', -1000);
         p.injury.weeksOut = Math.max(0, p.injury.weeksOut - 0.5);
         p.injury.treatedWeek = aw;
-        GameState.addLog(`Physio for ${p.name} (−0.5 wk, €1,000).`, 'money');
-        if (p.injury.weeksOut <= 0) { this.recoverInjury(p); return { ok: true, message: `Physio session done — ${p.name} is fit again!` }; }
-        return { ok: true, message: `Physio session done — ${p.name} now out ~${this._wk(p.injury.weeksOut)} more.` };
+        GameState.addLog(I18n.t('ag.log.physio', { name: p.name }), 'money');
+        if (p.injury.weeksOut <= 0) { this.recoverInjury(p); return { ok: true, message: I18n.t('ag.physio.doneFit', { name: p.name }) }; }
+        return { ok: true, message: I18n.t('ag.physio.doneOut', { name: p.name, wk: this._wk(p.injury.weeksOut) }) };
     },
     treatSpecialist(p) {
-        if (!p.injury) return { ok: false, message: `${p.name} is fully fit.` };
-        if (p.injury.specialistUsed) return { ok: false, message: `${p.name} has already seen the specialist for this injury.` };
+        if (!p.injury) return { ok: false, message: I18n.t('ag.fullyFit', { name: p.name }) };
+        if (p.injury.specialistUsed) return { ok: false, message: I18n.t('ag.spec.used', { name: p.name }) };
         const aw = GameState.absWeek();
-        if (p.injury.treatedWeek === aw) return { ok: false, message: `You can't see the specialist and do physio in the same week.` };
-        if (GameState.agency.balance < 15000) return { ok: false, message: 'The specialist costs €15,000 — not enough cash.' };
+        if (p.injury.treatedWeek === aw) return { ok: false, message: I18n.t('ag.spec.sameWeek') };
+        if (GameState.agency.balance < 15000) return { ok: false, message: I18n.t('ag.spec.cost') };
         GameState.agency.balance -= 15000; GameState.addFinance('Specialists', -15000);
         p.injury.weeksOut = Math.round((p.injury.weeksOut / 2) / 0.5) * 0.5;
         p.injury.specialistUsed = true;
         p.injury.treatedWeek = aw;
-        GameState.addLog(`Specialist for ${p.name} (halved recovery, €15,000).`, 'money');
-        if (p.injury.weeksOut <= 0) { this.recoverInjury(p); return { ok: true, message: `The specialist worked wonders — ${p.name} is fit again!` }; }
-        return { ok: true, message: `The specialist halved it — ${p.name} now out ~${this._wk(p.injury.weeksOut)} more.` };
+        GameState.addLog(I18n.t('ag.log.specialist', { name: p.name }), 'money');
+        if (p.injury.weeksOut <= 0) { this.recoverInjury(p); return { ok: true, message: I18n.t('ag.spec.doneFit', { name: p.name }) }; }
+        return { ok: true, message: I18n.t('ag.spec.doneOut', { name: p.name, wk: this._wk(p.injury.weeksOut) }) };
     },
     _wk(w) { return (Math.round(w * 2) / 2) + ' week(s)'; },
 
@@ -1064,13 +1074,13 @@ const Agency = {
     giveGift(p, tier) {
         if (!p._giftLog) p._giftLog = { small: null, medium: null, large: null, lastAny: null };
         if (p.moraleCase && p.moraleCase.dim === 'agent' && p.moraleCase.stage >= 3)
-            return { ok: false, message: `${p.name} refuses to accept any gifts from you right now — it's gone well beyond that.` };
+            return { ok: false, message: I18n.t('ag.gift.refuses', { name: p.name }) };
         if (!this.giftTierReady(p, tier)) {
             const weeksLeft = MORALE.GIFT_TIER_COOLDOWN_WEEKS - (GameState.absWeek() - p._giftLog[tier]);
-            return { ok: false, message: `${p.name} already had a gift like that recently — try again in ~${Math.ceil(weeksLeft / 52)} season(s).` };
+            return { ok: false, message: I18n.t('ag.gift.recent', { name: p.name, n: Math.ceil(weeksLeft / 52) }) };
         }
         const cost = this.giftCost(tier, p);
-        if (GameState.agency.balance < cost) return { ok: false, message: `Not enough money for that gift (€${UI.money(cost)}).` };
+        if (GameState.agency.balance < cost) return { ok: false, message: I18n.t('ag.gift.cost', { amt: UI.money(cost) }) };
         GameState.addFinance('Gifts & relationships', -cost);
         GameState.agency.balance -= cost;
         const aw = GameState.absWeek();
@@ -1087,11 +1097,11 @@ const Agency = {
         };
         const arr = lines[tier] || lines.small;
         const quote = arr[Math.floor(Rng.next() * arr.length)];
-        GameState.addLog(`Gave ${p.name} a ${tier} gift (−€${UI.money(cost)})${diminished ? ' — diminished, too soon after the last one' : ''}.`, 'info');
+        GameState.addLog(I18n.t('ag.log.gift', { name: p.name, tier, amt: UI.money(cost), dim: diminished ? I18n.t('ag.log.giftDim') : '' }), 'info');
         // a gift lands hardest when things between you are strained (see js/dialogue.js)
         if (typeof Dialogue !== 'undefined') Dialogue.addBond(p, strained ? 2 : 1);
         // `scene` lets the UI play the reaction as a short conversation instead of a banner
-        return { ok: true, quote, scene: true, tier, diminished, message: `${p.name}: ${quote}${diminished ? '<br><span class="muted">(reduced effect — too soon after your last gift)</span>' : ''}`, cost };
+        return { ok: true, quote, scene: true, tier, diminished, message: I18n.t('ag.gift.result', { name: p.name, quote, note: diminished ? I18n.t('ag.gift.diminishedNote') : '' }), cost };
     },
 
     // ---------- morale case actions ----------
@@ -1104,13 +1114,13 @@ const Agency = {
         return MORALE_PROMISE_TYPES[p.moraleCase.dim] || [];
     },
     makePromise(p, type) {
-        if (!this.isClient(p)) return { ok: false, message: 'Not your client.' };
+        if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
         const c = p.moraleCase;
-        if (!c || c.stage !== 1) return { ok: false, message: `No open case to make a promise about.` };
-        if (!this.validPromiseTypes(p).includes(type)) return { ok: false, message: `That promise doesn't fit this situation.` };
+        if (!c || c.stage !== 1) return { ok: false, message: I18n.t('ag.promise.noCase') };
+        if (!this.validPromiseTypes(p).includes(type)) return { ok: false, message: I18n.t('ag.promise.badFit') };
         c.promise = { type, deadlineAbsWeek: moralePromiseDeadline(type) };
-        GameState.addLog(`Promised ${p.name} you'll sort things out.`, 'morale');
-        return { ok: true, message: `You've promised ${p.name} you'll sort this out. Don't let him down.` };
+        GameState.addLog(I18n.t('ag.log.promised', { name: p.name }), 'morale');
+        return { ok: true, message: I18n.t('ag.promise.made', { name: p.name }) };
     },
 
     repRemainingWeeks(p) {
@@ -1122,16 +1132,16 @@ const Agency = {
     releaseFee(p) { return p.repExpired ? 0 : Math.round(p.wage * this.repRemainingWeeks(p) * p.wageCommission / 100); },
     releasePlayer(p) {
         const fee = this.releaseFee(p);
-        if (GameState.agency.balance < fee) return { ok: false, message: `You must pay out the contract (€${UI.money(fee)}) but can't afford it.` };
+        if (GameState.agency.balance < fee) return { ok: false, message: I18n.t('ag.release.cost', { amt: UI.money(fee) }) };
         GameState.addFinance('Release pay-outs', -fee);
         GameState.agency.balance -= fee;
         p.agentId = null; p.wageCommission = 0; p.sponsorCommission = 0; p.repUntilSeason = null;
         p.transferListed = false; p.loanListed = false; p.dismissedTalent = true;   // ex-client: out of clients & talent, kept in Client History
-        GameState.addLog(`Released ${p.name} (paid out €${UI.money(fee)}).`, 'warn');
-        return { ok: true, message: `${p.name} is no longer your client. Contract pay-out: €${UI.money(fee)}.` };
+        GameState.addLog(I18n.t('ag.log.released', { name: p.name, amt: UI.money(fee) }), 'warn');
+        return { ok: true, message: I18n.t('ag.release.done', { name: p.name, amt: UI.money(fee) }) };
     },
-    toggleTransferList(p) { p.transferListed = !p.transferListed; GameState.addLog(`${p.name} ${p.transferListed ? 'added to' : 'removed from'} transfer list.`, 'info'); return p.transferListed; },
-    toggleLoanList(p) { p.loanListed = !p.loanListed; if (p.loanListed) p._loanOffersFrom = GameState.absWeek() + 1; GameState.addLog(`${p.name} ${p.loanListed ? 'added to' : 'removed from'} loan list.`, 'info'); return p.loanListed; },
+    toggleTransferList(p) { p.transferListed = !p.transferListed; GameState.addLog(I18n.t(p.transferListed ? 'ag.log.txlistAdded' : 'ag.log.txlistRemoved', { name: p.name }), 'info'); return p.transferListed; },
+    toggleLoanList(p) { p.loanListed = !p.loanListed; if (p.loanListed) p._loanOffersFrom = GameState.absWeek() + 1; GameState.addLog(I18n.t(p.loanListed ? 'ag.log.loanlistAdded' : 'ag.log.loanlistRemoved', { name: p.name }), 'info'); return p.loanListed; },
 
     // ---------- helpers ----------
     // the most a club will spend on a single player, driven by its league's wealth and its own standing.

@@ -4,7 +4,7 @@
 // becomes the new autosave.
 const vm = require('vm'), fs = require('fs'), path = require('path');
 const base = path.join(__dirname, '..', 'js') + '/';
-const engine = ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'injuries-data.js', 'simulation.js'];
+const engine = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'injuries-data.js', 'simulation.js'];
 
 // a keyed fake IndexedDB that retains put values by key (deep-copied, like structured clone) so named
 // slots and the autosave live side by side, and a stored snapshot can't alias the live game state

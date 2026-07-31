@@ -92,7 +92,7 @@ const ClubScreen = {
         const rows = ['UCL', 'UEL', 'UECL'].filter(k => eb[k]).map(k => {
             const b = eb[k];
             const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(k)) || '';
-            const stage = labels[b.stage] || I18n.t('club.reached');
+            const stage = (typeof Europe !== 'undefined' && Europe.stageLabel(b.stage)) || labels[b.stage] || I18n.t('club.reached');
             const won = b.stage >= 7;
             return `<div class="frow"><span class="frow__k">${ic}${compName(k)}</span><span class="frow__v"${won ? ' style="color:var(--gold)"' : ''}>${stage}${b.year != null ? ` <span class="muted">· ${GameState.seasonLabelFor(b.year)}</span>` : ''}</span></div>`;
         }).join('');

@@ -5,15 +5,25 @@ const ROLE_PLAYTIME = { youth: 0.12, fringe: 0.30, rotation: 0.45, starter: 1.0,
 const ROLE_LABEL = { youth: 'Youth', fringe: 'Hot Prospect', rotation: 'Rotation', starter: 'Starter', key: 'Star Player' };
 // Goalkeepers use their own tier names (D4): only one plays, so it's a strict depth chart.
 const GK_ROLE_LABEL = { youth: 'Youth', fringe: 'Hot Prospect', rotation: 'Back Up', starter: 'First Choice', key: 'Star Player' };
+// each squad role maps to an i18n key; GK rotation/starter get their own depth-chart names
+const ROLE_I18N = { youth: 'youth', fringe: 'hotProspect', rotation: 'rotation', starter: 'starter', key: 'star' };
+const GK_ROLE_I18N = { youth: 'youth', fringe: 'hotProspect', rotation: 'backUp', starter: 'firstChoice', key: 'star' };
+// look up 'role.<key>' via I18n, falling back to the raw English label if I18n is absent or the key is unregistered
+function tRole(key, raw) {
+    if (typeof I18n === 'undefined') return raw;
+    const s = I18n.t('role.' + key);
+    return s === 'role.' + key ? raw : s;
+}
 // "Hot Prospect" only applies to players under 23; the same tier reads "Fringe" for older players
 function roleLabel(role, age, pos, cupKeeper) {
+    const fringe = () => (age != null && age >= 23) ? tRole('fringe', 'Fringe') : tRole('hotProspect', 'Hot Prospect');
     if (pos === 'GK') {
-        if (cupKeeper) return 'Cup Goalkeeper';
-        if (role === 'fringe') return (age != null && age >= 23) ? 'Fringe' : 'Hot Prospect';
-        return GK_ROLE_LABEL[role] || role;
+        if (cupKeeper) return tRole('cupKeeper', 'Cup Goalkeeper');
+        if (role === 'fringe') return fringe();
+        return tRole(GK_ROLE_I18N[role] || role, GK_ROLE_LABEL[role] || role);
     }
-    if (role === 'fringe') return (age != null && age >= 23) ? 'Fringe' : 'Hot Prospect';
-    return ROLE_LABEL[role] || role;
+    if (role === 'fringe') return fringe();
+    return tRole(ROLE_I18N[role] || role, ROLE_LABEL[role] || role);
 }
 // role label from a full player object (handles the GK depth chart + the Cup Goalkeeper flag)
 function roleName(p) { return roleLabel(p.squadRole, p.age, p.position, p.cupKeeper); }

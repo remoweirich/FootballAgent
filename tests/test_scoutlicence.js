@@ -2,7 +2,7 @@
 // then €10k / €20k / €40k fines and a 52-week suspension that recalls overseas scouts.
 const vm = require('vm'), fs = require('fs'), path = require('path');
 const base = path.join(__dirname, '..', 'js') + '/';
-const engine = ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'injuries-data.js', 'simulation.js'];
+const engine = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'injuries-data.js', 'simulation.js'];
 const g = { console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout, Math, Date, JSON, indexedDB: { open() { return { result: null, onsuccess: null }; } }, localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, document: { addEventListener() {} }, window: { addEventListener() {} } };
 g.UI = { money: n => Math.round(n || 0).toLocaleString('en-US'), euro: n => '€' + n };
 vm.createContext(g);

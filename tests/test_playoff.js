@@ -13,7 +13,7 @@ const sb = {
 };
 sb.UI = { money: n => String(n), euro: n => '€' + n, clubName: id => String(id) };
 vm.createContext(sb);
-for (const f of ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js', 'live-sim-data.js'])
+for (const f of ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js', 'live-sim-data.js'])
     vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
 const LiveSim = vm.runInContext(fs.readFileSync(path.join(root, 'js', 'live-sim.js'), 'utf8') + ';LiveSim', sb, { filename: 'live-sim.js' });
 const run = c => vm.runInContext('(function(){' + c + '})()', sb);

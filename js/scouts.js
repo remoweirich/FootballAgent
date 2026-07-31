@@ -4,40 +4,40 @@
 //  (one-off fee; better regions cost more). Only assigned scouts
 //  produce reports. Better scouts find better, more talents.
 // ============================================================
-const FIRST_NAMES_SCOUT = ['Hans', 'Piet', 'Wim', 'Cor', 'Jan', 'Ruud', 'Theo', 'Frank', 'Gerard', 'Sjaak', 'Henk', 'Bas', 'Marcel', 'Ronald'];
+const FIRST_NAMES_SCOUT = ['Sem', 'Teun', 'Esmee', 'Lieke', 'Emma', 'Stijn', 'Patrick', 'Hans', 'Piet', 'Wim', 'Cor', 'Jan', 'Ruud', 'Theo', 'Frank', 'Gerard', 'Sjaak', 'Henk', 'Bas', 'Marcel', 'Ronald'];
 const LAST_NAMES_SCOUT = ['Visser', 'Bakker', 'de Wit', 'Janssen', 'Smit', 'Vermeer', 'Kuiper', 'Blom', 'Dekker', 'Hofman', 'Mulder', 'Kok'];
 const SCOUT_NAMES = {
     Netherlands: { first: FIRST_NAMES_SCOUT, last: LAST_NAMES_SCOUT },
     England: {
-        first: ['James', 'Jack', 'Harry', 'George', 'Oliver', 'Thomas', 'William', 'Charlie', 'Daniel', 'Joseph', 'Samuel', 'Lewis', 'Ryan', 'Liam', 'Nathan', 'Scott', 'Wayne', 'Gary', 'Paul', 'Steve', 'Mark', 'Lee', 'Ian', 'Phil', 'Dean', 'Craig', 'Darren', 'Neil', 'Alan', 'Terry'],
+        first: ['James', 'Jack', 'Harry', 'George', 'Oliver', 'Thomas', 'William', 'Charlie', 'Daniel', 'Joseph', 'Samuel', 'Lewis', 'Ryan', 'Liam', 'Nathan', 'Scott', 'Wayne', 'Gary', 'Paul', 'Steve', 'Mark', 'Lee', 'Ian', 'Phil', 'Dean', 'Craig', 'Darren', 'Neil', 'Alan', 'Terry', 'Gemma', 'Anne', 'Patros', 'Hannah', 'Patty', 'Mo'],
         last: ['Smith', 'Jones', 'Taylor', 'Brown', 'Williams', 'Wilson', 'Johnson', 'Davies', 'Robinson', 'Wright', 'Thompson', 'Evans', 'Walker', 'White', 'Roberts', 'Green', 'Hall', 'Wood', 'Harris', 'Clarke', 'Jackson', 'Turner', 'Hill', 'Cooper', 'Ward', 'Morris', 'Moore', 'King', 'Baker', 'Morgan']
     },
     Germany: {
-        first: ['Michael', 'Thomas', 'Andreas', 'Stefan', 'Klaus', 'Jürgen', 'Wolfgang', 'Dieter', 'Uwe', 'Matthias', 'Frank', 'Markus', 'Christian', 'Sebastian', 'Lukas', 'Felix', 'Jonas', 'Tobias', 'Sven', 'Dirk', 'Bernd', 'Rainer', 'Horst', 'Günter', 'Helmut', 'Manfred', 'Rolf', 'Jörg', 'Kai', 'Oliver'],
+        first: ['Maria', 'Emma', 'Sophia', 'Martina', 'Lukas', 'Kristof', 'Mahmoud','Michael', 'Thomas', 'Andreas', 'Stefan', 'Klaus', 'Jürgen', 'Wolfgang', 'Dieter', 'Uwe', 'Matthias', 'Frank', 'Markus', 'Christian', 'Sebastian', 'Lukas', 'Felix', 'Jonas', 'Tobias', 'Sven', 'Dirk', 'Bernd', 'Rainer', 'Horst', 'Günter', 'Helmut', 'Manfred', 'Rolf', 'Jörg', 'Kai', 'Oliver'],
         last: ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann', 'Schäfer', 'Koch', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann', 'Braun', 'Krüger', 'Hartmann', 'Lange', 'Werner', 'Krause', 'Lehmann', 'Köhler', 'Herrmann', 'Kaiser']
     },
     Spain: {
-        first: ['Antonio', 'Manuel', 'José', 'Francisco', 'David', 'Juan', 'Javier', 'Daniel', 'Carlos', 'Miguel', 'Alejandro', 'Rafael', 'Pablo', 'Sergio', 'Fernando', 'Jorge', 'Alberto', 'Luis', 'Álvaro', 'Adrián', 'Diego', 'Rubén', 'Óscar', 'Raúl', 'Iván', 'Pedro', 'Andrés', 'Ángel', 'Marcos', 'Gonzalo'],
+        first: ['Alexia', 'Salma', 'Maricarla', 'Antonio', 'Manuel', 'José', 'Francisco', 'David', 'Juan', 'Javier', 'Daniel', 'Carlos', 'Miguel', 'Alejandro', 'Rafael', 'Pablo', 'Sergio', 'Fernando', 'Jorge', 'Alberto', 'Luis', 'Álvaro', 'Adrián', 'Diego', 'Rubén', 'Óscar', 'Raúl', 'Iván', 'Pedro', 'Andrés', 'Ángel', 'Marcos', 'Gonzalo'],
         last: ['García', 'Rodríguez', 'González', 'Fernández', 'López', 'Martínez', 'Sánchez', 'Pérez', 'Gómez', 'Martín', 'Jiménez', 'Ruiz', 'Hernández', 'Díaz', 'Moreno', 'Álvarez', 'Romero', 'Alonso', 'Gutiérrez', 'Navarro', 'Torres', 'Domínguez', 'Vázquez', 'Ramos', 'Gil', 'Serrano', 'Molina', 'Blanco', 'Castro', 'Ortega']
     },
     Switzerland: {
-        first: ['Lukas', 'Simon', 'Fabian', 'Marco', 'Jonas', 'Sandro', 'Manuel', 'Adrian', 'Reto', 'Beat', 'Urs', 'Christian', 'Thomas', 'Daniel', 'Stefan', 'Martin', 'Jean', 'Pierre', 'Luc', 'Mathieu', 'Guillaume', 'Bastien', 'Alessandro', 'Diego', 'Francesco', 'Pietro', 'Andreas', 'Florian', 'Patrick', 'Hans'],
+        first: ['Julia', 'Joelle', 'Andrea', 'Betty','Lukas', 'Simon', 'Fabian', 'Marco', 'Jonas', 'Sandro', 'Manuel', 'Adrian', 'Reto', 'Beat', 'Urs', 'Christian', 'Thomas', 'Daniel', 'Stefan', 'Martin', 'Jean', 'Pierre', 'Luc', 'Mathieu', 'Guillaume', 'Bastien', 'Alessandro', 'Diego', 'Francesco', 'Pietro', 'Andreas', 'Florian', 'Patrick', 'Hans'],
         last: ['Müller', 'Meier', 'Schmid', 'Keller', 'Weber', 'Huber', 'Steiner', 'Fischer', 'Gerber', 'Brunner', 'Baumann', 'Moser', 'Zimmermann', 'Frei', 'Widmer', 'Graf', 'Favre', 'Dubois', 'Girard', 'Richard', 'Bernasconi', 'Bianchi', 'Fontana', 'Ferrari', 'Rossi', 'Sutter', 'Studer', 'Wyss', 'Egli', 'Vogel']
     },
     Italy: {
-        first: ['Alessandro', 'Andrea', 'Marco', 'Francesco', 'Giuseppe', 'Antonio', 'Giovanni', 'Roberto', 'Stefano', 'Paolo', 'Fabio', 'Luca', 'Matteo', 'Lorenzo', 'Davide', 'Simone', 'Riccardo', 'Massimo', 'Claudio', 'Sergio', 'Maurizio', 'Gianluca', 'Vincenzo', 'Salvatore', 'Domenico', 'Michele', 'Bruno', 'Franco', 'Carlo', 'Enrico'],
+        first: ['Maria', 'Giulia', 'Patricia','Alessandro', 'Andrea', 'Marco', 'Francesco', 'Giuseppe', 'Antonio', 'Giovanni', 'Roberto', 'Stefano', 'Paolo', 'Fabio', 'Luca', 'Matteo', 'Lorenzo', 'Davide', 'Simone', 'Riccardo', 'Massimo', 'Claudio', 'Sergio', 'Maurizio', 'Gianluca', 'Vincenzo', 'Salvatore', 'Domenico', 'Michele', 'Bruno', 'Franco', 'Carlo', 'Enrico'],
         last: ['Rossi', 'Russo', 'Ferrari', 'Esposito', 'Bianchi', 'Romano', 'Colombo', 'Ricci', 'Marino', 'Greco', 'Bruno', 'Gallo', 'Conti', 'De Luca', 'Mancini', 'Costa', 'Giordano', 'Rizzo', 'Lombardi', 'Moretti', 'Barbieri', 'Fontana', 'Santoro', 'Mariani', 'Rinaldi', 'Caruso', 'Ferrara', 'Galli', 'Martini', 'Leone']
     },
     France: {
-        first: ['Jean', 'Pierre', 'Michel', 'Philippe', 'Alain', 'Nicolas', 'Christophe', 'Laurent', 'Olivier', 'Thierry', 'David', 'Julien', 'Sébastien', 'Stéphane', 'Pascal', 'Frédéric', 'Antoine', 'Guillaume', 'Maxime', 'Alexandre', 'Romain', 'Vincent', 'Bernard', 'Patrick', 'Gérard', 'Didier', 'Franck', 'Bruno', 'Yannick', 'Florian'],
+        first: ['Juliette', 'Marie', 'René', 'Jean', 'Pierre', 'Michel', 'Philippe', 'Alain', 'Nicolas', 'Christophe', 'Laurent', 'Olivier', 'Thierry', 'David', 'Julien', 'Sébastien', 'Stéphane', 'Pascal', 'Frédéric', 'Antoine', 'Guillaume', 'Maxime', 'Alexandre', 'Romain', 'Vincent', 'Bernard', 'Patrick', 'Gérard', 'Didier', 'Franck', 'Bruno', 'Yannick', 'Florian'],
         last: ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel', 'Girard', 'André', 'Lefèvre', 'Mercier', 'Dupont', 'Lambert', 'Bonnet', 'Rousseau', 'Blanc']
     },
     Portugal: {
-        first: ['João', 'Francisco', 'Miguel', 'Gonçalo', 'Tomás', 'Rodrigo', 'Pedro', 'Tiago', 'Diogo', 'Rafael', 'André', 'Daniel', 'Bruno', 'Nuno', 'Hugo', 'Rui', 'Ricardo', 'Fábio', 'Sérgio', 'Vítor', 'Luís', 'Paulo', 'Carlos', 'José', 'António', 'Manuel', 'Jorge', 'Filipe', 'Nélson', 'Márcio'],
+        first: ['Maria', 'Ana', 'Isabel', 'João', 'Francisco', 'Miguel', 'Gonçalo', 'Tomás', 'Rodrigo', 'Pedro', 'Tiago', 'Diogo', 'Rafael', 'André', 'Daniel', 'Bruno', 'Nuno', 'Hugo', 'Rui', 'Ricardo', 'Fábio', 'Sérgio', 'Vítor', 'Luís', 'Paulo', 'Carlos', 'José', 'António', 'Manuel', 'Jorge', 'Filipe', 'Nélson', 'Márcio'],
         last: ['Silva', 'Santos', 'Ferreira', 'Pereira', 'Oliveira', 'Costa', 'Rodrigues', 'Martins', 'Sousa', 'Fernandes', 'Gonçalves', 'Gomes', 'Lopes', 'Marques', 'Alves', 'Almeida', 'Ribeiro', 'Pinto', 'Carvalho', 'Teixeira', 'Moreira', 'Correia', 'Mendes', 'Nunes', 'Soares', 'Vieira', 'Monteiro', 'Cardoso', 'Rocha', 'Neves']
     },
     Belgium: {
-        first: ['Lucas', 'Louis', 'Nathan', 'Thomas', 'Wout', 'Arthur', 'Jules', 'Victor', 'Jan', 'Kevin', 'Thibaut', 'Maxime', 'Simon', 'Robbe', 'Seppe', 'Dries', 'Bram', 'Sander', 'Ruben', 'Bart', 'Koen', 'Tom', 'Nicolas', 'Antoine', 'Guillaume', 'Florian', 'Mathieu', 'Julien', 'Cédric', 'Michel'],
+        first: ['Emma', 'Anna', 'Sophie', 'Lucas', 'Louis', 'Nathan', 'Thomas', 'Wout', 'Arthur', 'Jules', 'Victor', 'Jan', 'Kevin', 'Thibaut', 'Maxime', 'Simon', 'Robbe', 'Seppe', 'Dries', 'Bram', 'Sander', 'Ruben', 'Bart', 'Koen', 'Tom', 'Nicolas', 'Antoine', 'Guillaume', 'Florian', 'Mathieu', 'Julien', 'Cédric', 'Michel'],
         last: ['Peeters', 'Janssens', 'Maes', 'Jacobs', 'Willems', 'Mertens', 'Claes', 'Goossens', 'Wouters', 'De Smet', 'Dubois', 'Lambert', 'Dupont', 'Martin', 'Simon', 'Van Damme', 'De Clercq', 'Vermeulen', 'Segers', 'Hermans', 'Michiels', 'Aerts', 'Verstraeten', 'Van Hecke', 'Leroy', 'Renard', 'Lejeune', 'Thys', 'Coppens', 'De Backer']
     }
 };
@@ -294,6 +294,13 @@ const Scouts = {
         pro: { pot: [55, 72], label: '3rd-tier / lower-league' },
         top: { pot: [70, 85], label: 'top-league talent' },
         elite: { pot: [85, 99], label: 'international superstar' },
+    },
+    // localized tier label ('tier.<key>'), falling back to the raw English label
+    tierLabel(key) {
+        const raw = (this.TIERS[key] && this.TIERS[key].label) || key;
+        if (typeof I18n === 'undefined') return raw;
+        const s = I18n.t('tier.' + key);
+        return s === 'tier.' + key ? raw : s;
     },
     _tierReliability(q, tierKey) {
         const need = { dev: 15, pro: 35, top: 60, elite: 82 }[tierKey] || 15;

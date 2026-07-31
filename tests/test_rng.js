@@ -41,7 +41,7 @@ check('withSeed is deterministic for a given seed', JSON.stringify(derivedA) ===
 
 // ---- Part 2: the seed threads through save/load ------------------------------------------------
 const base = path.join(__dirname, '..', 'js') + '/';
-const engine = ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js'];
+const engine = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js'];
 function makeDisk() {
     let stored = null;
     const idb = { open() { const r = { result: null, onsuccess: null }; setTimeout(() => { r.result = store; if (r.onsuccess) r.onsuccess(); }, 0); return r; } };

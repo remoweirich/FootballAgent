@@ -32,6 +32,8 @@ Object.defineProperty(locObj, 'hash', { get() { return hash; }, set(v) { const n
 sb.location = locObj;
 sb.window.location = locObj;
 vm.createContext(sb);
+for (const f of ['i18n.js', 'i18n-en.js', 'i18n-de.js']) vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
+vm.runInContext(fs.readFileSync(path.join(root, 'ui', 'js', 'i18n-en.js'), 'utf8'), sb, { filename: 'ui-i18n-en.js' });
 vm.runInContext(fs.readFileSync(path.join(root, 'ui', 'js', 'router.js'), 'utf8'), sb, { filename: 'router.js' });
 
 const R = vm.runInContext('Router', sb);

@@ -3,7 +3,7 @@
 // so nothing the game reads is missing.
 const vm = require('vm'), fs = require('fs'), path = require('path');
 const base = path.join(__dirname, '..', 'js') + '/';
-const engine = ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js'];
+const engine = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js'];
 
 // a fake IDB that actually retains the last put value, so load() reads back what save() wrote
 function makeDisk() {

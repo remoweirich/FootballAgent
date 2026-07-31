@@ -224,31 +224,10 @@ const LeaguesScreen = {
             : t.et ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.etTag')})</span>` : '';
         return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}${penTag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
-    // brief English explanation shown at the top of every cup view, keyed by competition
-    CUP_BLURB: {
-        beker: 'Clubs from tiers 2–4 (56 in all) start in round one; the 18 Eredivisie clubs join at the Round of 32. Every tie is a single match with the lower-ranked side at home. Rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
-        kbek: 'The lower-division clubs are split into twelve mixed groups of three (group games in weeks 4, 7 and 16). The twelve group winners plus the four best runners-up form the last 16, then a straight knockout to the final in week 47.',
-        facup: 'All 116 English league clubs plus 12 non-league guest clubs — 128 in total — are drawn together from round one. Single-match knockout (lower-ranked side at home), with rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
-        llc: 'The 24 National League clubs are drawn into eight groups of three and play each other once (weeks 4 & 7). The top two of each group — 16 clubs — join the 48 League One and League Two clubs for a 64-team knockout: Round of 64 in week 11, then weeks 15, 26, 32, 38 and the final in week 47.',
-        dfb: 'All 128 German clubs enter in round one. Bundesliga, 2. Bundesliga and 3. Liga sides are seeded — drawn away and kept apart in round one. Single-match rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
-        lpokal: 'The 48 clubs of the 1st and 2nd Regionalliga play two qualifying rounds (weeks 4 & 7); the 12 survivors join the 20 clubs of the 3. Liga at the Round of 32 (week 15). Further rounds in weeks 26, 32, 38 and 47.',
-        cdr: 'All 64 clubs from the top three divisions enter round one. La Liga clubs are seeded — drawn away and kept apart in round one. Single-match rounds in weeks 4, 7, 15, 26, 38 and 47.',
-        cfed: 'The 64 clubs from the bottom three divisions contest this cup. Primera Superior clubs are seeded — drawn away and kept apart in round one. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
-        schwcup: 'Round one pits the 1. Liga (drawn away) against the 2. Liga; the 24 winners then meet the Super League (seeded, away), Challenge League and Promotion League — 64 clubs in all. Reserve teams, Vaduz and Eschen/Mauren are replaced by virtual amateur sides. Rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
-        cupabass: '64 clubs from the Promotion League, 1. Liga and 2. Liga (minus Eschen/Mauren and one random reserve side). Promotion League clubs are seeded and drawn away. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
-        lichcup: 'Vaduz, Eschen/Mauren and six Liechtenstein amateur clubs. The quarter-finals and semi-finals are two-legged; the final is a single match. Played in weeks 32, 38 and 47.',
-        coppaitalia: 'All 64 clubs from Serie A, B and C enter round one. Serie A clubs are seeded — drawn away and kept apart in round one. Single-match rounds in weeks 4, 7, 15, 26, 38 and 47.',
-        coppacompagno: 'The 64 clubs from Serie B, C and D. Serie B clubs are seeded — drawn away and kept apart in round one. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
-        coupefrance: '128 entrants — the 100 clubs of Ligue 1 to 5 plus 28 amateur guest clubs — are drawn together from round one. The higher-division side is always drawn away. Single-match rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
-        coupenational: 'The 64 clubs of Ligue 3, 4 and 5, drawn together from round one. The higher-division side is always drawn away. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
-        tacaportugal: 'The 24 Liga 4 clubs meet in a preliminary round; the 12 winners join the 52 non-reserve clubs of the top three divisions for a 64-team knockout. The 18 Primeira Liga clubs are seeded in the first round (drawn away, kept apart). B/U21 sides are excluded. Rounds in weeks 4, 7, 15, 26, 32, 38 and 47.',
-        segundataca: 'The 62 clubs of Liga Portugal 2, Liga 3 and Liga 4 (B sides included) are joined by two amateur guest clubs for a clean 64-team knockout. Rounds in weeks 4, 7, 15, 26, 38 and 47.',
-        belgiancup: 'The 24 Belgian Division 2 clubs play eight groups of three (one game against each, in week 4). The 8 group winners join the 56 clubs of the top three divisions for a 64-team knockout. The 18 Jupiler Pro League clubs are seeded in the first round (drawn away, kept apart). Knockout rounds in weeks 7, 15, 26, 32, 38 and 47.',
-        notrecoupe: 'The 62 clubs of the Challenger Pro League, Belgian Division 1 and Division 2 (B sides included) are joined by two amateur guest clubs for a clean 64-team knockout. Rounds in weeks 4, 7, 15, 26, 38 and 47.'
-    },
     cupBlurb(key) {
-        const b = this.CUP_BLURB[key];
-        return b ? `<p class="hint" style="margin-bottom:var(--space-4)">${b}</p>` : '';
+        const k = 'leagues.cupBlurb.' + key;
+        const b = I18n.t(k);
+        return b !== k ? `<p class="hint" style="margin-bottom:var(--space-4)">${b}</p>` : '';
     },
     knockoutCup(key, label) {
         const C = (GameState.league && GameState.league[key]) || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
@@ -331,8 +310,8 @@ const LeaguesScreen = {
             const BAR = [['L1L2', 'Ligue 1 / Ligue 2'], ['L2L3', 'Ligue 2 / Ligue 3'], ['L3L4', 'Ligue 3 / Ligue 4'], ['L4L5', 'Ligue 4 / Ligue 5']];
             const barrages = BAR.map(([k, label]) => {
                 const t = bar && bar[k];
-                if (!t) return `<div class="section-label">${label} barrage</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
-                return `<div class="section-label">${label} barrage</div><div class="fcard">${this.relegTie(t)}<p class="hint">${I18n.t('leagues.winnerHigherDiv')}</p></div>`;
+                if (!t) return `<div class="section-label">${I18n.t('leagues.barrageLabel', { comp: label })}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
+                return `<div class="section-label">${I18n.t('leagues.barrageLabel', { comp: label })}</div><div class="fcard">${this.relegTie(t)}<p class="hint">${I18n.t('leagues.winnerHigherDiv')}</p></div>`;
             }).join('');
             return brackets + barrages;
         }
@@ -360,12 +339,12 @@ const LeaguesScreen = {
             if (!PO) return `<p class="hint">${I18n.t('leagues.promRelegDecided46')}</p>`;
             const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
             const block = (label, tie, note) => `<div class="section-label">${label}</div><div class="fcard">${this.relegTie(tie)}${note ? `<p class="hint">${note}</p>` : ''}</div>`;
-            const lp = block('Liga Portugal play-off', PO.lpPlayoff, 'Primeira Liga 16th vs Liga Portugal 2 3rd — the winner plays in the Primeira Liga next season.');
-            const lp2 = block('Liga Portugal 2 play-off', PO.lp2Playoff, 'Liga Portugal 2 16th vs Liga 3 3rd — the winner plays in Liga Portugal 2 next season.');
-            let l3 = `<div class="section-label">Liga 3 play-off</div><p class="hint">Decided in week 46.</p>`;
+            const lp = block(I18n.t('leagues.pt.lpLabel'), PO.lpPlayoff, I18n.t('leagues.pt.lpNote'));
+            const lp2 = block(I18n.t('leagues.pt.lp2Label'), PO.lp2Playoff, I18n.t('leagues.pt.lp2Note'));
+            let l3 = `<div class="section-label">${I18n.t('leagues.pt.l3Label')}</div><p class="hint">${I18n.t('leagues.pt.l3Decided')}</p>`;
             if (PO.liga3PO) {
                 const p = PO.liga3PO;
-                l3 = `<div class="section-label">Liga 3 play-off</div><div class="fcard">${hd('Semi-final A — Liga 4 3rd v 4th')}${this.relegTie(p.sfA)}${hd('Semi-final B — Liga 3 17th v 18th')}${this.relegTie(p.sfB)}${hd('Final — loser of SF-B v winner of SF-A')}${this.relegTie(p.final)}${typeof Attend !== 'undefined' && Attend.poFinalHidden(p.final) ? '' : `<div class="frow"><span class="frow__k">Into Liga 3</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div>`}</div>`;
+                l3 = `<div class="section-label">${I18n.t('leagues.pt.l3Label')}</div><div class="fcard">${hd(I18n.t('leagues.pt.sfA'))}${this.relegTie(p.sfA)}${hd(I18n.t('leagues.pt.sfB'))}${this.relegTie(p.sfB)}${hd(I18n.t('leagues.pt.final'))}${this.relegTie(p.final)}${typeof Attend !== 'undefined' && Attend.poFinalHidden(p.final) ? '' : `<div class="frow"><span class="frow__k">${I18n.t('leagues.pt.intoLiga3')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div>`}</div>`;
             }
             return lp + lp2 + l3;
         }
@@ -374,12 +353,12 @@ const LeaguesScreen = {
             if (!PO) return `<p class="hint">${I18n.t('leagues.promRelegDecided46')}</p>`;
             const hd = t => `<div class="frow__k" style="padding:6px 0;font-weight:var(--weight-semibold);color:var(--text)">${t}</div>`;
             const block = (label, tie, note) => `<div class="section-label">${label}</div><div class="fcard">${this.relegTie(tie)}${note ? `<p class="hint">${note}</p>` : ''}</div>`;
-            const pro = block('Pro League play-off', PO.proPlayoff, 'Pro League 16th vs Challenger Pro League 3rd — the winner plays in the Pro League next season.');
-            const cpl = block('Challenger Pro League play-off', PO.cplPlayoff, 'Challenger Pro League 16th vs Belgian Division 1 3rd — the winner plays in the Challenger Pro League next season.');
-            let d1 = `<div class="section-label">Belgian Division 1 play-off</div><p class="hint">Decided in week 46.</p>`;
+            const pro = block(I18n.t('leagues.be.proLabel'), PO.proPlayoff, I18n.t('leagues.be.proNote'));
+            const cpl = block(I18n.t('leagues.be.cplLabel'), PO.cplPlayoff, I18n.t('leagues.be.cplNote'));
+            let d1 = `<div class="section-label">${I18n.t('leagues.be.d1Label')}</div><p class="hint">${I18n.t('leagues.pt.l3Decided')}</p>`;
             if (PO.d1PO) {
                 const p = PO.d1PO;
-                d1 = `<div class="section-label">Belgian Division 1 play-off</div><div class="fcard">${hd('Semi-final A — Division 2 3rd v 4th')}${this.relegTie(p.sfA)}${hd('Semi-final B — Division 1 17th v 18th')}${this.relegTie(p.sfB)}${hd('Final — loser of SF-B v winner of SF-A')}${this.relegTie(p.final)}${typeof Attend !== 'undefined' && Attend.poFinalHidden(p.final) ? '' : `<div class="frow"><span class="frow__k">Into Belgian Division 1</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div>`}</div>`;
+                d1 = `<div class="section-label">${I18n.t('leagues.be.d1Label')}</div><div class="fcard">${hd(I18n.t('leagues.be.sfA'))}${this.relegTie(p.sfA)}${hd(I18n.t('leagues.be.sfB'))}${this.relegTie(p.sfB)}${hd(I18n.t('leagues.be.final'))}${this.relegTie(p.final)}${typeof Attend !== 'undefined' && Attend.poFinalHidden(p.final) ? '' : `<div class="frow"><span class="frow__k">${I18n.t('leagues.be.intoD1')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(p.winner)}</span></div>`}</div>`;
             }
             return pro + cpl + d1;
         }
@@ -407,11 +386,6 @@ const LeaguesScreen = {
     },
 
     // ---- UEFA competitions (UCL / UEL / UECL) — global, not tied to the selected country ----
-    EU_BLURB: {
-        UCL: 'The Champions League. 36 clubs in one league phase: eight games each — two against a club from each seeding pot, one home and one away. 1st–8th advance straight to the Round of 16; 9th–24th contest a two-legged knockout play-off; 25th–36th are eliminated. Qualifying runs weeks 1–5, the league phase across weeks 11–31, and the knockouts from week 34 to the final in week 47.',
-        UEL: 'The Europa League. Same 36-club league-phase format as the Champions League. It is made up of 16 direct entrants, the 9 clubs knocked out of the last Champions League qualifying round, and 11 qualifying winners. Qualifying runs weeks 2–6; 1st–8th reach the Round of 16 directly, 9th–24th play a knockout play-off.',
-        UECL: "The Conference League — Europe's third tier — uses the identical 36-club format. It gathers 9 direct entrants, the 11 clubs dropping out of the last Europa League qualifying round, and 16 qualifying winners. Qualifying runs weeks 3–6.",
-    },
     // Europe as a "country": UCL/UEL/UECL live in the division dropdown, and the main tab bar is the
     // stage list (Qualifiers / Table / each knockout round / Bracket), auto-following the live phase.
     currentEurope() {
@@ -476,7 +450,7 @@ const LeaguesScreen = {
             case 'bracket': return this.euBracketTree(c);
             case 'qual': default: {
                 const firstWk = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.qualifying[comp] && EUROPE_DATA.qualifying[comp].rounds[0] && EUROPE_DATA.qualifying[comp].rounds[0].week) || 1;
-                return `<p class="hint" style="margin-bottom:var(--space-3)">${this.EU_BLURB[comp]}</p>` + (this.euQualifying(c) || `<p class="hint">${I18n.t('leagues.qualBegins', { wk: firstWk })}</p>`);
+                return `<p class="hint" style="margin-bottom:var(--space-3)">${I18n.t('leagues.euBlurb.' + comp)}</p>` + (this.euQualifying(c) || `<p class="hint">${I18n.t('leagues.qualBegins', { wk: firstWk })}</p>`);
             }
         }
     },
@@ -499,7 +473,7 @@ const LeaguesScreen = {
     },
     // horizontal bracket from the Round of 16 to the final — every club's path, scroll to follow it
     euBracketTree(c) {
-        if (!c.ko || !c.ko.r16) return '<p class="hint">The bracket is drawn once the Round of 16 is set (week 37).</p>';
+        if (!c.ko || !c.ko.r16) return `<p class="hint">${I18n.t('leagues.bracketDrawn')}</p>`;
         const w = (r, i) => r && r.winners ? r.winners[i] : null;
         const r16 = c.ko.r16, qf = c.ko.qf, sf = c.ko.sf, fin = c.ko.final;
         const side = (id, ph, winId) => {
