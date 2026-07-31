@@ -195,5 +195,25 @@ const t7 = JSON.parse(runv(`
 check('renewal round 1 produces a counter', t7.s1 === 'counter' && t7.c1 > 0);
 check('asking exactly the club\u2019s own counter is accepted', t7.s2 === 'accept');
 
+// ================= 8. goalkeeper Cup Goalkeeper role in deals =================
+const gk = JSON.parse(runv(`
+    const club = Clubs.getClubById('ajax');
+    const g = PlayerGen.makePlayer(club, { ability: 82, age: 26, position: 'GK' });
+    g.agentId = 'me'; g.everClient = true; g.clubId = club.id; g.wage = 1500; g.squadRole = 'rotation'; g.cupKeeper = false; g._renewSeason = -1;
+    GameState.players.push(g);
+    // renew him as Cup Goalkeeper (a Back Up who takes the cup ties)
+    const rm = GameState.addMail({ kind: 'renewal', offer: { playerId: g.id, clubId: club.id, proposedWage: 1500, proposedTermSeasons: 2 } });
+    const rr = Agency.acceptRenewal(rm, 1600, 'rotation', 2, { cupKeeper: true });
+    const cupAfter = g.cupKeeper;
+    // renewing him back to a plain First Choice clears the cup flag
+    g._renewSeason = -1;
+    const rm2 = GameState.addMail({ kind: 'renewal', offer: { playerId: g.id, clubId: club.id, proposedWage: 1700, proposedTermSeasons: 2 } });
+    Agency.acceptRenewal(rm2, 1700, 'starter', 2, { cupKeeper: false });
+    return JSON.stringify({ ok: rr.ok, cupAfter, cupCleared: g.cupKeeper, cupLabel: roleLabel('rotation', g.age, 'GK', true), backupLabel: roleLabel('rotation', g.age, 'GK', false), firstChoice: roleLabel('starter', g.age, 'GK', false) });
+`));
+check('GK renewal as Cup Goalkeeper sets the cupKeeper flag', gk.ok && gk.cupAfter === true);
+check('renewing a GK to a non-Back-Up role clears the cup flag', gk.cupCleared === false);
+check('GK role labels read as a depth chart (Cup Goalkeeper / Back Up / First Choice)', gk.cupLabel === 'Cup Goalkeeper' && gk.backupLabel === 'Back Up' && gk.firstChoice === 'First Choice');
+
 console.log(failed ? '\n*** SOME CHECKS FAILED ***' : '\nAll negotiation checks passed.');
 process.exitCode = failed ? 1 : 0;

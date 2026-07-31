@@ -772,12 +772,12 @@ const Agency = {
     negotiateLoanRole(p, club, requested, round = 1) {
         const ceil = this.clubRoleCeiling(p, club);
         const reqIdx = ROLE_ORDER.indexOf(requested), ceilIdx = ROLE_ORDER.indexOf(ceil);
-        if (reqIdx <= ceilIdx) return { status: 'accept', role: requested, message: I18n.t('nego.loanRole.accept', { name: p.name, role: roleLabel(requested, p.age) }) };
+        if (reqIdx <= ceilIdx) return { status: 'accept', role: requested, message: I18n.t('nego.loanRole.accept', { name: p.name, role: roleLabel(requested, p.age, p.position) }) };
         const rel = this.relationship(club ? club.id : null);
         const concede = Math.max(0, Math.min(0.85, 0.12 + (rel - 55) / 200 + (round - 1) * 0.22 - (reqIdx - ceilIdx - 1) * 0.28));
-        if (Rng.next() < concede) return { status: 'accept', role: requested, message: I18n.t('nego.loanRole.relent', { name: p.name, role: roleLabel(requested, p.age) }) };
-        if (round >= 4) return { status: 'final', role: ceil, message: I18n.t('nego.loanRole.final', { role: roleLabel(ceil, p.age), name: p.name }) };
-        return { status: 'counter', role: ceil, message: I18n.t('nego.loanRole.counter', { name: p.name, role: roleLabel(ceil, p.age), reqRole: roleLabel(requested, p.age) }) };
+        if (Rng.next() < concede) return { status: 'accept', role: requested, message: I18n.t('nego.loanRole.relent', { name: p.name, role: roleLabel(requested, p.age, p.position) }) };
+        if (round >= 4) return { status: 'final', role: ceil, message: I18n.t('nego.loanRole.final', { role: roleLabel(ceil, p.age, p.position), name: p.name }) };
+        return { status: 'counter', role: ceil, message: I18n.t('nego.loanRole.counter', { name: p.name, role: roleLabel(ceil, p.age, p.position), reqRole: roleLabel(requested, p.age, p.position) }) };
     },
     // ask the club to transfer-list your player; they may agree (more offers) or keep him
     requestTransferListing(p) {
@@ -883,10 +883,10 @@ const Agency = {
 
         const bits = [];
         if (!wageOk) bits.push(I18n.t('nego.tr.bitWage', { req: UI.money(pkg.wage), max: UI.money(effMaxWage) }));
-        if (!roleOk) bits.push(I18n.t('nego.tr.bitRole', { ceil: roleLabel(roleCeil, p.age), role: roleLabel(pkg.role, p.age) }));
+        if (!roleOk) bits.push(I18n.t('nego.tr.bitRole', { ceil: roleLabel(roleCeil, p.age, p.position), role: roleLabel(pkg.role, p.age, p.position) }));
         if (!bonusOk) bits.push(I18n.t('nego.tr.bitBonus', { bonus: UI.money(pkg.bonus || 0), max: UI.money(feeCeil) }));
         const hint = (!wageOk && term > 1) ? I18n.t('nego.tr.hint') : '';
-        const vars = { bits: bits.join('; '), hint, wage: UI.money(counter.wage), role: roleLabel(counter.role, p.age), term, bonus: UI.money(counter.bonus) };
+        const vars = { bits: bits.join('; '), hint, wage: UI.money(counter.wage), role: roleLabel(counter.role, p.age, p.position), term, bonus: UI.money(counter.bonus) };
         // out of patience -> a take-it-or-leave-it final package instead of another soft counter
         if (this.threatBand(neg.threat) === 'high') {
             neg._ultimatum = true;
@@ -958,7 +958,7 @@ const Agency = {
 
         // the club won't hand out any role / signing bonus you ask for
         if (role && !this.roleAcceptable(p, toClub, role))
-            return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: toClub.name, name: p.name, role: roleLabel(role, p.age), ceil: roleLabel(this.clubRoleCeiling(p, toClub), p.age) }) };
+            return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: toClub.name, name: p.name, role: roleLabel(role, p.age, p.position), ceil: roleLabel(this.clubRoleCeiling(p, toClub), p.age, p.position) }) };
         const reqBonus = Math.max(0, Math.round(signingBonus || 0));
         const okBonus = this.clubBonusWillingness(p, toClub, agreedWage, o.transferFee);
         if (reqBonus > okBonus)
@@ -969,6 +969,8 @@ const Agency = {
             toClubId: toClub.id, fromClubId: o.fromClubId || p.clubId || null,
             wage: agreedWage, role: role || null, term, bonus: reqBonus,
             fee: wasFree ? 0 : o.transferFee, wasFree, initiatedByAgent: !!o.initiatedByAgent,
+            // a keeper signed as Back Up can be earmarked the Cup Goalkeeper (plays the cup ties)
+            cupKeeper: !!opts.cupKeeper && p.position === 'GK' && role === 'rotation',
             forced: !!opts.forced, credited: false
         };
 
@@ -1025,6 +1027,7 @@ const Agency = {
         p.transferListed = false; p.loanListed = false; p._loanOk = false;
         delete p.pendingTransfer; delete p.joiningClubId; delete p._joinSeason;
         p.squadRole = (pkg.role && ROLE_ORDER.includes(pkg.role)) ? pkg.role : this.maxRoleAt(p, toClub);
+        p.cupKeeper = p.position === 'GK' && !!pkg.cupKeeper;   // the negotiated Cup Goalkeeper flag (GK only)
         recordWagePoint(p);
 
         if (fromClub) this.changeRelationship(fromClub.id, pkg.initiatedByAgent ? +1 : +3);
@@ -1059,7 +1062,7 @@ const Agency = {
         }
         GameState.addLog(I18n.t('ag.log.moveDone', { name: p.name, club: toClub.name, fee: UI.money(pkg.fee), bonus: UI.money(pkg.bonus) }), 'transfer');
         const myCut = Math.round(pkg.wage * p.wageCommission / 100);
-        return { ok: true, message: I18n.t('ag.tr.completed', { name: p.name, club: toClub.name, role: roleLabel(p.squadRole, p.age), until: GameState.seasonLabelFor(p.contractUntilSeason), free: pkg.wasFree ? I18n.t('ag.freeTransfer') : '', bonus: UI.money(pkg.bonus), cut: UI.money(myCut) }), bonus: pkg.bonus };
+        return { ok: true, message: I18n.t('ag.tr.completed', { name: p.name, club: toClub.name, role: roleLabel(p.squadRole, p.age, p.position, p.cupKeeper), until: GameState.seasonLabelFor(p.contractUntilSeason), free: pkg.wasFree ? I18n.t('ag.freeTransfer') : '', bonus: UI.money(pkg.bonus), cut: UI.money(myCut) }), bonus: pkg.bonus };
     },
 
     // called by Sim.advanceWeek the week a transfer window opens
@@ -1077,7 +1080,7 @@ const Agency = {
         });
     },
 
-    acceptRenewal(mail, agreedWage, role, termSeasons) {
+    acceptRenewal(mail, agreedWage, role, termSeasons, opts = {}) {
         const o = mail.offer, p = GameState.getPlayer(o.playerId);
         const club = Clubs.getClubById(o.clubId);
         if (!p || !club) return { ok: false, message: I18n.t('ag.gone') };
@@ -1089,9 +1092,10 @@ const Agency = {
         if (term > termCap)
             return { ok: false, message: I18n.t('ag.deal.termTooLong', { club: club.name, term, cap: termCap }) };
         if (role && !this.roleAcceptable(p, club, role))
-            return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: club.name, name: p.name, role: roleLabel(role, p.age), ceil: roleLabel(this.clubRoleCeiling(p, club), p.age) }) };
+            return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: club.name, name: p.name, role: roleLabel(role, p.age, p.position), ceil: roleLabel(this.clubRoleCeiling(p, club), p.age, p.position) }) };
         p.wage = agreedWage; p.contractUntilSeason = GameState.seasonStartYear + term; p.freeAgent = false; p._renewSeason = GameState.seasonStartYear;
         if (role && ROLE_ORDER.includes(role)) p.squadRole = role;
+        p.cupKeeper = p.position === 'GK' && !!opts.cupKeeper && role === 'rotation';   // Cup Goalkeeper (GK Back Up only)
         recordWagePoint(p);
         // renewals stay NEUTRAL (no fee to weigh), so goodwill is the neutral +2, plus the fast-deal
         // bonus when it was wrapped up inside the first couple of rounds (see concludeRelDelta)
@@ -1103,11 +1107,11 @@ const Agency = {
         // He has just committed: every bid on the table dies with the signature. Clubs that still
         // want him have to come back with a fresh (and better) offer.
         GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'transfer' && m.offer && m.offer.playerId === p.id));
-        GameState.addLog(I18n.t('ag.log.renewed', { name: p.name, club: club.name, wage: UI.money(agreedWage), until: GameState.seasonLabelFor(p.contractUntilSeason), role: roleLabel(p.squadRole, p.age) }), 'contract');
-        return { ok: true, message: I18n.t('ag.renew.done', { wage: UI.money(agreedWage), role: roleLabel(p.squadRole, p.age), until: GameState.seasonLabelFor(p.contractUntilSeason) }) };
+        GameState.addLog(I18n.t('ag.log.renewed', { name: p.name, club: club.name, wage: UI.money(agreedWage), until: GameState.seasonLabelFor(p.contractUntilSeason), role: roleLabel(p.squadRole, p.age, p.position, p.cupKeeper) }), 'contract');
+        return { ok: true, message: I18n.t('ag.renew.done', { wage: UI.money(agreedWage), role: roleLabel(p.squadRole, p.age, p.position, p.cupKeeper), until: GameState.seasonLabelFor(p.contractUntilSeason) }) };
     },
 
-    acceptLoanOffer(mail, role, durationCode) {
+    acceptLoanOffer(mail, role, durationCode, cupKeeper) {
         const o = mail.offer, p = GameState.getPlayer(o.playerId);
         const borrower = Clubs.getClubById(o.toClubId);
         if (!p || !borrower) return { ok: false, message: I18n.t('ag.gone') };
@@ -1122,6 +1126,8 @@ const Agency = {
         const timeWasBelowGood = p.morale && moraleBand(p.morale.time) !== 'GOOD';
         const hadPlayingTimeCase = !!(p.moraleCase && p.moraleCase.promise && p.moraleCase.promise.type === 'playingTime');
         p.onLoanAt = borrower.id; p.loanUntilSeason = end.until; p.loanMid = end.mid; p.loanListed = false; p.loanRole = r; p._loanOk = false;
+        // scoped to the loan spell (auto-ignored once he's back home): a keeper loaned in as Back Up who takes the cup ties
+        p.loanCupKeeper = p.position === 'GK' && !!cupKeeper && r === 'rotation';
         if (p.morale) { p.morale.time = MORALE.TIME_RESET_ON_MOVE; }
         p._playStreak = 0; p._benchStreak = 0;
         this.changeRelationship(borrower.id, +2);
@@ -1131,8 +1137,8 @@ const Agency = {
         GameState.removeMail(mail.id);
         GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'loan' && m.offer.playerId === p.id));
         const durLabel = this.durLabel((opts.find(o2 => o2.code === code) || {}).label || code);
-        GameState.addLog(I18n.t('ag.log.loaned', { name: p.name, club: borrower.name, role: roleLabel(r, p.age), dur: durLabel }), 'loan');
-        return { ok: true, message: I18n.t('ag.loan.done', { name: p.name, club: borrower.name, role: roleLabel(r, p.age), dur: durLabel }) };
+        GameState.addLog(I18n.t('ag.log.loaned', { name: p.name, club: borrower.name, role: roleLabel(r, p.age, p.position, p.loanCupKeeper), dur: durLabel }), 'loan');
+        return { ok: true, message: I18n.t('ag.loan.done', { name: p.name, club: borrower.name, role: roleLabel(r, p.age, p.position, p.loanCupKeeper), dur: durLabel }) };
     },
 
     // sponsor deals still running this season or later

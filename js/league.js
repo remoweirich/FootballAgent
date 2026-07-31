@@ -2204,7 +2204,7 @@ const League = {
         const gkRank = rest.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability);
         const isCupTie = COMPETITIONS[compId] && COMPETITIONS[compId].type === 'cup';
         let bestGK = gkRank[0];
-        if (isCupTie) { const ck = gkRank.find(g => g.cupKeeper); if (ck) bestGK = ck; }
+        if (isCupTie) { const ck = gkRank.find(g => g.cupKeeper || (g.onLoanAt === clubId && g.loanCupKeeper)); if (ck) bestGK = ck; }
         else if (gkRank.length > 1 && Rng.next() < 0.08) bestGK = gkRank[1];
 
         // squad role decides how often a player features — but a loaned-in player follows the role his
