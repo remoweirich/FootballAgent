@@ -535,15 +535,18 @@ const Agency = {
         // Even then most clubs will still table a low-wage contract rather than walk away; only a minority
         // decide the wages are out of reach and pass entirely.
         const wageTight = free && this.offeredWage(p, target, { loyalty: false, jitter: false }) > this.maxClubWage(p, target);
+        // Affordability only bites at the very top of the market: below 94 ability essentially every
+        // club that rates him can fund the deal (superclubs have near-bottomless wallets, see buyerMaxFee).
+        const canPriceOut = p.ability >= 94;
         // even the friendliest fee estimate is beyond what this club/league can fund (permanent deals only)
-        if (!free && this.playerValue(p) * 0.6 > this.buyerMaxFee(target)) {
+        if (!free && canPriceOut && this.playerValue(p) * 0.6 > this.buyerMaxFee(target)) {
             return { ok: true, interested: false, message: msg + `${target.name} rate him but can't afford the fee.` };
         }
         // not good enough right now to dislodge their current XI
         if (perceived < target.reputation - 6) {
             return { ok: true, interested: false, message: msg + `${target.name} say they don't need a player like ${p.name} right now.` };
         }
-        if (wageTight && Rng.next() < 0.3) {
+        if (wageTight && canPriceOut && Rng.next() < 0.3) {
             return { ok: true, interested: false, message: msg + `${target.name} like ${p.name} but can't afford his wages.` };
         }
         // most clubs pass — only a minority bite on any given pitch. Being persistent (re-shopping
@@ -1304,7 +1307,11 @@ const Agency = {
     },
     buyerMaxFee(club) {
         if (!club) return 6000000;
-        return Math.round(this._leagueCap(club.division) * Math.max(0.04, 0.5 + (club.reputation - 45) / 55));
+        let factor = Math.max(0.04, 0.5 + (club.reputation - 45) / 55);
+        // genuine superclubs (Premier League giants, PSG, …) have near-bottomless wallets: from rep ~80
+        // up the ceiling escalates sharply so a marquee 94+ signing is comfortably within reach.
+        if (club.reputation > 80) factor *= 1 + (club.reputation - 80) * 0.4;
+        return Math.round(this._leagueCap(club.division) * factor);
     },
     // intrinsic value of a player, independent of any particular buyer
     playerValue(p) {

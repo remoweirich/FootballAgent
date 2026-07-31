@@ -267,8 +267,14 @@ const Scouts = {
         // spread tightens from 8.5 down to 3.494 at the top, so an elite scout reliably centres on 90 and
         // only rarely (~0.5%) tops out at 99. Every step of quality means better AND more consistent finds.
         const qc = this._clamp(q, 15, 99);
-        const centre = 38 + (qc - 15) * 0.619;   // 38 @ q15  →  90 @ q99
-        const sd = 8.5 - (qc - 15) * 0.0596;     // 8.5 @ q15 →  3.494 @ q99
+        // Centre climbs continuously from ~38 (q15) up the base curve, then the elite tier (q90+) is
+        // lifted to the tuned anchors — 90→86, 95→89, 99→90 (concave, so a 99-potential find stays a
+        // ~0.5% rarity even for the very best scout). SD is floored at 3.494 across the elite tier.
+        let centre;
+        if (qc < 90) centre = 38 + (qc - 15) * 0.619;         // base curve (≈84.4 @ q90)
+        else if (qc < 95) centre = 86 + (qc - 90) * 0.6;      // 86 @ q90 → 89 @ q95
+        else centre = 89 + (qc - 95) * 0.25;                  // 89 @ q95 → 90 @ q99
+        const sd = qc >= 90 ? 3.494 : 8.5 - (qc - 15) * 0.0596;   // 8.5 @ q15 → 3.494 across q90+
         let potential = Math.round(PlayerGen.gauss(centre, sd));
         potential = Math.max(Math.max(20, loA), Math.min(cap, potential));
         // spread current ability ACROSS the tier band [loA..hiA], driven by age + potential + genuine noise
@@ -293,7 +299,8 @@ const Scouts = {
         dev: { pot: [38, 58], label: '4th-tier prospect' },
         pro: { pot: [55, 72], label: '3rd-tier / lower-league' },
         top: { pot: [70, 85], label: 'top-league talent' },
-        elite: { pot: [85, 99], label: 'international superstar' },
+        elite: { pot: [85, 95], label: 'international superstar' },
+        legend: { pot: [96, 99], label: 'Legend of the game' },   // the once-in-a-generation ceiling (>95)
     },
     // localized tier label ('tier.<key>'), falling back to the raw English label
     tierLabel(key) {
@@ -303,8 +310,8 @@ const Scouts = {
         return s === 'tier.' + key ? raw : s;
     },
     _tierReliability(q, tierKey) {
-        const need = { dev: 15, pro: 35, top: 60, elite: 82 }[tierKey] || 15;
-        const cap = { dev: 0.95, pro: 0.9, top: 0.8, elite: 0.6 }[tierKey] || 0.9;   // ceiling even for a 99
+        const need = { dev: 15, pro: 35, top: 60, elite: 82, legend: 95 }[tierKey] || 15;
+        const cap = { dev: 0.95, pro: 0.9, top: 0.8, elite: 0.6, legend: 0.12 }[tierKey] || 0.9;   // ceiling even for a 99 — a legend stays a rare hunt
         if (q >= need) return Math.min(cap, 0.5 + (q - need) / 100);
         return Math.max(0.04, cap * Math.pow(q / need, 2.5));                        // below the floor: rare
     },

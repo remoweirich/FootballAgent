@@ -16,6 +16,7 @@ I18n.register('de', {
     'tier.pro': 'Drittliga-/Unterhaus-Niveau',
     'tier.top': 'Topliga-Talent',
     'tier.elite': 'Internationaler Superstar',
+    'tier.legend': 'Legende des Spiels',
     // --- Verhandlung: Begrüßung des Klubs (agency.js greetingFor) ---
     'nego.greet.warm': 'Schön, Sie zu sehen.',
     'nego.greet.friendly': 'Gut, Sie wiederzusehen.',

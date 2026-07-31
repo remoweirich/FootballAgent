@@ -20,6 +20,7 @@ I18n.register('en', {
     'tier.pro': '3rd-tier / lower-league',
     'tier.top': 'top-league talent',
     'tier.elite': 'international superstar',
+    'tier.legend': 'Legend of the game',
     // --- negotiation: club greeting (agency.js greetingFor) ---
     'nego.greet.warm': 'Always a pleasure to see you.',
     'nego.greet.friendly': 'Good to see you again.',
