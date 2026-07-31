@@ -12,7 +12,21 @@ function loanCountryDist(a, b) {
     if (!A || !B) return 14;   // unknown country -> treat as far away
     return Math.hypot(A[0] - B[0], A[1] - B[1]);
 }
+// ---- Negotiation dynamics (Phase 2 overhaul, see docs/negotiation-overhaul-spec.md) ----
+// The keystone: wage and agent fee draw from ONE implicit budget, so a fatter fee visibly
+// costs the player wage (which then erodes his morale on its own). Patience is a threat meter
+// seeded by the relationship: each round the club has to push back it loses a little, and at
+// 100 it walks. All values are calibration knobs to be tuned in playtest.
+const NEGO = {
+    FEE_TO_WAGE: 1.0,   // €1 of amortized annual fee costs ~€1 of annual wage room
+    THREAT_BASE: 8,     // patience lost per haggling round at a neutral relationship
+    THREAT_MAX: 100,    // at 100 the club walks away from the table
+    ROUND_CAP: 8,       // hard safety net so nothing can loop forever
+    WALKOUT_REL: -20,   // relationship hit when a club walks
+    BAND_MED: 40, BAND_HIGH: 75,   // threat thresholds for the tension cue / final-offer tone
+};
 const Agency = {
+    NEGO,
     init() {
         const relationships = {};
         Clubs.allClubs.forEach(c => {
@@ -65,6 +79,33 @@ const Agency = {
 
     relationship(clubId) { const r = GameState.agency.relationships; if (r[clubId] == null) r[clubId] = 55; return r[clubId]; },
     changeRelationship(clubId, d) { const r = GameState.agency.relationships; r[clubId] = Math.max(0, Math.min(100, (r[clubId] ?? 55) + d)); return r[clubId]; },
+
+    // ---------- negotiation patience (threat meter) ----------
+    // warm clubs start relaxed, frosty ones already on edge
+    threatInit(rel) { return rel >= 78 ? 0 : rel <= 30 ? 30 : 8; },
+    // and lose patience slower / faster per round accordingly
+    threatAccumMod(rel) { return rel >= 78 ? 0.7 : rel <= 30 ? 1.5 : 1.0; },
+    threatBand(t) { return t >= NEGO.BAND_HIGH ? 'high' : t >= NEGO.BAND_MED ? 'med' : 'low'; },
+    // Persisted per-deal negotiation state, carried on the mail's offer so it survives a reload.
+    // profile/wInitial/history are recorded now but only consumed by the Pass-2 classifier.
+    initNeg(neg, club, wInitial) {
+        if (neg && neg._init) return neg;
+        neg = neg || {};
+        neg._init = true;
+        neg.round = 1;
+        neg.threat = this.threatInit(this.relationship(club ? club.id : null));
+        neg.profile = 'NEUTRAL';
+        neg.wInitial = wInitial || 0;
+        neg.history = [];
+        neg.lastCounter = null;
+        return neg;
+    },
+    // advance patience after a round the club had to push back on; true => the club walks
+    bumpThreat(neg, club) {
+        neg.threat += NEGO.THREAT_BASE * (neg.profileMod || 1.0) * this.threatAccumMod(this.relationship(club ? club.id : null));
+        neg.round += 1;
+        return neg.threat >= NEGO.THREAT_MAX || neg.round > NEGO.ROUND_CAP;
+    },
 
     // ---------- request cooldowns: stop re-asking the same thing repeatedly to force a lucky roll ----------
     // one attempt per player+action per week; the answer stands until at least the next week
@@ -651,22 +692,32 @@ const Agency = {
         if (rel >= 18) return I18n.t('nego.greet.cool');
         return I18n.t('nego.greet.cold');
     },
-    // wage the club will accept depends on player value AND your relationship; no hard ceiling shown to you
-    negotiateWage(p, club, requested, round = 1, lastCounter = null) {
+    // wage the club will accept depends on player value AND your relationship; no hard ceiling shown to you.
+    // `neg` is the persisted patience/threat state (see initNeg), created lazily and mutated in place.
+    negotiateWage(p, club, requested, neg) {
+        const base = this.maxClubWage(p, club);
+        neg = this.initNeg(neg, club, base);
         // a club never goes back on its own word: anything at or below the counter it offered
         // last round is a done deal (the per-round patience penalty used to shrink the cap
         // below the club's own previous counter, producing a 650 -> 640 -> 630... death spiral)
-        if (lastCounter != null && requested <= lastCounter)
-            return { status: 'accept', message: I18n.t('nego.wage.acceptDiscussed', { amt: UI.money(requested) }) };
+        if (neg.lastCounter != null && requested <= neg.lastCounter)
+            return { status: 'accept', neg, message: I18n.t('nego.wage.acceptDiscussed', { amt: UI.money(requested) }) };
         const rel = this.relationship(club ? club.id : null);
-        const base = this.maxClubWage(p, club);
         const room = base * (1 + Math.max(-0.10, Math.min(0.45, (rel - 55) / 110)));   // a bit more give than before
-        const cap = Math.round(room) - (round - 1) * Math.round(p.wage * 0.03);
-        if (requested <= cap) return { status: 'accept', message: round === 1 ? I18n.t('nego.wage.acceptR1', { amt: UI.money(requested) }) : I18n.t('nego.wage.acceptRn', { amt: UI.money(requested) }) };
-        const counter = Math.max(p.wage, Math.round(cap / 10) * 10, lastCounter || 0);
-        if (requested <= cap * 1.12) return { status: 'counter', counter, message: I18n.t('nego.wage.close', { amt: UI.money(counter) }) };
-        if (round >= 5) return { status: 'reject', message: I18n.t('nego.wage.reject', { name: p.name }) };
-        return { status: 'counter', counter, message: requested > cap * 1.5 ? I18n.t('nego.wage.counterHigh', { amt: UI.money(counter) }) : I18n.t('nego.wage.counter', { amt: UI.money(counter) }) };
+        const cap = Math.round(room) - (neg.round - 1) * Math.round(p.wage * 0.03);
+        if (requested <= cap) return { status: 'accept', neg, message: neg.round === 1 ? I18n.t('nego.wage.acceptR1', { amt: UI.money(requested) }) : I18n.t('nego.wage.acceptRn', { amt: UI.money(requested) }) };
+
+        // the club had to push back — record it and lose patience; at the ceiling it walks
+        neg.history.push({ w: requested, f: 0 });
+        const walk = this.bumpThreat(neg, club);
+        const counter = Math.max(p.wage, Math.round(cap / 10) * 10, neg.lastCounter || 0);
+        neg.lastCounter = counter;
+        if (walk) {
+            this.changeRelationship(club.id, NEGO.WALKOUT_REL);
+            return { status: 'walkout', neg, message: I18n.t('nego.wage.walkout', { name: p.name }) };
+        }
+        if (requested <= cap * 1.12) return { status: 'counter', counter, neg, message: I18n.t('nego.wage.close', { amt: UI.money(counter) }) };
+        return { status: 'counter', counter, neg, message: requested > cap * 1.5 ? I18n.t('nego.wage.counterHigh', { amt: UI.money(counter) }) : I18n.t('nego.wage.counter', { amt: UI.money(counter) }) };
     },
     // negotiate loan game time: ask above the club's comfort level and they may dig in — or, with a good
     // relationship and persistence, eventually relent. Sometimes they stay stubborn.
@@ -744,31 +795,48 @@ const Agency = {
     maxSigningBonus(p, wage) { return Math.round((wage != null ? wage : p.wage) * 52 / 10); },
 
     // commission is FIXED at what you originally negotiated. You agree wage, role, term and your signing bonus.
-    // the club weighs the WHOLE package (wage, role, term, signing bonus) at once and answers with one improved counter
-    evaluateTransfer(p, club, pkg, round = 1) {
+    // the club weighs the WHOLE package (wage, role, term, signing bonus) at once and answers with one improved counter.
+    // `neg` is the persisted patience/threat state (see initNeg); it is created lazily and mutated in place.
+    evaluateTransfer(p, club, pkg, neg) {
         const term = Math.max(1, Math.min(6, pkg.term || 3));
         const termFactor = 1 + (3 - term) * 0.05;                 // a shorter deal -> they'll stretch the wage
         const maxWage = Math.round(this.maxClubWage(p, club) * termFactor / 10) * 10;
         const roleCeil = this.clubRoleCeiling(p, club);
         const roleOk = ROLE_ORDER.indexOf(pkg.role) <= ROLE_ORDER.indexOf(roleCeil);
-        const maxBonus = this.clubBonusWillingness(p, club, Math.min(pkg.wage, maxWage), pkg.fee);
-        const wageOk = pkg.wage <= maxWage, bonusOk = (pkg.bonus || 0) <= maxBonus;
-        const counter = { wage: Math.min(pkg.wage, maxWage), role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, maxBonus) };
+        const feeCeil = this.clubBonusWillingness(p, club, Math.min(pkg.wage, maxWage), pkg.fee);
+        // KEYSTONE (A.1): the agent fee is amortized over the deal and eats into the wage room —
+        // one implicit budget, so asking a fat fee visibly lowers the wage the club will accept.
+        const feeAnnual = (pkg.bonus || 0) / term;
+        const wageFloor = Math.max(30, p.wage || 30);
+        const effMaxWage = Math.round(Math.max(wageFloor, maxWage - NEGO.FEE_TO_WAGE * feeAnnual / 52) / 10) * 10;
+        const wageOk = pkg.wage <= effMaxWage, bonusOk = (pkg.bonus || 0) <= feeCeil;
+        const counter = { wage: Math.min(pkg.wage, effMaxWage), role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, feeCeil) };
+
+        neg = this.initNeg(neg, club, maxWage);
+        neg.history.push({ w: pkg.wage, f: pkg.bonus || 0 });     // recorded for the Pass-2 classifier
 
         if (wageOk && roleOk && bonusOk) {
             const lines = [I18n.t('nego.tr.accept1', { name: p.name }), I18n.t('nego.tr.accept2', { name: p.name }), I18n.t('nego.tr.accept3')];
-            return { status: 'accept', counter, message: lines[Math.floor(Rng.next() * lines.length)] };
+            return { status: 'accept', counter, neg, message: lines[Math.floor(Rng.next() * lines.length)] };
         }
-        if (round >= 4) return { status: 'final', counter, message: I18n.t('nego.tr.final', { wage: UI.money(counter.wage), role: roleLabel(counter.role, p.age), term, bonus: UI.money(counter.bonus) }) };
+
+        // the club had to push back — it loses patience; at the ceiling it walks
+        if (this.bumpThreat(neg, club)) {
+            this.changeRelationship(club.id, NEGO.WALKOUT_REL);
+            return { status: 'walkout', counter, neg, message: I18n.t('nego.tr.walkout', { name: p.name }) };
+        }
 
         const bits = [];
-        if (!wageOk) bits.push(I18n.t('nego.tr.bitWage', { req: UI.money(pkg.wage), max: UI.money(maxWage) }));
+        if (!wageOk) bits.push(I18n.t('nego.tr.bitWage', { req: UI.money(pkg.wage), max: UI.money(effMaxWage) }));
         if (!roleOk) bits.push(I18n.t('nego.tr.bitRole', { ceil: roleLabel(roleCeil, p.age), role: roleLabel(pkg.role, p.age) }));
-        if (!bonusOk) bits.push(I18n.t('nego.tr.bitBonus', { bonus: UI.money(pkg.bonus || 0), max: UI.money(maxBonus) }));
-        const wageClose = pkg.wage <= maxWage * 1.08, bonusClose = (pkg.bonus || 0) <= maxBonus * 1.12;
+        if (!bonusOk) bits.push(I18n.t('nego.tr.bitBonus', { bonus: UI.money(pkg.bonus || 0), max: UI.money(feeCeil) }));
         const hint = (!wageOk && term > 1) ? I18n.t('nego.tr.hint') : '';
-        if (roleOk && wageClose && bonusClose) return { status: 'close', counter, message: I18n.t('nego.tr.close', { bits: bits.join('; '), hint }) };
-        return { status: 'counter', counter, message: I18n.t('nego.tr.counter', { bits: bits.join('; '), hint }) };
+        // out of patience -> a take-it-or-leave-it final package instead of another soft counter
+        if (this.threatBand(neg.threat) === 'high')
+            return { status: 'final', counter, neg, message: I18n.t('nego.tr.final', { wage: UI.money(counter.wage), role: roleLabel(counter.role, p.age), term, bonus: UI.money(counter.bonus) }) };
+        const wageClose = pkg.wage <= effMaxWage * 1.08, bonusClose = (pkg.bonus || 0) <= feeCeil * 1.12;
+        if (roleOk && wageClose && bonusClose) return { status: 'close', counter, neg, message: I18n.t('nego.tr.close', { bits: bits.join('; '), hint }) };
+        return { status: 'counter', counter, neg, message: I18n.t('nego.tr.counter', { bits: bits.join('; '), hint }) };
     },
 
     // Phase 2 (morale rework): a transfer/renewal/loan/sponsor deal concluded by the agent is

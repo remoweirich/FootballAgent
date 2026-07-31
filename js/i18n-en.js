@@ -34,6 +34,7 @@ I18n.register('en', {
     'nego.wage.reject': "We aren't prepared to pay that much for {name}.",
     'nego.wage.counterHigh': 'That is far too much. €{amt}/wk is our ceiling.',
     'nego.wage.counter': "That's too much — we could do €{amt}/wk.",
+    'nego.wage.walkout': "We're done here. This is going nowhere, so we're pulling our renewal offer for {name}.",
     // --- negotiation: loan game-time (agency.js negotiateLoanRole) ---
     'nego.loanRole.accept': 'Agreed — {name} joins as {role}.',
     'nego.loanRole.relent': "Alright — we'll let {name} play as {role}.",
@@ -50,6 +51,7 @@ I18n.register('en', {
     'nego.tr.hint': ' On a shorter contract we could push the wage higher.',
     'nego.tr.close': '“We\'re almost there — {bits}.{hint}”',
     'nego.tr.counter': '“{bits}.{hint}”',
+    'nego.tr.walkout': '“We\'ve gone back and forth long enough. We\'re moving on to other options; the deal for {name} is off.”',
     // --- agency: shared short guards / fragments ---
     'ag.notClient': 'Not your client.',
     'ag.unknownClub': 'Unknown club.',

@@ -23,12 +23,14 @@ const ratchet = JSON.parse(runv(`
     const p = PlayerGen.makePlayer(club, { ability: 70, age: 25, position: 'CM' });
     p.agentId = 'me'; p.everClient = true; p.clubId = club.id; p.wage = 1000;
     GameState.players.push(p);
+    // one persisted negotiation state carries round/threat/lastCounter across the exchange
+    const neg = Agency.initNeg(null, club, 1000);
     // round 1: ask way too much -> counter C
-    const r1 = Agency.negotiateWage(p, club, 999999, 1, null);
-    // round 2: ask exactly their counter, passing it as lastCounter -> must accept
-    const r2 = Agency.negotiateWage(p, club, r1.counter, 2, r1.counter);
+    const r1 = Agency.negotiateWage(p, club, 999999, neg);
+    // round 2: ask exactly their last counter -> must accept (club never undercuts its own word)
+    const r2 = Agency.negotiateWage(p, club, r1.counter, neg);
     // and a fresh counter can never undercut the previous one
-    const r3 = Agency.negotiateWage(p, club, 999999, 5, r1.counter);
+    const r3 = Agency.negotiateWage(p, club, 999999, neg);
     return JSON.stringify({ s1: r1.status, c1: r1.counter, s2: r2.status, s3: r3.status, c3: r3.counter });
 `));
 check('round 1 produces a counter: ' + ratchet.s1 + ' @ ' + ratchet.c1, ratchet.s1 === 'counter' && ratchet.c1 > 0);

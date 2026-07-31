@@ -30,6 +30,7 @@ I18n.register('de', {
     'nego.wage.reject': 'So viel sind wir für {name} nicht zu zahlen bereit.',
     'nego.wage.counterHigh': 'Das ist viel zu viel. €{amt}/Wo. ist unsere Obergrenze.',
     'nego.wage.counter': 'Das ist zu viel, €{amt}/Wo. wäre möglich.',
+    'nego.wage.walkout': 'Für uns ist die Sache erledigt. Das führt zu nichts, deshalb ziehen wir unser Verlängerungsangebot für {name} zurück.',
     // --- Verhandlung: Einsatzzeit bei Leihe (agency.js negotiateLoanRole) ---
     'nego.loanRole.accept': 'Einverstanden, {name} kommt als {role}.',
     'nego.loanRole.relent': 'Also gut, wir lassen {name} als {role} spielen.',
@@ -46,6 +47,7 @@ I18n.register('de', {
     'nego.tr.hint': ' Bei einem kürzeren Vertrag könnten wir beim Gehalt höher gehen.',
     'nego.tr.close': '„Wir sind fast am Ziel, {bits}.{hint}“',
     'nego.tr.counter': '„{bits}.{hint}“',
+    'nego.tr.walkout': '„Wir haben lange genug hin und her verhandelt. Wir konzentrieren uns auf andere Optionen; der Deal für {name} ist vom Tisch.“',
     // --- Agentur: gemeinsame Kurz-Hinweise / Fragmente ---
     'ag.notClient': 'Nicht Ihr Klient.',
     'ag.unknownClub': 'Unbekannter Klub.',

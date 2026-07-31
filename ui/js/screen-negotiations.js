@@ -135,7 +135,7 @@ Nego.transfer = function (el, m) {
     const o = m.offer, p = GameState.getPlayer(o.playerId), to = Clubs.getClubById(o.toClubId), from = Clubs.getClubById(o.fromClubId);
     if (!p || !to) { this.dismiss(m.id); return; }
     const termCap = Agency.maxContractTerm(p, to);
-    const c = this.ctxFor(m.id); if (!c.pkgRound) { c.pkgRound = 1; c.wage = o.proposedWage; c.role = o.role || 'rotation'; c.term = Math.min(3, termCap); c.bonus = 0; }
+    const c = this.ctxFor(m.id); if (c.wage == null) { c.wage = o.proposedWage; c.role = o.role || 'rotation'; c.term = Math.min(3, termCap); c.bonus = 0; }
     const bonusMax = Math.max(Agency.maxSigningBonus(p, o.proposedWage), Agency.agentFeeCap(o.transferFee));
     const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
     const cut = w => Math.round(w * p.wageCommission / 100);
@@ -161,11 +161,25 @@ Nego.transfer = function (el, m) {
         <label class="field-label">${I18n.t('nego.agentFee')} <span id="negoBonusVal" class="editable-val">${UI.euro(c.bonus)}</span></label>
         <input class="range" type="range" min="0" max="${bonusMax}" step="${Math.max(10, Math.round(bonusMax / 50))}" value="${c.bonus}" oninput="Nego.slide('${m.id}','bonus',this.value)">
         ${others.length ? `<div class="result info">${I18n.t('nego.competingBids')} ${others.map(x => `<a href="${Router.link('mail', x.id)}" style="color:var(--info-text)">${Clubs.getClubById(x.offer.toClubId) ? Clubs.getClubById(x.offer.toClubId).name : ''} · ${roleLabel(x.offer.role || 'rotation', p.age)}</a>`).join(' · ')}</div>` : ''}
+        ${this.patienceCue(o.neg)}
         <div class="flex-row" style="margin-top:var(--space-5)">
             <button class="btn btn--danger" onclick="Nego.reject('${m.id}')"><i class="ti ti-x"></i>${I18n.t('nego.reject')}</button>
             <button class="btn btn--primary" onclick="Nego.proposePackage('${m.id}')"><i class="ti ti-send"></i>${I18n.t('nego.proposePackage')}</button>
         </div>
         <div id="actionResult"></div>`;
+};
+// The club's dwindling patience with back-and-forth (Pass 1 threat meter). The bar shows how
+// much room to keep haggling is left before the club walks; only rendered once a round is in.
+Nego.patienceCue = function (neg) {
+    if (!neg || !neg._init) return '';
+    const t = Math.max(0, Math.min(100, neg.threat)), remain = 100 - t;
+    const band = Agency.threatBand(t);
+    const color = band === 'high' ? 'var(--danger)' : band === 'med' ? 'var(--gold)' : 'var(--ok)';
+    const label = band === 'high' ? I18n.t('nego.patienceEdge') : band === 'med' ? I18n.t('nego.patienceCooling') : I18n.t('nego.patienceRelaxed');
+    return `<div style="margin:var(--space-4) 0 var(--space-2)">
+        <div class="flex-row" style="justify-content:space-between;font-size:var(--fs-sm)"><span class="muted">${I18n.t('nego.patience')}</span><span style="color:${color};font-weight:var(--weight-semibold)">${label}</span></div>
+        <div style="height:6px;border-radius:3px;background:var(--line-strong);overflow:hidden;margin-top:5px"><div style="height:100%;width:${remain}%;background:${color};transition:width .3s"></div></div>
+    </div>`;
 };
 // Update state + only the specific label(s) affected — a full Router.refresh() on every
 // drag tick would tear down and rebuild the whole screen mid-drag (breaking the slider,
@@ -192,10 +206,19 @@ Nego.slide = function (id, key, val) {
     }
 };
 Nego.proposePackage = function (mailId) {
-    const m = GameState.inbox.find(x => x.id === mailId), p = GameState.getPlayer(m.offer.playerId), club = Clubs.getClubById(m.offer.toClubId);
+    const m = GameState.inbox.find(x => x.id === mailId), o = m.offer, p = GameState.getPlayer(o.playerId), club = Clubs.getClubById(o.toClubId);
     const c = this.ctxFor(mailId);
-    const pkg = { wage: c.wage, role: c.role, term: c.term, bonus: c.bonus, fee: m.offer.transferFee };
-    const r = Agency.evaluateTransfer(p, club, pkg, c.pkgRound++);
+    const pkg = { wage: c.wage, role: c.role, term: c.term, bonus: c.bonus, fee: o.transferFee };
+    if (!o.neg) o.neg = Agency.initNeg(null, club, o.proposedWage);
+    const r = Agency.evaluateTransfer(p, club, pkg, o.neg);
+    o.neg = r.neg;
+    if (r.status === 'walkout') {
+        const pid = p.id;
+        GameState.removeMail(m.id); GameState.save();
+        Router.result(r.message, 'bad');
+        setTimeout(() => Nego.goPlayer(pid), 1200);
+        return;
+    }
     if (r.status === 'accept') {
         const pid = p.id;
         const ar = Agency.acceptTransfer(m, r.counter.wage, r.counter.role, r.counter.term, r.counter.bonus);
@@ -205,6 +228,7 @@ Nego.proposePackage = function (mailId) {
         setTimeout(() => Nego.goPlayer(pid), 900);
     } else {
         const cc = r.counter; c.wage = cc.wage; c.role = cc.role; c.term = cc.term; c.bonus = cc.bonus;
+        GameState.save();   // persist the threat meter carried on o.neg
         Router.refresh();
         Router.result(`${r.message}<br><span class="muted">${I18n.t('nego.theirPackage', { wage: UI.euro(cc.wage), role: roleLabel(cc.role, p.age), term: cc.term, bonus: UI.euro(cc.bonus) })}</span>`, r.status === 'close' ? 'info' : 'bad');
     }
@@ -215,7 +239,7 @@ Nego.renewal = function (el, m) {
     const o = m.offer, p = GameState.getPlayer(o.playerId), club = Clubs.getClubById(o.clubId);
     if (!p || !club) { this.dismiss(m.id); return; }
     const termCap = Agency.maxContractTerm(p, club);
-    const c = this.ctxFor(m.id); if (c.wage == null) { c.wage = o.proposedWage; c.role = p.squadRole; c.term = Math.min(o.proposedTermSeasons, termCap); c.wageRound = 1; }
+    const c = this.ctxFor(m.id); if (c.wage == null) { c.wage = o.proposedWage; c.role = p.squadRole; c.term = Math.min(o.proposedTermSeasons, termCap); }
     const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
     const cut = w => Math.round(w * p.wageCommission / 100);
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(club.id)}"</p>
@@ -228,6 +252,7 @@ Nego.renewal = function (el, m) {
         <input class="range" type="range" min="${o.proposedWage}" max="${wageMax}" step="10" value="${c.wage}" oninput="Nego.slide('${m.id}','wage',this.value)">
         <button class="btn btn--accent-outline btn--sm" style="margin:var(--space-2) 0 var(--space-4);width:auto" onclick="Nego.negRenewWage('${m.id}')"><i class="ti ti-send"></i>${I18n.t('nego.putToClub')}</button>
         <div id="wageMsg"></div>
+        ${this.patienceCue(o.neg)}
         <label class="field-label">${I18n.t('nego.squadRoleAt', { club: club.name })}</label>
         <select class="select-input" onchange="Nego.slide('${m.id}','role',this.value)">${ROLE_ORDER.map(r => `<option value="${r}" ${r === c.role ? 'selected' : ''}>${roleLabel(r, p.age)}</option>`).join('')}</select>
         <label class="field-label">${I18n.t('nego.contractLength')} <span id="negoTermVal" class="editable-val">${c.term}</span>${I18n.t('nego.seasonsSuffix')}${termCap < 6 ? ` <span class="muted">${I18n.t('nego.maxTerm', { cap: termCap })}</span>` : ''}</label>
@@ -239,12 +264,23 @@ Nego.renewal = function (el, m) {
         <div id="actionResult"></div>`;
 };
 Nego.negRenewWage = function (mailId) {
-    const m = GameState.inbox.find(x => x.id === mailId), p = GameState.getPlayer(m.offer.playerId), club = Clubs.getClubById(m.offer.clubId);
+    const m = GameState.inbox.find(x => x.id === mailId), o = m.offer, p = GameState.getPlayer(o.playerId), club = Clubs.getClubById(o.clubId);
     const c = this.ctxFor(mailId);
-    const r = Agency.negotiateWage(p, club, c.wage, c.wageRound++, c.lastWageCounter);
-    if (r.status === 'counter') { c.wage = r.counter; c.lastWageCounter = r.counter; }
+    if (!o.neg) o.neg = Agency.initNeg(null, club, o.proposedWage);
+    const r = Agency.negotiateWage(p, club, c.wage, o.neg);
+    o.neg = r.neg;
+    if (r.status === 'walkout') {
+        const pid = this.playerIdOf(m);
+        GameState.removeMail(m.id); GameState.save();
+        Router.result(r.message, 'bad');
+        setTimeout(() => Nego.goPlayer(pid), 1200);
+        return;
+    }
+    if (r.status === 'counter') c.wage = r.counter;
+    GameState.save();   // persist the threat meter carried on o.neg
     Router.refresh();
-    document.getElementById('wageMsg').innerHTML = `<div class="hint" style="margin:-8px 0 var(--space-3)">"${r.message}"</div>`;
+    const msgEl = document.getElementById('wageMsg');
+    if (msgEl) msgEl.innerHTML = `<div class="hint" style="margin:-8px 0 var(--space-3)">"${r.message}"</div>`;
 };
 Nego.acceptRenewal = function (mailId) {
     const m = GameState.inbox.find(x => x.id === mailId), c = this.ctxFor(mailId);
