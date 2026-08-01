@@ -173,6 +173,9 @@ I18n.register('de', {
     'ag.promise.made': 'Sie haben {name} versprochen, das zu regeln. Enttäuschen Sie ihn nicht.',
     'ag.release.cost': 'Sie müssen den Vertrag ausbezahlen (€{amt}), können es sich aber nicht leisten.',
     'ag.release.done': '{name} ist nicht mehr Ihr Klient. Vertragsauszahlung: €{amt}.',
+    'ach.event': '{n} neue(s) Achievement(s) freigeschaltet — in Einstellungen ▸ Achievements abholen.',
+    'ach.mailSubj': 'Achievement freigeschaltet ×{n}',
+    'ach.mailBody': 'Du hast {n} neue(s) Achievement(s) freigeschaltet. Hol die Belohnung(en) in Einstellungen ▸ Achievements ab.',
     // --- Dauer-Optionen (Lizenz + Leihe) ---
     'dur.s1': '1 Saison',
     'dur.s2': '2 Saisons',

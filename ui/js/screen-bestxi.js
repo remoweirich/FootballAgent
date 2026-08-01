@@ -173,8 +173,18 @@ const BestXI = {
         const pitch = `<div class="bx-pitch">${f.slots.map(s => tile(s, true)).join('')}</div>`;
         const bench = `<div class="bx-benchlab">${I18n.t('bestxi.substitutes')}</div><div class="bx-bench">${this.BENCH.map(s => tile(s, false)).join('')}</div>`;
         const count = f.slots.filter(s => st.picks[s.id]).length + this.BENCH.filter(s => st.picks[s.id]).length;
+        // average rating of the STARTING eleven only (not the bench): peak ability, one decimal
+        let xiSum = 0, xiFilled = 0;
+        f.slots.forEach(s => { const p = st.picks[s.id] && GameState.getPlayer(st.picks[s.id]); if (p) { xiSum += (p.peakAbility || p.ability || 0); xiFilled++; } });
+        const xiAvg = xiFilled ? xiSum / xiFilled : 0;
+        const xiColor = UI.abilityVar ? UI.abilityVar(Math.round(xiAvg)) : '--accent';
+        const xiInd = `<div class="bx-xirating">
+            <span class="bx-xilbl">${I18n.t('bestxi.xiAvgLabel')}</span>
+            <span class="bx-xival" style="color:var(${xiColor})">${xiFilled ? xiAvg.toFixed(1) : '—'}</span>
+            <span class="bx-xisub">${I18n.t('bestxi.xiFilled', { filled: xiFilled, total: f.slots.length })}</span></div>`;
         el.innerHTML = `${selector}
             <p class="bx-note">${I18n.t('bestxi.note', { count, total: f.slots.length + this.BENCH.length })}</p>
+            ${xiInd}
             ${pitch}${bench}`;
     },
 
@@ -215,7 +225,11 @@ const BestXI = {
         .bx-pickname{font-weight:var(--weight-semibold)}
         .bx-pickmeta{color:var(--text-muted);font-size:var(--fs-xs)}
         .bx-clear{width:100%;background:none;border:1px solid var(--line-strong);color:var(--state-bad,#e5484d);border-radius:10px;padding:9px;font:inherit;cursor:pointer;margin-bottom:6px}
-        .bx-empty{color:var(--text-dim);text-align:center;padding:20px 8px}`;
+        .bx-empty{color:var(--text-dim);text-align:center;padding:20px 8px}
+        .bx-xirating{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:0 0 12px}
+        .bx-xilbl{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim)}
+        .bx-xival{font-size:var(--fs-xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums}
+        .bx-xisub{font-size:var(--fs-xs);color:var(--text-muted);font-variant-numeric:tabular-nums}`;
         const el = document.createElement('style'); el.id = 'bxCSS'; el.textContent = css; document.head.appendChild(el);
     },
 };

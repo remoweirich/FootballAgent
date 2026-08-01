@@ -1296,6 +1296,7 @@ const Agency = {
         p.agentId = null; p.wageCommission = 0; p.sponsorCommission = 0; p.repUntilSeason = null;
         p.transferListed = false; p.loanListed = false; p.dismissedTalent = true;   // ex-client: out of clients & talent, kept in Client History
         GameState.addLog(I18n.t('ag.log.released', { name: p.name, amt: UI.money(fee) }), 'warn');
+        if (typeof Achievements !== 'undefined') Achievements.noteRelease();
         return { ok: true, message: I18n.t('ag.release.done', { name: p.name, amt: UI.money(fee) }) };
     },
     toggleTransferList(p) { p.transferListed = !p.transferListed; GameState.addLog(I18n.t(p.transferListed ? 'ag.log.txlistAdded' : 'ag.log.txlistRemoved', { name: p.name }), 'info'); return p.transferListed; },

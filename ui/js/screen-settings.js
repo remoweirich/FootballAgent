@@ -11,6 +11,9 @@ const SettingsScreen = {
         this._from = from || 'game';
         this._injectCSS();
         const soon = `<span class="set-soon">${I18n.t('common.comingSoon')}</span>`;
+        const achRight = (typeof Achievements !== 'undefined')
+            ? (() => { const cc = Achievements.counts(); return cc.claimable ? `<span class="set-badge">${cc.claimable}</span>` : `<i class="ti ti-chevron-right" style="margin-left:auto;color:var(--text-dim)"></i>`; })()
+            : soon;
         // some glyphs aren't in the trimmed icon font — use inline SVG for those (sun/music/volume)
         const ic = cls => `<i class="ti ${cls} set-row__ico"></i>`;
         const svg = d => `<svg class="set-row__ico set-row__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -67,7 +70,7 @@ const SettingsScreen = {
 
                 <div class="set-heading">${I18n.t('settings.groupGame')}</div>
                 <div class="set-group">
-                    ${row(ic('ti-trophy'), I18n.t('settings.achievements'), soon, null, true)}
+                    ${row(ic('ti-trophy'), I18n.t('settings.achievements'), achRight, 'SettingsScreen.openAchievements()')}
                     ${langRow}
                 </div>
 
@@ -100,6 +103,7 @@ const SettingsScreen = {
         if (typeof StartScreen !== 'undefined') StartScreen.show();
     },
     help() { if (typeof Setup !== 'undefined' && Setup.openHelpOverlay) Setup.openHelpOverlay(); },
+    openAchievements() { if (typeof AchievementsScreen !== 'undefined') AchievementsScreen.show(this._from); },
     // re-render in place, keeping the scroll position (toggles live deep in the list — a full
     // show() would otherwise snap the page back to the top on every tap)
     _reshow() {

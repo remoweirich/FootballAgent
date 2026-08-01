@@ -278,6 +278,14 @@ const Sim = {
         // finals a client is in become a persisted viewing window: their results are hidden in the
         // Competitions tab until the agent watches (or advances past) them.
         if (typeof Attend !== 'undefined') Attend.openWindow(GameState._attend);
+        // achievements: re-evaluate the whole set from the freshly-updated state; a heads-up mail when new ones unlock
+        if (typeof Achievements !== 'undefined') {
+            const newAch = Achievements.refresh();
+            if (newAch.length) {
+                events.push({ type: 'info', text: I18n.t('ach.event', { n: newAch.length }) });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ach.mailSubj', { n: newAch.length }), body: I18n.t('ach.mailBody', { n: newAch.length }), ttl: 6 });
+            }
+        }
         GameState.save();
         Storage.flush();   // a completed week is a meaningful checkpoint — don't leave it debounced
         const attend = (typeof Attend !== 'undefined') ? Attend.windowFinals() : [];

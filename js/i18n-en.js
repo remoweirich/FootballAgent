@@ -177,6 +177,9 @@ I18n.register('en', {
     'ag.promise.made': "You've promised {name} you'll sort this out. Don't let him down.",
     'ag.release.cost': "You must pay out the contract (€{amt}) but can't afford it.",
     'ag.release.done': '{name} is no longer your client. Contract pay-out: €{amt}.',
+    'ach.event': '{n} new achievement(s) unlocked — collect in Settings ▸ Achievements.',
+    'ach.mailSubj': 'Achievement unlocked ×{n}',
+    'ach.mailBody': "You've unlocked {n} new achievement(s). Head to Settings ▸ Achievements to collect the reward(s).",
     // --- duration option labels (licence + loan terms) ---
     'dur.s1': '1 season',
     'dur.s2': '2 seasons',
