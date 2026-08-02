@@ -402,7 +402,8 @@ const League = {
             tables[div] = ids.map(id => ({ clubId: id, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, Pts: 0 }));
         });
         GameState.league = {
-            tables, schedule, mdIndex,
+            tables, schedule, mdIndex, results: {},   // results[div][md] = [[hg,ag],…] aligned to schedule[div][md]; wiped each season
+
             beker: this._buildBeker(),
             kbek: this._buildKleine(),
             facup: this._buildFACup(),
@@ -2038,13 +2039,17 @@ const League = {
                             if ([...dec].some(id => clientClubs.has(id))) { deciders = dec; snapshot = this.sortedTable(div).map(r => ({ ...r })); }
                         }
                     }
+                    const rec = [];   // this matchday's scores, aligned to s[md], for the fixtures view (wiped each season)
                     s[md].forEach(([h, a]) => {
+                        let r;
                         if (deciders) {
-                            const r = this.playMatch(h, a, div, true);
+                            r = this.playMatch(h, a, div, true);
                             this._applyLeagueResult(div, h, a, r);
                             if (deciders.has(h) || deciders.has(a)) Attend.consider('title-decider', div, h, a, r, { minutes: 90 });
-                        } else this.playLeagueMatch(div, h, a);
+                        } else r = this.playLeagueMatch(div, h, a);
+                        rec.push([r.hg, r.ag]);
                     });
+                    if (L.results) { if (!L.results[div]) L.results[div] = {}; if (!deciders) L.results[div][md] = rec; }   // a hidden decider round stays unrecorded until watched
                     if (snapshot) Attend.stashLeagueSnapshot(div, snapshot);   // pre-round table, for the hidden view
                     L.mdIndex[div] += 1;
                 }

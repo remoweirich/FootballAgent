@@ -116,7 +116,7 @@ const Achievements = {
         add('facilitiesFull', 'facilities', 3000000, 'ach.facilities', {}, g => g.facilitiesFull);
         add('retire1', 'career', 25000, 'ach.career', {}, g => g.anyRetired);
         add('xiComplete', 'xi', 50000, 'ach.xi.complete', {}, g => g.xiComplete);
-        [[40, 100000], [60, 350000], [75, 1000000], [85, 2500000], [90, 3500000], [95, 10000000]].forEach(([n, r]) => add('xi' + n, 'xi', r, 'ach.xi.rating', { n }, g => g.xiComplete && g.xiAvg >= n));
+        [[40, 100000], [60, 350000], [75, 1000000], [85, 2500000], [90, 3500000], [95, 10000000]].forEach(([n, r]) => add('xi' + n, 'xi', r, 'ach.xi.r' + n, { n }, g => g.xiComplete && g.xiAvg >= n));
         [[20, 5000], [30, 10000], [40, 20000], [50, 50000], [60, 100000], [70, 200000], [80, 400000], [90, 1000000], [100, 2000000]].forEach(([n, r]) => add('rep' + n, 'reputation', r, 'ach.reputation', { n }, g => g.reputation >= n));
         this.DEFS = D;
         return D;

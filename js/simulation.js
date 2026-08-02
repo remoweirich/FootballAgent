@@ -270,6 +270,7 @@ const Sim = {
         if (GameState.isTransferWindowOpen(week) || week >= 48) this._generateOffers(events);
         this._forcedMoves(events);   // stage-3 time/club: the player pushes his own move through (window only; guards inside)
         this._sponsorOffers(events);
+        this._clubRenewals(events);   // clubs proactively try to re-sign final-year clients they want to keep
         this._expireMail(events);
 
         // career moments: milestone crossings and fulfilled ambitions become queued scenes
@@ -862,6 +863,42 @@ const Sim = {
         let n = 0;
         Object.keys(p.stats || {}).forEach(y => { if (Object.values(p.stats[y]).some(st => st.clubId === p.clubId && !st.loan)) n++; });
         return n;
+    },
+
+    // Clubs proactively try to re-sign a client in the FINAL season of his contract, so you're never
+    // ambushed by a player silently running down to a free transfer. If you keep turning them down the
+    // club comes back a few weeks later with a better offer — and eventually may decide he isn't worth
+    // chasing and lets him run down. (Player-initiated renewals via Agency.requestRenewal still work too.)
+    _clubRenewals(events) {
+        if (!GameState.isSeasonActive()) return;
+        Agency.clients().forEach(p => {
+            // only relevant in his final contract season; otherwise clear any stale chase state
+            if (p.contractUntilSeason == null || p.contractUntilSeason !== GameState.seasonStartYear) {
+                if (p._clubRenewTries || p._clubRenewGaveUp || p._clubRenewNext != null) { p._clubRenewTries = 0; p._clubRenewGaveUp = false; delete p._clubRenewNext; }
+                return;
+            }
+            if (p.freeAgent || p.onLoanAt || p.pendingTransfer || p._clubRenewGaveUp) return;
+            if (p._renewSeason === GameState.seasonStartYear) return;   // already re-signed this season
+            const club = Clubs.getClubById(p.clubId); if (!club) return;
+            if (p.squadRole === 'fringe' && p.ability < club.reputation - 8) return;   // a body they'd happily let go
+            // one live offer at a time — wait for the current one to be answered or to lapse
+            if (GameState.inbox.some(m => m.kind === 'renewal' && m.offer && m.offer.playerId === p.id)) return;
+            if (p._clubRenewNext != null && GameState.absWeek() < p._clubRenewNext) return;
+            const tries = p._clubRenewTries || 0;
+            if (tries >= 3 && Rng.next() < 0.5) {
+                p._clubRenewGaveUp = true;
+                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.clubGiveUpSubj', { name: p.name }), body: I18n.t('sim.clubGiveUpBody', { name: p.name, club: club.name }), ttl: 6 });
+                events.push({ type: 'offer', text: I18n.t('sim.clubGiveUpEvent', { name: p.name, club: club.name }) });
+                return;
+            }
+            const bump = 1 + Math.min(0.15, tries * 0.05);   // each knock-back sweetens the next approach
+            const proposedWage = Math.round(Math.max(p.wage + 10, Agency.offeredWage(p, club, { loyalty: true, jitter: false }) * bump) / 10) * 10;
+            const proposedTermSeasons = Math.min(2 + Math.floor(Rng.next() * 2), Agency.maxContractTerm(p, club));
+            GameState.addMail({ kind: 'renewal', subject: I18n.t('sim.clubRenewSubj', { name: p.name, club: club.name }), body: I18n.t('sim.clubRenewBody', { name: p.name, club: club.name, wage: UI.money(proposedWage) }), offer: { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons, clubInitiated: true }, ttl: 4 });
+            events.push({ type: 'offer', text: I18n.t('sim.clubRenewEvent', { name: p.name, club: club.name }) });
+            p._clubRenewTries = tries + 1;
+            p._clubRenewNext = GameState.absWeek() + 3 + Math.floor(Rng.next() * 3);
+        });
     },
 
     _expireMail(events) {

@@ -63,15 +63,24 @@ const AchievementsScreen = {
             <i class="ti ${icon} ach-ico" style="color:${iconCol}"></i>
             <span class="ach-name">${name}</span>${right}</div>`;
     },
+    // re-render in place, keeping the scroll position (collecting a reward deep in the list shouldn't
+    // snap the page back to the top)
+    _reshow() {
+        const sc = document.querySelector('.set-body');
+        const y = sc ? sc.scrollTop : 0;
+        this.show(this._from);
+        const sc2 = document.querySelector('.set-body');
+        if (sc2) sc2.scrollTop = y;
+    },
     collect(id) {
         const r = Achievements.collect(id);
         if (r.ok) { if (GameState.save) GameState.save(); if (typeof Sound !== 'undefined') Sound.play('cash'); }
-        this.show(this._from);
+        this._reshow();
     },
     collectAll() {
         const r = Achievements.collectAll();
         if (r.n) { if (GameState.save) GameState.save(); if (typeof Sound !== 'undefined') Sound.play('cash'); if (typeof Router !== 'undefined' && Router.result) Router.result(I18n.t('ach.collectedAll', { n: r.n, v: UI.euro(r.total) }), 'ok'); }
-        this.show(this._from);
+        this._reshow();
     },
     back() { if (typeof SettingsScreen !== 'undefined') SettingsScreen.show(this._from); },
 
@@ -90,9 +99,9 @@ const AchievementsScreen = {
         .ach-tallylbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);text-align:center}
         .ach-row{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:.5px solid var(--line-faint)}
         .set-group .ach-row:last-child{border-bottom:none}
-        .ach-row--locked{opacity:.55}
+        .ach-row--locked{opacity:.72}
         .ach-ico{font-size:19px;flex:none}
-        .ach-name{flex:1;min-width:0;font-size:var(--fs-sm)}
+        .ach-name{flex:1;min-width:0;font-size:var(--fs-sm);color:var(--text)}
         .ach-reward{font-size:var(--fs-xs);color:var(--text-dim);white-space:nowrap;font-variant-numeric:tabular-nums}
         .ach-collected{font-size:var(--fs-xs);color:var(--state-good);white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
         .ach-collect{flex:none;background:var(--accent);border:none;color:var(--accent-ink,#04140c);border-radius:999px;padding:6px 12px;font:inherit;font-size:var(--fs-xs);font-weight:var(--weight-semibold);cursor:pointer;white-space:nowrap}

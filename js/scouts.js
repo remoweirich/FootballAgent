@@ -275,7 +275,7 @@ const Scouts = {
         else if (qc < 95) centre = 86 + (qc - 90) * 0.6;      // 86 @ q90 → 89 @ q95
         else centre = 89 + (qc - 95) * 0.25;                  // 89 @ q95 → 90 @ q99
         const sd = qc >= 90 ? 3.494 : 8.5 - (qc - 15) * 0.0596;   // 8.5 @ q15 → 3.494 across q90+
-        let potential = Math.round(PlayerGen.gauss(centre, sd));
+        let potential = Math.round(PlayerGen.gaussN(centre, sd));   // true normal: the tail must reach 99, just rarely
         potential = Math.max(Math.max(20, loA), Math.min(cap, potential));
         // spread current ability ACROSS the tier band [loA..hiA], driven by age + potential + genuine noise
         const ageN = Math.max(0, Math.min(1, (age - 15) / 7));                 // 15y→0 .. 22y→1
@@ -318,21 +318,35 @@ const Scouts = {
     setPos(scoutId, pos) { const s = GameState.agency.scouts.find(x => x.id === scoutId); if (s) s.targetPos = pos || null; },
     setTier(scoutId, tier) { const s = GameState.agency.scouts.find(x => x.id === scoutId); if (s) s.targetTier = tier && tier !== 'any' ? tier : null; },
 
-    // roll a talent honouring the scout's brief. Returns { ability:null } when nothing fits the chosen
-    // tier this report (which is how a mismatched brief simply yields fewer finds).
+    // roll a talent honouring the scout's brief. A brief is a FILTER, not a bias: it never makes the
+    // requested calibre more likely to exist. Targeting a tier AT OR BELOW the scout's own level is
+    // easy (he reliably turns players up in that band — "scouting down"); targeting a tier ABOVE his
+    // level just filters his natural finds, so e.g. a "Legend of the game" brief only surfaces someone
+    // on the rare occasion his ordinary roll genuinely lands that high. Returns { ability:null } for a
+    // report that turned nobody matching up.
     rolledTalentFiltered(q, age, s) {
-        let { ability, potential } = this.rolledTalent(q, age);
         const tier = s && s.targetTier && this.TIERS[s.targetTier] && this.TIERS[s.targetTier].pot ? this.TIERS[s.targetTier] : null;
-        if (tier) {
-            if (Rng.next() > this._tierReliability(q, s.targetTier)) return { ability: null, potential: null };
-            const [lo, hi] = tier.pot;
-            const qFrac = Math.max(0, Math.min(1, (q - 20) / 79));                   // better scouts land higher in the band
-            potential = Math.round(lo + (hi - lo) * (0.30 + qFrac * 0.55) + PlayerGen.gauss(0, 4));
+        if (!tier) return this.rolledTalent(q, age);
+        const [lo, hi] = tier.pot;
+        const qc = this._clamp(q, 15, 99);
+        const centre = qc < 90 ? 38 + (qc - 15) * 0.619 : qc < 95 ? 86 + (qc - 90) * 0.6 : 89 + (qc - 95) * 0.25;   // his natural potential centre
+        if (lo <= centre) {
+            // scouting AT or BELOW his level: he reliably supplies players in the band (a small miss
+            // chance so a report isn't always full). This is what makes a 99 scout hunting 3rd-tier
+            // talent turn up 2-4 every time.
+            if (Rng.next() < 0.12) return { ability: null, potential: null };
+            const qFrac = Math.max(0, Math.min(1, (q - 20) / 79));
+            let potential = Math.round(lo + (hi - lo) * (0.30 + qFrac * 0.55) + PlayerGen.gauss(0, 4));
             potential = Math.max(lo, Math.min(hi, potential));
-            const ageN = Math.max(0, Math.min(1, (age - 15) / 7));                   // younger => further below his ceiling
-            ability = Math.max(5, Math.min(potential, Math.round(potential * (0.35 + ageN * 0.4) + PlayerGen.gauss(0, 4))));
+            const ageN = Math.max(0, Math.min(1, (age - 15) / 7));
+            const ability = Math.max(5, Math.min(potential, Math.round(potential * (0.35 + ageN * 0.4) + PlayerGen.gauss(0, 4))));
+            return { ability, potential };
         }
-        return { ability, potential };
+        // scouting ABOVE his level: no manufacturing — roll natural talent and only surface it if it
+        // genuinely lands in the band, so an out-of-reach brief very rarely turns anyone up.
+        const nat = this.rolledTalent(q, age);
+        if (nat.potential < lo || nat.potential > hi) return { ability: null, potential: null };
+        return nat;
     },
 
     // place a found talent at a club IN the scout's region:

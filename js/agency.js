@@ -527,8 +527,14 @@ const Agency = {
         // exactly what the club expects an agent to do, so it never offends them. Only
         // shopping a player who ISN'T listed (going behind the club's back) risks it.
         const discovered = !p.transferListed && Rng.next() < 0.5;
+        // the parent club's betrayal hit lands only ONCE per shopping campaign, no matter how many clubs
+        // you pitch him to — pitching 45 clubs and being rumbled by ten of them is still a single −15,
+        // not −150. Keyed to the current transfer window so a fresh campaign later can sting again.
+        const shopKey = GameState.transferWindowKey ? GameState.transferWindowKey() : GameState.seasonStartYear;
+        const alreadyExposed = p._shopExposedWin === shopKey;
         let msg = '';
-        if (discovered && parent) { this.changeRelationship(parent.id, -15); msg += `${parent.name} found out and feels betrayed (relationship −15). `; }
+        if (discovered && parent && !alreadyExposed) { this.changeRelationship(parent.id, -15); p._shopExposedWin = shopKey; msg += `${parent.name} found out and feels betrayed (relationship −15). `; }
+        else if (discovered && parent) { msg += `${parent.name} are aware you're shopping ${p.name} around. `; }
 
         const free = this.isFreeAgent(p);
         // A FREE AGENT has no fee — a club that can't take him on can't afford his WAGES, not a fee.
@@ -693,7 +699,17 @@ const Agency = {
         if (club && p.clubId === club.id) base *= this.loyaltyMult(p);                      // long service pays, when he stays
         base *= 1 + Math.max(-0.08, Math.min(0.25, (this.relationship(club ? club.id : null) - 55) / 220));
         base = PlayerGen.capYouthWage(base, p.age, rep, p.potential);
-        return Math.round(base / 10) * 10;
+        let max = Math.round(base / 10) * 10;
+        // At his OWN club, loyalty and recent form guarantee at least a real raise on his current wage —
+        // a long-serving, in-form player is due a bump even if the abstract market bracket sits at or below
+        // what he's already earning (the reason a well-paid star at a modest club used to be stuck flat).
+        if (club && p.clubId === club.id) {
+            const loyaltyRaise = Math.min(0.20, this.loyaltyMult(p) - 1);
+            const perfRaise = this.perfWageMult(p) - 1;
+            const raise = Math.min(0.35, loyaltyRaise + perfRaise);
+            if (raise > 0) max = Math.max(max, Math.round(p.wage * (1 + raise) / 10) * 10);
+        }
+        return max;
     },
     // clubs won't lock up an ageing player for years — unless he clearly outclasses the level he's at
     // Longest deal a club will offer, by the role the player would hold THERE and his age.
@@ -740,35 +756,49 @@ const Agency = {
         if (rel >= 18) return I18n.t('nego.greet.cool');
         return I18n.t('nego.greet.cold');
     },
-    // wage the club will accept depends on player value AND your relationship; no hard ceiling shown to you.
+    // Hidden-ceiling wage bargaining (the real negotiation). The club has a true max but reveals only
+    // 80–95% of it as its opening line; it inches that standing offer UP toward the max as you concede
+    // (drop your ask) or simply persist. A wildly greedy ask (>30% over its true max) is held off
+    // WITHOUT revealing the ceiling. Mutates neg.woffer/wmax/wprev; returns { result, offer }.
+    _wageBargain(neg, max, requested) {
+        if (neg.wmax == null) {
+            neg.wmax = max;
+            neg.woffer = Math.round(max * (0.80 + Rng.next() * 0.15) / 10) * 10;   // open at 80–95% of the true max
+            neg.wprev = null;
+        }
+        neg.wmax = Math.max(neg.woffer, max);   // the true max can drift (form/rel) but never below the standing offer
+        const A = requested;
+        if (A <= neg.woffer) { neg.wprev = A; return { result: 'accept', offer: neg.woffer }; }
+        if (A > neg.wmax * 1.30) { neg.wprev = A; return { result: 'reject', offer: neg.woffer }; }   // too greedy: hold, don't reveal
+        const conceded = neg.wprev != null && A < neg.wprev;
+        const step = (neg.wmax - neg.woffer) * (conceded ? 0.55 : 0.28);   // meeting them halfway moves them more
+        neg.woffer = Math.min(neg.wmax, Math.round((neg.woffer + step) / 10) * 10);
+        neg.wprev = A;
+        return { result: A <= neg.woffer ? 'accept' : 'counter', offer: neg.woffer };
+    },
     // `neg` is the persisted patience/threat state (see initNeg), created lazily and mutated in place.
     negotiateWage(p, club, requested, neg) {
-        const base = this.maxClubWage(p, club);
-        neg = this.initNeg(neg, club, base);
-        // a club never goes back on its own word: anything at or below the counter it offered
-        // last round is a done deal (the per-round patience penalty used to shrink the cap
-        // below the club's own previous counter, producing a 650 -> 640 -> 630... death spiral)
-        if (neg.lastCounter != null && requested <= neg.lastCounter)
-            return { status: 'accept', neg, message: I18n.t('nego.wage.acceptDiscussed', { amt: UI.money(requested) }) };
-        const rel = this.relationship(club ? club.id : null);
-        const room = base * (1 + Math.max(-0.10, Math.min(0.45, (rel - 55) / 110)));   // a bit more give than before
-        const cap = Math.round(room) - (neg.round - 1) * Math.round(p.wage * 0.03);
-        if (requested <= cap) return { status: 'accept', neg, message: neg.round === 1 ? I18n.t('nego.wage.acceptR1', { amt: UI.money(requested) }) : I18n.t('nego.wage.acceptRn', { amt: UI.money(requested) }) };
+        const max = this.maxClubWage(p, club);
+        neg = this.initNeg(neg, club, max);
+        const b = this._wageBargain(neg, max, requested);
+        neg.lastCounter = b.offer;
+        if (b.result === 'accept')
+            return { status: 'accept', neg, message: neg.round === 1 ? I18n.t('nego.wage.acceptR1', { amt: UI.money(requested) }) : I18n.t('nego.wage.acceptRn', { amt: UI.money(requested) }) };
 
-        // the club had to push back — record it and lose patience; at the ceiling it walks
+        // pushed back — record it and lose patience; a greedy over-ask burns it faster, and at the
+        // ceiling the club walks
         neg.history.push({ w: requested, f: 0 });
+        if (b.result === 'reject') neg.threat += NEGO.THREAT_BASE * 0.8;
         const walk = this.bumpThreat(neg, club);
-        const counter = Math.max(p.wage, Math.round(cap / 10) * 10, neg.lastCounter || 0);
-        neg.lastCounter = counter;
         if (walk) {
             this.changeRelationship(club.id, neg._ultimatum ? -15 : NEGO.WALKOUT_REL);
             return { status: 'walkout', neg, message: I18n.t('nego.wage.walkout', { name: p.name }) };
         }
-        // Pass 3: renewals stay NEUTRAL; a data line for this band replaces the generic counter where authored
+        if (b.result === 'reject')   // won't show its hand for a greedy ask
+            return { status: 'counter', counter: b.offer, neg, message: I18n.t('nego.wage.counterHigh', { amt: UI.money(b.offer) }) };
         const band = this.threatBand(neg.threat);
-        const flavor = this.negLine('NEUTRAL', band, 'renewal', { amt: UI.money(counter) });
-        if (requested <= cap * 1.12) return { status: 'counter', counter, neg, message: I18n.t('nego.wage.close', { amt: UI.money(counter) }) };
-        return { status: 'counter', counter, neg, message: flavor || (requested > cap * 1.5 ? I18n.t('nego.wage.counterHigh', { amt: UI.money(counter) }) : I18n.t('nego.wage.counter', { amt: UI.money(counter) })) };
+        const flavor = this.negLine('NEUTRAL', band, 'renewal', { amt: UI.money(b.offer) });
+        return { status: 'counter', counter: b.offer, neg, message: flavor || I18n.t('nego.wage.close', { amt: UI.money(b.offer) }) };
     },
     // negotiate loan game time: ask above the club's comfort level and they may dig in — or, with a good
     // relationship and persistence, eventually relent. Sometimes they stay stubborn.

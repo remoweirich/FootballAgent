@@ -46,6 +46,15 @@ const PlayerGen = {
     squadSizeByTier(t) { return ({ 1: 20, 2: 18, 3: 16, 4: 14 })[t] || 16; },
     randPos() { return POS_LIST[Math.floor(Rng.next() * POS_LIST.length)]; },
     gauss(mean, sd) { const r = (Rng.next() + Rng.next() + Rng.next()) / 3; return mean + (r - 0.5) * 2 * sd; },
+    // A TRUE normal (Box–Muller) — unlike gauss() above, which is a bounded triangular (mean ± sd) and
+    // so can never reach its own tails. Used where the rare tail actually matters (scouted potential:
+    // a centre-90 / SD-3.494 roll must still occasionally reach 99, and only very rarely).
+    gaussN(mean, sd) {
+        let u = 0, v = 0;
+        while (u === 0) u = Rng.next();
+        while (v === 0) v = Rng.next();
+        return mean + Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) * sd;
+    },
     randSquadAge() { const r = (Rng.next() + Rng.next()) / 2; return Math.round(16 + r * 18); },
 
     peakAgeFor(pos) {

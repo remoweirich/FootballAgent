@@ -215,5 +215,86 @@ check('GK renewal as Cup Goalkeeper sets the cupKeeper flag', gk.ok && gk.cupAft
 check('renewing a GK to a non-Back-Up role clears the cup flag', gk.cupCleared === false);
 check('GK role labels read as a depth chart (Cup Goalkeeper / Back Up / First Choice)', gk.cupLabel === 'Cup Goalkeeper' && gk.backupLabel === 'Back Up' && gk.firstChoice === 'First Choice');
 
+// ================= 9. loyalty/performance floor on the renewal ceiling (1a) =================
+const t9 = JSON.parse(runv(`
+    const club = Clubs.getClubById('ajax');
+    const p = PlayerGen.makePlayer(club, { ability: 74, age: 27, position: 'CM' });
+    p.agentId = 'me'; p.everClient = true; p.clubId = club.id;
+    p.wage = 120000;   // paid well above the abstract market bracket for his level
+    // three prior senior seasons at the club -> loyalty
+    const y = GameState.seasonStartYear;
+    p.stats = {}; [y - 3, y - 2, y - 1].forEach(yr => { p.stats[yr] = { k: { clubId: club.id, loan: false, youth: false, comps: {} } }; });
+    GameState.players.push(p);
+    const max = Agency.maxClubWage(p, club);
+    return JSON.stringify({ wage: p.wage, max });
+`));
+check('a loyal player can negotiate a renewal ABOVE his current wage (' + t9.max + ' > ' + t9.wage + ')', t9.max > t9.wage);
+
+// ================= 10. hidden-max bargaining: open low, inch up, never reveal on a greedy ask (1b) =================
+const t10 = JSON.parse(runv(`
+    const club = Clubs.getClubById('ajax');
+    const p = PlayerGen.makePlayer(club, { ability: 72, age: 26, position: 'CM' });
+    p.agentId = 'me'; p.everClient = true; p.clubId = club.id; p.wage = 5000;
+    GameState.players.push(p);
+    GameState.agency.relationships[club.id] = 60;
+    const max = Agency.maxClubWage(p, club);
+    const neg = Agency.initNeg(null, club, max);
+    const r1 = Agency.negotiateWage(p, club, max * 3, neg);   // way over -> won't reveal its hand
+    const r2 = Agency.negotiateWage(p, club, max, neg);       // reasonable ask -> inches up
+    const r3 = Agency.negotiateWage(p, club, max, neg);       // persistence -> inches further
+    return JSON.stringify({ max, c1: r1.counter, s1: r1.status, c2: r2.counter, c3: r3.counter });
+`));
+check('the club opens below its true ceiling, not at it (' + t10.c1 + ' < ' + t10.max + ')', t10.c1 < t10.max);
+check('a wildly greedy ask is pushed back, not accepted', t10.s1 === 'counter');
+check('the offer inches up as you keep pushing, capped at the true max', t10.c2 >= t10.c1 && t10.c3 >= t10.c2 && t10.c3 <= t10.max);
+
+// ================= 11. a 1-year renewal is 1 season, not existing+1 (1c) =================
+const t11 = JSON.parse(runv(`
+    const club = Clubs.getClubById('ajax');
+    const p = PlayerGen.makePlayer(club, { ability: 70, age: 25, position: 'CM' });
+    p.agentId = 'me'; p.everClient = true; p.clubId = club.id; p.wage = 4000;
+    p.contractUntilSeason = GameState.seasonStartYear + 4;   // four years left
+    p._renewSeason = -1;
+    GameState.players.push(p);
+    const mail = GameState.addMail({ kind: 'renewal', offer: { playerId: p.id, clubId: club.id, proposedWage: 4200, proposedTermSeasons: 3 } });
+    Agency.acceptRenewal(mail, 4200, null, 1);   // sign a ONE-year deal
+    return JSON.stringify({ until: p.contractUntilSeason, expected: GameState.seasonStartYear + 1 });
+`));
+check('a 1-year renewal lasts exactly 1 season (replaces the deal, not adds to it)', t11.until === t11.expected);
+
+// ================= 12. offering a player out only stings the parent once (2) =================
+const t12 = JSON.parse(runv(`
+    const club = Clubs.getClubById('ajax');
+    const p = PlayerGen.makePlayer(club, { ability: 78, age: 25, position: 'ST' });
+    p.agentId = 'me'; p.everClient = true; p.clubId = club.id; p.transferListed = false; delete p._shopExposedWin;
+    GameState.players.push(p);
+    const relBefore = Agency.relationship('ajax');
+    const realNext = Rng.next; Rng.next = () => 0;   // force "the parent found out" on every pitch
+    Agency.shopPlayer(p, 'psv');
+    Agency.shopPlayer(p, 'Liverpool');
+    Agency.shopPlayer(p, 'Chelsea');
+    Rng.next = realNext;
+    return JSON.stringify({ drop: relBefore - Agency.relationship('ajax') });
+`));
+check('being rumbled at 3 clubs is still a single -15, not -45 (' + t12.drop + ')', t12.drop === 15);
+
+// ================= 13. scouting brief = filter, not bias (6) =================
+const t13 = JSON.parse(runv(`
+    let downHits = 0, downInBand = 0, legendHits = 0, legendBad = 0;
+    for (let i = 0; i < 1500; i++) {
+        const r = Scouts.rolledTalentFiltered(99, 18, { targetTier: 'pro' });     // 3rd-tier band [55,72], below a 99 scout
+        if (r.ability != null) { downHits++; if (r.potential >= 55 && r.potential <= 72) downInBand++; }
+    }
+    for (let i = 0; i < 1500; i++) {
+        const r = Scouts.rolledTalentFiltered(99, 18, { targetTier: 'legend' }); // [96,99], above even a 99 scout's centre
+        if (r.ability != null) { legendHits++; if (r.potential < 96) legendBad++; }
+    }
+    return JSON.stringify({ downRate: downHits / 1500, downInBand, downHits, legendRate: legendHits / 1500, legendBad });
+`));
+check('a 99 scout hunting 3rd-tier talent finds someone almost every time (' + t13.downRate.toFixed(2) + ')', t13.downRate > 0.75);
+check('and every one of those finds is in the requested band', t13.downInBand === t13.downHits);
+check('a 99 scout hunting legends only rarely turns one up (' + t13.legendRate.toFixed(3) + ')', t13.legendRate > 0 && t13.legendRate < 0.20);
+check('a legend brief never surfaces a below-band player (pure filter)', t13.legendBad === 0);
+
 console.log(failed ? '\n*** SOME CHECKS FAILED ***' : '\nAll negotiation checks passed.');
 process.exitCode = failed ? 1 : 0;

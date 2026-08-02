@@ -279,7 +279,15 @@ const LeaguesScreen = {
             <div class="section-label" style="margin:0">${I18n.t('leagues.matchdayN', { n: md })}${played ? ` <span class="muted" style="font-weight:400">${I18n.t('leagues.playedTag')}</span>` : ''}</div>
             <select class="select-input" style="width:auto" onchange="LeaguesScreen.setLeagueMd(+this.value)">${opts}</select></div>`;
         const lk = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
-        const fx = (s[md - 1] || []).map(([h, a]) => `<div class="fixture"><span class="fx-home">${lk(h)}</span><span class="fx-score muted">${I18n.t('livesim.vs')}</span><span class="fx-away">${lk(a)}</span></div>`).join('');
+        const res = (L.results && L.results[div] && L.results[div][md - 1]) || null;   // this season's stored scores, if any
+        const fx = (s[md - 1] || []).map(([h, a], i) => {
+            const sc = res && res[i];
+            if (sc) {
+                const hw = sc[0] > sc[1], aw = sc[1] > sc[0];
+                return `<div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(h)}</span><span class="fx-score">${sc[0]}–${sc[1]}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(a)}</span></div>`;
+            }
+            return `<div class="fixture"><span class="fx-home">${lk(h)}</span><span class="fx-score muted">${I18n.t('livesim.vs')}</span><span class="fx-away">${lk(a)}</span></div>`;
+        }).join('');
         return header + `<div class="fcard">${fx || `<p class="hint">${I18n.t('leagues.noFixtures')}</p>`}</div>`;
     },
     // ---- national-cup bracket (Round of 16 → final), mirroring the European bracket ----
