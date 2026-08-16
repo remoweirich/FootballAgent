@@ -109,15 +109,15 @@ check('milestones: baseline initialises silently (no stale scene for a veteran)'
   Dialogue.weeklyMoments();
   return GameState.agency.pendingScenes.length === 0 && P._mile.a >= 120;
 `));
-check('milestones: crossing 250 apps queues the milestone scene', runv(`
+check('milestones: crossing 500 apps queues the milestone scene', runv(`
   GameState.agency.pendingScenes = [];
   const y = GameState.seasonStartYear;
   const c = statBucket(P, y, CLUB.id, false, false, 'ERE');
-  const need = 250 - P._mile.a + 1;
+  const need = 500 - P._mile.a + 1;
   c.apps += need; c.ratingSum += need * 7;
   Dialogue.weeklyMoments();
   const q = GameState.agency.pendingScenes;
-  return q.length === 1 && q[0].type === 'milestone' && q[0].milestone === '250 appearances';
+  return q.length === 1 && q[0].type === 'milestone' && q[0].milestone === '500 appearances';
 `));
 check('milestones: debut fires for a fresh client with a tracked zero baseline', runv(`
   GameState.agency.pendingScenes = [];

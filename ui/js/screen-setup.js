@@ -13,6 +13,7 @@ const Setup = {
         { icon: 'ti-currency-euro', id: 'gametime' },
         { icon: 'ti-building', id: 'clubs' },
         { icon: 'ti-heartbeat', id: 'happy' },
+        { icon: 'ti-ticket', id: 'watch' },
         { icon: 'ti-arrows-transfer-up', id: 'grow' },
         { icon: 'ti-trophy', id: 'week' }
     ],

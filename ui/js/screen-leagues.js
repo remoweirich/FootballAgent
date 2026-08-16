@@ -663,10 +663,12 @@ const CompHistory = {
         if (!w.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-trophy"></i></div><div class="empty__title">${I18n.t('leagues.noWinners')}</div><div class="empty__hint">${I18n.t('leagues.noWinnersSub')}</div></div>`;
         const tally = {}; w.forEach(x => tally[x.clubId] = (tally[x.clubId] || 0) + 1);
         const crest = cid => UI.crest(Clubs.getClubById(cid) || { name: UI.clubName(cid), colors: { primary: '#5A626D' } });
-        const most = Object.entries(tally).sort((a, b) => b[1] - a[1] || UI.clubName(a[0]).localeCompare(UI.clubName(b[0]))).slice(0, 6)
+        // every club that has ever won it, most titles first (name as a stable tiebreak) — the full list,
+        // not a top-N, so a club tied on the cut line is never hidden by alphabetical order
+        const most = Object.entries(tally).sort((a, b) => b[1] - a[1] || UI.clubName(a[0]).localeCompare(UI.clubName(b[0])))
             .map(([cid, n]) => `<a href="${Router.link('clubs', cid)}" class="frow" style="cursor:pointer"><span class="frow__k">${crest(cid)}${UI.clubName(cid)}</span><span class="frow__v">${I18n.t('leagues.titlesN', { n })}</span></a>`).join('');
         const roll = w.map(x => `<a href="${Router.link('clubs', x.clubId)}" class="frow" style="cursor:pointer"><span class="frow__k">${GameState.seasonLabelFor(x.year)}</span><span class="frow__v">${crest(x.clubId)}${UI.clubName(x.clubId)}</span></a>`).join('');
-        return `<div class="section-label">${I18n.t('leagues.mostTitles')}</div><div class="fcard" style="margin-top:var(--space-2)">${most}</div>
+        return `<div class="section-label">${I18n.t('leagues.mostTitles')}</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${most}</div>
             <div class="section-label" style="margin-top:var(--space-4)">${I18n.t('leagues.rollOfHonour')}</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${roll}</div>`;
     },
 

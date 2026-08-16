@@ -260,13 +260,13 @@ const EQUIPMENT = [
     { id: 'treadmills', name: 'Treadmills', price: 2500, dev: 0.5, injury: -0.25, rep: 1 },
     { id: 'strength_machine', name: 'Multifunctional Strength Machine', price: 10000, dev: 0.5, injury: -0.25, rep: 1 },
     { id: 'first_aid', name: 'First-Aid Kit', price: 250, dev: 0, injury: -1, rep: 0, expires: 1 },
-    { id: 'gym', name: 'Gym', price: 2000000, weekly: 10000, dev: 2, injury: -1, rep: 2, facility: true },
-    { id: 'pool', name: 'Swimming Pool', price: 4000000, weekly: 20000, dev: 2, injury: -1, rep: 2, facility: true },
-    { id: 'training_ground', name: 'Training Ground', price: 10000000, weekly: 40000, dev: 5, injury: 1, rep: 3, facility: true },
-    { id: 'medical_center', name: 'Medical Center', price: 10000000, weekly: 60000, dev: 0, injury: -10, rep: 3, facility: true },
+    { id: 'gym', name: 'Gym', price: 2000000, weekly: 15000, dev: 2, injury: -1, rep: 2, facility: true },
+    { id: 'pool', name: 'Swimming Pool', price: 4000000, weekly: 35000, dev: 2, injury: -1, rep: 2, facility: true },
+    { id: 'training_ground', name: 'Training Ground', price: 10000000, weekly: 80000, dev: 5, injury: 1, rep: 3, facility: true },
+    { id: 'medical_center', name: 'Medical Center', price: 10000000, weekly: 120000, dev: 0, injury: -10, rep: 3, facility: true },
 ];
 const STAFF = [
-    { id: 'physio', name: 'Physio', weekly: 1500, dev: 0, injury: -1, rep: 0, max: 5, yearly: 'first_aid', yearlyName: 'First-Aid Kit' },
+    { id: 'physio', name: 'Physio', weekly: 2500, dev: 0, injury: -1, rep: 0, max: 5, yearly: 'first_aid', yearlyName: 'First-Aid Kit' },
     { id: 'trainer', name: 'Personal Trainer', weekly: 5000, dev: 1, injury: 0, rep: 1, max: 5, yearly: 'resistance_bands', yearlyName: 'Resistance Bands' },
 ];
 
@@ -311,7 +311,7 @@ Object.assign(Upgrades, {
     facDevBonus() { let d = 0; this.ownedEquipment().forEach(e => d += (e.dev || 0)); d += this.facState().trainers * 1; return d; },
     facInjuryBonus() { let i = 0; this.ownedEquipment().forEach(e => i += (e.injury || 0)); i += this.facState().physios * (-1); return i; },
     facRepBonus() { let r = 0; this.ownedEquipment().forEach(e => r += (e.rep || 0)); r += this.facState().trainers * 1; return r; },
-    weeklyFacCost() { let c = 0; this.ownedEquipment().forEach(e => { if (e.facility) c += (e.weekly || 0); }); const st = this.facState(); c += st.physios * 1500 + st.trainers * 5000; return c; },
+    weeklyFacCost() { let c = 0; this.ownedEquipment().forEach(e => { if (e.facility) c += (e.weekly || 0); }); const st = this.facState(); c += st.physios * this.staffById('physio').weekly + st.trainers * this.staffById('trainer').weekly; return c; },
     devSpeedMult() { return 1 + this.facDevBonus() / 100; },
     injuryRiskMult() { return Math.max(0.1, Math.min(2, 1 + this.facInjuryBonus() / 100)); },
 

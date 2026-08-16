@@ -215,8 +215,8 @@ const BestXI = {
             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.65)}
         .bx-plus{font-size:18px;color:rgba(255,255,255,.65);font-weight:var(--weight-regular)}
         .bx-benchlab{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.07em;margin:16px 2px 8px}
-        .bx-bench{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-        .bx-slot--bench{position:static;transform:none;width:100%}
+        .bx-bench{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+        .bx-slot--bench{position:static;transform:none;width:80px;flex:0 0 80px}
         .bx-slot--bench .bx-circle{width:100%;height:40px;border-radius:10px}
         .bx-slot--bench .bx-slotname{max-width:100%;color:var(--text-secondary);text-shadow:none}
         .bx-picklist{max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:6px 0}

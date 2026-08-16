@@ -1029,7 +1029,7 @@ const CustomizeScreen = {
         const cc = this.db.countries[country]; if (!cc) return;
         this._namesCountry = country;
         const body = `
-            <p class="cx-note">${I18n.t('customize.namesNote', { max: 150 })}</p>
+            <p class="cx-note">${I18n.t('customize.namesNote')}</p>
             <label class="field-label">${I18n.t('customize.firstNames')} <span class="cx-ncount" id="cxFirstN"></span></label>
             <textarea id="cxFirst" class="text-input cx-area" rows="7"></textarea>
             <label class="field-label" style="margin-top:10px">${I18n.t('customize.lastNames')} <span class="cx-ncount" id="cxLastN"></span></label>
@@ -1042,8 +1042,8 @@ const CustomizeScreen = {
         const fe = document.getElementById('cxFirst'), le = document.getElementById('cxLast');
         const upd = () => {
             const fn = document.getElementById('cxFirstN'), ln = document.getElementById('cxLastN');
-            if (fn) fn.textContent = '(' + this._nameCount(fe && fe.value) + '/150)';
-            if (ln) ln.textContent = '(' + this._nameCount(le && le.value) + '/150)';
+            if (fn) fn.textContent = '(' + this._nameCount(fe && fe.value) + ')';
+            if (ln) ln.textContent = '(' + this._nameCount(le && le.value) + ')';
         };
         if (fe) { fe.value = cc.names.first.join(', '); fe.addEventListener('input', upd); }
         if (le) { le.value = cc.names.last.join(', '); le.addEventListener('input', upd); }
@@ -1053,7 +1053,7 @@ const CustomizeScreen = {
     _nameCount(v) { return String(v || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean).length; },
     _saveNames(country) {
         const cc = this.db.countries[country]; if (!cc) return;
-        const parse = v => String(v || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean).slice(0, 150);
+        const parse = v => String(v || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean);
         cc.names.first = parse((document.getElementById('cxFirst') || {}).value);
         cc.names.last = parse((document.getElementById('cxLast') || {}).value);
         this._toast(I18n.t('customize.namesSaved'));
@@ -1090,7 +1090,13 @@ const CustomizeScreen = {
             <p class="cx-note">${I18n.t('customize.regionsNote', { left: pool.length })}</p>
             ${cards}
             <button class="btn btn--primary cx-wide" style="margin-top:14px" data-act="regdone"${allOk ? '' : ' disabled'}>${I18n.t('customize.regionsDone')}</button>`;
+        // keep the reader where they were: rebuilding the screen otherwise snaps back to the top on every pick
+        const qs = sel => (document.querySelector ? document.querySelector(sel) : null);
+        const prevBody = qs('#cxRoot .cx-body');
+        const scrollY = prevBody ? prevBody.scrollTop : 0;
         this._screen(I18n.t('customize.scoutingRegions'), body, () => this.countryMenu(this._regCountry));
+        const newBody = qs('#cxRoot .cx-body');
+        if (newBody && scrollY) newBody.scrollTop = scrollY;
         this._delegate();
     },
     regName(idx) {
@@ -1103,12 +1109,22 @@ const CustomizeScreen = {
         const cc = this.db.countries[this._regCountry];
         const assigned = new Set(); cc.regions.forEach(r => (r.clubIds || []).forEach(id => assigned.add(id)));
         const pool = cc.clubs.filter(c => !assigned.has(c.id));
-        if (!pool.length) { this._toast(I18n.t('customize.poolEmpty')); return; }
+        if (!pool.length) { this._closeOverlay(); this._toast(I18n.t('customize.poolEmpty')); return; }
         const rows = pool.map(c => `<button class="cx-btn" data-act="regassign" data-region="${idx}" data-cid="${UI.esc(c.id)}">${UI.esc(c.name)} <span class="cx-id">${UI.esc(this._compName(c.division))}</span></button>`).join('');
         this._overlay(I18n.t('customize.addClubs'), `<div class="cx-list" style="max-height:60vh;overflow:auto">${rows}</div><button class="btn btn--ghost cx-wide" style="margin-top:8px" data-act="ovcancel">${I18n.t('common.close')}</button>`);
         this._delegate(this._ov());
     },
-    _regAssign(idx, cid) { const cc = this.db.countries[this._regCountry]; if (cc.regions[idx] && !cc.regions[idx].clubIds.includes(cid)) cc.regions[idx].clubIds.push(cid); this._closeOverlay(); this._renderRegions(); },
+    _regAssign(idx, cid) {
+        const cc = this.db.countries[this._regCountry];
+        if (cc.regions[idx] && !cc.regions[idx].clubIds.includes(cid)) cc.regions[idx].clubIds.push(cid);
+        const listOf = () => { const ov = this._ov(); return (ov && ov.querySelector) ? ov.querySelector('.cx-list') : null; };
+        const oldList = listOf();
+        const listScroll = oldList ? oldList.scrollTop : 0;
+        this._renderRegions();      // refresh the counts/costs underneath (page scroll is preserved)
+        this.regAdd(idx);           // reopen the picker (now without the club just added) for rapid multi-add; it self-closes with a toast once the pool is empty
+        const newList = listOf();
+        if (newList && listScroll) newList.scrollTop = listScroll;   // and keep the picker where it was too
+    },
     _regRemove(cid) { const cc = this.db.countries[this._regCountry]; cc.regions.forEach(r => { r.clubIds = (r.clubIds || []).filter(x => x !== cid); }); this._renderRegions(); },
     regionsDone() {
         const cc = this.db.countries[this._regCountry];

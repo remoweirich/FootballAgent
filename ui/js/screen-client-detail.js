@@ -84,9 +84,12 @@ const ClientDetail = {
             actions = `<div class="gap-2" style="display:flex;flex-direction:column;margin-top:var(--space-4)">${moveBtns}${checkinBtn}<button class="btn btn--ghost" onclick="ClientDetail.reqRenewal('${p.id}')"><i class="ti ti-file-pencil"></i>${I18n.t('cd.renewalTalks')}</button></div>`;
         } else {
             const gate = Agency.canSign(p);
+            // an age rejection is never worth showing: you only ever scout U23 prospects, so a box
+            // telling you an older player (e.g. a retired one you're browsing) can't be signed is noise
             actions = gate.ok
                 ? `<button class="btn btn--primary" style="margin-top:var(--space-4)" onclick="ClientDetail.openSign('${p.id}')"><i class="ti ti-signature"></i>${I18n.t('cd.offerRep')}</button>`
-                : `<div class="result info">${gate.reason}</div>`;
+                : gate.code === 'age' ? ''
+                    : `<div class="result info">${gate.reason}</div>`;
         }
         return `${statusRow}
             <div class="info-grid">

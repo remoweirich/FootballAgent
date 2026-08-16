@@ -167,7 +167,7 @@ const Agency = {
         if (p.agentId === 'me') return { ok: false, reason: I18n.t('ag.sign.already') };
         if (p.agentId) return { ok: false, reason: I18n.t('ag.sign.otherAgent') };
         if (p.noTalkUntil && p.noTalkUntil > GameState.absWeek()) return { ok: false, reason: I18n.t('ag.sign.noTalkWeeks', { n: p.noTalkUntil - GameState.absWeek() }) };
-        if (p.age >= 23) return { ok: false, reason: I18n.t('ag.sign.under23') };
+        if (p.age >= 23) return { ok: false, code: 'age', reason: I18n.t('ag.sign.under23') };
         if (this.atCapacity()) return { ok: false, reason: I18n.t('ag.sign.capacity', { n: this.capacity() }) };
         const ceiling = GameState.agency.reputation + 12;
         if (p.ability > ceiling) return { ok: false, reason: I18n.t('ag.sign.lowRep') };

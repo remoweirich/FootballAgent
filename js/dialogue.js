@@ -754,7 +754,7 @@ const Dialogue = {
     },
     // weekly detection: appearance/goal milestones and ambition fulfilment. Baselines initialise
     // silently on first sight, so a veteran loaded from an old save never gets a stale "100 apps!".
-    APPS_MARKS: [100, 250, 500],
+    APPS_MARKS: [500, 1000],
     GOAL_MARKS: [50, 100, 200],
     weeklyMoments() {
         if (!GameState.agency) return;

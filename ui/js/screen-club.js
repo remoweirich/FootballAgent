@@ -62,7 +62,7 @@ const ClubScreen = {
         rowsData.sort((a, b) => (b.current - a.current) || (sorters[this.state.sort] || sorters.apps)(a, b));
         const clientRows = rowsData.length ? rowsData.map(d => `<a href="${Router.link('client', d.p.id)}" class="frow" style="cursor:pointer;${d.current ? 'background:var(--accent-fill);border-radius:var(--radius-sm)' : ''}">
             <span class="frow__k">${d.p.name}${d.current ? ` <span class="pill pill--accent" style="padding:1px 6px;font-size:10px">${I18n.t('club.current')}</span>` : ''}${d.p.retired ? ` <span class="pill" style="padding:1px 6px;font-size:10px">${I18n.t('club.retired')}</span>` : ''}${d.youthOnly ? ` <span class="muted">${I18n.t('club.youth')}</span>` : ''}</span>
-            <span class="frow__v">${d.agg.apps} ${I18n.t('common.appsShort')} · ${d.agg.goals}${I18n.t('common.goalsShort')} · ${UI.ratingText(d.agg.avg)}${d.tro ? ' · 🏆' + d.tro : ''}</span></a>`).join('')
+            <span class="frow__v">${d.agg.apps} ${I18n.t('common.appsShort')} · ${d.agg.goals}${I18n.t('common.goalsShort')} · ${d.agg.assists || 0}${I18n.t('common.assistsShort')} · ${UI.ratingText(d.agg.avg)}${d.tro ? ' · 🏆' + d.tro : ''}</span></a>`).join('')
             : `<p class="muted">${mode === 'season' ? I18n.t('club.noneSeason') : I18n.t('club.noneAll')}</p>`;
 
         el.innerHTML = `
