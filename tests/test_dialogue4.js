@@ -124,28 +124,6 @@ check('tipoff: only once a season, never below Confidant', runv(`
   return again === false && low === false;
 `));
 
-// ---- referrals ----
-check('referral: Family tier recommends the best young teammate, warm intro attached', runv(`
-  GameState.agency.pendingScenes = [];
-  P.bond = 80; delete P._referSeason;
-  // guarantee eligible teammates exist
-  let got = null;
-  for (let i = 0; i < 80 && !got; i++) { delete P._referSeason; GameState.agency.pendingScenes = []; Dialogue.onSeasonRollover(); got = GameState.agency.pendingScenes.find(e => e.type === 'referral'); }
-  if (!got) return false;
-  const mate = GameState.getPlayer(got.mateId);
-  const scene = Dialogue.buildMomentScene(got);
-  return mate.knownToAgent === true && mate._warmIntro === P.id && mate.age <= 26
-    && scene.extra.mate === mate.name && !scene.open.text.includes('{');
-`));
-check('referral: warm intro pays off at signing (agent morale 85+, bond seeded)', runv(`
-  const mate = GameState.players.find(x => x._warmIntro === P.id);
-  if (!mate) return false;
-  Agency.signPlayer(mate, 10, 10, 2);
-  const ok = mate.morale.agent >= 85 && mate.bond >= 12 && mate._warmIntro === undefined;
-  mate.agentId = null;   // clean up
-  return ok;
-`));
-
 // ---- settling in ----
 check('settling: NL -> England full period; NL -> Belgium only a brief one (he knows Dutch)', runv(`
   delete P.settling; P._langs = [];

@@ -909,30 +909,6 @@ const DIALOGUE_DATA = {
    "text": "You don't need to bribe me, {agent}. But alright, deal."
   },
   {
-   "id": "F090",
-   "beat": "titlemiss-open",
-   "choice": "",
-   "outcome": "any",
-   "personality": "any",
-   "text": "We did everything right today, {agent}. It just wasn't enough — the title's gone on the other result."
-  },
-  {
-   "id": "F091",
-   "beat": "titlemiss-open",
-   "choice": "",
-   "outcome": "any",
-   "personality": "any",
-   "text": "We won and it still slipped away. So close. I can't believe it's over."
-  },
-  {
-   "id": "F092",
-   "beat": "titlemiss-open",
-   "choice": "",
-   "outcome": "any",
-   "personality": "any",
-   "text": "Our part's done — we did our job. It's the game we couldn't control that killed us."
-  },
-  {
    "id": "F024",
    "beat": "win-open",
    "choice": "",
@@ -1163,6 +1139,30 @@ const DIALOGUE_DATA = {
    "outcome": "bad",
    "personality": "any",
    "text": "Next season? We JUST lost, {agent}. Read the room."
+  },
+  {
+   "id": "F090",
+   "beat": "titlemiss-open",
+   "choice": "",
+   "outcome": "any",
+   "personality": "any",
+   "text": "We did everything right today, {agent}. It just wasn't enough — the title's gone on the other result."
+  },
+  {
+   "id": "F091",
+   "beat": "titlemiss-open",
+   "choice": "",
+   "outcome": "any",
+   "personality": "any",
+   "text": "We won and it still slipped away. So close. I can't believe it's over."
+  },
+  {
+   "id": "F092",
+   "beat": "titlemiss-open",
+   "choice": "",
+   "outcome": "any",
+   "personality": "any",
+   "text": "Our part's done — we did our job. It's the game we couldn't control that killed us."
   }
  ],
  "farewell": [
@@ -1277,6 +1277,22 @@ const DIALOGUE_DATA = {
    "choice": "personal",
    "personality": "loyal",
    "text": "We stuck together, didn't we. Through everything. That's rare in this game."
+  },
+  {
+   "id": "W015",
+   "beat": "reply",
+   "tier": "family",
+   "choice": "personal",
+   "personality": "any",
+   "text": "You are making me cry. I am so glad to have met you!"
+  },
+  {
+   "id": "W016",
+   "beat": "reply",
+   "tier": "family",
+   "choice": "career",
+   "personality": "any",
+   "text": "It means the world to me that you have been there through it all!"
   }
  ],
  "checkin": [
@@ -1427,13 +1443,29 @@ const DIALOGUE_DATA = {
   {
    "id": "K019",
    "beat": "reply",
+   "choice": "q-club",
+   "variant": "any",
+   "personality": "hothead",
+   "text": "I love {favclub}! I can't sit still when they are playing."
+  },
+  {
+   "id": "K020",
+   "beat": "reply",
+   "choice": "q-club",
+   "variant": "any",
+   "personality": "homebody",
+   "text": "It's {favclub}. My grandma has been a season ticket holder for 52 years, and she has brought the entire family into it."
+  },
+  {
+   "id": "K021",
+   "beat": "reply",
    "choice": "q-ambition",
    "variant": "any",
    "personality": "any",
    "text": "Honestly? One day, I want to {ambition}. That's the dream."
   },
   {
-   "id": "K020",
+   "id": "K022",
    "beat": "reply",
    "choice": "q-ambition",
    "variant": "any",
@@ -1441,7 +1473,7 @@ const DIALOGUE_DATA = {
    "text": "Between us: I want to {ambition}. And I want everyone to see it."
   },
   {
-   "id": "K021",
+   "id": "K023",
    "beat": "reply",
    "choice": "q-ambition",
    "variant": "any",
@@ -1449,7 +1481,31 @@ const DIALOGUE_DATA = {
    "text": "I've set myself one target: {ambition}. Everything I do points there."
   },
   {
-   "id": "K022",
+   "id": "K024",
+   "beat": "reply",
+   "choice": "q-ambition",
+   "variant": "any",
+   "personality": "humble",
+   "text": "If I could ever {ambition}, that would be an amazing achievement for me and my mates."
+  },
+  {
+   "id": "K025",
+   "beat": "reply",
+   "choice": "q-ambition",
+   "variant": "any",
+   "personality": "hothead",
+   "text": "I need to {ambition}. And I always want to be in the race for titles!"
+  },
+  {
+   "id": "K026",
+   "beat": "reply",
+   "choice": "q-ambition",
+   "variant": "any",
+   "personality": "homebody",
+   "text": "I want to {ambition}. But most importantly, I want to have my friends and family with me at every step of the way."
+  },
+  {
+   "id": "K027",
    "beat": "reply",
    "choice": "q-room",
    "variant": "any",
@@ -1457,7 +1513,7 @@ const DIALOGUE_DATA = {
    "text": "Dressing room's good. Few big egos, but show me one without."
   },
   {
-   "id": "K023",
+   "id": "K028",
    "beat": "reply",
    "choice": "q-room",
    "variant": "any",
@@ -1465,7 +1521,7 @@ const DIALOGUE_DATA = {
    "text": "Honestly, great group of lads. Best I've been part of."
   },
   {
-   "id": "K024",
+   "id": "K029",
    "beat": "reply",
    "choice": "q-room",
    "variant": "any",
@@ -1473,7 +1529,71 @@ const DIALOGUE_DATA = {
    "text": "There's one guy who keeps nicking my parking spot. We've had words."
   },
   {
-   "id": "K025",
+   "id": "K030",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "showman",
+   "text": "Honestly, I feel like my team mates don't sufficiently appreciate my excellence..."
+  },
+  {
+   "id": "K031",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "showman",
+   "text": "Ha! It's a blast most of the time, and you know I'm the DJ!"
+  },
+  {
+   "id": "K032",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "homebody",
+   "text": "I feel very at home here! I see no reason to ever leave at the moment."
+  },
+  {
+   "id": "K033",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "loyal",
+   "text": "I feel very at home here! I see no reason to ever leave at the moment."
+  },
+  {
+   "id": "K034",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "hothead",
+   "text": "We have a bunch of two-faced snakes among us... Always talking behind the others backs."
+  },
+  {
+   "id": "K035",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "any",
+   "text": "We lack a real team cohesion right now... I think the manager has assembled a squad of mercenaries."
+  },
+  {
+   "id": "K036",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "humble",
+   "text": "I look around at times and am just so grateful to be part of this amazing team! Thank you for making this possible for me."
+  },
+  {
+   "id": "K037",
+   "beat": "reply",
+   "choice": "q-room",
+   "variant": "any",
+   "personality": "any",
+   "text": "I have made a lot of friend in my time at this club. I really feel blessed."
+  },
+  {
+   "id": "K038",
    "beat": "reply",
    "choice": "q-none",
    "variant": "any",
@@ -1481,7 +1601,7 @@ const DIALOGUE_DATA = {
    "text": "Ha, just checking in? Appreciated. Genuinely."
   },
   {
-   "id": "K026",
+   "id": "K039",
    "beat": "reply",
    "choice": "q-none",
    "variant": "any",
@@ -1489,7 +1609,7 @@ const DIALOGUE_DATA = {
    "text": "No agenda? That's a first for an agent. I like it."
   },
   {
-   "id": "K027",
+   "id": "K040",
    "beat": "reply",
    "choice": "q-none",
    "variant": "any",
@@ -1497,7 +1617,7 @@ const DIALOGUE_DATA = {
    "text": "That's kind of you. It gets lonely out here sometimes, you know."
   },
   {
-   "id": "K028",
+   "id": "K041",
    "beat": "open",
    "choice": "",
    "variant": "any",
@@ -1505,7 +1625,7 @@ const DIALOGUE_DATA = {
    "text": "Good to see you, {agent}! What did you want to talk about?"
   },
   {
-   "id": "K029",
+   "id": "K042",
    "beat": "open",
    "choice": "",
    "variant": "any",
@@ -1513,7 +1633,7 @@ const DIALOGUE_DATA = {
    "text": "Hey, how are you? I hope you don't come begging for money! Kidding, of course, what's going on?"
   },
   {
-   "id": "K030",
+   "id": "K043",
    "beat": "open",
    "choice": "",
    "variant": "any",
@@ -1881,30 +2001,6 @@ const DIALOGUE_DATA = {
    "choice": "decline",
    "personality": "any",
    "text": "Right. Busy schedule, I get it. ...I get it."
-  },
-  {
-   "id": "M046",
-   "kind": "referral",
-   "beat": "open",
-   "choice": "",
-   "personality": "any",
-   "text": "You know {mate} from my dressing room? I told him you're the only agent worth having. Expect his call."
-  },
-  {
-   "id": "M047",
-   "kind": "referral",
-   "beat": "open",
-   "choice": "",
-   "personality": "loyal",
-   "text": "I vouched for you with {mate}. Don't make me look bad, alright? He's a good lad."
-  },
-  {
-   "id": "M048",
-   "kind": "referral",
-   "beat": "open",
-   "choice": "",
-   "personality": "professional",
-   "text": "{mate} asked who handles my career. I gave him my honest assessment: you. He's interested."
   }
  ],
  "choices": [

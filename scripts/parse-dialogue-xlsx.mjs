@@ -173,7 +173,7 @@ for (const choice of ['praise', 'modest'])
         problems.push(`no 'any' close line for choice=${choice}`);
 
 // ---- Final (Phase 2: pre-match word, post-win party, post-loss consolation)
-const FINAL_BEATS = ['pre-open', 'pre-reply', 'win-open', 'win-reply', 'loss-open', 'loss-reply'];
+const FINAL_BEATS = ['pre-open', 'pre-reply', 'win-open', 'win-reply', 'loss-open', 'loss-reply', 'titlemiss-open'];
 const FINAL_CHOICE = { 'pre-reply': ['calm', 'fireup', 'bonus'], 'win-reply': ['toast', 'quiet', 'tab'], 'loss-reply': ['sit', 'space', 'speech'] };
 const finals = readTable(sheetByName('Final'), ['id', 'beat', 'choice', 'outcome', 'personality', 'text']);
 finals.forEach(r => {
@@ -232,7 +232,7 @@ for (const v of ['single', 'partner', 'kids', 'hobby', 'nothing'])
         problems.push(`no 'any' q-life reply for variant=${v}`);
 
 // ---- Moments (Phase 3: career-moment scenes)
-const MOMENT_KINDS = ['debut', 'firstgoal', 'hattrick', 'milestone', 'procontract', 'transfer', 'dreammove', 'ambition', 'injury', 'thanks', 'invite', 'referral', 'any'];
+const MOMENT_KINDS = ['debut', 'firstgoal', 'hattrick', 'milestone', 'procontract', 'transfer', 'dreammove', 'ambition', 'injury', 'thanks', 'invite', 'any'];
 const moments = readTable(sheetByName('Moments'), ['id', 'kind', 'beat', 'choice', 'personality', 'text']);
 moments.forEach(r => {
     checkId(r.id, 'Moments');

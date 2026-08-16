@@ -841,7 +841,6 @@ const Dialogue = {
         if (entry.weeks) extra.weeks = String(entry.weeks);
         if (entry.occasion) extra.occasion = entry.occasion;
         if (entry.type === 'ambition') extra.ambition = this.ambitionText(p);
-        if (entry.type === 'referral') extra.mate = (GameState.getPlayer(entry.mateId) || {}).name || 'a team-mate';
         // the big ones pay out on arrival, so the numbers are right even if the scene is skipped
         if (entry.type === 'dreammove' && !entry._paid) { this.addBond(p, 8, 'dreamMove'); entry._paid = true; }
         if (entry.type === 'ambition' && !entry._paid) { this.addBond(p, 6, 'ambitionDelivered'); Agency.bumpRep(1); entry._paid = true; }
@@ -980,8 +979,7 @@ const Dialogue = {
         GameState.addLog(I18n.t('dlg.tip.log', { name: p.name }), 'morale');
         return true;
     },
-    // Season-rollover social calendar: wedding/christening invitations (Confidant+) and, at Family,
-    // the rare referral of a teammate into your orbit.
+    // Season-rollover social calendar: wedding/christening invitations (Confidant+).
     onSeasonRollover() {
         const year = GameState.seasonStartYear;   // already the NEW season by this point
         Agency.clients().forEach(p => {
@@ -1001,15 +999,6 @@ const Dialogue = {
                     this.queueMoment({ type: 'invite', playerId: p.id, occasion: "the little one's christening" });
                 }
             }
-            if (bond >= 75 && p._referSeason !== year && Rng.next() < 0.25) {
-                const mate = this._pickReferral(p);
-                if (mate) {
-                    p._referSeason = year;
-                    mate.knownToAgent = true; mate.discoveredVia = 'referral'; mate._warmIntro = p.id;
-                    this.queueMoment({ type: 'referral', playerId: p.id, mateId: mate.id });
-                    GameState.addLog(I18n.t('dlg.referLog', { name: p.name, mate: mate.name }), 'sign');
-                }
-            }
             // family life moves on over the years: single → partner → kids. A change re-opens the topic
             // (discovered reset), so a yearly check-in can catch it (D6). Rolled AFTER this year's social
             // events so it only affects future seasons — this year's status is what triggers them.
@@ -1019,15 +1008,6 @@ const Dialogue = {
             }
         });
     },
-    _pickReferral(p) {
-        const clubId = effectiveClubId(p);
-        const cands = GameState.players.filter(x => x.id !== p.id && !x.archived && x.agentId == null
-            && !x.knownToAgent && (x.onLoanAt || x.clubId) === clubId && x.age <= 26);
-        if (!cands.length) return null;
-        cands.sort((a, b) => (b.potential || b.ability) - (a.potential || a.ability));
-        return cands[0];
-    },
-
     // =================================================== settling in & concierge (Phase 4)
     // Language map: a move to a country that shares no language with what he speaks starts a
     // settling-in period — a small morale drag and a small form drag until he finds his feet.
