@@ -1,0 +1,77 @@
+Achievements! Have them in the settings where we marked it. To get the reward, the player must go there and collect it. 
+
+1. Signing players:
+	Sign 1 Player (1k reward)
+	Sign 5 Players (10k reward)
+	Sign 20 Players (150k reward)
+	Sign 50 Players (1.5m reward)
+
+2. Release 1 Player (5k reward)
+3. Office Achievements:
+	Move into Co-working space (5k reward)
+	Move into traditional office (25k reward)
+	Move into modern office (150k reward)
+	Move into iconic office (1m reward)
+4. All time earnings:
+	Earn 1 million euros (add other currencies) (50k reward)
+	Earn 10 million euros (add other currencies) (350k reward)
+	Earn 100 million euros (add other currencies) (2m reward)
+Leagues: (not to be completed in order):
+5. Champions! (One of your players wins a sixth division League Title) (10k reward)
+6. Champions! (One of your players wins a fifth division League Title) (10k reward)
+7. Champions! (One of your players wins a fourth division League Title) (25k reward)
+8. Champions! (One of your players wins a third division League Title) (50k reward)
+9. Champions! (One of your players wins a second division League Title) (100k reward)
+10. Champions! (One of your players wins a highest division League Title) (250k reward)
+Cups: (not to be completed in order): 
+11. Cup Champions! (One of your players wins a secondary Cup Title) (50k reward)
+12. Cup Champions! (One of your players wins a primary Cup Title) (250k reward)
+European Cups: (not to be completed in order): 
+13. Conference League champions (One of your players wins the UECL (rename for copyright)) (500k reward)
+14. Europa League champions (One of your players wins the EL (rename for copyright)) (800k reward)
+15. Champions of Europe! (One of your players wins the UCL (rename for copyright)) (2.5m reward)
+16. Transfers:
+	1 million! (A client transfers for 1 million euros (or other)) (10k reward)
+	10 million! (A client transfers for 10 million euros (or other)) (50k reward)
+	100 million! (A client transfers for 100 million euros (or other)) (1m reward)
+17. Games played:
+	250 games! (A client reaches 250 club games) (25k reward)
+	500 games! (A client reaches 500 club games) (100k reward)
+	750 games! (A client reaches 750 club games) (500k reward)
+	1000 games! (A client reaches 1000 club games) (2m reward)
+18. Titles:
+	5 titles! (A client reaches 5 titles won) (150k reward)
+	10 titles! (A client reaches 10 titles won) (500k reward)
+	15 titles! (A client reaches 10 titles won) (2m reward)
+19. Physios:
+	Employ 1 physio. (25k reward)
+	Employ 5 physios (250k reward)
+20. Personal trainers:
+	Employ 1 personal trainer (30k reward)
+	Employ 5 personal trainers 300k reward)
+21. Vehicles:
+	Buy a vehicle (1k reward)
+	Own all vehicles (200k reward)
+22. Properties:
+	Buy property (1k reward)
+	Own all properties (250k reward)
+23. Completely upgrade facilities (3m reward)
+24. What a career (1 client retires) (25k reward)
+25. XI:
+	My own legends (build a complete starting eleven in the all time XI tab) (50k reward)
+	Local legends (build a complete starting eleven with an average rating of 40) (100k reward)
+	Regional legends (build a complete starting eleven with an average rating of 60) (350k reward)
+	National legends (build a complete starting eleven with an average rating of 75) (1m reward)
+	International legends (build a complete starting eleven with an average rating of 85) (2.5m reward)
+	Icons of the game (build a complete starting eleven with an average rating of 90) (3.5m reward)
+	GOATs (build a complete starting eleven with an average rating of 95) (10m reward)
+26. Reputation:
+	Reach an agency reputation of 20 (5k reward)
+	Reach an agency reputation of 30 (10k reward)
+	Reach an agency reputation of 40 (20k reward)
+	Reach an agency reputation of 50 (50k reward)
+	Reach an agency reputation of 60 (100k reward)
+	Reach an agency reputation of 70 (200k reward)
+	Reach an agency reputation of 80 (400k reward)
+	Reach an agency reputation of 90 (1m reward)
+	Reach an agency reputation of 100 (2m reward)
