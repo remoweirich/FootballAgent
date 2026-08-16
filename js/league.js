@@ -435,6 +435,9 @@ const League = {
             champions: {},
             finished: false
         };
+        // created countries (Customize Part 2): build their higher/lower cups and register play-off slots
+        GameState.league.customCups = this.buildCustomCups();
+        this._customCountries().forEach(cc => cc.divIds.forEach(d => { GameState.league.playoffs[d] = null; }));
     },
 
     // ---------------- KNVB Beker ----------------
@@ -736,6 +739,32 @@ const League = {
     },
 
     YOUTH_CAP: { ERE: 0, EED: Infinity, TWD: 5, DRD: 4 },
+    // Max reserve/B-team sides allowed per division, mirroring the caps the promotion/relegation code
+    // enforces at each boundary (NL YOUTH_CAP above; German _promoteRespectingReserves 0/0/3/5/5;
+    // Spanish _capReserves 0/2/4/∞; Swiss 0/0/4/6/∞; England & Italy have no reserve sides at all).
+    // Consumed by the Customize editor's exit validation so a custom day-one layout can't smuggle more
+    // B-teams into a division than the engine permits. Divisions with no explicit rule (France/Portugal/
+    // Belgium floors) fall back in reserveCapFor() to their shipped day-one reserve count.
+    RESERVE_CAP: {
+        ERE: 0, EED: Infinity, TWD: 5, DRD: 4,
+        PREM: 0, CHAMP: 0, LEAGUE1: 0, LEAGUE2: 0, Natleague: 0,
+        BUNDES: 0, '2BUNDES': 0, '3LIGA': 3, REGIONAL1: 5, REGIONAL2: 5, REGIONAL3: Infinity,
+        LaLiga: 0, LaLiga2: 2, PrimeraSup: 4, PrimeraInf: Infinity, Segunda: Infinity,
+        SuperLeagueCH: 0, ChallengeLeague: 0, PromotionLeague: 4, '1.LigaCH': 6, '2.LigaCH': Infinity,
+        SerieA: 0, SerieB: 0, SerieC: 0, SerieD: 0
+    },
+    _dayOneReserveCount: null,
+    reserveCapFor(divId) {
+        if (this.RESERVE_CAP[divId] != null) return this.RESERVE_CAP[divId];
+        // no explicit engine cap (e.g. FR/PT/BE tiers): fall back to the shipped day-one reserve count,
+        // so customization can never pile MORE B-sides into a division than the world was built with.
+        if (!this._dayOneReserveCount) {
+            const m = {};
+            (Clubs.allClubs || []).forEach(c => { if (isReserveClub(c.id)) m[c.division] = (m[c.division] || 0) + 1; });
+            this._dayOneReserveCount = m;
+        }
+        return this._dayOneReserveCount[divId] != null ? this._dayOneReserveCount[divId] : Infinity;
+    },
     _destDivOf(srcDiv) { return { EED: 'ERE', TWD: 'EED', DRD: 'TWD' }[srcDiv]; },
     // ordered promotion picture for a division: who is green (direct), who is blue (play-off), who is denied
     promoStructure(srcDiv) {
@@ -822,6 +851,7 @@ const League = {
         this.applyPromotionRelegationFrance();
         this.applyPromotionRelegationPortugal();
         this.applyPromotionRelegationBelgium();
+        this._customCountries().forEach(cc => this.applyPromotionRelegationCustom(cc));
         return c;
     },
 
@@ -1498,6 +1528,104 @@ const League = {
         return L.prorelIta;
     },
 
+    // ================= CREATED COUNTRIES (Customize Part 2) =================
+    // A generic Italian-style engine for every country added via the Customize "Add a new country"
+    // flow (see js/world-ext.js). Each has 4 divisions (20/20/24/20), a higher + lower cup, Spanish-
+    // style reserve caps (0/2/4 into D1/D2/D3, ≤4 in D4) and the play-off shape below. Sizes conserve
+    // exactly (3↔3 between D1/D2, 4↔4 between D3/D4), so _assertDivisionSizes stays quiet.
+    _customCountries() { return (typeof WorldExt !== 'undefined' && WorldExt.created) ? Object.values(WorldExt.created) : []; },
+
+    applyPromotionRelegationCustom(cc) {
+        const L = GameState.league;
+        const [d1, d2, d3, d4] = cc.divIds;
+        if (!L.tables[d1]) return null;
+        const ord = d => this.sortedTable(d).map(r => r.clubId);
+        const T1 = ord(d1), T2 = ord(d2), T3 = ord(d3), T4 = ord(d4);
+        const poW = d => (L.playoffs && L.playoffs[d]) ? L.playoffs[d].winner : null;
+
+        const d1Down = T1.slice(-3);          // D1: last 3 relegate directly
+        const d2Down = T2.slice(-3);          // D2: last 3 relegate directly
+        const d3Down = T3.slice(-4);          // D3: last 4 relegate directly (D4 has no relegation)
+        const d1DownS = new Set(d1Down), d2DownS = new Set(d2Down), d3DownS = new Set(d3Down);
+
+        // promotions (2/2/3 auto + 1 play-off each), honouring the destination reserve caps
+        const d1Stay = T1.filter(id => !d1DownS.has(id));
+        const resD1 = d1Stay.filter(isReserveClub).length;
+        const d2Up = this._capReserves([T2[0], T2[1], poW(d2)].filter(Boolean), T2, 0, resD1, d2DownS);
+        const d2Stay = T2.filter(id => !d2DownS.has(id) && !d2Up.includes(id));
+        const resD2 = [...d2Stay, ...d1Down].filter(isReserveClub).length;
+        const d3Up = this._capReserves([T3[0], T3[1], poW(d3)].filter(Boolean), T3, 2, resD2, d3DownS);
+        const d3Stay = T3.filter(id => !d3DownS.has(id) && !d3Up.includes(id));
+        const resD3 = [...d3Stay, ...d2Down].filter(isReserveClub).length;
+        const d4Up = this._capReserves([T4[0], T4[1], T4[2], poW(d4)].filter(Boolean), T4, 4, resD3, new Set());
+
+        const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
+        move(d1Down, d2); move(d2Up, d1);
+        move(d2Down, d3); move(d3Up, d2);
+        move(d3Down, d4); move(d4Up, d3);
+        this._repDrift([...d2Up, ...d3Up, ...d4Up], [...d1Down, ...d2Down, ...d3Down]);
+
+        if (!L.prorelCustom) L.prorelCustom = {};
+        L.prorelCustom[cc.name] = { d1Down, d2Up, d2Down, d3Up, d3Down, d4Up };
+        return L.prorelCustom[cc.name];
+    },
+    // two two-legged ties (higher seed hosts leg 2) feeding a two-legged final; aggregate draws go to
+    // penalties (no extra time) via _twoLeggedTie/_twoLeggedFinal. `pairs` are 0-indexed [hi, lo] seeds.
+    _customPromoSeries(div, pairs) {
+        const order = this.sortedTable(div).map(r => r.clubId);
+        const need = Math.max.apply(null, pairs.reduce((a, p) => a.concat(p), [])) + 1;
+        if (order.length < need) return null;
+        const sf1 = this._twoLeggedTie(order[pairs[0][0]], order[pairs[0][1]], 'PO');
+        const sf2 = this._twoLeggedTie(order[pairs[1][0]], order[pairs[1][1]], 'PO');
+        const seed = id => order.indexOf(id);
+        const a = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
+        const b = a === sf1.winner ? sf2.winner : sf1.winner;
+        const final = this._twoLeggedFinal(a, b, 'PO');
+        return { sf: [sf1, sf2], final, winner: final.winner };
+    },
+    playCustomPlayoffs() {
+        const L = GameState.league;
+        this._customCountries().forEach(cc => {
+            const [, d2, d3, d4] = cc.divIds;
+            if (!L.tables[d2]) return;
+            L.playoffs[d2] = this._customPromoSeries(d2, [[2, 5], [3, 4]]);   // D2: 3v6, 4v5
+            L.playoffs[d3] = this._customPromoSeries(d3, [[2, 5], [3, 4]]);   // D3: 3v6, 4v5
+            L.playoffs[d4] = this._customPromoSeries(d4, [[3, 6], [4, 5]]);   // D4: 4v7, 5v6
+        });
+    },
+    // higher cup = D1 seeded + D2/D3; lower cup = D2 seeded + D3/D4 — each a clean 64-team seeded
+    // knockout on the Spanish/Italian calendar (CUP_WEEKS_NO32, skips week 32).
+    buildCustomCups() {
+        const out = {};
+        this._customCountries().forEach(cc => {
+            const [d1, d2, d3, d4] = cc.divIds;
+            out[cc.name] = { higher: this._buildSpanishCup([d1], [d2, d3]), lower: this._buildSpanishCup([d2], [d3, d4]) };
+        });
+        return out;
+    },
+    _customCupStep(C, comp, week) {
+        if (!C || C.winner) return;
+        let pairs;
+        if (C.remaining === null) {
+            const seeded = this.shuffle(C.seeded.slice()), lower = this.shuffle(C.lower.slice());
+            pairs = [];
+            seeded.forEach(s => { const h = lower.pop(); pairs.push(h != null ? [h, s] : [s, null]); });   // seeded drawn away
+            while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
+            if (lower.length) pairs.push([lower.pop(), null]);
+        } else {
+            pairs = this._pairUp(this.shuffle(C.remaining));
+        }
+        const ties = [], winners = [];
+        pairs.forEach(([h, a]) => {
+            if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
+            const t = this.playCupTie(h, a, comp, week === 47);
+            ties.push(t); winners.push(t.winner);
+        });
+        C.remaining = winners;
+        C.results.push({ week, round: this._spanishCupRoundName(week), ties });
+        if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
+    },
+
     // ---- seasonal form rolls: called at rollover BEFORE promotion/relegation is applied, so
     // expected/actual positions both refer to the season just finished. Expected position =
     // the club's reputation rank inside its country's full ladder (Bayern 1st in Germany, a
@@ -2049,7 +2177,7 @@ const League = {
                         } else r = this.playLeagueMatch(div, h, a);
                         rec.push([r.hg, r.ag]);
                     });
-                    if (L.results) { if (!L.results[div]) L.results[div] = {}; if (!deciders) L.results[div][md] = rec; }   // a hidden decider round stays unrecorded until watched
+                    if (L.results) { if (!L.results[div]) L.results[div] = {}; L.results[div][md] = rec; }   // always stored; a hidden decider round is withheld in the fixtures view (Attend.leagueRoundHidden) until watched, then revealed
                     if (snapshot) Attend.stashLeagueSnapshot(div, snapshot);   // pre-round table, for the hidden view
                     L.mdIndex[div] += 1;
                 }
@@ -2103,8 +2231,17 @@ const League = {
         if (CUP_WEEKS.includes(week) && L.belgiancup) this.belgianCupStep(week);
         if (CUP_WEEKS_NO32.includes(week) && L.notrecoupe) this.notreCoupeStep(week);
 
+        // created-country cups (Customize Part 2): clean 64-team knockouts, skip week 32 like the others
+        if (CUP_WEEKS_NO32.includes(week) && L.customCups) {
+            this._customCountries().forEach(cc => {
+                const cups = L.customCups[cc.name]; if (!cups) return;
+                this._customCupStep(cups.higher, cc.cups.higher.id, week);
+                this._customCupStep(cups.lower, cc.cups.lower.id, week);
+            });
+        }
+
         // every promotion/relegation play-off is a do-or-die match — field the best XI (see playMatch/assignStats)
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this._bigMatch = true; this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); this.playPlayoffsPortugal(); this.playPlayoffsBelgium(); this._bigMatch = false; L.playoffs._done = true; }
+        if (week === 46 && L.playoffs && !L.playoffs._done) { this._bigMatch = true; this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); this.playPlayoffsPortugal(); this.playPlayoffsBelgium(); this.playCustomPlayoffs(); this._bigMatch = false; L.playoffs._done = true; }
 
         // UEFA club competitions (UCL/UEL/UECL) run in parallel all season — qualifying wk1-6,
         // league phase wk11-31, knockouts wk34-48. See js/europe.js.
@@ -2269,8 +2406,13 @@ const League = {
         const posW = { ST: 1.0, LW: 0.8, RW: 0.8, CAM: 0.7, CM: 0.4, CDM: 0.2, LB: 0.15, RB: 0.15, CB: 0.12, GK: 0.0 };
         const posWA = { ST: 1.0, LW: 0.95, RW: 0.95, CAM: 1.0, CM: 0.55, CDM: 0.3, LB: 0.4, RB: 0.4, CB: 0.12, GK: 0.015 };
         const sBias = p => (typeof Scouting !== 'undefined' ? Scouting.styleBias(p) : { goal: 1, assist: 1 });
-        const wG = a => (posW[a.p.position] ?? 0.3) * (0.5 + a.p.ability / 100) * sBias(a.p).goal;
-        const wA = a => (posWA[a.p.position] ?? 0.3) * (0.5 + a.p.ability / 100) * sBias(a.p).assist;
+        // A slight thumb on the scale for the agent's own clients — so the players you actually watch
+        // get on the scoresheet more often — and a stronger nudge in the big one (final / play-off),
+        // where you may well be in the stands. It only tilts WHO among those on the pitch is credited;
+        // the team's goal/assist totals are unchanged.
+        const clientMult = p => p.agentId === 'me' ? (bigMatch ? 1.9 : 1.35) : 1;
+        const wG = a => (posW[a.p.position] ?? 0.3) * (0.5 + a.p.ability / 100) * sBias(a.p).goal * clientMult(a.p);
+        const wA = a => (posWA[a.p.position] ?? 0.3) * (0.5 + a.p.ability / 100) * sBias(a.p).assist * clientMult(a.p);
         // A club always fields eleven, but only the players this save actually models turn up in
         // `appear`. Whatever is missing from the XI still scores its share, so give the unmodelled
         // remainder its own weight in the draw. Without this, a club whose background squad has

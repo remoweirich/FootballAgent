@@ -53,21 +53,20 @@ for (let n = 0; n < 2000; n++) { const opts = JSON.parse(buildOffer()); opts.for
 const avg1 = sum[1] / cnt[1], avg3 = sum[3] / cnt[3];
 check('sponsor: term length does NOT systematically change per-year value', Math.abs(avg1 - avg3) / avg1 < 0.05);
 
-// ---- item 2: cup prestige order ----
-check('prestige: Liechtensteiner Cup (1) > lower cup (0)', runv(`
-  return Attend._prestige({kind:'cup-final',compId:'LICHCUP'}) > Attend._prestige({kind:'cup-final',compId:'CUPABASS'});`));
-check('prestige: national cup (2) > Liechtensteiner Cup (1)', runv(`
-  return Attend._prestige({kind:'cup-final',compId:'SCHWCUP'}) > Attend._prestige({kind:'cup-final',compId:'LICHCUP'});`));
-check('prestige: europe (UCL) > national cup', runv(`
-  return Attend._prestige({kind:'europe-final',compId:'UCL'}) > Attend._prestige({kind:'cup-final',compId:'SCHWCUP'});`));
-check('prestige: UECL < UEL < UCL preserved', runv(`
-  return Attend._prestige({kind:'europe-final',compId:'UECL'}) < Attend._prestige({kind:'europe-final',compId:'UEL'})
-      && Attend._prestige({kind:'europe-final',compId:'UEL'}) < Attend._prestige({kind:'europe-final',compId:'UCL'});`));
-check('prestige: ordering — a lich final sorts between a lower cup and a national cup', runv(`
+// ---- item 2: finals are scheduled by competition across the week (day map) ----
+check('day: Liechtensteiner Cup + lower cups play Monday', runv(`
+  return Attend._dayFor({kind:'cup-final',compId:'LICHCUP'})==='Monday'
+      && Attend._dayFor({kind:'cup-final',compId:'CUPABASS'})==='Monday';`));
+check('day: main national cups play Friday, Conference/Europa/Champions on Tue/Thu/Sun', runv(`
+  return Attend._dayFor({kind:'cup-final',compId:'SCHWCUP'})==='Friday'
+      && Attend._dayFor({kind:'europe-final',compId:'UECL'})==='Tuesday'
+      && Attend._dayFor({kind:'europe-final',compId:'UEL'})==='Thursday'
+      && Attend._dayFor({kind:'europe-final',compId:'UCL'})==='Sunday';`));
+check('order: chronological — a lower cup (Mon) before a main cup (Fri) before UCL (Sun)', runv(`
   const mk=(compId,kind)=>({kind:kind||'cup-final',compId,clients:[{}],homeId:'h',awayId:'a'});
-  const list=[mk('SCHWCUP'),mk('LICHCUP'),mk('CUPABASS')];
+  const list=[mk('SCHWCUP'),mk('UCL','europe-final'),mk('CUPABASS')];
   const ord=Attend.order(list).map(m=>m.compId);
-  return ord[0]==='CUPABASS' && ord[1]==='LICHCUP' && ord[2]==='SCHWCUP';`));
+  return ord[0]==='CUPABASS' && ord[1]==='SCHWCUP' && ord[2]==='UCL';`));
 
 // ---- item 4: intl scouting costs from row 13 ----
 check('intl scout: PREM cost base 20000 (before discount)', runv(`return Scouts.INTL_LEAGUE_COST['PREM']===20000;`));

@@ -180,7 +180,7 @@ const Router = {
         if (!ag) return '';
         const net = this.lastWeekNet;
         const netColor = net == null ? 'var(--text-faint)' : net >= 0 ? 'var(--state-good)' : 'var(--state-bad)';
-        const netText = net == null ? '—' : (net >= 0 ? '+€' : '−€') + UI.abbr(Math.abs(net));
+        const netText = net == null ? '—' : (net >= 0 ? '+' : '−') + UI.cur() + UI.abbr(Math.abs(net));
         return `<a class="hdr-finance" href="#finance" aria-label="${I18n.t('common.finances')}">
             <span class="hf-item"><i class="ti ti-wallet"></i>${UI.eabbr(ag.balance)}</span>
             <span class="hf-item" style="color:${netColor}"><i class="ti ${net == null || net >= 0 ? 'ti-trending-up' : 'ti-trending-down'}"></i>${netText}</span>

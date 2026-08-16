@@ -44,6 +44,12 @@ const SettingsScreen = {
         const WORLD = `<i class="ti ti-world set-row__ico"></i>`;
         const langRow = `<div class="set-row set-row--static">${WORLD}<span class="set-row__label">${I18n.t('settings.language')}</span>
             <div class="set-seg">${langs.map(l => `<button class="set-seg__btn${curLang === l.code ? ' is-on' : ''}" onclick="SettingsScreen.setLang('${l.code}')">${l.name}</button>`).join('')}</div></div>`;
+        // Currency picker — EUR is the baseline; GBP/CHF are converted for display
+        const curCode = (typeof Currency !== 'undefined') ? Currency.get() : 'EUR';
+        const curCodes = (typeof Currency !== 'undefined') ? Currency.CODES : ['EUR'];
+        const COIN = `<i class="ti ti-coin set-row__ico"></i>`;
+        const currencyRow = `<div class="set-row set-row--static">${COIN}<span class="set-row__label">${I18n.t('settings.currency')}</span>
+            <div class="set-seg">${curCodes.map(c => `<button class="set-seg__btn${curCode === c ? ' is-on' : ''}" onclick="SettingsScreen.setCurrency('${c}')">${c}</button>`).join('')}</div></div>`;
         // Per-track enable/disable list (only shown when bundled music exists)
         const tracks = (typeof Sound !== 'undefined') ? Sound.allTracks() : [];
         const trackGroup = tracks.length ? `<div class="set-heading" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -56,6 +62,18 @@ const SettingsScreen = {
                     <i class="ti ti-player-play set-row__ico"></i><span class="set-row__label">${UI.esc(tk.name)}</span>
                     <span class="set-check${on ? ' is-on' : ''}" onclick="event.stopPropagation();SettingsScreen.toggleTrack('${enc}')"></span></div>`;
             }).join('')}</div>` : '';
+        // mid-save logo import is only meaningful when a game is running
+        const inGame = typeof GameState !== 'undefined' && GameState.players && GameState.players.length > 0;
+        const M = (typeof Monetization !== 'undefined') ? Monetization : null;
+        const logoRow = inGame ? row(ic('ti-photo'), I18n.t('settings.importLogos'), '', 'SettingsScreen.importLogos()') : '';
+        const nameRow = inGame ? row(ic('ti-text-caption'), I18n.t('settings.importNames'), '', 'SettingsScreen.importNames()') : '';
+        // Enhanced Insights: an on/off toggle, shown only once the entitlement is owned
+        const insightsRow = (M && M.owns('insights'))
+            ? `<div class="set-row set-row--static">${ic('ti-eye')}<span class="set-row__label">${I18n.t('settings.insights')}</span>
+                <span class="set-check${M.insightsOn() ? ' is-on' : ''}" onclick="SettingsScreen.toggleInsights()"></span></div>`
+            : '';
+        // Full Sandbox editor: in-game only, once owned
+        const sandboxRow = (inGame && M && M.owns('sandbox')) ? row(ic('ti-tools'), I18n.t('settings.sandbox'), '', 'SettingsScreen.openSandbox()') : '';
         document.getElementById('app').innerHTML = `<div class="set-wrap">
             <div class="set-bar">
                 <button class="set-close" onclick="SettingsScreen.close()" aria-label="Close"><i class="ti ti-chevron-left" style="font-size:24px"></i></button>
@@ -70,8 +88,14 @@ const SettingsScreen = {
 
                 <div class="set-heading">${I18n.t('settings.groupGame')}</div>
                 <div class="set-group">
+                    ${row(ic('ti-shopping-bag'), I18n.t('store.title'), '', 'SettingsScreen.openStore()')}
                     ${row(ic('ti-trophy'), I18n.t('settings.achievements'), achRight, 'SettingsScreen.openAchievements()')}
+                    ${insightsRow}
+                    ${sandboxRow}
+                    ${nameRow}
+                    ${logoRow}
                     ${langRow}
+                    ${currencyRow}
                 </div>
 
                 <div class="set-heading">${I18n.t('settings.groupAppearance')}</div>
@@ -85,6 +109,7 @@ const SettingsScreen = {
 
                 <div class="set-heading">${I18n.t('settings.groupAbout')}</div>
                 <div class="set-group">
+                    ${row(ic('ti-music'), I18n.t('settings.credits'), '', "SettingsScreen.credits()")}
                     ${row(ic('ti-license'), I18n.t('settings.copyright'), '', "SettingsScreen.legal('copyright')")}
                     ${row(ic('ti-lock'), I18n.t('settings.privacy'), '', "SettingsScreen.legal('privacy')")}
                 </div>
@@ -104,6 +129,11 @@ const SettingsScreen = {
     },
     help() { if (typeof Setup !== 'undefined' && Setup.openHelpOverlay) Setup.openHelpOverlay(); },
     openAchievements() { if (typeof AchievementsScreen !== 'undefined') AchievementsScreen.show(this._from); },
+    importLogos() { if (typeof CustomizeScreen !== 'undefined' && CustomizeScreen.importLogosLive) CustomizeScreen.importLogosLive(); },
+    importNames() { if (typeof CustomizeScreen !== 'undefined' && CustomizeScreen.importNamesLive) CustomizeScreen.importNamesLive(); },
+    toggleInsights() { if (typeof Monetization !== 'undefined') { Monetization.setInsights(!Monetization.insightsOn()); this._reshow(); } },
+    openSandbox() { if (typeof Sandbox !== 'undefined') Sandbox.show(); },
+    openStore() { if (typeof StoreScreen !== 'undefined') StoreScreen.show('game'); },
     // re-render in place, keeping the scroll position (toggles live deep in the list — a full
     // show() would otherwise snap the page back to the top on every tap)
     _reshow() {
@@ -115,6 +145,7 @@ const SettingsScreen = {
     },
     setTheme(mode) { if (typeof Theme !== 'undefined') Theme.set(mode); this._reshow(); },
     setLang(code) { if (typeof I18n !== 'undefined') I18n.set(code); this._reshow(); },
+    setCurrency(code) { if (typeof Currency !== 'undefined') Currency.set(code); this._reshow(); },
     setVol(ch, v) { if (typeof Sound !== 'undefined') Sound.setVol(ch, v); },
     toggleMute(ch) { if (typeof Sound !== 'undefined') Sound.toggleMuted(ch); this._reshow(); },
     toggleTrack(fileEnc) {
@@ -156,6 +187,12 @@ const SettingsScreen = {
             ? `<p class="set-note">${I18n.t('settings.privacyBody')}</p>`
             : `<p class="set-note">${I18n.t('settings.copyrightBody')}</p>`;
         this._overlay(which === 'privacy' ? I18n.t('settings.privacy') : I18n.t('settings.copyright'), body);
+    },
+
+    // Music credits. Attribution lines live in i18n (settings.creditsBody) so they're easy to update
+    // as tracks are added; kept language-neutral (names/licences aren't translated).
+    credits() {
+        this._overlay(I18n.t('settings.credits'), `<p class="set-note" style="white-space:pre-line">${I18n.t('settings.creditsBody')}</p>`);
     },
 
     _overlay(title, bodyHTML) {

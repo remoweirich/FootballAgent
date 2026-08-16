@@ -14,6 +14,10 @@ const GameState = {
     attendWindow: null,  // "Attend the Final" viewing window (finals to watch this week), or null
     homeCountry: 'Netherlands', // chosen at the start: drives initial talents + domestic scouting regions
     needsSetup: false,
+    databaseId: null,           // customization database this game was started on ('null' = Standard); see js/clubs.js applyDatabase
+    clubLogos: null,            // { clubId: dataURI } logos added mid-save (Settings > Import logos); re-applied on load over the db
+    clubNames: null,            // { clubId: name } names added mid-save (Settings > Import names — e.g. the real-names pack); re-applied on load
+    canEditGameState: true,     // gate for reputation/starting-division edits in Customize (flipped by the future paid "Gamestate editor")
 
     // ---- season phase ----
     isTransferWindowOpen(w = this.week) { return (w >= 1 && w <= 6) || (w >= 28 && w <= 33); },
@@ -57,8 +61,7 @@ const GameState = {
             this.startNewGame(this.homeCountry || 'Netherlands', (this.agency && this.agency.name) || 'Your Agency');
         }
     },
-    startNewGame(country, name, agentName) {
-        this.homeCountry = (country && REGIONS_BY_COUNTRY[country]) ? country : 'Netherlands';
+    startNewGame(country, name, agentName, database) {
         this.week = 1; this.seasonStartYear = 2025;
         // Fix this game's RNG seed up front so the very first pool is drawn from the seeded stream;
         // it rides along in every save (see save/load) and also anchors background-squad regen.
@@ -69,6 +72,13 @@ const GameState = {
         // per-save trace — competition & club history, European best-runs, last-season report,
         // inbox, log and any live "Attend the Final" window.
         if (typeof Clubs !== 'undefined' && Clubs.init) Clubs.init();
+        // apply the chosen customization database on top of the day-one pyramid, BEFORE squads are
+        // generated (so they reflect custom reputations) and setupSeason builds tables (custom divisions)
+        this.databaseId = (database && database.id) ? database.id : null;
+        if (database && typeof Clubs.applyDatabase === 'function') Clubs.applyDatabase(database);
+        // home country is validated AFTER the database is applied, so a created country (registered by
+        // applyDatabase into REGIONS_BY_COUNTRY) can be chosen as the agent's base
+        this.homeCountry = (country && REGIONS_BY_COUNTRY[country]) ? country : 'Netherlands';
         this.inbox = []; this.log = [];
         this.clubHistory = {}; this.clubEuropeBest = {};
         this.lastSeasonReport = null; this.attendWindow = null; this.league = null;
@@ -149,10 +159,14 @@ const GameState = {
             lastSeasonReport: this.lastSeasonReport, clubState,
             saveName: this.saveName || null,  // player-given name for this game (Settings > Save game)
             bestXI: this.bestXI || null,      // the player's hall-of-fame XI (Clients > Best XI)
+            achievements: this.achievements || null,   // unlocked/collected achievements + reward state (persist so rewards can't be re-collected each reload)
             namedClean: !!this.namedClean,    // true = this exact state is backed up to a named slot
             savedAt: Date.now(),              // when this snapshot was taken (shown in the Load list)
             rngSeed: this.rngSeed,            // this game's fixed seed (anchors background-squad regen)
             rngState: Rng.getState(),         // live stream position, so a reload keeps rolling from here
+            databaseId: this.databaseId || null, // customization database to re-overlay on load (see _hydrateDatabase)
+            clubLogos: this.clubLogos || null,   // mid-save logo additions (Settings > Import logos)
+            clubNames: this.clubNames || null,   // mid-save name additions (Settings > Import names)
             schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
         };
     },
@@ -164,9 +178,52 @@ const GameState = {
     async load() {
         const d = await Storage.loadGame();
         if (!d) return false;
+        await this._hydrateDatabase(d, false);   // boot path: Clubs was just init()'d fresh in Main.boot
         return this._applySaved(d);
     },
+    // Re-overlay the save's customization database onto Clubs BEFORE the save is applied, so club
+    // identity (names/colours/logos) and day-one reputation/division come from the right db (the
+    // save's own drifted division/reputation still win, applied afterwards in _restoreClubState).
+    // `reinit` rebuilds the day-one pyramid first — used by mid-session named-save loads where Clubs
+    // may already carry a different overlay; the boot autosave path skips it (Main.boot just init()'d).
+    async _hydrateDatabase(d, reinit) {
+        this.databaseId = (d && d.databaseId) ? d.databaseId : null;
+        if (reinit && typeof Clubs !== 'undefined' && Clubs.init) Clubs.init();
+        if (!this.databaseId || typeof Clubs === 'undefined' || typeof Clubs.applyDatabase !== 'function') return;
+        try { const db = await Storage.getDatabase(this.databaseId); if (db) Clubs.applyDatabase(db); }
+        catch (e) { console.warn('Database overlay load failed', e); }
+    },
     // Apply a loaded state object to the live GameState. Used by load() (autosave) and loadNamedSave().
+    // Add a logo to a club mid-save (Settings > Import logos). Stored per-save so it survives reload
+    // and overlays on top of whatever database the game was started on.
+    setClubLogo(id, uri) {
+        if (!id) return;
+        if (!this.clubLogos) this.clubLogos = {};
+        this.clubLogos[id] = uri;
+        const c = (typeof Clubs !== 'undefined') ? Clubs.getClubById(id) : null;
+        if (c) c.logo = uri;
+    },
+    // Set a club's display name mid-save (Settings > Import names). Stored per-save so it survives reload.
+    setClubName(id, name) {
+        if (!id || !name) return;
+        if (!this.clubNames) this.clubNames = {};
+        this.clubNames[id] = name;
+        const c = (typeof Clubs !== 'undefined') ? Clubs.getClubById(id) : null;
+        if (c) c.name = name;
+    },
+    _applyClubNames() {
+        if (!this.clubNames || typeof Clubs === 'undefined') return;
+        Object.entries(this.clubNames).forEach(([id, name]) => { const c = Clubs.getClubById(id); if (c && name) c.name = name; });
+    },
+    _applyClubLogos() {
+        if (!this.clubLogos || typeof Clubs === 'undefined') return;
+        Object.entries(this.clubLogos).forEach(([id, uri]) => { const c = Clubs.getClubById(id); if (c && uri) c.logo = uri; });
+        // let B-teams inherit a parent logo that was added mid-save
+        Object.entries(Clubs.parentReserveId || {}).forEach(([parentId, reserveId]) => {
+            const parent = Clubs.getClubById(parentId), reserve = Clubs.getClubById(reserveId);
+            if (parent && parent.logo && reserve && !this.clubLogos[reserveId]) reserve.logo = parent.logo;
+        });
+    },
     _applySaved(d) {
         try {
             this.week = d.week; this.seasonStartYear = d.seasonStartYear;
@@ -180,13 +237,18 @@ const GameState = {
             this.lastSeasonReport = d.lastSeasonReport || null;
             this.saveName = d.saveName || null;
             this.bestXI = d.bestXI || null;
+            this.achievements = d.achievements || null;   // restore collected-reward state (Achievements.state() re-creates it if a legacy save lacks it)
             this.namedClean = !!d.namedClean;
+            this.clubLogos = d.clubLogos || null;
+            this.clubNames = d.clubNames || null;
             // Restore the RNG: legacy saves predate the seed, so fall back to one derived from the
             // save so a given save always regenerates the same background squads. rngState (the live
             // position) is preferred; without it we reseed from rngSeed.
             this.rngSeed = (d.rngSeed != null ? d.rngSeed : ((d.seasonStartYear || 2025) * 52 + (d.week || 1))) >>> 0 || 1;
             Rng.setState(d.rngState != null ? d.rngState : this.rngSeed);
             this._runMigrations(d);
+            this._applyClubNames();   // overlay mid-save name additions (Settings > Import names — e.g. real-names pack)
+            this._applyClubLogos();   // overlay mid-save logo additions on top of the db (Settings > Import logos)
             // the save holds only the players the user can see; rebuild the anonymous background
             // squads around them (a near no-op for old saves that still carry full squads)
             if (typeof regenerateBackgroundSquads === 'function') regenerateBackgroundSquads();
@@ -232,6 +294,7 @@ const GameState = {
         if (!Storage.getSlot) return false;
         const d = await Storage.getSlot(id);
         if (!d) return false;
+        await this._hydrateDatabase(d, true);    // may be a mid-session switch: re-init to a clean base first
         const ok = this._applySaved(d);
         if (ok) {
             this.namedClean = true;   // it came straight from a named slot — clean until you play on

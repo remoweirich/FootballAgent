@@ -52,50 +52,7 @@ const FinanceScreen = {
             <div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);margin-bottom:4px">${I18n.t('finance.allTimeNet')}</div>
             <div style="font-size:var(--fs-3xl);font-weight:var(--weight-semibold);color:${netAll >= 0 ? 'var(--state-good)' : 'var(--state-bad)'}">${netAll >= 0 ? '+' : '−'}${UI.euro(Math.abs(netAll))}</div>
         </div>
-
-        <div class="section-label" style="margin-top:var(--space-6)"><i class="ti ti-bug" style="margin-right:4px"></i>${I18n.t('finance.developer')}</div>
-        <div class="fcard" style="padding:12px">
-            <div class="flex-row" style="justify-content:space-between;align-items:center;gap:12px">
-                <div style="min-width:0"><div class="row-title">${I18n.t('finance.debugMode')}</div><div class="row-sub">${I18n.t('finance.debugDesc')}</div></div>
-                <button class="btn ${GameState.debug ? 'btn--accent-outline' : 'btn--ghost'} btn--sm" style="width:auto;flex:none" onclick="FinanceScreen.toggleDebug()"><i class="ti ${GameState.debug ? 'ti-toggle-right' : 'ti-toggle-left'}"></i>${GameState.debug ? I18n.t('common.on') : I18n.t('common.off')}</button>
-            </div>
-        </div>
-        ${GameState.debug ? `<div class="fcard" style="padding:12px">
-            <label class="field-label" style="margin-top:0">${I18n.t('finance.setBalance')}</label>
-            <div class="flex-row"><input class="text-input" type="number" id="dbgMoney" value="${Math.round(a.balance)}"><button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="FinanceScreen.setMoney()">${I18n.t('common.set')}</button></div>
-            <label class="field-label">${I18n.t('finance.addBalance')}</label>
-            <div class="flex-row"><input class="text-input" type="number" id="dbgAdd" value="10000"><button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="FinanceScreen.addMoney()">${I18n.t('common.add')}</button></div>
-            <label class="field-label">${I18n.t('finance.reputationRange', { max: Agency.repLimit() })}</label>
-            <div class="flex-row"><input class="text-input" type="number" id="dbgRep" min="0" max="${Agency.repLimit()}" value="${Math.round(a.reputation)}"><button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="FinanceScreen.setRep()">${I18n.t('common.set')}</button></div>
-        </div>` : ''}
         <div id="actionResult"></div>`;
-    },
-    toggleDebug() {
-        if (GameState.debug) { GameState.debug = false; GameState.save(); Router.refresh(); Router.result(I18n.t('finance.debugOff'), 'ok'); return; }
-        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('finance.enableDebugQ')}</div>
-            <p class="hint">${I18n.t('finance.enableDebugDesc')}</p>
-            <div class="flex-row" style="margin-top:var(--space-5)"><button class="btn btn--ghost" onclick="Router.closeSheet()">${I18n.t('common.cancel')}</button><button class="btn btn--primary" onclick="FinanceScreen.doEnableDebug()"><i class="ti ti-bug"></i>${I18n.t('common.enable')}</button></div>`);
-    },
-    doEnableDebug() { GameState.debug = true; GameState.save(); Router.closeSheet(); Router.refresh(); Router.result(I18n.t('finance.debugOn'), 'ok'); },
-
-    setMoney() {
-        const n = Math.round(+document.getElementById('dbgMoney').value);
-        if (!isFinite(n)) return;
-        GameState.agency.balance = n; GameState.save();
-        Router.refresh(); Router.result(I18n.t('finance.balanceSet', { v: UI.euro(n) }), 'ok');
-    },
-    addMoney() {
-        const n = Math.round(+document.getElementById('dbgAdd').value);
-        if (!isFinite(n)) return;
-        GameState.agency.balance += n; GameState.save();
-        Router.refresh(); Router.result(n >= 0 ? I18n.t('finance.added', { v: UI.euro(Math.abs(n)) }) : I18n.t('finance.removed', { v: UI.euro(Math.abs(n)) }), 'ok');
-    },
-    setRep() {
-        let n = Math.round(+document.getElementById('dbgRep').value);
-        if (!isFinite(n)) return;
-        n = Math.max(0, Math.min(Agency.repLimit(), n));
-        GameState.agency.reputation = n; GameState.save();
-        Router.refresh(); Router.result(I18n.t('finance.repSet', { n }), 'ok');
     }
 };
 Router.register('finance', { isMain: false, parent: 'agency', title: () => I18n.t('finance.title'), render(el) { FinanceScreen.render(el); } });

@@ -34,6 +34,10 @@ const I18n = {
         if (s === undefined) s = this.packs[this.fallback] && this.packs[this.fallback][key];
         if (s === undefined) return key;
         if (vars) s = String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
+        // currency: baseline strings are written with '€'; swap in the player's chosen symbol. (Amounts
+        // are converted separately by UI.money/UI.abbr; interpolated euro() values already carry the
+        // right symbol, so only literal '€' in the template remains to translate.)
+        if (typeof Currency !== 'undefined' && Currency.get() !== 'EUR') { s = String(s); if (s.indexOf('€') >= 0) s = s.replace(/€/g, Currency.sym()); }
         return s;
     },
 };

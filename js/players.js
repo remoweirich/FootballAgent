@@ -36,7 +36,12 @@ const MID_POS = ['CDM', 'CM', 'CAM'];
 // down, and the Prem clearly outpays the Primeira Liga / La Liga for the same man). Applied to every
 // player's wage at generation AND to every renewal/transfer offer (see Agency.offeredWage), with a
 // per-offer jitter there so it's a tendency, not a fixed law. England leads; Portugal/Belgium trail.
-const COUNTRY_WAGE_MULT = { England: 1.42, Germany: 1.15, Spain: 1.12, Italy: 1.12, France: 1.02, Netherlands: 1.0, Switzerland: 0.92, Portugal: 0.9, Belgium: 0.88 };
+// League wage tendency, England (Premier League) as the 1.00 reference. Everything else pays a share:
+// Spain/Italy 85%, Germany 80%, France 75%, and the Eredivisie/Liga Portugal/Jupiler/Super League tier 65%.
+const COUNTRY_WAGE_MULT = { England: 1.00, Spain: 0.85, Italy: 0.85, Germany: 0.80, France: 0.75, Netherlands: 0.65, Portugal: 0.65, Belgium: 0.65, Switzerland: 0.65 };
+// Super clubs pay at top-Premier-League level regardless of their league's tendency.
+const SUPER_CLUBS = new Set(['Bayern Munich', 'PSG', 'Real Madrid', 'Barcelona', 'Inter Milan', 'Juventus', 'Napoli', 'AC Milan']);
+function clubWageMult(club) { return club && SUPER_CLUBS.has(club.id) ? 1.00 : ((club && COUNTRY_WAGE_MULT[club.country]) || 0.6); }
 // development pacing: deliberately slow — a top young regular gains roughly a handful of points a
 // season on his own, and agency development upgrades give a meaningful, noticeable boost on top
 const DEV_BASE = 0.08;
@@ -78,8 +83,14 @@ const PlayerGen = {
     // to genuine elite quality is where the big money is), while lower abilities are untouched.
     wageFor(ability, reputation) {
         const rep = reputation != null ? reputation : 45;
-        let w = 0.5 * Math.pow(ability, 2) * Math.pow(1.045, Math.max(0, ability - 50));
-        w *= Math.max(0.28, Math.min(2.2, Math.pow(rep / 50, 1.4)));
+        // A gentle curve below 76 (mediocre players don't get rich), then a steep elite premium above,
+        // scaled by club reputation. Calibrated so a top-flight 85-rated earns ~150k at the ceiling and
+        // lower-league wages sit ~35-40k. LEAGUE tendency + super-club overrides apply on top via
+        // COUNTRY_WAGE_MULT / Agency.countryWageMult. High potential lifts sub-76 players via the
+        // separate wagePotentialFactor, so the flatter base doesn't punish genuine prospects.
+        let w = 1.4 * Math.pow(ability, 2) * Math.pow(1.024, Math.max(0, ability - 50));
+        if (ability > 76) w *= Math.pow(1.12, ability - 76);
+        w *= Math.max(0.4, Math.min(3.0, Math.pow(rep / 58, 1.1)));
         return Math.max(30, Math.round(w / 10) * 10);
     },
     sponsorBaseFor(ability) { return ability < 60 ? 0 : Math.round(Math.pow(ability - 55, 2) * 5 / 10) * 10; },
@@ -116,7 +127,7 @@ const PlayerGen = {
         const isYouth = age <= 22;
         const peakAge = this.peakAgeFor(position);
         const potential = isYouth ? this.youthPotential(age, ability) : Math.max(ability, ability + (age < peakAge ? 3 : 0));
-        let wage = Math.round(this.wageFor(ability, club.reputation) * (COUNTRY_WAGE_MULT[club.country] || 1) / 10) * 10;
+        let wage = Math.round(this.wageFor(ability, club.reputation) * clubWageMult(club) / 10) * 10;
         wage = this.capYouthWage(wage, age, club.reputation, potential);
         return {
             id: this._id(),

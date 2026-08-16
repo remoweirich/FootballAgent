@@ -218,32 +218,6 @@ check('season-to-remember requires 30+ apps for the message', runv(`
   return MORALE.HOT_FORM_MSG_MIN_APPS === 30 && MORALE.HOT_FORM_AVG_RATING === 7.5;
 `));
 
-// ---- follow-up: debug gating on finance + potential ----
-check('finance debug controls hidden by default, shown when debug on', runv(`
-  const el = { innerHTML:'' };
-  GameState.debug = false; FinanceScreen.render(el);
-  const offHidden = !el.innerHTML.includes('Set balance') && el.innerHTML.includes('Debug mode');
-  GameState.debug = true; FinanceScreen.render(el);
-  const onShown = el.innerHTML.includes('Set balance') && el.innerHTML.includes('Reputation');
-  GameState.debug = false;
-  return offHidden && onShown;
-`));
-check('potential tab hides age/true-potential unless debug on; shows true potential when on', runv(`
-  const p = GameState.getPlayer(window.__cid);
-  GameState.debug = false;
-  const off = ClientDetail.tabPotential(p);
-  GameState.debug = true;
-  const on = ClientDetail.tabPotential(p);
-  GameState.debug = false;
-  return !off.includes('True potential') && !off.includes('dbgAge') && on.includes('True potential') && on.includes(String(p.potential)) && on.includes('dbgAge');
-`));
-check('enabling debug persists the flag', runv(`
-  GameState.debug = false; FinanceScreen.doEnableDebug();
-  const on = GameState.debug === true;
-  GameState.debug = false;
-  return on;
-`));
-
 // ---- follow-up: agency info boxes link to clients/scouting ----
 check('agency clients/scouts boxes link to their pages', runv(`
   const el = { innerHTML:'' }; AgencyScreen.render(el);

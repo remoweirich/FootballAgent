@@ -676,7 +676,7 @@ const Agency = {
     // Country pay tendency, with a per-offer jitter so it's a likelihood rather than a fixed law: an
     // English suitor USUALLY outpays a Portuguese one for the same player, but not on literally every bid.
     countryWageMult(club, jitter) {
-        let m = (club && COUNTRY_WAGE_MULT[club.country]) || 1;
+        let m = clubWageMult(club);   // league tendency, with the super-club override
         if (jitter) m *= 0.9 + Rng.next() * 0.28;
         return m;
     },
@@ -897,7 +897,10 @@ const Agency = {
         // KEYSTONE (A.1): the agent fee is amortized over the deal and eats into the wage room —
         // one implicit budget, so asking a fat fee visibly lowers the wage the club will accept.
         const feeAnnual = (pkg.bonus || 0) / term;
-        const wageFloor = Math.max(30, p.wage || 30);
+        // A club is NOT obliged to match his current wage: an ageing player dropping to a smaller-rep
+        // club (e.g. a 35yo going back home) may well have to take a pay cut, so the floor is only a
+        // sane minimum — the club's real ceiling (maxWage, from its reputation) governs from there.
+        const wageFloor = 30;
         const effMaxWage = Math.round(Math.max(wageFloor, maxWage - NEGO.FEE_TO_WAGE * feeAnnual / 52) / 10) * 10;
         const wageOk = pkg.wage <= effMaxWage, bonusOk = (pkg.bonus || 0) <= feeCeil;
         const counter = { wage: Math.min(pkg.wage, effMaxWage), role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, feeCeil) };
@@ -1222,11 +1225,11 @@ const Agency = {
         if (!p.injury) return { ok: false, message: I18n.t('ag.fullyFit', { name: p.name }) };
         const aw = GameState.absWeek();
         if (p.injury.treatedWeek === aw) return { ok: false, message: I18n.t('ag.physio.treated', { name: p.name }) };
-        if (GameState.agency.balance < 1000) return { ok: false, message: I18n.t('ag.physio.cost') };
+        if (GameState.agency.balance < 1000) return { ok: false, message: I18n.t('ag.physio.cost', { cost: UI.money(1000) }) };
         GameState.agency.balance -= 1000; GameState.addFinance('Physio treatments', -1000);
         p.injury.weeksOut = Math.max(0, p.injury.weeksOut - 0.5);
         p.injury.treatedWeek = aw;
-        GameState.addLog(I18n.t('ag.log.physio', { name: p.name }), 'money');
+        GameState.addLog(I18n.t('ag.log.physio', { name: p.name, cost: UI.money(1000) }), 'money');
         if (p.injury.weeksOut <= 0) { this.recoverInjury(p); return { ok: true, message: I18n.t('ag.physio.doneFit', { name: p.name }) }; }
         return { ok: true, message: I18n.t('ag.physio.doneOut', { name: p.name, wk: this._wk(p.injury.weeksOut) }) };
     },
@@ -1235,12 +1238,12 @@ const Agency = {
         if (p.injury.specialistUsed) return { ok: false, message: I18n.t('ag.spec.used', { name: p.name }) };
         const aw = GameState.absWeek();
         if (p.injury.treatedWeek === aw) return { ok: false, message: I18n.t('ag.spec.sameWeek') };
-        if (GameState.agency.balance < 15000) return { ok: false, message: I18n.t('ag.spec.cost') };
+        if (GameState.agency.balance < 15000) return { ok: false, message: I18n.t('ag.spec.cost', { cost: UI.money(15000) }) };
         GameState.agency.balance -= 15000; GameState.addFinance('Specialists', -15000);
         p.injury.weeksOut = Math.round((p.injury.weeksOut / 2) / 0.5) * 0.5;
         p.injury.specialistUsed = true;
         p.injury.treatedWeek = aw;
-        GameState.addLog(I18n.t('ag.log.specialist', { name: p.name }), 'money');
+        GameState.addLog(I18n.t('ag.log.specialist', { name: p.name, cost: UI.money(15000) }), 'money');
         if (p.injury.weeksOut <= 0) { this.recoverInjury(p); return { ok: true, message: I18n.t('ag.spec.doneFit', { name: p.name }) }; }
         return { ok: true, message: I18n.t('ag.spec.doneOut', { name: p.name, wk: this._wk(p.injury.weeksOut) }) };
     },

@@ -157,12 +157,12 @@ I18n.register('en', {
     'ag.sponsor.annualCut': ' + €{amt}/yr',
     // --- agency: injury treatment ---
     'ag.physio.treated': '{name} has already had treatment this week.',
-    'ag.physio.cost': 'Physio costs €1,000 — not enough cash.',
+    'ag.physio.cost': 'Physio costs €{cost} — not enough cash.',
     'ag.physio.doneFit': 'Physio session done — {name} is fit again!',
     'ag.physio.doneOut': 'Physio session done — {name} now out ~{wk} more.',
     'ag.spec.used': '{name} has already seen the specialist for this injury.',
     'ag.spec.sameWeek': "You can't see the specialist and do physio in the same week.",
-    'ag.spec.cost': 'The specialist costs €15,000 — not enough cash.',
+    'ag.spec.cost': 'The specialist costs €{cost} — not enough cash.',
     'ag.spec.doneFit': 'The specialist worked wonders — {name} is fit again!',
     'ag.spec.doneOut': 'The specialist halved it — {name} now out ~{wk} more.',
     // --- agency: gifts ---
@@ -224,8 +224,8 @@ I18n.register('en', {
     'ag.log.sponsorSigned': '{name} signed {company}: +€{weekly}/wk{annual} for {terms} season(s).',
     'ag.log.plusAnnual': ' + €{amt}/yr',
     'ag.log.recovered': '{name} has recovered from {type}.',
-    'ag.log.physio': 'Physio for {name} (−0.5 wk, €1,000).',
-    'ag.log.specialist': 'Specialist for {name} (halved recovery, €15,000).',
+    'ag.log.physio': 'Physio for {name} (−0.5 wk, €{cost}).',
+    'ag.log.specialist': 'Specialist for {name} (halved recovery, €{cost}).',
     'ag.log.gift': 'Gave {name} a {tier} gift (−€{amt}){dim}.',
     'ag.log.giftDim': ' — diminished, too soon after the last one',
     'ag.log.promised': "Promised {name} you'll sort things out.",
@@ -473,6 +473,7 @@ I18n.register('en', {
     // gift / trip
     'dlg.gift.cantCover': "You can't cover a {tier} gift right now (€{amt}).",
     'dlg.gift.paidBonus': 'Paid {name} his promised win bonus (−€{amt}).',
+    'dlg.titleMissedNote': 'You won on the day — but a rival matched it, so the title slipped away.',
     'dlg.giftSize.small': 'small', 'dlg.giftSize.medium': 'medium', 'dlg.giftSize.large': 'large',
     'dlg.trip.cantCover': "You can't cover the trip right now (€{amt}).",
     // tip-off (Confidant+ head start)

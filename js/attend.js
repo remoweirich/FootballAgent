@@ -36,28 +36,50 @@ const Attend = {
     // when you advance past it (finalizeWindow).
     window() { return (typeof GameState !== 'undefined') ? GameState.attendWindow : null; },
 
-    // Open a window from this week's captures (called at the end of advanceWeek). Least reputable
-    // first, so the showpiece is the last thing you watch.
-    // A finals weekend, in chronological order (Mon evening → Sun night). Assigning the LAST n slots
-    // to the n finals puts the showpiece last (Sun night) and keeps the order chronological =
-    // prestige; small fields sit on the weekend, only a big one spills onto weekday evenings.
-    SCHEDULE_SLOTS: [
-        ['Monday', '20:00'], ['Tuesday', '20:00'], ['Wednesday', '20:00'], ['Thursday', '20:00'],
-        ['Friday', '19:45'], ['Friday', '20:45'],
-        ['Saturday', '14:30'], ['Saturday', '16:00'], ['Saturday', '17:00'], ['Saturday', '18:30'], ['Saturday', '19:45'], ['Saturday', '20:45'],
-        ['Sunday', '14:30'], ['Sunday', '16:00'], ['Sunday', '17:00'], ['Sunday', '18:00'], ['Sunday', '18:30'], ['Sunday', '19:45'], ['Sunday', '20:45'],
-    ],
+    // The finals are spread across the week by COMPETITION, not by prestige, so you can attend several
+    // (they no longer all pile onto one weekend). Fixed days: Mon lower cups + the Liechtensteiner Cup,
+    // Tue Conference League, Wed lower-league title/promotion deciders, Thu Europa League, Fri higher
+    // (main national) cups, Sat top-division title deciders, Sun Champions League.
+    _dayFor(m) {
+        if (m.kind === 'europe-final') return ({ UCL: 'Sunday', UEL: 'Thursday', UECL: 'Tuesday' })[m.compId] || 'Tuesday';
+        if (m.kind === 'cup-final') {
+            if (m.compId === 'LICHCUP') return 'Monday';
+            return this.MAIN_CUPS.has(m.compId) ? 'Friday' : 'Monday';
+        }
+        if (m.kind === 'title-decider') {
+            const tier = (typeof Clubs !== 'undefined' && Clubs.DIV_TIERS) ? Clubs.DIV_TIERS[m.compId] : 1;
+            return tier === 1 ? 'Saturday' : 'Wednesday';
+        }
+        return 'Wednesday';   // play-off / promotion deciders sit with the lower-league deciders
+    },
+    // several kick-off times per day, so multiple same-day finals get distinct slots for the travel/
+    // clash check; cycles (with a widening offset) if a day somehow holds more finals than listed times
+    DAY_SLOTS: {
+        Monday: ['18:00', '20:00', '20:45', '19:00', '21:00'],
+        Tuesday: ['20:00', '18:00', '21:00'],
+        Wednesday: ['13:00', '15:30', '18:00', '20:30', '14:00', '16:30', '19:00', '21:00', '12:30', '17:00'],
+        Thursday: ['20:00', '18:00', '21:00'],
+        Friday: ['18:00', '20:00', '20:45', '19:00', '21:00'],
+        Saturday: ['12:30', '15:00', '17:30', '20:00', '13:30', '16:00', '18:30', '21:00', '14:00', '19:00'],
+        Sunday: ['20:00', '18:00', '16:00', '21:00'],
+    },
     _assignSchedule(finals) {
-        const slots = this.SCHEDULE_SLOTS, n = finals.length;
-        const chosen = slots.slice(Math.max(0, slots.length - n));
-        while (chosen.length < n) chosen.unshift(slots[0]);   // more finals than slots (never, really)
-        finals.forEach((m, i) => { m.day = chosen[i][0]; m.time = chosen[i][1]; });
+        const perDay = {};
+        finals.forEach(m => {
+            const day = this._dayFor(m);
+            const slots = this.DAY_SLOTS[day] || ['20:00'];
+            const n = (perDay[day] = (perDay[day] || 0) + 1) - 1;
+            m.day = day;
+            m.time = slots[n % slots.length];
+            if (n >= slots.length) { const [h, mi] = m.time.split(':').map(Number); m.time = String(h + Math.floor(n / slots.length)).padStart(2, '0') + ':' + String(mi).padStart(2, '0'); }
+        });
     },
 
     openWindow(captures) {
         if (!captures || !captures.length) return null;
-        const finals = this.order(captures);
+        const finals = captures.slice();
         this._assignSchedule(finals);
+        finals.sort((a, b) => (this._slotMinutes(a) || 0) - (this._slotMinutes(b) || 0));   // chronological: Mon → Sun
         GameState.attendWindow = {
             season: GameState.seasonStartYear, week: GameState.week,
             finals, pointer: -1, watched: 0, attended: [],
@@ -121,43 +143,19 @@ const Attend = {
     // is a play-off final object (single-match or two-legged) an unwatched invitation?
     poFinalHidden(finalObj) { return !!(finalObj && finalObj._attendId && this.isHidden(finalObj._attendId)); },
 
-    // ---- ordering: least reputable first, the showpiece last (decision) ----
-    // Main national cups outrank their country's secondary cup; the European finals outrank both
-    // (UECL < UEL < UCL). Ties: more clients on the pitch => later; then the agent's home country
-    // => later; then the leagues-dropdown order of countries.
-    // the id each MAIN national cup FINAL is played under (see League.*Step); the secondary/lower-league
-    // cups (KBEK, LLC, LPOKAL, CUPABASS, NOTRECOUPE, COUPENAT, SEGTACA, CFED, COPPACOMP) sit at the
-    // lowest tier (0). The Liechtensteiner Cup sits one tier above them (1) — above the lower-league
-    // cups but below the main national cups (2). Europe sits above everything (3 < 4 < 5).
+    // Main national cups play their final on Friday; each country's secondary/lower-league cups (KBEK,
+    // LLC, LPOKAL, CUPABASS, NOTRECOUPE, COUPENAT, SEGTACA, CFED, COPPACOMP) and the Liechtensteiner
+    // Cup play on Monday. See _dayFor for the full week map.
     MAIN_CUPS: new Set(['BEKER', 'FACUP', 'DFB', 'CDR', 'SCHWCUP', 'COPPA', 'COUPEFR', 'TACAPT', 'BELCUP']),
-    EUROPE_PRESTIGE: { UECL: 3, UEL: 4, UCL: 5 },
-    COUNTRY_ORDER: ['England', 'Germany', 'Spain', 'Italy', 'France', 'Netherlands', 'Portugal', 'Switzerland', 'Belgium', 'Liechtenstein'],
-
-    _prestige(m) {
-        if (m.kind === 'europe-final') return this.EUROPE_PRESTIGE[m.compId] || 3;
-        if (m.kind === 'cup-final') {
-            if (m.compId === 'LICHCUP') return 1;              // above lower-league cups, below national cups
-            return this.MAIN_CUPS.has(m.compId) ? 2 : 0;
-        }
-        return 0;   // play-off / last-day deciders sit with the lower cups until specced otherwise
-    },
     _matchCountry(m) {
         const inviter = this._inviterSide(m);
         const club = (typeof Clubs !== 'undefined') ? Clubs.getClubById(inviter === 'home' ? m.homeId : m.awayId) : null;
         return club ? club.country : '';
     },
-    // home country sorts last; everyone else follows the leagues-dropdown order
-    _countryRank(country) {
-        const i = this.COUNTRY_ORDER.indexOf(country);
-        const base = i < 0 ? this.COUNTRY_ORDER.length : i;
-        const home = (typeof GameState !== 'undefined') && country === GameState.homeCountry;
-        return (home ? 1000 : 0) + base;
-    },
+    // display order for the transient capture list — chronological by the fixed day map
     order(list) {
-        return list.slice().sort((a, b) =>
-            this._prestige(a) - this._prestige(b) ||
-            a.clients.length - b.clients.length ||
-            this._countryRank(this._matchCountry(a)) - this._countryRank(this._matchCountry(b)));
+        const di = m => { const d = this.DAY_INDEX[this._dayFor(m)]; return d != null ? d : 9; };
+        return list.slice().sort((a, b) => di(a) - di(b) || a.clients.length - b.clients.length);
     },
 
     // ---- travel: you can't be in two places at once (decision 6) ----
@@ -288,6 +286,10 @@ const Attend = {
         if (benchers.length) {
             const who = this._clientList(benchers);
             body += `\n\nA word of honesty: ${who} may not play much — ${benchers.length > 1 ? 'they are' : 'he is'} not a guaranteed starter — but you're welcome all the same.`;
+        }
+        // a last-day title decider hinges on more than this pitch: even a win may not be enough
+        if (m.kind === 'title-decider') {
+            body += `\n\nOne caveat: this is the last day, and the title isn't in their hands alone — even a win may not be enough if the rivals get their result too.`;
         }
         return {
             id: m.id,

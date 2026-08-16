@@ -273,13 +273,16 @@ const LeaguesScreen = {
         if (!s || !s.length) return `<p class="hint">${I18n.t('leagues.fixturesDraw')}</p>`;
         const total = s.length, done = (L.mdIndex && L.mdIndex[div]) || 0;
         let md = this.state.leagueMd; if (!md || md < 1 || md > total) md = Math.min(total, done + 1);
-        const played = md <= done;
+        // the final round is withheld while it holds an unwatched title/promotion decider you're invited to
+        const finalHidden = md === total && typeof Attend !== 'undefined' && Attend.leagueRoundHidden(div);
+        const played = md <= done && !finalHidden;
         const opts = Array.from({ length: total }, (_, i) => `<option value="${i + 1}" ${i + 1 === md ? 'selected' : ''}>${I18n.t('leagues.matchdayN', { n: i + 1 })}</option>`).join('');
+        const note = finalHidden ? `<p class="hint" style="margin-bottom:var(--space-3)"><i class="ti ti-ticket"></i> ${I18n.t('leagues.finalHidden')}</p>` : '';
         const header = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <div class="section-label" style="margin:0">${I18n.t('leagues.matchdayN', { n: md })}${played ? ` <span class="muted" style="font-weight:400">${I18n.t('leagues.playedTag')}</span>` : ''}</div>
             <select class="select-input" style="width:auto" onchange="LeaguesScreen.setLeagueMd(+this.value)">${opts}</select></div>`;
         const lk = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
-        const res = (L.results && L.results[div] && L.results[div][md - 1]) || null;   // this season's stored scores, if any
+        const res = (!finalHidden && L.results && L.results[div] && L.results[div][md - 1]) || null;   // this season's stored scores, if any (withheld while the final round is a hidden decider)
         const fx = (s[md - 1] || []).map(([h, a], i) => {
             const sc = res && res[i];
             if (sc) {
@@ -288,7 +291,7 @@ const LeaguesScreen = {
             }
             return `<div class="fixture"><span class="fx-home">${lk(h)}</span><span class="fx-score muted">${I18n.t('livesim.vs')}</span><span class="fx-away">${lk(a)}</span></div>`;
         }).join('');
-        return header + `<div class="fcard">${fx || `<p class="hint">${I18n.t('leagues.noFixtures')}</p>`}</div>`;
+        return note + header + `<div class="fcard">${fx || `<p class="hint">${I18n.t('leagues.noFixtures')}</p>`}</div>`;
     },
     // ---- national-cup bracket (Round of 16 → final), mirroring the European bracket ----
     // Only kicks in once the field has narrowed to 16/8/4 (8/4/2 ties); each column is the round's

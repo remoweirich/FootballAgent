@@ -102,19 +102,19 @@ check('best XI is written into the save snapshot', () => {
 // ---- item 3: tile shows PEAK ability in a club-coloured circle, name below ----
 run(`
     const p = GameState.getPlayer(window.stId);
-    p.peakAbility = 91; p.clubId = 'ajax';                    // ajax primary #D2122E, secondary #FFFFFF
+    p.peakAbility = 91; p.clubId = 'feyenoord';               // feyenoord primary #E30613, secondary #030303
     BestXI.selectFormation('433'); BestXI.pick('st', window.stId);
     window.__html = '';
     const el = { set innerHTML(v) { window.__html = v; }, get innerHTML() { return window.__html; } };
     BestXI.render(el);
 `);
 check('tile shows the peak ability (91), not just current', () => run(`return window.__html.includes('91');`) === true);
-check('tile circle is filled with the club primary colour', () => run(`return window.__html.toLowerCase().includes('#d2122e');`) === true);
-check('tile circle outline uses the club secondary colour', () => run(`return window.__html.toLowerCase().includes('border-color:#ffffff');`) === true);
+check('tile circle is filled with the club primary colour', () => run(`return window.__html.toLowerCase().includes('#e30613');`) === true);
+check('tile circle outline uses the club secondary colour', () => run(`return window.__html.toLowerCase().includes('border-color:#030303');`) === true);
 check('the name appears below (bx-slotname) the circle', () => run(`return window.__html.includes('bx-slotname');`) === true);
 check('_clubColors falls back to the current club when there are no senior apps', () => {
-    const c = JSON.parse(run(`return JSON.stringify(BestXI._clubColors({ clubId: 'ajax', stats: {} }));`));
-    return c.primary === '#D2122E' && c.secondary === '#FFFFFF';
+    const c = JSON.parse(run(`return JSON.stringify(BestXI._clubColors({ clubId: 'feyenoord', stats: {} }));`));
+    return c.primary === '#E30613' && c.secondary === '#030303';
 });
 check('_ink chooses dark text on a light fill, light on a dark fill', () => run(`return BestXI._ink('#FFFFFF') === '#0b140c' && BestXI._ink('#111111') === '#ffffff';`) === true);
 

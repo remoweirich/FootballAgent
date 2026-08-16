@@ -22,7 +22,7 @@ check('virtual club strength uses reputation', runv(`const id=EUROPE_DATA.pools[
 // Liechtenstein's cup winner is a REAL club (Vaduz / Eschen-Mauren), not a virtual placeholder
 check('Vaduz is a real club, not virtual', runv(`
   return Clubs.getClubById('Vaduz') && findVirtualClub('Vaduz')===null && typeof EUROPE_VIRTUAL_MAP['Vaduz']==='undefined'
-    && League.teamName('Vaduz')==='FC Vaduz' && Europe.repOf('Vaduz')===Clubs.getClubById('Vaduz').reputation;
+    && League.teamName('Vaduz')===Clubs.getClubById('Vaduz').name && Europe.repOf('Vaduz')===Clubs.getClubById('Vaduz').reputation;
 `));
 check('Liechtenstein pool references real ids and is flagged real', runv(`
   const cl=EUROPE_DATA.pools['Liechtenstein'].clubs;

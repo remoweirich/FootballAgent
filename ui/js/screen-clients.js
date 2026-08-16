@@ -84,7 +84,7 @@ const ClientsScreen = {
                 ${this.state.sort === 'repterm'
                 ? `<div class="cl-st"><b style="${p.repExpired ? 'color:var(--danger)' : ''}">${p.repExpired ? I18n.t('clients.expired') : r.repLeft <= 0 ? I18n.t('clients.finalYr') : (r.repLeft + 1) + I18n.t('common.yearsShort')}</b><span>${I18n.t('clients.stat.repLeft')}</span></div>`
                 : `<div class="cl-st"><b>${p.retiringThisSeason ? I18n.t('clients.retiring') : Agency.isFreeAgent(p) ? I18n.t('clients.free') : r.contractLeft <= 0 ? I18n.t('clients.finalYr') : (r.contractLeft + 1) + I18n.t('common.yearsShort')}</b><span>${I18n.t('clients.stat.contract')}</span></div>`}
-                <div class="cl-st"><b>${Agency.isFreeAgent(p) ? '—' : '€' + (p.wage / 1000).toFixed(p.wage >= 10000 ? 0 : 1) + 'k'}</b><span>${I18n.t('clients.stat.wage')}</span></div>
+                <div class="cl-st"><b>${Agency.isFreeAgent(p) ? '—' : UI.eabbr(p.wage)}</b><span>${I18n.t('clients.stat.wage')}</span></div>
             </div>
         </a>`;
     },

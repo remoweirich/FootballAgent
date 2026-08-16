@@ -257,24 +257,20 @@ const ClientDetail = {
     // ---------------- Potential ----------------
     tabPotential(p) {
         const r = Scouting.ensureReport(p);
+        // Enhanced Insights (owned + toggled on): reveal the exact true potential instead of only the
+        // scout's fuzzy ceiling/floor range. The scouting report stays below for flavour.
+        const insights = (typeof Monetization !== 'undefined' && Monetization.insightsOn())
+            ? `<div class="fcard" style="border:1px solid var(--accent);margin-bottom:var(--space-4)">
+                <div class="section-label" style="margin-top:0"><i class="ti ti-eye" style="margin-right:4px"></i>${I18n.t('cd.insights')}</div>
+                <div class="frow"><span class="frow__k">${I18n.t('cd.truePotential')} <span class="muted">${I18n.t('cd.abilityCap')}</span></span><span class="frow__v" style="color:var(--state-good)">${p.potential}</span></div>
+                <div class="frow"><span class="frow__k">${I18n.t('cd.currentAbility')}</span><span class="frow__v">${p.ability}</span></div>
+                <div class="frow"><span class="frow__k">${I18n.t('cd.roomToGrow')}</span><span class="frow__v" style="color:var(--accent)">+${Math.max(0, p.potential - p.ability)}</span></div>
+            </div>` : '';
         return `<h3 style="margin-top:0">${I18n.t('cd.scoutingReport')}</h3>
+            ${insights}
             <p style="color:var(--text-secondary);line-height:1.5">${r.desc}</p>
             <div class="fcard"><div class="frow"><span class="frow__k">${I18n.t('cd.ceiling')}</span><span class="frow__v" style="color:var(--state-good)">${r.ceiling}</span></div><div class="frow"><span class="frow__k">${I18n.t('cd.floor')}</span><span class="frow__v" style="color:var(--danger)">${r.floor}</span></div></div>
-            <p class="hint">${I18n.t('cd.estimatesHint', { country: r.country })}</p>
-            ${GameState.debug ? `<div class="section-label" style="margin-top:var(--space-6)"><i class="ti ti-bug" style="margin-right:4px"></i>${I18n.t('cd.debug')}</div>
-            <div class="fcard" style="padding:12px">
-                <label class="field-label" style="margin-top:0">${I18n.t('cd.ageLabel')} <span class="muted">${p.everClient ? I18n.t('cd.retiresNote', { age: p.retireAge }) : I18n.t('cd.retiresNoteUntracked', { age: p.retireAge })}</span></label>
-                <div class="flex-row"><input class="text-input" type="number" id="dbgAge" min="15" max="45" value="${p.age}"><button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ClientDetail.setAge('${p.id}')">${I18n.t('common.set')}</button></div>
-                <div class="frow" style="margin-top:var(--space-3);border-top:1px solid var(--line-strong);padding-top:10px"><span class="frow__k">${I18n.t('cd.truePotential')} <span class="muted">${I18n.t('cd.abilityCap')}</span></span><span class="frow__v" style="color:var(--state-good)">${p.potential}</span></div>
-            </div>` : ''}`;
-    },
-    setAge(id) {
-        const p = GameState.getPlayer(id);
-        const n = Math.round(+document.getElementById('dbgAge').value);
-        if (!isFinite(n) || n < 1) return;
-        p.age = n;
-        GameState.save(); Router.refresh();
-        Router.result(I18n.t('cd.ageSet', { name: p.name, n }), 'ok');
+            <p class="hint">${I18n.t('cd.estimatesHint', { country: r.country })}</p>`;
     },
 
     // ---------------- Morale ----------------
@@ -477,8 +473,8 @@ const ClientDetail = {
             const canSpec = !p.injury.specialistUsed && p.injury.treatedWeek !== aw;
             cur = `<div class="fcard"><div class="frow"><span class="frow__k">${I18n.t('cd.injury')}</span><span class="frow__v">${p.injury.type}</span></div><div class="frow"><span class="frow__k">${I18n.t('cd.outFor')}</span><span class="frow__v">${I18n.t('cd.outForWeeks', { w: Math.round(p.injury.weeksOut * 2) / 2 })}</span></div></div>
                 <div class="flex-row">
-                    <button class="btn btn--accent-outline" ${canPhysio ? '' : 'disabled'} onclick="ClientDetail.physio('${p.id}')"><i class="ti ti-first-aid-kit"></i>${I18n.t('cd.physioBtn')}</button>
-                    <button class="btn btn--ghost" ${canSpec ? '' : 'disabled'} onclick="ClientDetail.specialist('${p.id}')"><i class="ti ti-stethoscope"></i>${I18n.t('cd.specialistBtn')}</button>
+                    <button class="btn btn--accent-outline" ${canPhysio ? '' : 'disabled'} onclick="ClientDetail.physio('${p.id}')"><i class="ti ti-first-aid-kit"></i>${I18n.t('cd.physioBtn', { cost: UI.money(1000) })}</button>
+                    <button class="btn btn--ghost" ${canSpec ? '' : 'disabled'} onclick="ClientDetail.specialist('${p.id}')"><i class="ti ti-stethoscope"></i>${I18n.t('cd.specialistBtn', { cost: UI.money(15000) })}</button>
                 </div>`;
         }
         const hist = (p.injuryHistory || []).slice().reverse();
@@ -505,7 +501,7 @@ const ClientDetail = {
                 <div class="info"><span>${I18n.t('cd.wageCutLabel')}</span><b>${p.wageCommission}%</b></div>
                 <div class="info"><span>${I18n.t('cd.sponsorCutLabel')}</span><b>${p.sponsorCommission}%</b></div>
                 <div class="info"><span>${I18n.t('cd.repUntil')}</span><b>${p.repExpired ? I18n.t('clients.expired') : GameState.seasonLabelFor(p.repUntilSeason)}</b></div>
-                <div class="info"><span>${I18n.t('cd.weeklyIncome')}</span><b style="color:var(--state-good)">${Agency.isFreeAgent(p) ? '€0' : UI.euro(Math.round(p.wage * p.wageCommission / 100))}</b></div>
+                <div class="info"><span>${I18n.t('cd.weeklyIncome')}</span><b style="color:var(--state-good)">${Agency.isFreeAgent(p) ? UI.cur() + '0' : UI.euro(Math.round(p.wage * p.wageCommission / 100))}</b></div>
             </div>
             <button class="btn btn--accent-outline" onclick="ClientDetail.reqRenewal('${p.id}')"><i class="ti ti-file-pencil"></i>${I18n.t('cd.requestRenewalClub')}</button>
             <div class="section-label" style="margin-top:var(--space-5)">${I18n.t('cd.activeSponsors')}</div>

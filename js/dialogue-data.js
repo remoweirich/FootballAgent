@@ -909,6 +909,30 @@ const DIALOGUE_DATA = {
    "text": "You don't need to bribe me, {agent}. But alright, deal."
   },
   {
+   "id": "F090",
+   "beat": "titlemiss-open",
+   "choice": "",
+   "outcome": "any",
+   "personality": "any",
+   "text": "We did everything right today, {agent}. It just wasn't enough — the title's gone on the other result."
+  },
+  {
+   "id": "F091",
+   "beat": "titlemiss-open",
+   "choice": "",
+   "outcome": "any",
+   "personality": "any",
+   "text": "We won and it still slipped away. So close. I can't believe it's over."
+  },
+  {
+   "id": "F092",
+   "beat": "titlemiss-open",
+   "choice": "",
+   "outcome": "any",
+   "personality": "any",
+   "text": "Our part's done — we did our job. It's the game we couldn't control that killed us."
+  },
+  {
    "id": "F024",
    "beat": "win-open",
    "choice": "",

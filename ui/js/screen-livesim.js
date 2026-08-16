@@ -13,8 +13,9 @@
 const LiveView = {
     BASE_MS_PER_MIN: 730,    // 1x default: brisk (~90 minutes in ~66s), speed up from here to 2x/4x
     SLOWMO: 0.25,            // while an event narrates, the clock crawls at 25% of the default speed
-    LINE_MS: 2000,           // real time between a chain's pieces revealing (start → middle → end) — paced to read
+    LINE_MS: 2900,           // real time between a chain's pieces revealing (start → middle → end) — paced to read
     GOAL_HOLD_MS: 2000,      // a goal freezes the clock this long and flashes the board (the celebration)
+    EVENT_HOLD_MS: 2000,     // after ANY narrated player event lands its result, hold this long so you can read how it went
     PEN_MS: 950,             // real time between penalties in a shootout
     TICK_MS: 100,
     other: s => (s === 'home' ? 'away' : 'home'),
@@ -112,9 +113,9 @@ const LiveView = {
         const m = this.match;
         const feat = (typeof Dialogue !== 'undefined') ? Dialogue.featuredClient(m) : null;
         if (feat && typeof DialogueView !== 'undefined') {
-            const won = m.winner === this._inviterId();
+            const won = this._matchWon(m);
             const self = this;
-            DialogueView.show(Dialogue.buildPostmatchScene(feat, m, won), function () { GameState.save(); self._close(); });
+            DialogueView.show(Dialogue.buildPostmatchScene(feat, m, won, { titleMissed: this._titleMissed(m) }), function () { GameState.save(); self._close(); });
         } else this._close();
     },
 
@@ -136,7 +137,12 @@ const LiveView = {
             st.clock += (this.TICK_MS * this.SLOWMO) / this.BASE_MS_PER_MIN;   // slow-mo during an event
             if (now >= st.reveal.nextAt) {
                 st.reveal.e._shown += 1;
-                if (st.reveal.e._shown >= (st.reveal.e.lines || []).length) { this._land(st.reveal.e); st.reveal = null; }
+                if (st.reveal.e._shown >= (st.reveal.e.lines || []).length) {
+                    this._land(st.reveal.e); st.reveal = null;
+                    // a beat to read how it went down — a goal already holds for its celebration, so
+                    // this makes every OTHER narrated event pause too (never shorter than the goal hold)
+                    if (!st.done && !this._skipping) st.hold = Math.max(st.hold || 0, Date.now() + this.EVENT_HOLD_MS);
+                }
                 else st.reveal.nextAt = now + this.LINE_MS;
             }
             if (!st.reveal && st.clock >= this.timeline.minutes && st.revealed >= evs.length) { this._matchEnded(); return; }
@@ -321,7 +327,7 @@ const LiveView = {
         const speedBtn = (v, lbl) => `<button class="lv-sp ${!st.paused && st.speed === v ? 'on' : ''}" onclick="LiveView.setSpeed(${v})">${lbl}</button>`;
         let ctrl, banner = '';
         if (st.done) {
-            const won = m.winner === this._inviterId();
+            const won = this._matchWon(m);
             const decided = m.pens ? I18n.t('livesim.pensScore', { score: League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–') }) : m.et ? I18n.t('livesim.afterET') : '';
             banner = `<div class="lv-ftbanner">${won ? '🏆 ' : ''}${I18n.t('livesim.fullTime')}${decided ? ` · <span style="color:var(--danger-text)">${decided}</span>` : ''}</div>`;
             ctrl = `<div class="lv-ctrl"><button class="btn btn--primary" style="flex:1" onclick="LiveView._done()">${I18n.t('livesim.leave')}</button></div>`;
@@ -421,6 +427,19 @@ const LiveView = {
     },
 
     _inviterId() { const c = this.match.clients.find(x => x.side === 'home'); return c ? this.match.homeId : this.match.awayId; },
+    // Did the inviter's club actually achieve the prize? For a last-day TITLE decider, winning the
+    // match isn't enough — a rival may also have won, so read the finished table (the title is theirs
+    // only if they end up 1st). Cup / European / play-off finals: winning the match wins the trophy.
+    _matchWon(m) {
+        const inviterId = this._inviterId();
+        if (m.kind === 'title-decider' && typeof League !== 'undefined' && GameState.league && GameState.league.tables && GameState.league.tables[m.compId]) {
+            const table = League.sortedTable(m.compId);
+            return !!(table.length && table[0].clubId === inviterId);
+        }
+        return m.winner === inviterId;
+    },
+    // won the match, but a rival's parallel result meant it still wasn't enough for the title
+    _titleMissed(m) { return m.kind === 'title-decider' && m.winner === this._inviterId() && !this._matchWon(m); },
 
     _injectCSS() {
         if (document.getElementById('lvCSS')) return;
@@ -505,6 +524,11 @@ const AttendOverview = {
                 action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></div>`;
             } else if (watchable) {
                 action = `<button class="btn btn--primary lv-ov-btn" onclick="AttendOverview.watch(${i})">${I18n.t('livesim.attend')}</button>`;
+            } else if (Attend._attendClash(i)) {
+                // you're committed to another final that day, so you can't attend this one — just show how
+                // it finished (no need to go hunting through the Competitions tab for it)
+                const note = m.pens ? I18n.t('livesim.pensNote', { score: League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–') }) : m.et ? I18n.t('livesim.etNote') : '';
+                action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></div><div class="lv-ov-clashnote">${I18n.t('livesim.clashResult')}</div>`;
             } else {
                 const reason = Attend.watchBlockReason(i) || I18n.t('livesim.inThePast');
                 action = `<div class="lv-ov-locked"><i class="ti ti-lock"></i> ${reason}</div>`;
@@ -543,7 +567,8 @@ const AttendOverview = {
         .lv-ov-comp{color:var(--text-dim);font-size:var(--fs-xs);margin-top:2px;margin-bottom:10px}
         .lv-ov-btn{width:100%;padding:7px 0;font-size:var(--fs-sm)}
         .lv-ov-res{font-variant-numeric:tabular-nums;color:var(--text-bright);font-weight:var(--weight-semibold);font-size:var(--fs-md)}
-        .lv-ov-locked{color:var(--text-dim);font-size:var(--fs-xs)}`;
+        .lv-ov-locked{color:var(--text-dim);font-size:var(--fs-xs)}
+        .lv-ov-clashnote{color:var(--text-dim);font-size:var(--fs-xs);margin-top:4px}`;
         const el = document.createElement('style'); el.id = 'lvOvCSS'; el.textContent = css; document.head.appendChild(el);
     },
 };

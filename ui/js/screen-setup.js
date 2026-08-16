@@ -36,8 +36,6 @@ const Setup = {
                 <div class="setup-brand__tag">${I18n.t('start.tagline')}</div>
             </div>
 
-            ${this.howtoHTML()}
-
             <label class="field-label"><i class="ti ti-briefcase"></i>${I18n.t('setup.agencyName')}</label>
             <input id="setupName" class="text-input" type="text" maxlength="32" placeholder="${I18n.t('setup.agencyPlaceholder')}" autocomplete="off" autocorrect="off" spellcheck="false">
 
@@ -50,14 +48,16 @@ const Setup = {
                 <i class="ti ti-chevron-down select-wrap__chevron"></i>
             </div>
             <p class="hint" style="margin-top:var(--space-3)">${I18n.t('setup.countryHint')}</p>
+
+            <label class="field-label"><i class="ti ti-database"></i>${I18n.t('setup.database')}</label>
+            <div class="select-wrap">
+                <select id="setupDatabase" class="select-input"><option value="">${I18n.t('setup.dbStandard')}</option></select>
+                <i class="ti ti-chevron-down select-wrap__chevron"></i>
+            </div>
+            <p class="hint" style="margin-top:var(--space-3)">${I18n.t('setup.dbHint')}</p>
         </div>
         <div class="setup-cta"><button class="btn btn--primary" id="setupStart" disabled><i class="ti ti-player-play"></i>${I18n.t('setup.start')}</button></div>
         </div>`;
-
-        this.idx = 0;
-        this._measureSlideHeight();
-        this.renderSlide();
-        this.wireHowto();
 
         const nameEl = document.getElementById('setupName'), agentEl = document.getElementById('setupAgent'), startBtn = document.getElementById('setupStart');
         nameEl.value = agentEl.value = '';   // belt-and-braces: some browsers restore a field's last typed value
@@ -67,6 +67,41 @@ const Setup = {
         nameEl.addEventListener('input', refresh);
         agentEl.addEventListener('input', refresh);
         startBtn.addEventListener('click', () => this.start());
+        this._loadDatabaseOptions();
+        const dbSel = document.getElementById('setupDatabase');
+        if (dbSel) dbSel.addEventListener('change', () => this._refreshCountryOptions(dbSel.value));
+    },
+
+    // When a database with created countries is selected, add its playable (regions-built) countries to
+    // the home-country dropdown, so you can start your agency in a country you built.
+    async _refreshCountryOptions(dbId) {
+        const sel = document.getElementById('setupCountry'); if (!sel) return;
+        const base = (typeof REGIONS_BY_COUNTRY !== 'undefined') ? Object.keys(REGIONS_BY_COUNTRY) : ['Netherlands'];
+        let created = [];
+        if (dbId && typeof Storage !== 'undefined' && Storage.getDatabase) {
+            try {
+                const db = await Storage.getDatabase(dbId);
+                if (db && db.countries) created = Object.keys(db.countries).filter(c => {
+                    const cc = db.countries[c];
+                    return cc && cc.regions && cc.regions.length === 6 && cc.regions.every(r => (r.clubIds || []).length >= 2);
+                });
+            } catch (e) { created = []; }
+        }
+        const cur = sel.value, all = base.concat(created.filter(c => base.indexOf(c) < 0));
+        sel.innerHTML = all.map(c => `<option value="${UI.esc(c)}">${UI.esc(c)}${created.indexOf(c) >= 0 ? ' ★' : ''}</option>`).join('');
+        if (all.indexOf(cur) >= 0) sel.value = cur;
+    },
+
+    // Populate the Select Database dropdown from the player's saved customization databases (async —
+    // IndexedDB). "Standard" (value "") is always first and is the default. See screen-customize.js.
+    async _loadDatabaseOptions() {
+        if (typeof Storage === 'undefined' || !Storage.listDatabases) return;
+        let dbs = [];
+        try { dbs = await Storage.listDatabases(); } catch (e) { dbs = []; }
+        const sel = document.getElementById('setupDatabase');
+        if (!sel || !dbs.length) return;
+        sel.innerHTML = `<option value="">${I18n.t('setup.dbStandard')}</option>` +
+            dbs.map(d => `<option value="${UI.esc(d.id)}">${UI.esc(d.name)}</option>`).join('');
     },
 
     // the how-to carousel markup, shared between first-run setup and the in-app help
@@ -101,12 +136,14 @@ const Setup = {
 
     // Standalone version of the how-to for screens that live OUTSIDE the Router shell (Start, Settings),
     // where Router.sheet has no layer to render into: a self-contained overlay appended to <body>.
-    openHelpOverlay() {
+    openHelpOverlay(isIntro) {
+        // the first-run intro marks itself seen the moment it appears, so it never auto-shows again
+        if (isIntro && typeof Prefs !== 'undefined') Prefs.set('introSeen', true);
         let ov = document.getElementById('helpOverlay');
         if (ov) ov.remove();
         ov = document.createElement('div');
         ov.id = 'helpOverlay'; ov.className = 'help-overlay';
-        ov.innerHTML = `<div class="help-overlay__card"><div class="help-overlay__title">${I18n.t('common.howToPlay')}</div>${this.howtoHTML()}<button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="document.getElementById('helpOverlay').remove()">${I18n.t('common.close')}</button></div>`;
+        ov.innerHTML = `<div class="help-overlay__card"><div class="help-overlay__title">${I18n.t('common.howToPlay')}</div>${this.howtoHTML()}<button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="document.getElementById('helpOverlay').remove()">${isIntro ? I18n.t('setup.skipIntro') : I18n.t('common.close')}</button></div>`;
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
         if (!document.getElementById('helpOvCSS')) {
             const st = document.createElement('style'); st.id = 'helpOvCSS';
@@ -168,12 +205,23 @@ const Setup = {
         track.addEventListener('pointercancel', () => { dragging = false; });
     },
 
-    start() {
+    async start() {
         const name = document.getElementById('setupName').value.trim();
         const agent = document.getElementById('setupAgent').value.trim();
         if (!name || !agent) return;
         const country = document.getElementById('setupCountry').value;
-        GameState.startNewGame(country, name, agent);
+        // resolve the chosen customization database (null = Standard) before booting the new game
+        const dbSel = document.getElementById('setupDatabase');
+        const dbId = dbSel ? dbSel.value : '';
+        let database = null;
+        if (dbId && typeof Storage !== 'undefined' && Storage.getDatabase) {
+            try { database = await Storage.getDatabase(dbId); } catch (e) { database = null; }
+        }
+        GameState.startNewGame(country, name, agent, database);
         Main.afterLoad();
+        // first time into a brand-new game: play the how-to full-screen (skippable). It stays reachable
+        // afterwards from the Home screen and Settings. (Needs a real DOM — skipped in headless tests.)
+        if (typeof document !== 'undefined' && typeof document.createElement === 'function' &&
+            (typeof Prefs === 'undefined' || !Prefs.get('introSeen', false))) this.openHelpOverlay(true);
     }
 };

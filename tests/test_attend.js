@@ -298,37 +298,27 @@ const ord = `
     clients: Array.from({length:nClients}, (_,i)=>({ name:"C"+i, side:"home" })),
   });
 `;
-check('order: lower cup < main cup < UECL < UEL < UCL', run(ord + `
+check('order: chronological by competition day (lower cup Mon → UECL Tue → UEL Thu → main cup Fri → UCL Sun)', run(ord + `
   const list = [
     mk("europe-final","UCL","Germany",1), mk("cup-final","KBEK","Netherlands",1),
     mk("europe-final","UECL","Germany",1), mk("cup-final","BEKER","Netherlands",1),
     mk("europe-final","UEL","Germany",1),
   ];
-  const seq = GameState._attend = list, o = Attend.order(list).map(m=>m.compId);
-  return JSON.stringify(o) === JSON.stringify(["KBEK","BEKER","UECL","UEL","UCL"]);
+  const o = Attend.order(list).map(m=>m.compId);
+  return JSON.stringify(o) === JSON.stringify(["KBEK","UECL","UEL","BEKER","UCL"]);
 `));
-check('order: at the same prestige, more clients comes later', run(ord + `
+check('order: on the same day, fewer clients first', run(ord + `
+  // both main cups play Friday; the tiebreak is client count
   const o = Attend.order([ mk("cup-final","BEKER","Netherlands",2), mk("cup-final","FACUP","England",1) ]);
-  return o[0].compId==="FACUP" && o[1].compId==="BEKER";   // 1 client before 2 clients
+  return o[0].compId==="FACUP" && o[1].compId==="BEKER";
 `));
-check('order: same prestige + client count, the HOME country comes later', run(ord + `
-  // Switzerland is home. A Swiss main cup vs a German main cup, both 1 client.
-  const o = Attend.order([ mk("cup-final","SCHWCUP","Switzerland",1), mk("cup-final","DFB","Germany",1) ]);
-  return o[0].compId==="DFB" && o[1].compId==="SCHWCUP";   // foreign first, home last
-`));
-check('order: otherwise the leagues-dropdown country order decides', run(ord + `
-  // England precedes Germany in the dropdown order; neither is home (Switzerland).
-  const o = Attend.order([ mk("cup-final","DFB","Germany",1), mk("cup-final","FACUP","England",1) ]);
-  return o[0].compId==="FACUP" && o[1].compId==="DFB";
-`));
-check('order: a MAIN cup (COPPA) outranks a lower cup (LICHCUP) — the compId fix', run(ord + `
-  // prestige differs (main vs lower), so the country tiebreak is irrelevant; use clubbed countries
+check('order: a MAIN cup (COPPA, Fri) comes after a lower cup (LICHCUP, Mon)', run(ord + `
   const o = Attend.order([ mk("cup-final","COPPA","Italy",1), mk("cup-final","LICHCUP","Germany",1) ]);
-  return o[0].compId==="LICHCUP" && o[1].compId==="COPPA";   // lower cup first, main cup later
+  return o[0].compId==="LICHCUP" && o[1].compId==="COPPA";
 `));
 
-// ---------------- schedule: chronological = prestige, showpiece last ----------------
-check('schedule: openWindow stamps a weekday + time, the showpiece last (Sunday night)', run(`
+// ---------------- schedule: fixed day per competition, spread across the week ----------------
+check('schedule: openWindow spreads finals across the week by competition (chronological)', run(`
   GameState.attendWindow = null;
   const caps = [
     { id:"a", kind:"europe-final", compId:"UCL", homeId:"H", awayId:"A", homeName:"H", awayName:"A", clients:[{side:"home"}] },
@@ -336,17 +326,18 @@ check('schedule: openWindow stamps a weekday + time, the showpiece last (Sunday 
     { id:"c", kind:"cup-final", compId:"BEKER", homeId:"H3", awayId:"A3", homeName:"H3", awayName:"A3", clients:[{side:"home"}] },
   ];
   const w = Attend.openWindow(caps);
-  // least first: KBEK (lower) -> BEKER (main) -> UCL (europe). All have a day/time; UCL is last & latest.
-  const days = w.finals.map(f=>f.day+" "+f.time);
-  return w.finals[0].compId==="KBEK" && w.finals[2].compId==="UCL" &&
-         w.finals[2].day==="Sunday" && w.finals[2].time==="20:45" &&
+  // lower cup KBEK -> Monday, main cup BEKER -> Friday, UCL -> Sunday, in chronological order
+  return w.finals[0].compId==="KBEK" && w.finals[0].day==="Monday" &&
+         w.finals[1].compId==="BEKER" && w.finals[1].day==="Friday" &&
+         w.finals[2].compId==="UCL" && w.finals[2].day==="Sunday" &&
          w.finals.every(f=>f.day && f.time);
 `));
-check('schedule: three or fewer finals stay on the weekend', run(`
+check('schedule: several lower cups all land on Monday, with distinct kick-off times', run(`
   GameState.attendWindow = null;
   const caps = [1,2,3].map(i=>({ id:"s"+i, kind:"cup-final", compId:"KBEK", homeId:"H"+i, awayId:"A"+i, homeName:"H"+i, awayName:"A"+i, clients:[{side:"home"}] }));
   const w = Attend.openWindow(caps);
-  return w.finals.every(f=>f.day==="Saturday" || f.day==="Sunday");
+  const times = new Set(w.finals.map(f=>f.time));
+  return w.finals.every(f=>f.day==="Monday") && times.size===3;
 `));
 
 // ---------------- the viewing window: reveal / watch / hide ----------------
@@ -377,7 +368,7 @@ check('window: finalizeWindow reveals everything (isHidden goes false for all)',
   for(let i=0;i<6;i++) if(Attend.isHidden("f"+i)) return false;
   return Attend.window()===null;
 `));
-check('window: openWindow orders least-reputable first and clears the capture list feed', run(`
+check('window: openWindow orders chronologically and clears the capture list feed', run(`
   GameState.attendWindow = null;
   const caps = [
     { id:"a", kind:"europe-final", compId:"UCL", homeId:"H", awayId:"A", homeName:"H", awayName:"A", clients:[{side:"home"}] },

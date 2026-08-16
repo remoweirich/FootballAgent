@@ -360,7 +360,8 @@ const Dialogue = {
     },
     // Full time. Settles everything the dressing room set up (the right word, the promised
     // bonus) and opens the party or the consolation. Returns notes for the UI to show first.
-    buildPostmatchScene(p, m, won) {
+    buildPostmatchScene(p, m, won, opts) {
+        opts = opts || {};
         const extra = { opponent: this._opponentName(m, p) };
         const notes = [];
         const talk = p._finalTalk && p._finalTalk.matchId === m.id ? p._finalTalk : null;
@@ -382,7 +383,14 @@ const Dialogue = {
             }
             delete p._finalTalk;
         }
-        const open = this._pick(DIALOGUE_DATA.final.filter(r => r.beat === (won ? 'win-open' : 'loss-open')), p, extra);
+        // won the match but a rival's parallel result cost the title: a distinct, gutted-but-proud
+        // tone rather than the party OR a plain defeat lament (falls back to loss lines if none exist).
+        let beat = won ? 'win-open' : 'loss-open';
+        if (opts.titleMissed) {
+            notes.push(I18n.t('dlg.titleMissedNote'));
+            if (DIALOGUE_DATA.final.some(r => r.beat === 'titlemiss-open')) beat = 'titlemiss-open';
+        }
+        const open = this._pick(DIALOGUE_DATA.final.filter(r => r.beat === beat), p, extra);
         const keys = won ? ['toast', 'quiet', 'tab'] : ['sit', 'space', 'speech'];
         const choices = keys.map(k => ({ key: k, ...this.choiceLabel(won ? 'postwin' : 'postloss', k) }));
         return { kind: 'postmatch', playerId: p.id, matchId: m.id, won, extra, notes, open, choices };
@@ -944,7 +952,10 @@ const Dialogue = {
     _maybeThanks(p, delta) {
         if (p.archived || delta < 3 || this.bondOf(p) < 50) return;
         const year = GameState.seasonStartYear;
-        if (p._thanksSeason === year || Rng.next() > 0.3) return;
+        // a gesture like this should feel special: at most once every 6 years for any one player
+        // (previously once a season, which let a handful of confidants gift you every single year)
+        if (p._thanksSeason != null && year - p._thanksSeason < 6) return;
+        if (Rng.next() > 0.3) return;
         p._thanksSeason = year;
         const money = Rng.next() < 0.5;
         this.queueMoment(money

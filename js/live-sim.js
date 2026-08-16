@@ -491,6 +491,21 @@ const LiveSim = {
 
             const ch = chainFor(req.c, req.need);
             const side = req.c.side;
+            // The old ghost: an assist narrated as a bare "Assist — X" line with no goal in that minute,
+            // because the goal it set up was an ANONYMOUS team goal rendered separately. When no chain
+            // could weave this assist into a goal and the side has an anonymous goal spare, ride the
+            // assist on that goal and narrate the two as one beat. (When it pairs a client's own goal
+            // instead, that goal is a real event elsewhere in the feed, so the normal path still holds.)
+            if (!ch && req.need === 'ASSIST' && ledger.anon[side] > 0 &&
+                this._spend([{ tag: 'ASSIST', player: req.c.player, anonymous: false, side: 'own' }], side, ledger)) {
+                ledger.anon[side] -= 1;
+                units.push([{
+                    kind: 'goal', side, client: req.c.player, need: 'ASSIST',
+                    lines: [`GOAL — ${nameOf(side)}! Laid on by ${req.c.player.name}.`],
+                    events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }, { tag: 'ASSIST', ref: 'M', player: req.c.player, anonymous: false, side: 'own' }],
+                }]);
+                return;
+            }
             if (ch) noteChain(ch);
             else if (!this._spend([{ tag: req.need, player: req.c.player, anonymous: false, side: 'own' }], side, ledger)) return;
             if (req.need === 'RC' || req.need === 'Y2C') sentOff.add(req.c.player);   // no further events for him

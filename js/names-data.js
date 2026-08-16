@@ -509,35 +509,35 @@ const NAMES_DATABASE = {
 },
    "USA": {
     firstNames: ["James", "Michael", "Robert", "John", "David", "William", "Richard", "Joseph", "Thomas", "Christopher", "Daniel", 	"Matthew", "Anthony", "Mark", "Donald", "Steven", "Andrew", "Joshua", "Kevin", "Brian"],
-    lastNames: ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", 	"Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"]
+    lastNames: ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"]
 },
    "Nigeria": {
-    firstNames: ["Chukwuemeka", "Oluwaseun", "Chioma", "Adewale", "Ngozi", "Ikechukwu", "Folake", "Obinna", "Chiamaka", "Tunde", 	"Chinonso", "Yemi", "Oluwatobi", "Chinedu", "Bukola", "Emeka", "Funmi", "Chidi", "Segun", "Obi"],
+    firstNames: ["Chukwuemeka", "Oluwaseun", "Chioma", "Adewale", "Ngozi", "Ikechukwu", "Folake", "Obinna", "Chiamaka", "Tunde", "Chinonso", "Yemi", "Oluwatobi", "Chinedu", "Bukola", "Emeka", "Funmi", "Chidi", "Segun", "Obi"],
     lastNames: ["Okafor", "Adeyemi", "Okonkwo", "Nwankwo", "Eze", "Okeke", "Adebayo", "Chikezie", "Oluwole", "Nwosu", "Onyekachi", 	"Ogunleye", "Nnamdi", "Okoli", "Chukwu", "Obi", "Adenuga", "Ikenna", "Olaniyan", "Udoka"]
 },
    "Ghana": {
-    firstNames: ["Kwame", "Kofi", "Yaw", "Akwasi", "Kwabena", "Kweku", "Ama", "Abena", "Akua", "Yaa", "Afia", "Kwadwo", "Fiifi", 	"Kojo", "Ekow", "Ebo", "Kobby", "Nana", "Kwesi", "Adjoa"],
-    lastNames: ["Mensah", "Owusu", "Asante", "Boateng", "Agyeman", "Osei", "Acheampong", "Frimpong", "Appiah", "Amoako", "Adjei", 	"Danso", "Ofori", "Boakye", "Amponsah", "Ansah", "Gyasi", "Oteng", "Yeboah", "Opoku"]
+    firstNames: ["Kwame", "Kofi", "Yaw", "Akwasi", "Kwabena", "Kweku", "Ama", "Abena", "Akua", "Yaa", "Afia", "Kwadwo", "Fiifi", "Kojo", "Ekow", "Ebo", "Kobby", "Nana", "Kwesi", "Adjoa"],
+    lastNames: ["Mensah", "Owusu", "Asante", "Boateng", "Agyeman", "Osei", "Acheampong", "Frimpong", "Appiah", "Amoako", "Adjei", "Danso", "Ofori", "Boakye", "Amponsah", "Ansah", "Gyasi", "Oteng", "Yeboah", "Opoku"]
 },
    "South Africa": {
-    firstNames: ["Sipho", "Thabo", "Mandla", "Bongani", "Themba", "Sello", "Kagiso", "Lerato", "Zanele", "Nomsa", "Thandi", "Mpho", 	"Lucas", "Johannes", "Pieter", "Andries", "Hendrik", "Johan", "Francois", "Willem"],
-    lastNames: ["Nkosi", "Dlamini", "Khumalo", "Mthembu", "Zulu", "Ndlovu", "Mokoena", "Molefe", "Mkhize", "Radebe", "Van der Merwe", 	"Botha", "Pretorius", "Du Plessis", "Van Rensburg", "Steyn", "Fourie", "Nel", "De Wet", "Venter"]
+    firstNames: ["Sipho", "Thabo", "Mandla", "Bongani", "Themba", "Sello", "Kagiso", "Lerato", "Zanele", "Nomsa", "Thandi", "Mpho", "Lucas", "Johannes", "Pieter", "Andries", "Hendrik", "Johan", "Francois", "Willem"],
+    lastNames: ["Nkosi", "Dlamini", "Khumalo", "Mthembu", "Zulu", "Ndlovu", "Mokoena", "Molefe", "Mkhize", "Radebe", "Van der Merwe", "Botha", "Pretorius", "Du Plessis", "Van Rensburg", "Steyn", "Fourie", "Nel", "De Wet", "Venter"]
 },
    "Poland": {
-    firstNames: ["Jakub", "Mateusz", "Kacper", "Szymon", "Wojciech", "Adam", "Paweł", "Piotr", "Krzysztof", "Tomasz", "Michał", 	"Kamil", "Dawid", "Łukasz", "Marcin", "Maciej", "Bartosz", "Grzegorz", "Artur", "Rafał"],
-    lastNames: ["Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński", "Lewandowski", "Zieliński", "Szymański", 	"Woźniak", "Dąbrowski", "Kozłowski", "Jankowski", "Mazur", "Kwiatkowski", "Krawczyk", "Piotrowski", "Grabowski", "Nowakowski", 	"Pawłowski"]
+    firstNames: ["Jakub", "Mateusz", "Kacper", "Szymon", "Wojciech", "Adam", "Paweł", "Piotr", "Krzysztof", "Tomasz", "Michał", "Kamil", "Dawid", "Łukasz", "Marcin", "Maciej", "Bartosz", "Grzegorz", "Artur", "Rafał"],
+    lastNames: ["Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński", "Lewandowski", "Zieliński", "Szymański", "Woźniak", "Dąbrowski", "Kozłowski", "Jankowski", "Mazur", "Kwiatkowski", "Krawczyk", "Piotrowski", "Grabowski", "Nowakowski", 	"Pawłowski"]
 },
    "Slovenia": {
-    firstNames: ["Luka", "Jan", "Nik", "Filip", "Žiga", "Mark", "Matej", "Anže", "Tim", "Jaka", "Vid", "Nejc", "Rok", "Tilen", 	"Grega", "Blaž", "Marko", "Miha", "Matija", "Luka"],
+    firstNames: ["Luka", "Jan", "Nik", "Filip", "Žiga", "Mark", "Matej", "Anže", "Tim", "Jaka", "Vid", "Nejc", "Rok", "Tilen", "Grega", "Blaž", "Marko", "Miha", "Matija", "Luka"],
     lastNames: ["Novak", "Horvat", "Krajnc", "Kovačič", "Zupančič", "Potočnik", "Vidmar", "Golob", "Božič", "Turk", "Kavčič", "Mrhar", 	"Kos", "Kastelic", "Lenarčič", "Bizjak", "Savnik", "Berlec", "Oblak", "Zajc"]
 },
    "Serbia": {
-    firstNames: ["Stefan", "Luka", "Nemanja", "Nikola", "Marko", "Aleksandar", "Miloš", "Filip", "Dušan", "Ivan", "Petar", "Milan", 	"Đorđe", "Jovan", "Vladimir", "Dragan", "Dejan", "Bojan", "Andrija", "Vuk"],
+    firstNames: ["Stefan", "Luka", "Nemanja", "Nikola", "Marko", "Aleksandar", "Miloš", "Filip", "Dušan", "Ivan", "Petar", "Milan", "Đorđe", "Jovan", "Vladimir", "Dragan", "Dejan", "Bojan", "Andrija", "Vuk"],
     lastNames: ["Jovanović", "Petrović", "Nikolić", "Marković", "Đorđević", "Stojanović", "Ilić", "Stanković", "Pavlović", 	"Milošević", "Todorović", "Simić", "Popović", "Dimitrijević", "Kostić", "Živković", "Vasić", "Mladenović", "Đukić", 	"Stefanović"]
 },
    "Greece": {
     firstNames: ["Georgios", "Dimitrios", "Konstantinos", "Ioannis", "Nikolaos", "Panagiotis", "Christos", "Vasileios", "Andreas", 	"Alexandros", "Michail", "Athanasios", "Stefanos", "Apostolos", "Evangelos", "Theodoros", "Spyridon", "Petros", "Nikos", 	"Giorgos"],
-    lastNames: ["Papadopoulos", "Papadakis", "Pappas", "Georgiou", "Dimitriou", "Nikolaou", "Ioannou", "Konstantinou", 	"Christodoulou", "Vasileiou", "Petridis", "Michalopoulos", "Angelopoulos", "Stavropoulos", "Vlahos", "Karagiannis", 	"Athanasiou", "Kouris", "Makris", "Economou"]
+    lastNames: ["Papadopoulos", "Papadakis", "Pappas", "Georgiou", "Dimitriou", "Nikolaou", "Ioannou", "Konstantinou", "Christodoulou", "Vasileiou", "Petridis", "Michalopoulos", "Angelopoulos", "Stavropoulos", "Vlahos", "Karagiannis", 	"Athanasiou", "Kouris", "Makris", "Economou"]
 },
    "Turkey": {
     firstNames: ["Mehmet", "Mustafa", "Ahmet", "Ali", "Hüseyin", "Hasan", "İbrahim", "İsmail", "Yusuf", "Ömer", "Murat", "Emre", 	"Burak", "Cem", "Eren", "Can", "Deniz", "Kerem", "Barış", "Onur"],
@@ -925,7 +925,9 @@ function getRegionPrimaryNationality(region) {
         "Argentina": "Argentina"
     };
     
-    return regionMap[region] || "Netherlands";
+    // any country with its own name database (incl. created countries registered at runtime) maps to
+    // itself, so squads at a created country's clubs are named from that country's pool
+    return regionMap[region] || (NAMES_DATABASE[region] ? region : "Netherlands");
 }
 
 // Get secondary (immigrant/neighbor) nationality for a region

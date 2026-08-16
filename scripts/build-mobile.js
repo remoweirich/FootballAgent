@@ -14,16 +14,19 @@ const ENGINE_FILES = [
     'rng.js',
     'i18n.js', 'i18n-en.js', 'i18n-de.js',
     'names-data.js', 'clubs.js', 'players.js', 'storage.js', 'game-state.js',
-    'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'achievements.js', 'injuries-data.js', 'simulation.js',
+    'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'achievements.js', 'injuries-data.js', 'simulation.js',
     'live-sim-data.js', 'live-sim.js', 'attend.js', 'dialogue-data.js', 'dialogue-data-de.js', 'dialogue.js'
 ];
 const UI_JS_FILES = [
     'prefs.js',
+    'monetization.js',
+    'ads.js',
+    'revenuecat.js',
     'i18n-en.js', 'i18n-de.js',
     'music-manifest.js', 'audio.js',
     'shim.js', 'ui-helpers.js', 'router.js',
     'screen-start.js', 'screen-settings.js', 'screen-achievements.js',
-    'screen-setup.js', 'screen-home.js', 'screen-clients.js', 'screen-club.js',
+    'screen-setup.js', 'screen-customize.js', 'screen-sandbox.js', 'screen-store.js', 'screen-home.js', 'screen-clients.js', 'screen-club.js',
     'screen-client-detail.js', 'screen-negotiations.js', 'screen-agency.js', 'screen-bestxi.js',
     'screen-finance.js', 'screen-leagues.js', 'screen-scouting.js', 'screen-livesim.js', 'screen-dialogue.js', 'main.js'
 ];

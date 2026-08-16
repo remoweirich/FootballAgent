@@ -15,6 +15,12 @@ Nego.clubPosLine = function (clubId) {
     return ` · ${UI.ordinal(r.pos)}/${r.total}${r.played ? ` · ${r.pts}pts` : ''}`;
 };
 
+// The offering/bidding club, as a line you can read AND tap through to: its name links to the club
+// page, and its reputation is spelled out so you can judge whether the move is a step up or down.
+Nego.clubLine = function (club) {
+    return `<a href="${Router.link('clubs', club.id)}" style="color:inherit;text-decoration:underline;text-underline-offset:2px">${club.name}</a>, ${club.divisionName} · ${I18n.t('common.reputation')} ${club.reputation}${this.clubPosLine(club.id)}`;
+};
+
 Nego.linkifyPlayers = function (html) {
     if (!html) return html;
     const cands = GameState.players.filter(p => p.agentId === 'me' || p.everClient || p.knownToAgent);
@@ -149,7 +155,7 @@ Nego.transfer = function (el, m) {
             <div class="frow"><span class="frow__k">${I18n.t('nego.playersWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentClub')}</span><span class="frow__v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentRole')}</span><span class="frow__v">${Agency.isFreeAgent(p) ? '\u2014' : roleName(p)}</span></div>
-            <div class="frow"><span class="frow__k">${I18n.t('nego.biddingClub')}</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.biddingClub')}</span><span class="frow__v">${this.clubLine(to)}</span></div>
         </div>
         <p class="hint">${p.ability} OVR · ${p.age}y · ${feeLine}${o.initiatedByAgent ? I18n.t('nego.youPitched') : ''}</p>
         <p style="color:var(--text-secondary);font-size:var(--fs-sm)">${I18n.t('nego.transferIntro')}</p>
@@ -328,7 +334,7 @@ Nego.loan = function (el, m) {
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
         <div style="margin:6px 0 var(--space-3)">${UI.relBadge(to.id)}</div>
         <div class="fcard">
-            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${to.name}, ${to.divisionName}${this.clubPosLine(to.id)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${this.clubLine(to)}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.from')}</span><span class="frow__v">${p.clubId ? (Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : '') : ''}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.theyPropose')}</span><span class="frow__v">${roleLabel(o.role || 'starter', p.age, p.position)}</span></div>
         </div>

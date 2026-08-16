@@ -26,6 +26,9 @@ const Storage = {
     SLOT_INDEX: 'slotIndex',       // lightweight list of the manual named saves
     SLOT_PREFIX: 'slot:',          // per-slot full snapshots live at 'slot:<id>'
     MAX_SLOTS: 5,                  // how many manual named saves you may keep
+    DB_INDEX: 'dbIndex',           // lightweight list of the customization databases
+    DB_PREFIX: 'db:',              // per-database overlays live at 'db:<id>'
+    MAX_DBS: 3,                    // how many customization databases you may keep
     LEGACY_KEY: 'fam_proto_v4',
     FLUSH_DELAY_MS: 1500,
 
@@ -183,6 +186,30 @@ const Storage = {
         await this._idbDeleteKey(this.SLOT_PREFIX + id);
         const idx = (await this.listSlots()).filter(s => s.id !== id);
         await this._idbPutKey(this.SLOT_INDEX, idx);
+        return true;
+    },
+    // ---- customization databases (Customize screen). Independent of saves; a save references one by
+    // id via GameState.databaseId. Same index+prefix shape as named slots. IndexedDB-only. The MAX_DBS
+    // cap (overwrite-on-4th) is enforced by the create flow, mirroring createNamedSave. ----
+    async listDatabases() {
+        const idx = await this._idbGetKey(this.DB_INDEX);
+        return Array.isArray(idx) ? idx : [];
+    },
+    getDatabase(id) { return id ? this._idbGetKey(this.DB_PREFIX + id) : Promise.resolve(null); },
+    async putDatabase(id, db, meta) {
+        const ok = await this._idbPutKey(this.DB_PREFIX + id, db);
+        if (!ok) return false;
+        const idx = await this.listDatabases();
+        const entry = Object.assign({ id }, meta);
+        const i = idx.findIndex(s => s.id === id);
+        if (i >= 0) idx[i] = entry; else idx.push(entry);
+        await this._idbPutKey(this.DB_INDEX, idx);
+        return true;
+    },
+    async deleteDatabase(id) {
+        await this._idbDeleteKey(this.DB_PREFIX + id);
+        const idx = (await this.listDatabases()).filter(s => s.id !== id);
+        await this._idbPutKey(this.DB_INDEX, idx);
         return true;
     },
 

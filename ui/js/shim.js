@@ -24,11 +24,14 @@ const NATIONALITY_ISO = {
 };
 
 const UI = {
-    money(n) { return Math.round(n || 0).toLocaleString('en-US'); },
-    euro(n) { return '€' + UI.money(n); },
+    // the active currency symbol ('€' by default; '£' / 'CHF ' when the player picks another)
+    cur() { return (typeof Currency !== 'undefined') ? Currency.sym() : '€'; },
+    // every amount is stored in euros; money() converts to the chosen currency (rounded to 10 for non-EUR)
+    money(n) { return ((typeof Currency !== 'undefined') ? Currency.conv(n) : Math.round(n || 0)).toLocaleString('en-US'); },
+    euro(n) { return UI.cur() + UI.money(n); },
     // compact form for tight spaces (the header finance strip): 1234567 -> "€1.2M"
     abbr(n) {
-        n = n || 0;
+        n = (typeof Currency !== 'undefined') ? Currency.conv(n) : (n || 0);
         const sign = n < 0 ? '−' : '';
         const a = Math.abs(n);
         const fmt = (v, suf) => sign + (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10) + suf;
@@ -37,7 +40,7 @@ const UI = {
         if (a >= 1e3) return fmt(a / 1e3, 'k');
         return sign + Math.round(a);
     },
-    eabbr(n) { return '€' + UI.abbr(n); },
+    eabbr(n) { return UI.cur() + UI.abbr(n); },
 
     // ---- ability badge colour band (7 bands, see DESIGN_SYSTEM.md) ----
     abilityVar(a) {
@@ -93,15 +96,20 @@ const UI = {
     },
 
     // ---- generated club crest (standings, client cards, negotiation headers) ----
-    // No emblem assets exist yet (fictional clubs) — a coloured shield with the
-    // club's initial gives real identity at a glance without any licensing risk.
+    // Stock clubs have no emblem assets — a coloured shield with the club's initial gives real
+    // identity at a glance without any licensing risk. A customization database can attach a real
+    // logo (a small square PNG data: URI), in which case it's rendered in the same crest box.
     crest(club, lg) {
-        const color = club && club.colors ? club.colors.primary : '#5A626D';
+        const logo = club && club.logo;
+        if (typeof logo === 'string' && logo.slice(0, 5) === 'data:')
+            return `<img class="crest${lg ? ' crest--lg' : ''}" src="${logo}" alt="" aria-hidden="true" loading="lazy" style="object-fit:contain">`;
+        const primary = club && club.colors ? club.colors.primary : '#5A626D';
+        const secondary = club && club.colors && club.colors.secondary ? club.colors.secondary : '#FFFFFF';
         const initial = club && club.name ? club.name.trim()[0].toUpperCase() : '?';
         return `<svg class="crest${lg ? ' crest--lg' : ''}" viewBox="0 0 24 28" aria-hidden="true">
-            <path d="M12 1 22 5v9c0 7-4.4 11.2-10 13C6.4 25.2 2 21 2 14V5Z" fill="${color}"/>
+            <path d="M12 1 22 5v9c0 7-4.4 11.2-10 13C6.4 25.2 2 21 2 14V5Z" fill="${primary}" stroke="${secondary}" stroke-width="1.5" stroke-linejoin="round"/>
             <path d="M12 1 22 5v9c0 7-4.4 11.2-10 13Z" fill="rgba(255,255,255,.08)"/>
-            <text x="12" y="17.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="rgba(255,255,255,.92)">${initial}</text>
+            <text x="12" y="17.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="${secondary}">${initial}</text>
         </svg>`;
     },
 

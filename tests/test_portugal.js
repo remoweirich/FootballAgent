@@ -35,7 +35,7 @@ check('every Portugal city maps to a PT region, offenders: ' + badCity, JSON.par
 
 // ---- reserves ----
 const reserves = JSON.parse(runv(`return JSON.stringify(Clubs.getClubsByCountry('Portugal').filter(c=>isReserveClub(c.id)).map(c=>c.name))`));
-check('4 B sides detected: ' + JSON.stringify(reserves), reserves.length === 4 && reserves.every(n => / B$/.test(n)));
+check('4 B sides detected: ' + JSON.stringify(reserves), reserves.length === 4 && reserves.every(n => / II$/.test(n)));
 check('B side -> parent colours & registry', runv(`const b=Clubs.getClubById('Porto U21');const p=Clubs.getClubById('porto');return b.colors.primary===p.colors.primary && parentClubForReserve('Porto U21').id==='porto'`));
 
 // ---- fees ----

@@ -139,7 +139,7 @@ const Sim = {
         GameState.players.forEach(p => { p._weekApps = 0; if (p._finalTalk) delete p._finalTalk; });   // any unsettled dressing-room promise lapses with the week
 
         // ---- detect season-end / rollover ----
-        let rolledSeason = false, seasonFinished = false;
+        let rolledSeason = false, seasonFinished = false, windowClosed = false;
         const prevWeek = GameState.week;
         GameState.week += 1;
 
@@ -163,6 +163,7 @@ const Sim = {
 
         // ---- transfer window just closed ----
         if (GameState.isTransferWindowOpen(prevWeek) && !GameState.isTransferWindowOpen(week)) {
+            windowClosed = true;   // UI shows one interstitial ad here (twice a season), unless ads are removed
             const reopens = prevWeek <= 6 ? I18n.t('sim.reopensWinter') : I18n.t('sim.reopensSummer', { season: GameState.seasonLabelFor(GameState.seasonStartYear + 1) });
             GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.windowClosedSubj'), body: I18n.t('sim.windowClosedBody', { reopens }), ttl: 4 });
             GameState.addLog(I18n.t('sim.windowClosedLog'), 'info');
@@ -290,7 +291,7 @@ const Sim = {
         GameState.save();
         Storage.flush();   // a completed week is a meaningful checkpoint — don't leave it debounced
         const attend = (typeof Attend !== 'undefined') ? Attend.windowFinals() : [];
-        return { events, spotlights, rolledSeason, seasonFinished, attend };
+        return { events, spotlights, rolledSeason, seasonFinished, windowClosed, attend };
     },
 
     _simU21() {
@@ -646,6 +647,7 @@ const Sim = {
         const winKey = GameState.transferWindowKey ? GameState.transferWindowKey() : null;
         Agency.clients().forEach(p => {
             if (p.injury) return;
+            if (p.retiringThisSeason) return;   // announced his final season -> clubs stop chasing him (you can still tout him out)
             if (p.onLoanAt) return;   // out on loan / with reserves -> no transfer interest until he's back
             if (winKey && p._txWindow === winKey) return;   // just changed clubs this window -> no fresh approaches until next window
             // free agents: clubs approach with contract offers (no transfer fee)
@@ -878,6 +880,7 @@ const Sim = {
                 return;
             }
             if (p.freeAgent || p.onLoanAt || p.pendingTransfer || p._clubRenewGaveUp) return;
+            if (p.retiringThisSeason) return;   // no point re-signing a player who has announced he'll retire
             if (p._renewSeason === GameState.seasonStartYear) return;   // already re-signed this season
             const club = Clubs.getClubById(p.clubId); if (!club) return;
             if (p.squadRole === 'fringe' && p.ability < club.reputation - 8) return;   // a body they'd happily let go
@@ -932,10 +935,10 @@ const Sim = {
     // odds a "final season" player postpones retirement, by appearances that season —
     // graduated rather than an all-or-nothing threshold
     _retirePostponeChance(apps) {
-        if (apps >= 30) return 1.0;
-        if (apps >= 25) return 0.9;
-        if (apps >= 20) return 0.6;
-        if (apps >= 15) return 0.3;
+        if (apps >= 30) return 0.7;
+        if (apps >= 25) return 0.5;
+        if (apps >= 20) return 0.4;
+        if (apps >= 15) return 0.2;
         if (apps >= 10) return 0.1;
         return 0;
     },
@@ -1001,7 +1004,6 @@ const Sim = {
                 const trophies = awarded.filter(a => a.clubId === row.clubId).map(a => a.compId);
                 if (!GameState.clubHistory[row.clubId]) GameState.clubHistory[row.clubId] = [];
                 GameState.clubHistory[row.clubId].push({ year, division: div, position: i + 1, trophies });
-                if (GameState.clubHistory[row.clubId].length > 40) GameState.clubHistory[row.clubId].shift();
             });
         });
         // European winners that live only in the pooled associations (virtual clubs, not in any
@@ -1011,7 +1013,6 @@ const Sim = {
             if (w && !Clubs.getClubById(w)) {
                 if (!GameState.clubHistory[w]) GameState.clubHistory[w] = [];
                 GameState.clubHistory[w].push({ year, division: k, position: 1, trophies: [k] });
-                if (GameState.clubHistory[w].length > 40) GameState.clubHistory[w].shift();
             }
         });
         // remember each club's BEST-EVER run in each of the three European competitions (kept only if

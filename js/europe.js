@@ -71,10 +71,23 @@ const Europe = {
         this.COMPS.forEach(k => ed.comps[k] = this._newComp(k));
         this.COMPS.forEach(k => EUROPE_DATA.qualifying[k].rounds.forEach(r => ed.qpools[k][r.round] = { seeded: [], unseeded: [] }));
 
+        // created European countries (Customize Part 2): feed the REAL final standings + higher-cup
+        // winner into that association's existing pooled berth rules, replacing its virtual placeholder
+        // clubs. Its UEFA-rank allocation (how many teams, which qualifying round) is unchanged.
+        const customEuro = {};
+        Object.values((typeof WorldExt !== 'undefined' && WorldExt.created) || {}).forEach(cc => {
+            if (!cc.european) return;
+            const euKey = (typeof COUNTRY_EURO_KEY !== 'undefined' && COUNTRY_EURO_KEY[cc.name]) || cc.name;
+            if (!EUROPE_DATA.pools[euKey]) return;
+            const order = (standings && standings[cc.divIds[0]]) || [];
+            if (order.length) customEuro[euKey] = { order, cup: (cupWinners && cupWinners[cc.name]) || null };
+        });
+
         // 1) simulate every pooled domestic league + cup (weighted, once per season). If a pooled
         // country has a real in-game cup result (Liechtenstein's Liechtensteiner Cup, played in the
         // Swiss cups), use that actual winner instead of drawing one.
         for (const [name, pool] of Object.entries(EUROPE_DATA.pools)) {
+            if (customEuro[name]) { ed.sim[name] = customEuro[name]; continue; }   // real teams for a created country
             if (!pool.clubs.length) continue;
             const order = this._weightedOrder(pool.clubs, c => c.likelihood);
             const cup = (cupWinners && cupWinners[name]) || this._weightedPick(pool.clubs, c => Math.sqrt(Math.max(0.01, c.likelihood)));
@@ -510,6 +523,16 @@ const Europe = {
         }
         // Liechtenstein's UEL entrant is the actual Liechtensteiner Cup (lichcup) winner, whoever it is
         if (L && L.lichcup && L.lichcup.winner) cups.Liechtenstein = L.lichcup.winner;
+        // created European countries (Customize Part 2): real top-division order + higher-cup winner
+        Object.values((typeof WorldExt !== 'undefined' && WorldExt.created) || {}).forEach(cc => {
+            if (!cc.european) return;
+            const div = cc.divIds[0];
+            const hasTable = L && L.tables && L.tables[div] && L.tables[div].some(r => r.P > 0);
+            standings[div] = hasTable ? League.sortedTable(div).map(r => r.clubId)
+                : Clubs.getClubsByDivision(div).slice().sort((a, b) => b.reputation - a.reputation).map(c => c.id);
+            const hc = L && L.customCups && L.customCups[cc.name] && L.customCups[cc.name].higher;
+            cups[cc.name] = (hc && hc.winner) || null;
+        });
         return { standings, cups };
     },
     // season 1 (fresh game): synthesise plausible standings from reputation + a weighted cup winner

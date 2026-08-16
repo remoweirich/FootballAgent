@@ -42,6 +42,25 @@ const Theme = {
     },
 };
 
+// Currency: EUR is the baseline — every amount in the game is stored in euros. GBP/CHF are derived
+// by a fixed rate and rounded to the nearest 10. UI.money/UI.abbr convert the number, I18n.t swaps the
+// € symbol in translated strings, and UI.cur() returns the active symbol. See ui/js/shim.js.
+const Currency = {
+    CODES: ['EUR', 'GBP', 'CHF'],
+    INFO: { EUR: { sym: '€', rate: 1 }, GBP: { sym: '£', rate: 0.86 }, CHF: { sym: 'CHF ', rate: 0.95 } },
+    get() { const c = Prefs.get('currency', 'EUR'); return this.INFO[c] ? c : 'EUR'; },
+    set(code) { if (this.INFO[code]) Prefs.set('currency', code); },
+    sym() { return this.INFO[this.get()].sym; },
+    // convert a baseline euro amount to the chosen currency; non-EUR is rounded to the nearest 10
+    conv(eur) {
+        eur = eur || 0;
+        const code = this.get();
+        if (code === 'EUR') return Math.round(eur);
+        const sign = eur < 0 ? -1 : 1;
+        return sign * Math.round(Math.abs(eur) * this.INFO[code].rate / 10) * 10;
+    },
+};
+
 // Apply immediately (parse-time) so content renders in the right theme from the first paint.
 Theme.apply();
 // Keep 'system' mode live if the OS theme flips while the app is open.

@@ -56,6 +56,7 @@ Router.register('home', {
                 </div>
                 <div style="font-size:var(--fs-xl);font-weight:var(--weight-semibold);margin-top:3px">${I18n.t('home.weekMonth', { w: GameState.week, month: UI.monthLabel(GameState.week, GameState.seasonStartYear) })}</div>
             </div>
+            <button onclick="Setup.openHelpOverlay()" aria-label="${I18n.t('common.howToPlay')}" title="${I18n.t('common.howToPlay')}" style="align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text-secondary);width:36px;height:36px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none"><i class="ti ti-help"></i></button>
         </div>
 
         <div class="section-label" style="margin:var(--space-5) 0 var(--space-2)">${I18n.t('home.needsAttention')}</div>
@@ -115,6 +116,7 @@ Home._doAdvance = function () {
     Router.lastWeekNet = GameState.agency.balance - before;
     Home._spotlights = res.spotlights || [];
     Home._pendingAttend = (res.attend || []).slice();   // finals the agent may watch this week
+    Home._adPending = !!res.windowClosed;               // one interstitial when a transfer window shuts (Ads gates the rest)
     const lines = res.events.map(e => `<div class="frow"><span class="frow__k">${e.text}</span></div>`).join('');
     // tap anywhere in the card to continue (not just the button) — lets you rattle through
     // several quiet weeks by tapping the same spot repeatedly
@@ -147,6 +149,13 @@ Home._showSpotlight = function () {
     </div>`);
 };
 Home._nextSpotlight = function () { Home._spotIndex++; Home._showSpotlight(); };
+
+// terminal step of the advance flow: render the fresh week, then (only on a transfer-window close)
+// show one interstitial ad on top. Ads gates removal/frequency itself; failures never surface.
+Home._finishAdvance = function () {
+    Router.refresh();
+    if (Home._adPending) { Home._adPending = false; if (typeof Ads !== 'undefined') Ads.maybeShowInterstitial('window-close'); }
+};
 
 // ---- "Attend the Final" invitations ----
 // Each invited final pops up full-screen so you're aware of it; you watch them from the inbox
@@ -193,7 +202,7 @@ Home._startFarewells = function () {
 // Queued by the sim during the week (persisted on the agency), played here one after another.
 Home._startMoments = function () {
     const q = (GameState.agency && GameState.agency.pendingScenes) || [];
-    if (!q.length || typeof Dialogue === 'undefined' || typeof DialogueView === 'undefined') { Router.refresh(); return; }
+    if (!q.length || typeof Dialogue === 'undefined' || typeof DialogueView === 'undefined') { Home._finishAdvance(); return; }
     const entry = q.shift();
     GameState.save();
     const scene = Dialogue.buildMomentScene(entry);
