@@ -96,6 +96,7 @@ I18n.register('de', {
     'ag.loan.done': '{name} ist an {club} verliehen ({role}, {dur}).',
     // --- Agentur: zur/aus U21 & Reserve ---
     'ag.u21.tooOld': '{name} ist {age}. Nur Spieler die 21 oder jünger sind können in eine Jugend-/U21-Mannschaft absteigen.',
+    'ag.u21.tooOldNoReserve': '{name} ist zu alt für eine Jugendmannschaft, und {club} hat kein Reserveteam in den Ligen, zu dem er absteigen könnte.',
     'ag.u21.alreadyReserve': '{name} spielt bereits für eine Reservemannschaft ({club}); er kann nicht weiter herabgestuft werden. Sie können stattdessen eine Beförderung ins Profiteam beantragen.',
     'ag.u21.cooldown': 'Sie haben das diese Woche bereits mit dem Klub besprochen, warten Sie bis nächste Woche.',
     'ag.u21.refused': '{club} erlaubt gerade nicht, {name} in die Jugend zu schicken.',

@@ -389,8 +389,11 @@ const Agency = {
     sendToU21(p) {
         if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
         if (p.onLoanAt) return { ok: false, message: I18n.t('ag.alreadyAway', { name: p.name }) };
-        if (p.age > 21) return { ok: false, message: I18n.t('ag.u21.tooOld', { name: p.name, age: p.age }) };
         if (isReserveClub(p.clubId)) return { ok: false, message: I18n.t('ag.u21.alreadyReserve', { name: p.name, club: Clubs.getClubById(p.clubId)?.name }) };
+        const reserve = reserveClubFor(p.clubId);   // a REAL reserve/B side in the league pyramid, or null (only a synthetic U21 otherwise)
+        // A player past the youth window (22+) can only drop to a reserve that ACTUALLY exists as a team,
+        // never a virtual U21 — e.g. a 34yo at FC Basel can join Basel U21, but one at Thun cannot.
+        if (p.age > 21 && !reserve) return { ok: false, message: I18n.t('ag.u21.tooOldNoReserve', { name: p.name, club: Clubs.getClubById(p.clubId)?.name || '' }) };
         if (this.onCooldown(p, 'u21send')) return { ok: false, message: I18n.t('ag.u21.cooldown') };
         this.setCooldown(p, 'u21send');
         const seniorName = Clubs.getClubById(p.clubId)?.name || '';
@@ -405,7 +408,6 @@ const Agency = {
             GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.onSubj', { club: seniorName, name: p.name }), body: no[Math.floor(Rng.next() * no.length)], ttl: 4 });
             return { ok: false, message: I18n.t('ag.u21.refused', { club: seniorName, name: p.name }) };
         }
-        const reserve = reserveClubFor(p.clubId);
         if (reserve) {
             p.onLoanAt = reserve.id; p.loanUntilSeason = GameState.seasonStartYear; p.loanMid = false; p.loanRole = 'starter';
             GameState.addLog(I18n.t('ag.log.sentReserves', { name: p.name, club: reserve.name }), 'loan');

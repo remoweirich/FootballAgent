@@ -100,6 +100,7 @@ I18n.register('en', {
     'ag.loan.done': '{name} is on loan at {club} ({role}, {dur}).',
     // --- agency: send to / recall from U21 & reserves ---
     'ag.u21.tooOld': '{name} is {age} — only players aged 21 or under can drop to a youth/U21 side.',
+    'ag.u21.tooOldNoReserve': '{name} is too old for a youth side, and {club} has no reserve team in the leagues to drop him to.',
     'ag.u21.alreadyReserve': "{name} already plays for a reserve side ({club}); he can't be sent down further. You can request a promotion to the senior team instead.",
     'ag.u21.cooldown': "You've already raised this with the club this week — give it until next week.",
     'ag.u21.refused': "{club} won't sanction sending {name} to the youth side right now.",

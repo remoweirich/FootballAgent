@@ -130,7 +130,10 @@ const ClientDetail = {
     },
     reqLoan(id) { const r = Agency.requestLoan(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     sendU21(id) {
-        const p = GameState.getPlayer(id), reserve = reserveClubFor(p.clubId), dest = reserve ? reserve.name : youthTeamName(p.clubId);
+        const p = GameState.getPlayer(id), reserve = reserveClubFor(p.clubId);
+        // an over-age player can only drop to a real reserve side — no confirm sheet if there's only a virtual U21
+        if (p.age > 21 && !reserve) { Router.result(I18n.t('ag.u21.tooOldNoReserve', { name: p.name, club: UI.clubName(p.clubId) }), 'bad'); return; }
+        const dest = reserve ? reserve.name : youthTeamName(p.clubId);
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('cd.sendDownQ', { name: p.name })}</div>
             <p class="hint">${reserve ? I18n.t('cd.sendReserveHint') : I18n.t('cd.sendYouthHint')}</p>
             <div class="flex-row" style="margin-top:var(--space-5)"><button class="btn btn--ghost" onclick="Router.closeSheet()">${I18n.t('common.cancel')}</button><button class="btn btn--primary" onclick="ClientDetail.doSendU21('${id}')">${I18n.t('cd.sendTo', { dest })}</button></div>`);
