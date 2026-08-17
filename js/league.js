@@ -454,7 +454,7 @@ const League = {
             B.remaining = this.shuffle(B.remaining.concat(Clubs.getClubsByDivision('ERE').map(c => c.id)));
             B.stage = 'main';
         }
-        const pairs = week === 4 ? this._bekerFirstRoundPairs(B.remaining) : this._pairUp(this.shuffle(B.remaining));
+        const pairs = week === 4 ? this._bekerFirstRoundPairs(B.remaining) : this._drawOrBracket(B.remaining);
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
@@ -476,6 +476,11 @@ const League = {
         return pairs;
     },
     _pairUp(arr) { const pairs = []; for (let i = 0; i < arr.length; i += 2) pairs.push([arr[i], arr[i + 1] ?? null]); return pairs; },
+    // Cup pairing with a FIXED bracket once the field narrows: while MORE than 8 teams remain each
+    // round is drawn anew (a fresh shuffle), but from the quarter-finals down (<=8) we hold the bracket
+    // — the round-of-16 draw sets every downstream path, so winners advance through their slots rather
+    // than being redrawn each round. (Spec: cup ties are fixed from the round of 16 onwards.)
+    _drawOrBracket(list) { return this._pairUp(list.length > 8 ? this.shuffle(list) : list.slice()); },
     // One-legged cup tie: the lower-division side always hosts (the bigger club is drawn
     // away - proper cup atmosphere), and the FINAL is on neutral ground: original order is
     // kept and neither side gets the home bonus.
@@ -614,7 +619,7 @@ const League = {
     },
     facupStep(week) {
         const F = GameState.league.facup; if (!F || F.winner) return;
-        const pairs = this._pairUp(this.shuffle(F.remaining));
+        const pairs = this._drawOrBracket(F.remaining);
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
@@ -670,7 +675,7 @@ const League = {
     _llcRoundName(week) { return ({ 11: 'Round of 64', 15: 'Round of 32', 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 47: 'Final' })[week] || 'Round'; },
     llcKOStep(week) {
         const C = GameState.league.llc; if (!C || C.winner || !C.groupDone) return;
-        const pairs = this._pairUp(this.shuffle(C.remaining));
+        const pairs = this._drawOrBracket(C.remaining);
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); return; }
@@ -705,7 +710,7 @@ const League = {
     _kleineRoundName(week) { return ({ 26: 'Round of 16', 32: 'Quarter-finals', 38: 'Semi-finals', 47: 'Final' })[week]; },
     kleineKOStep(week) {
         const K = GameState.league.kbek; if (!K || K.winner) return;
-        const pairs = this._pairUp(this.shuffle(K.remaining));
+        const pairs = this._drawOrBracket(K.remaining);
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); return; }
@@ -942,7 +947,7 @@ const League = {
             while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
             if (lower.length) pairs.push([lower.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(D.remaining));
+            pairs = this._drawOrBracket(D.remaining);
         }
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
@@ -970,7 +975,7 @@ const League = {
             P.remaining = this.shuffle(P.remaining.concat(Clubs.getClubsByDivision('3LIGA').map(c => c.id)));
             P.merged = true;
         }
-        const pairs = this._pairUp(this.shuffle(P.remaining));
+        const pairs = this._drawOrBracket(P.remaining);
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
@@ -1138,7 +1143,7 @@ const League = {
             while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
             if (lower.length) pairs.push([lower.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const comp = key === 'cdr' ? 'CDR' : 'CFED';
         const ties = [], winners = [];
@@ -1264,7 +1269,7 @@ const League = {
             while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
             if (lower.length) pairs.push([lower.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
@@ -1306,7 +1311,7 @@ const League = {
             while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
             if (lower.length) pairs.push([lower.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
@@ -1439,7 +1444,7 @@ const League = {
             while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
             if (lower.length) pairs.push([lower.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const comp = key === 'coppaitalia' ? 'COPPA' : 'COPPACOMP';
         const ties = [], winners = [];
@@ -1613,7 +1618,7 @@ const League = {
             while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
             if (lower.length) pairs.push([lower.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
@@ -1719,7 +1724,7 @@ const League = {
             while (lower.length >= 2) pairs.push([lower.pop(), lower.pop()]);
             if (lower.length) pairs.push([lower.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const isFinal = week === 47;
         const ties = [], winners = [];
@@ -1746,7 +1751,7 @@ const League = {
             const all = ['Ligue3', 'Ligue4', 'Ligue5'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);
             pairs = this._pairUp(this.shuffle(all));
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const isFinal = week === 47;
         const ties = [], winners = [];
@@ -1876,7 +1881,7 @@ const League = {
             while (unseeded.length >= 2) pairs.push([unseeded.pop(), unseeded.pop()]);
             if (unseeded.length) pairs.push([unseeded.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         C.remaining = play(pairs);
         if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
@@ -1893,7 +1898,7 @@ const League = {
     },
     segundaTacaStep(week) {
         const C = GameState.league.segundataca; if (!C || C.winner) return;
-        const pairs = this._pairUp(this.shuffle(C.remaining));
+        const pairs = this._drawOrBracket(C.remaining);
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }
@@ -2016,7 +2021,7 @@ const League = {
             while (unseeded.length >= 2) pairs.push([unseeded.pop(), unseeded.pop()]);
             if (unseeded.length) pairs.push([unseeded.pop(), null]);
         } else {
-            pairs = this._pairUp(this.shuffle(C.remaining));
+            pairs = this._drawOrBracket(C.remaining);
         }
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
@@ -2039,7 +2044,7 @@ const League = {
     },
     notreCoupeStep(week) {
         const C = GameState.league.notrecoupe; if (!C || C.winner) return;
-        const pairs = this._pairUp(this.shuffle(C.remaining));
+        const pairs = this._drawOrBracket(C.remaining);
         const ties = [], winners = [];
         pairs.forEach(([h, a]) => {
             if (a == null) { winners.push(h); ties.push({ h, a: null, bye: true }); return; }

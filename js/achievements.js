@@ -163,10 +163,13 @@ const Achievements = {
     // his club's division tier across the seasons he actually played there (via clubHistory).
     tallies() {
         const clients = (GameState.players || []).filter(p => p.everClient);
-        let trophies = 0, promotions = 0, relegations = 0;
         const CH = GameState.clubHistory || {};
+        // Count each real-world event ONCE, not once per client who shared in it: several clients at the
+        // same club winning the same trophy (or going up/down together) is a single achievement. Keyed by
+        // the event itself — the trophy (year·comp·club) and the club's season move (club·year).
+        const trophySet = new Set(), promoSet = new Set(), relegSet = new Set();
         clients.forEach(p => {
-            trophies += (p.trophies || []).length;
+            (p.trophies || []).forEach(t => trophySet.add(t.year + '|' + t.compId + '|' + (t.clubId || '')));
             Object.keys(p.stats || {}).forEach(yKey => {
                 const Y = +yKey; if (isNaN(Y)) return;
                 const clubs = new Set(Object.values(p.stats[Y] || {}).filter(st => st && !st.youth && st.clubId).map(st => st.clubId));
@@ -176,12 +179,12 @@ const Achievements = {
                     if (!eY || !eN) return;
                     const tY = _achDivTier(eY.division), tN = _achDivTier(eN.division);
                     if (!tY || !tN) return;
-                    if (tN < tY) promotions++;
-                    else if (tN > tY) relegations++;
+                    if (tN < tY) promoSet.add(cid + '|' + Y);
+                    else if (tN > tY) relegSet.add(cid + '|' + Y);
                 });
             });
         });
-        return { trophies, promotions, relegations };
+        return { trophies: trophySet.size, promotions: promoSet.size, relegations: relegSet.size };
     },
 };
 

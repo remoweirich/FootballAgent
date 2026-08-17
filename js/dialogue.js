@@ -97,9 +97,23 @@ const Dialogue = {
     patienceBonusWeeks(p) { return this.bondOf(p) >= 25 ? 2 : 0; },
 
     // ---- line picking ----
+    // How this client addresses you when {agent} appears in a line: first-name terms once the bond
+    // reaches Trusted (25+), but the formal "Mr/Mrs <surname>" (Herr/Frau in German) while it is still
+    // only Business. Falls back to the full name when no gender was chosen (e.g. an older save).
+    _agentAddress(p) {
+        const full = (GameState.agentName && GameState.agentName()) || '';
+        if (!full) return 'boss';
+        const parts = full.split(/\s+/), first = parts[0];
+        if (!p || this.bondOf(p) >= 25) return first;   // Trusted and up -> first name
+        const gender = (GameState.agency && GameState.agency.agentGender) || '';
+        const surname = parts.length > 1 ? parts.slice(1).join(' ') : first;
+        if (gender === 'male') return (this._isDe() ? 'Herr ' : 'Mr ') + surname;
+        if (gender === 'female') return (this._isDe() ? 'Frau ' : 'Mrs ') + surname;
+        return full;
+    },
     fill(text, p, extra) {
         const club = (typeof Clubs !== 'undefined') && Clubs.getClubById(effectiveClubId(p));
-        const agent = (GameState.agentName && GameState.agentName()) || 'boss';
+        const agent = this._agentAddress(p);
         let out = String(text)
             .replace(/\{first\}/g, (p.name || '').split(' ')[0] || p.name)
             .replace(/\{name\}/g, p.name || '')

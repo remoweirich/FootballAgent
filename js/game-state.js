@@ -61,7 +61,7 @@ const GameState = {
             this.startNewGame(this.homeCountry || 'Netherlands', (this.agency && this.agency.name) || 'Your Agency');
         }
     },
-    startNewGame(country, name, agentName, database) {
+    startNewGame(country, name, agentName, database, agentGender) {
         this.week = 1; this.seasonStartYear = 2025;
         // Fix this game's RNG seed up front so the very first pool is drawn from the seeded stream;
         // it rides along in every save (see save/load) and also anchors background-squad regen.
@@ -86,6 +86,7 @@ const GameState = {
         Agency.init();
         this.agency.name = (name && name.trim()) ? name.trim() : 'Your Agency';
         this.agency.agentName = (agentName && agentName.trim()) ? agentName.trim() : '';
+        this.agency.agentGender = (agentGender === 'male' || agentGender === 'female') ? agentGender : '';
         this.agency.homeCountry = this.homeCountry;
         PlayerGen.seedKnownProspects();
         League.setupSeason();

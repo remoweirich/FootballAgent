@@ -169,6 +169,12 @@ const Sim = {
             GameState.addLog(I18n.t('sim.windowClosedLog'), 'info');
         }
 
+        // ---- re-derive club reputations 4× a season, at every transfer-window boundary ----
+        // As a window OPENS (weeks 1 & 28) and just after one CLOSES (weeks 7 & 34), so a club's
+        // standing tracks the squads that actually just moved. Week 1's pass runs in the season
+        // rollover above; the other three fire here (after any window-open moves have completed).
+        if (week === 7 || week === 28 || week === 34) League.normalizeReputations();
+
         // ---- mid-season loan returns (summer half/1.5-season loans end at the winter window) ----
         if (week >= 28 && week <= 33) {
             GameState.players.forEach(p => {
@@ -375,6 +381,9 @@ const Sim = {
         const offSeasonNoMatch = MORALE.BENCH_EXEMPT_WEEKS.includes(week);
         Agency.clients().forEach(p => {
             this._ensureMoraleFields(p, aw);
+            // sandbox "lock morale": re-assert the frozen values (undoing any match-day nudges) and skip
+            // all drift/case processing this week, so a locked client's mood stays exactly where it was set
+            if (p.moraleLock) { p.morale.club = p.moraleLock.club; p.morale.time = p.moraleLock.time; p.morale.wage = p.moraleLock.wage; p.morale.agent = p.moraleLock.agent; return; }
             const club = Clubs.getClubById(p.clubId);
 
             // ---- club / wage: unchanged target-drift model, now anti-spiral clamped ----

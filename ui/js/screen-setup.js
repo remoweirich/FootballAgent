@@ -43,6 +43,16 @@ const Setup = {
             <label class="field-label"><i class="ti ti-user"></i>${I18n.t('setup.yourName')}</label>
             <input id="setupAgent" class="text-input" type="text" maxlength="32" placeholder="${I18n.t('setup.agentPlaceholder')}" autocomplete="off" autocorrect="off" spellcheck="false">
 
+            <label class="field-label"><i class="ti ti-mood-smile"></i>${I18n.t('setup.gender')}</label>
+            <div class="select-wrap">
+                <select id="setupGender" class="select-input">
+                    <option value="male">${I18n.t('setup.genderMale')}</option>
+                    <option value="female">${I18n.t('setup.genderFemale')}</option>
+                </select>
+                <i class="ti ti-chevron-down select-wrap__chevron"></i>
+            </div>
+            <p class="hint" style="margin-top:var(--space-3)">${I18n.t('setup.genderHint')}</p>
+
             <label class="field-label"><i class="ti ti-world"></i>${I18n.t('setup.homeCountry')}</label>
             <div class="select-wrap">
                 <select id="setupCountry" class="select-input">${opts}</select>
@@ -211,6 +221,8 @@ const Setup = {
         const agent = document.getElementById('setupAgent').value.trim();
         if (!name || !agent) return;
         const country = document.getElementById('setupCountry').value;
+        const genderEl = document.getElementById('setupGender');
+        const gender = genderEl ? genderEl.value : '';
         // resolve the chosen customization database (null = Standard) before booting the new game
         const dbSel = document.getElementById('setupDatabase');
         const dbId = dbSel ? dbSel.value : '';
@@ -218,7 +230,7 @@ const Setup = {
         if (dbId && typeof Storage !== 'undefined' && Storage.getDatabase) {
             try { database = await Storage.getDatabase(dbId); } catch (e) { database = null; }
         }
-        GameState.startNewGame(country, name, agent, database);
+        GameState.startNewGame(country, name, agent, database, gender);
         Main.afterLoad();
         // first time into a brand-new game: play the how-to full-screen (skippable). It stays reachable
         // afterwards from the Home screen and Settings. (Needs a real DOM — skipped in headless tests.)

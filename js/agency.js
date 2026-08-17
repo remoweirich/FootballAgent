@@ -169,8 +169,8 @@ const Agency = {
         if (p.noTalkUntil && p.noTalkUntil > GameState.absWeek()) return { ok: false, reason: I18n.t('ag.sign.noTalkWeeks', { n: p.noTalkUntil - GameState.absWeek() }) };
         if (p.age >= 23) return { ok: false, code: 'age', reason: I18n.t('ag.sign.under23') };
         if (this.atCapacity()) return { ok: false, reason: I18n.t('ag.sign.capacity', { n: this.capacity() }) };
-        const ceiling = GameState.agency.reputation + 12;
-        if (p.ability > ceiling) return { ok: false, reason: I18n.t('ag.sign.lowRep') };
+        // he won't sign if your agency's reputation is beneath his potential tier (see signConcession)
+        if (this.signConcession(p) == null) return { ok: false, reason: I18n.t('ag.sign.lowRep') };
         return { ok: true };
     },
 
@@ -191,14 +191,45 @@ const Agency = {
             sponsor: Math.max(6, Math.min(20, Math.round(12 + lev * 0.36 + tol)))
         };
     },
-    // signing ceiling: a LONGER commitment buys a little extra tolerance, but only a little
+    // The concession a new client makes is driven by his POTENTIAL tier vs the AGENCY's reputation:
+    // a future legend gives a big agency almost nothing and won't touch a small one at all, while a
+    // fourth-division prospect concedes a large cut to anyone. Tier is his ceiling, not his current level
+    // (you only ever sign U23 prospects), so a raw 60-rated wonderkid is judged on where he's headed.
+    POTENTIAL_TIER(pot) {
+        if (pot >= 91) return 'legend';           // legend of the game
+        if (pot >= 86) return 'intlSuperstar';    // international superstar
+        if (pot >= 81) return 'intlStar';         // top-flight (PL/La Liga/Bundesliga…) star
+        if (pot >= 74) return 'div1Regular';      // top-flight regular
+        if (pot >= 67) return 'div2Star';         // second-division star
+        if (pot >= 57) return 'div3Star';         // third-division star
+        return 'div4Star';                        // fourth-division star (and below)
+    },
+    // per tier: `floor` = the agency reputation below which he simply won't sign; `br` = reputation
+    // brackets (high→low) → the base commission % he'll concede. See the design spec for the numbers.
+    SIGN_CONCESSION: {
+        legend: { floor: 65, br: [[90, 9], [80, 6], [70, 3], [65, 1]] },
+        intlSuperstar: { floor: 60, br: [[90, 12], [80, 9], [70, 6], [65, 3], [60, 1]] },
+        intlStar: { floor: 58, br: [[90, 13], [80, 10], [70, 7], [65, 4], [58, 2]] },
+        div1Regular: { floor: 50, br: [[90, 15], [80, 12], [70, 9], [60, 6], [50, 3]] },
+        div2Star: { floor: 40, br: [[90, 18], [80, 15], [70, 12], [60, 9], [50, 3], [40, 1]] },
+        div3Star: { floor: 15, br: [[90, 25], [80, 21], [70, 18], [60, 13], [50, 10], [40, 8], [30, 5], [20, 2], [15, 1]] },
+        div4Star: { floor: 0, br: [[90, 25], [80, 25], [70, 25], [60, 21], [50, 18], [40, 15], [30, 12], [20, 10], [10, 6]] },
+    },
+    // The base commission % this prospect will concede to your agency now, or null if your reputation
+    // is beneath his tier (he won't sign at all). Used both for the sign gate and the sign ceiling.
+    signConcession(p) {
+        const cfg = this.SIGN_CONCESSION[this.POTENTIAL_TIER(p.potential || p.ability)];
+        const rep = GameState.agency.reputation;
+        if (rep < cfg.floor) return null;
+        for (const [minRep, pct] of cfg.br) if (rep >= minRep) return pct;
+        return cfg.br[cfg.br.length - 1][1];   // above the floor but below the lowest bracket
+    },
+    // signing ceiling: the tier/rep concession, plus a touch of extra tolerance for a longer commitment
     maxSignCommissions(p, term) {
-        const lev = GameState.agency.reputation - p.ability;
-        const termBonus = Math.max(0, term - 1) * 0.4;   // up to +3.6 at a 10-year deal
-        return {
-            wage: Math.max(5, Math.min(18, Math.round(9 + lev * 0.30 + termBonus))),
-            sponsor: Math.max(6, Math.min(20, Math.round(11 + lev * 0.34 + termBonus)))
-        };
+        const base = this.signConcession(p);
+        if (base == null) return { wage: 0, sponsor: 0, refuses: true };
+        const wage = Math.round(base + Math.max(0, term - 1) * 0.4);   // up to +3.6 at a 10-year deal
+        return { wage: Math.max(1, Math.min(25, wage)), sponsor: Math.max(1, Math.min(27, wage + 2)) };
     },
 
     // multi-step representation negotiation. term 1..10; longer term => higher tolerance.
@@ -1358,6 +1389,10 @@ const Agency = {
     // intrinsic value of a player, independent of any particular buyer
     playerValue(p) {
         let v = 380 * Math.pow(1.15, p.ability);                       // steep in current ability
+        // Soft-cap the very top of the ability curve so elite fees don't run away: it barely touches
+        // players below ~80, but bends the 90+ range down hard (to a giant club a 99 tops out around
+        // €250m, a 91 around €130m). Michaelis-style saturation toward a ~€300m asymptote.
+        v = 300e6 * v / (v + 317e6);
         const potGap = Math.max(0, (p.potential || p.ability) - p.ability);
         const potWeight = p.age <= 21 ? 1.3 : p.age <= 25 ? 0.8 : p.age <= 28 ? 0.4 : 0.15;
         v *= 1 + potGap * 0.045 * potWeight * this.potentialConfidence(p.ability);   // upside is worth most in the young — but muted for unproven low-ability players, see potentialConfidence()
