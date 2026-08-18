@@ -78,7 +78,7 @@ check('club cells use crests, virtual names resolved (no raw eu: as text)', H.ha
 
 // europeSection: competition dropdown (UCL/UEL/UECL) + phase content (tab bar lives in render())
 const view = runv(`LeaguesScreen.state.country='Europe'; LeaguesScreen.state.euComp='UCL'; return LeaguesScreen.europeSection()`);
-check('europeSection renders a competition <select> with all three comps', view.includes('<select') && view.includes('Champions League') && view.includes('Europa League') && view.includes('Conference League'));
+check('europeSection renders a competition <select> with all three comps', view.includes('<select') && view.includes('European Champions Cup') && view.includes('European Cup') && view.includes('European Challenge Cup'));
 check('euPhaseTabs exposes stage tabs for the tab bar (Qualifiers live in season 3)', runv(`return LeaguesScreen.euPhaseTabs().some(t=>t[1]==='Qualifiers')`));
 
 // a partial (leg-1-only) knockout tie renders a "to come" second leg without throwing

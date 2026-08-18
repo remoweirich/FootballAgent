@@ -17,6 +17,7 @@ const GameState = {
     databaseId: null,           // customization database this game was started on ('null' = Standard); see js/clubs.js applyDatabase
     clubLogos: null,            // { clubId: dataURI } logos added mid-save (Settings > Import logos); re-applied on load over the db
     clubNames: null,            // { clubId: name } names added mid-save (Settings > Import names — e.g. the real-names pack); re-applied on load
+    compNames: null,            // { compId: name } competition names added mid-save (same real-names pack); re-applied on load
     canEditGameState: true,     // gate for reputation/starting-division edits in Customize (flipped by the future paid "Gamestate editor")
 
     // ---- season phase ----
@@ -81,6 +82,7 @@ const GameState = {
         this.homeCountry = (country && REGIONS_BY_COUNTRY[country]) ? country : 'Netherlands';
         this.inbox = []; this.log = [];
         this.clubHistory = {}; this.clubEuropeBest = {};
+        this.clubNames = null; this.clubLogos = null; this.compNames = null;   // a fresh game carries no imported real names/logos
         this.lastSeasonReport = null; this.attendWindow = null; this.league = null;
         this.players = PlayerGen.generatePool();
         Agency.init();
@@ -168,6 +170,7 @@ const GameState = {
             databaseId: this.databaseId || null, // customization database to re-overlay on load (see _hydrateDatabase)
             clubLogos: this.clubLogos || null,   // mid-save logo additions (Settings > Import logos)
             clubNames: this.clubNames || null,   // mid-save name additions (Settings > Import names)
+            compNames: this.compNames || null,   // mid-save competition-name additions (real-names pack)
             schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
         };
     },
@@ -216,6 +219,21 @@ const GameState = {
         if (!this.clubNames || typeof Clubs === 'undefined') return;
         Object.entries(this.clubNames).forEach(([id, name]) => { const c = Clubs.getClubById(id); if (c && name) c.name = name; });
     },
+    // Rename a competition mid-save (Settings > Import names — e.g. the real-names pack, which restores
+    // the real league/cup/European names on top of the shipped generics). Stored per-save; re-applied on
+    // load AFTER any database overlay so the import wins. COMPETITIONS is reset to generics in Clubs.init.
+    setCompName(id, name) {
+        if (!id || !name) return;
+        if (!this.compNames) this.compNames = {};
+        this.compNames[id] = name;
+        if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) COMPETITIONS[id].name = name;
+        if (typeof Clubs !== 'undefined' && Clubs.refreshDivisionNames) Clubs.refreshDivisionNames();
+    },
+    _applyCompNames() {
+        if (!this.compNames || typeof COMPETITIONS === 'undefined') return;
+        Object.entries(this.compNames).forEach(([id, name]) => { if (COMPETITIONS[id] && name) COMPETITIONS[id].name = name; });
+        if (typeof Clubs !== 'undefined' && Clubs.refreshDivisionNames) Clubs.refreshDivisionNames();
+    },
     _applyClubLogos() {
         if (!this.clubLogos || typeof Clubs === 'undefined') return;
         Object.entries(this.clubLogos).forEach(([id, uri]) => { const c = Clubs.getClubById(id); if (c && uri) c.logo = uri; });
@@ -242,6 +260,7 @@ const GameState = {
             this.namedClean = !!d.namedClean;
             this.clubLogos = d.clubLogos || null;
             this.clubNames = d.clubNames || null;
+            this.compNames = d.compNames || null;
             // Restore the RNG: legacy saves predate the seed, so fall back to one derived from the
             // save so a given save always regenerates the same background squads. rngState (the live
             // position) is preferred; without it we reseed from rngSeed.
@@ -249,6 +268,7 @@ const GameState = {
             Rng.setState(d.rngState != null ? d.rngState : this.rngSeed);
             this._runMigrations(d);
             this._applyClubNames();   // overlay mid-save name additions (Settings > Import names — e.g. real-names pack)
+            this._applyCompNames();   // overlay mid-save competition-name additions (real-names pack), on top of any db overlay
             this._applyClubLogos();   // overlay mid-save logo additions on top of the db (Settings > Import logos)
             // the save holds only the players the user can see; rebuild the anonymous background
             // squads around them (a near no-op for old saves that still carry full squads)

@@ -5,7 +5,7 @@ const LEAGUES_DATA = {
         tiers: [
             {
                 id: "ERE",
-                name: "Eredivisie",
+                name: "Dutch First Division",
                 tier: 1,
                 clubs: [
                     { id: "ajax", name: "Amsterdam White", city: "Amsterdam", colors: { primary: "#FFFFFF", secondary: "#D2122E" }, reputation: 82 },
@@ -30,7 +30,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "EED",
-                name: "Eerste Divisie",
+                name: "Dutch Second Division",
                 tier: 2,
                 clubs: [
                     { id: "jong-ajax", name: "Amsterdam White II", city: "Amsterdam", colors: { primary: "#D2122E", secondary: "#FFFFFF" }, reputation: 52 },
@@ -57,7 +57,7 @@ const LEAGUES_DATA = {
             },
 	    {
                 id: "TWD",
-                name: "Tweede Divisie",
+                name: "Dutch Third Division",
                 tier: 3,
                 clubs: [
                     { id: "acv", name: "ACV", city: "Assen", colors: { primary: "#0066CC", secondary: "#FFFFFF" }, reputation: 39 },
@@ -82,7 +82,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "DRD",
-                name: "Derde Divisie",
+                name: "Dutch Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "Kloetinge", name: "Kloetinge", city: "Kloetinge", colors: { primary: "#2d9120", secondary: "#FFFFFF" }, reputation: 41 },
@@ -112,7 +112,7 @@ const LEAGUES_DATA = {
         tiers: [
             {
                 id: "PREM",
-                name: "Premier League",
+                name: "English First Division",
                 tier: 1,
                 clubs: [
                     { id: "Arsenal", name: "London Red", city: "London", colors: { primary: "#EF0107", secondary: "#FFFFFF" }, reputation: 90 },
@@ -139,7 +139,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "CHAMP",
-                name: "Championship",
+                name: "English Second Division",
                 tier: 2,
                 clubs: [
                     { id: "Wolves", name: "Wolves", city: "Wolverhampton", colors: { primary: "#FDB913", secondary: "#000000" }, reputation: 74 },
@@ -170,7 +170,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "LEAGUE1",
-                name: "League One",
+                name: "English Third Division",
                 tier: 3,
                 clubs: [
                     { id: "Stockport", name: "Stockport", city: "Stockport", colors: { primary: "#1c4fda", secondary: "#FFFFFF" }, reputation: 60 },
@@ -201,7 +201,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "LEAGUE2",
-                name: "League Two",
+                name: "English Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "Exeter", name: "Exeter", city: "Exeter", colors: { primary: "#DA291C", secondary: "#000000" }, reputation: 52 },
@@ -232,7 +232,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "Natleague",
-                name: "National League",
+                name: "English Fifth Division",
                 tier: 5,
                 clubs: [
                     { id: "Harrogate", name: "Harrogate", city: "Harrogate", colors: { primary: "#F58220", secondary: "#FFFFFF" }, reputation: 41 },
@@ -268,7 +268,7 @@ const LEAGUES_DATA = {
         tiers: [
             {
                 id: "BUNDES",
-                name: "Bundesliga",
+                name: "German First Division",
                 tier: 1,
                 clubs: [
                     { id: "Bayern Munich", name: "München Red", city: "München", colors: { primary: "#DC052D", secondary: "#FFFFFF" }, reputation: 90 },
@@ -293,7 +293,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "2BUNDES",
-                name: "2. Bundesliga",
+                name: "German Second Division",
                 tier: 2,
                 clubs: [
                     { id: "Wolfsburg", name: "Wolfsburg", city: "Wolfsburg", colors: { primary: "#009639", secondary: "#FFFFFF" }, reputation: 78 },
@@ -318,7 +318,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "3LIGA",
-                name: "3. Liga",
+                name: "German Third Division",
                 tier: 3,
                 clubs: [
                     { id: "Düsseldorf", name: "Düsseldorf", city: "Düsseldorf", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 64 },
@@ -345,7 +345,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "REGIONAL1",
-                name: "1. Regionalliga",
+                name: "German Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "1860", name: "München Teal", city: "Munich", colors: { primary: "#0A9BD6", secondary: "#FFFFFF" }, reputation: 48 },
@@ -376,7 +376,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "REGIONAL2",
-                name: "2. Regionalliga",
+                name: "German Fifth Division",
                 tier: 5,
                 clubs: [
                     { id: "Jeddeloh", name: "Jeddeloh", city: "Jeddeloh", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 38 },
@@ -407,7 +407,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "REGIONAL3",
-                name: "3. Regionalliga",
+                name: "German Sixth Division",
                 tier: 6,
                 clubs: [
                     { id: "Bayreuth", name: "Bayreuth", city: "Bayreuth", colors: { primary: "#FFD200", secondary: "#000000" }, reputation: 29 },
@@ -443,7 +443,7 @@ const LEAGUES_DATA = {
         tiers: [
             { 
                 id: "LaLiga", 
-                name: "La Liga", 
+                name: "Spanish First Division",
                 tier: 1,
                 clubs: [
                     { id: "Real Madrid", name: "Madrid White", city: "Madrid", colors: { primary: "#FFFFFF", secondary: "#FEBE10" }, reputation: 90 },
@@ -470,7 +470,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "LaLiga2", 
-                name: "La Liga 2",
+                name: "Spanish Second Division",
                 tier: 2,
                 clubs: [
                     { id: "Mallorca", name: "Mallorca", city: "Palma de Mallorca", colors: { primary: "#DA291C", secondary: "#000000" }, reputation: 74 },
@@ -499,7 +499,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "PrimeraSup",
-                name: "Primera Superior",
+                name: "Spanish Third Division",
                 tier: 3,
                 clubs: [
                     { id: "Zaragoza", name: "Zaragoza", city: "Zaragoza", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 59 },
@@ -528,7 +528,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "PrimeraInf",
-                name: "Primera Inferior",
+                name: "Spanish Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "Alcorcón", name: "Alcorcón", city: "Alcorcón", colors: { primary: "#FFD200", secondary: "#005BAC" }, reputation: 49 },
@@ -557,7 +557,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "Segunda",
-                name: "Segunda Federación",
+                name: "Spanish Fifth Division",
                 tier: 5,
                 clubs: [
                     { id: "Real Oviedo B", name: "Oviedo II", city: "Oviedo", colors: { primary: "#005BAC", secondary: "#FFFFFF" }, reputation: 35 },
@@ -589,7 +589,7 @@ const LEAGUES_DATA = {
         tiers: [
             { 
                 id: "SuperLeagueCH", 
-                name: "Super League", 
+                name: "Swiss First Division",
                 tier: 1,
                 clubs: [
                     { id: "Basel", name: "Basel Red", city: "Basel", colors: { primary: "#E2001A", secondary: "#1C3F94" }, reputation: 80 },
@@ -608,7 +608,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "ChallengeLeague",
-                name: "Challenge League",
+                name: "Swiss Second Division",
                 tier: 2,
                 clubs: [
                     { id: "Winterthur", name: "Winterthur", city: "Winterthur", colors: { primary: "#DA291C", secondary: "#FFFFFF" }, reputation: 63 },
@@ -625,7 +625,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "PromotionLeague",
-                name: "Promotion League",
+                name: "Swiss Third Division",
                 tier: 3,
                 clubs: [
                     { id: "Bellinzona", name: "Bellinzona", city: "Bellinzona", colors: { primary: "#C8102E", secondary: "#000000" }, reputation: 47 },
@@ -650,7 +650,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "1.LigaCH",
-                name: "1. Liga",
+                name: "Swiss Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "Vevey-Sports", name: "Vevey", city: "Vevey", colors: { primary: "#DA291C", secondary: "#FFFFFF" }, reputation: 28 },
@@ -681,7 +681,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "2.LigaCH",
-                name: "2. Liga",
+                name: "Swiss Fifth Division",
                 tier: 5,
                 clubs: [
                     { id: "FC Courtételle", name: "Courtételle", city: "Courtételle", colors: { primary: "#0033A0", secondary: "#FFFFFF" }, reputation: 23 },
@@ -717,7 +717,7 @@ const LEAGUES_DATA = {
         tiers: [
             { 
                 id: "SerieA", 
-                name: "Serie A", 
+                name: "Italian First Division",
                 tier: 1,
                 clubs: [
                     { id: "Inter Milan", name: "Milan Navy", city: "Milan", colors: { primary: "#0B1560", secondary: "#000000" }, reputation: 88 },
@@ -744,7 +744,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "SerieB", 
-                name: "Serie B",
+                name: "Italian Second Division",
                 tier: 2,
                 clubs: [
                     { id: "Pisa SC", name: "Pisa", city: "Pisa", colors: { primary: "#DA291C", secondary: "#000000" }, reputation: 72 },
@@ -771,7 +771,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "SerieC",
-                name: "Serie C",
+                name: "Italian Third Division",
                 tier: 3,
                 clubs: [
                     { id: "Reggiana", name: "Reggiana", city: "Reggiana", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 60 },
@@ -802,7 +802,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "SerieD",
-                name: "Serie D",
+                name: "Italian Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "Team Altamura", name: "Altamura", city: "Altamura", colors: { primary: "#E30613", secondary: "#FFFFFF" }, reputation: 45 },
@@ -834,7 +834,7 @@ const LEAGUES_DATA = {
         tiers: [
             { 
                 id: "Ligue1", 
-                name: "Ligue 1", 
+                name: "French First Division",
                 tier: 1,
                 clubs: [
                     { id: "PSG", name: "Paris Blue", city: "Paris", colors: { primary: "#005BAC", secondary: "#E30613" }, reputation: 90 },
@@ -859,7 +859,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "Ligue2", 
-                name: "Ligue 2",
+                name: "French Second Division",
                 tier: 2,
                 clubs: [
                     { id: "FC Nantes", name: "Nantes", city: "Nantes", colors: { primary: "#FCD200", secondary: "#009640" }, reputation: 72 },
@@ -884,7 +884,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "Ligue3",
-                name: "Ligue 3",
+                name: "French Third Division",
                 tier: 3,
                 clubs: [
                     { id: "Amiens SC", name: "Amiens", city: "Amiens", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 61 },
@@ -909,7 +909,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "Ligue4",
-                name: "Ligue 4",
+                name: "French Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "Girondins Bordeaux", name: "Bordeaux", city: "Bordeaux", colors: { primary: "#0F1B5F", secondary: "#FFFFFF" }, reputation: 49 },
@@ -938,7 +938,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "Ligue5",
-                name: "Ligue 5",
+                name: "French Fifth Division",
                 tier: 5,
                 clubs: [
                     { id: "St. Colomban Locminé", name: "Locminé", city: "Locminé", colors: { primary: "#E30613", secondary: "#009640" }, reputation: 38 },
@@ -974,7 +974,7 @@ const LEAGUES_DATA = {
         tiers: [
             {
                 id: "LigaPortugal",
-                name: "Primeira Liga",
+                name: "Portuguese First Division",
                 tier: 1,
                 clubs: [
                     { id: "porto", name: "Porto", city: "Porto", colors: { primary: "#1E4FCB", secondary: "#FFFFFF" }, reputation: 80 },
@@ -999,7 +999,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "LigaPortugal2",
-                name: "Liga Portugal 2",
+                name: "Portuguese Second Division",
                 tier: 2,
                 clubs: [
                     { id: "cd tondela", name: "Tondela", city: "Tondela", colors: { primary: "#1E9E4A", secondary: "#F5D310" }, reputation: 63 },
@@ -1024,7 +1024,7 @@ const LEAGUES_DATA = {
             },
 	    {
                 id: "Liga3",
-                name: "Liga 3",
+                name: "Portuguese Third Division",
                 tier: 3,
                 clubs: [
                     { id: "ad fafe", name: "Fafe", city: "Fafe", colors: { primary: "#F5D310", secondary: "#111111" }, reputation: 41 },
@@ -1051,7 +1051,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "Liga4",
-                name: "Liga 4",
+                name: "Portuguese Fourth Division",
                 tier: 4,
                 clubs: [
                     { id: "CF Marialvas", name: "Marialvas", city: "Cantanhede", colors: { primary: "#D01317", secondary: "#F5D310" }, reputation: 22 },
@@ -1087,7 +1087,7 @@ const LEAGUES_DATA = {
         tiers: [
             {
                 id: "JupilerProLeague",
-                name: "Jupiler Pro League",
+                name: "Belgian First Division",
                 tier: 1,
                 clubs: [
                     { id: "club brugge", name: "Bruges Blue", city: "Bruges", colors: { primary: "#1E4FCB", secondary: "#111111" }, reputation: 81 },
@@ -1112,7 +1112,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "ChallengerProLeague",
-                name: "Challenger Pro League",
+                name: "Belgian Second Division",
                 tier: 2,
                 clubs: [
                     { id: "beerschot", name: "Antwerp Purple", city: "Antwerp", colors: { primary: "#6A2C91", secondary: "#FFFFFF" }, reputation: 63 },
@@ -1137,7 +1137,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "BelgianDivision1",
-                name: "Belgian Division 1",
+                name: "Belgian Third Division",
                 tier: 3,
                 clubs: [
                     { id: "tubize-braine", name: "Tubize", city: "Tubize", colors: { primary: "#D01317", secondary: "#D4AF37" }, reputation: 50 },
@@ -1164,7 +1164,7 @@ const LEAGUES_DATA = {
             },
             {
                 id: "BelgianDivision2",
-                name: "Belgian Division 2",
+                name: "Belgian Fourth Division",
                 tier: 4,
                 clubs: [
 		            { id: "stockay", name: "Saint-Georges-sur-Meuse", city: "Saint-Georges-sur-Meuse", colors: { primary: "#D01317", secondary: "#FFFFFF" }, reputation: 36 },
@@ -1444,6 +1444,9 @@ const Clubs = {
     
     init() {
         this.allClubs = [];
+        // COMPETITIONS is a shared global mutated by name overlays; reset it to the shipped generic names
+        // so a previous save's real-name import never bleeds into this game (mirrors the clean club rebuild)
+        if (typeof resetCompetitionNames === 'function') resetCompetitionNames();
         // drop any created-country injections from a previous game this session, so we rebuild a clean
         // stock world before the current database's overlay (incl. its created countries) is applied
         if (typeof WorldExt !== 'undefined' && WorldExt.reset) WorldExt.reset();
@@ -1515,6 +1518,7 @@ const Clubs = {
                 this.parentReserveId[parent.id] = c.id;
             }
         });
+        this.refreshDivisionNames();   // sync cached divisionName to the (generic) competition names
         return this.allClubs;
     },
 
@@ -1530,7 +1534,13 @@ const Clubs = {
         return this.allClubs.filter(c => c.region === regionId);
     },
 
-    DIV_NAMES: { ERE: 'Eredivisie', EED: 'Eerste Divisie', TWD: 'Tweede Divisie', DRD: 'Derde Divisie', PREM: 'Premier League', CHAMP: 'Championship', LEAGUE1: 'League One', LEAGUE2: 'League Two', Natleague: 'National League', BUNDES: 'Bundesliga', '2BUNDES': '2. Bundesliga', '3LIGA': '3. Liga', REGIONAL1: '1. Regionalliga', REGIONAL2: '2. Regionalliga', REGIONAL3: '3. Regionalliga', LaLiga: 'La Liga', LaLiga2: 'La Liga 2', PrimeraSup: 'Primera Superior', PrimeraInf: 'Primera Inferior', Segunda: 'Segunda Federación', SuperLeagueCH: 'Super League', ChallengeLeague: 'Challenge League', PromotionLeague: 'Promotion League', '1.LigaCH': '1. Liga', '2.LigaCH': '2. Liga', SerieA: 'Serie A', SerieB: 'Serie B', SerieC: 'Serie C', SerieD: 'Serie D', Ligue1: 'Ligue 1', Ligue2: 'Ligue 2', Ligue3: 'Ligue 3', Ligue4: 'Ligue 4', Ligue5: 'Ligue 5', LigaPortugal: 'Primeira Liga', LigaPortugal2: 'Liga Portugal 2', Liga3: 'Liga 3', Liga4: 'Liga 4', JupilerProLeague: 'Jupiler Pro League', ChallengerProLeague: 'Challenger Pro League', BelgianDivision1: 'Belgian Division 1', BelgianDivision2: 'Belgian Division 2' },
+    // Generic (copyright-safe) division names — the display source is compName()/COMPETITIONS; this map is
+    // the fallback + the initial c.divisionName. refreshDivisionNames() re-syncs c.divisionName to compName
+    // after any name overlay (database or the real-names import), so a restored real name shows everywhere.
+    DIV_NAMES: { ERE: 'Dutch First Division', EED: 'Dutch Second Division', TWD: 'Dutch Third Division', DRD: 'Dutch Fourth Division', PREM: 'English First Division', CHAMP: 'English Second Division', LEAGUE1: 'English Third Division', LEAGUE2: 'English Fourth Division', Natleague: 'English Fifth Division', BUNDES: 'German First Division', '2BUNDES': 'German Second Division', '3LIGA': 'German Third Division', REGIONAL1: 'German Fourth Division', REGIONAL2: 'German Fifth Division', REGIONAL3: 'German Sixth Division', LaLiga: 'Spanish First Division', LaLiga2: 'Spanish Second Division', PrimeraSup: 'Spanish Third Division', PrimeraInf: 'Spanish Fourth Division', Segunda: 'Spanish Fifth Division', SuperLeagueCH: 'Swiss First Division', ChallengeLeague: 'Swiss Second Division', PromotionLeague: 'Swiss Third Division', '1.LigaCH': 'Swiss Fourth Division', '2.LigaCH': 'Swiss Fifth Division', SerieA: 'Italian First Division', SerieB: 'Italian Second Division', SerieC: 'Italian Third Division', SerieD: 'Italian Fourth Division', Ligue1: 'French First Division', Ligue2: 'French Second Division', Ligue3: 'French Third Division', Ligue4: 'French Fourth Division', Ligue5: 'French Fifth Division', LigaPortugal: 'Portuguese First Division', LigaPortugal2: 'Portuguese Second Division', Liga3: 'Portuguese Third Division', Liga4: 'Portuguese Fourth Division', JupilerProLeague: 'Belgian First Division', ChallengerProLeague: 'Belgian Second Division', BelgianDivision1: 'Belgian Third Division', BelgianDivision2: 'Belgian Fourth Division' },
+    // Sync every club's cached divisionName to the current competition name (generic default, or the real
+    // name once the real-names pack is imported). Called after Clubs.init, applyDatabase and compName import.
+    refreshDivisionNames() { if (typeof compName !== 'function') return; (this.allClubs || []).forEach(c => { if (c.division) c.divisionName = compName(c.division); }); },
     DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6, LaLiga: 1, LaLiga2: 2, PrimeraSup: 3, PrimeraInf: 4, Segunda: 5, SuperLeagueCH: 1, ChallengeLeague: 2, PromotionLeague: 3, '1.LigaCH': 4, '2.LigaCH': 5, SerieA: 1, SerieB: 2, SerieC: 3, SerieD: 4, Ligue1: 1, Ligue2: 2, Ligue3: 3, Ligue4: 4, Ligue5: 5, LigaPortugal: 1, LigaPortugal2: 2, Liga3: 3, Liga4: 4, JupilerProLeague: 1, ChallengerProLeague: 2, BelgianDivision1: 3, BelgianDivision2: 4 },
     setDivision(clubId, divId) {
         const c = this.getClubById(clubId); if (!c) return;
@@ -1567,6 +1577,7 @@ const Clubs = {
             const rov = db.overrides[reserveId];
             if (parent && parent.logo && reserve && !(rov && rov.logo)) reserve.logo = parent.logo;
         });
+        this.refreshDivisionNames();   // db competition-name overrides -> refresh cached club divisionName
     },
     // day-one club count for a division straight from LEAGUES_DATA, ignoring whatever
     // promotion/relegation has since done to allClubs - used by Sim's post-rollover

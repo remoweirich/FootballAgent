@@ -477,7 +477,9 @@ const Dialogue = {
     HOBBIES: ['golf', 'fishing', 'gaming', 'chess', 'cooking', 'classic cars', 'photography', 'making music', 'padel', 'poker'],
     TOP5_DIVS: ['PREM', 'LaLiga', 'SerieA', 'BUNDES', 'Ligue1'],
     // the big-five leagues a talent might dream of, and how strongly (the glamour destinations lead)
-    LEAGUE_NAMES: { PREM: 'the Premier League', LaLiga: 'La Liga', BUNDES: 'the Bundesliga', SerieA: 'Serie A', Ligue1: 'Ligue 1' },
+    // the top-flight leagues a client can dream of joining — displayed via compName (generic by default,
+    // or the real name once the real-names pack is imported), so no trademarked name is hard-coded here
+    LEAGUE_IDS: ['PREM', 'LaLiga', 'BUNDES', 'SerieA', 'Ligue1'],
     LEAGUE_PULL: { PREM: 4, LaLiga: 3, BUNDES: 3, SerieA: 2, Ligue1: 1.5 },
     BIG5_COUNTRY: { England: 'PREM', Spain: 'LaLiga', Germany: 'BUNDES', Italy: 'SerieA', France: 'Ligue1' },
     // "smaller" football nations whose talents more often dream of a bigger league abroad
@@ -583,8 +585,8 @@ const Dialogue = {
     _rollDreamLeague(p) {
         const homeDiv = this.BIG5_COUNTRY[this._homeCountryOf(p)];
         const curDiv = (Clubs.getClubById(effectiveClubId(p)) || {}).division;
-        const opts = Object.keys(this.LEAGUE_NAMES).filter(d => d !== homeDiv && d !== curDiv);
-        const pool = opts.length ? opts : Object.keys(this.LEAGUE_NAMES);
+        const opts = this.LEAGUE_IDS.filter(d => d !== homeDiv && d !== curDiv);
+        const pool = opts.length ? opts : this.LEAGUE_IDS;
         let r = Rng.next() * pool.reduce((s, d) => s + (this.LEAGUE_PULL[d] || 1), 0);
         for (const d of pool) { r -= (this.LEAGUE_PULL[d] || 1); if (r <= 0) return d; }
         return pool[0];
@@ -662,7 +664,7 @@ const Dialogue = {
         const f = this.ensureFacts(p), a = f.ambition;
         const de = this._isDe() ? DIALOGUE_DE.amb : null;
         const fav = f.favClub.clubId ? this._clubName(f.favClub.clubId) : (de ? de.favFallback : 'the club I grew up on');
-        const league = this.LEAGUE_NAMES[a.div] || (de ? de.leagueFallback : 'a bigger league');
+        const league = (a.div && typeof compName === 'function' && compName(a.div)) || (de ? de.leagueFallback : 'a bigger league');
         const club = a.clubId ? this._clubName(a.clubId) : (de ? de.clubFallback : 'a big club');
         if (de) {
             const t = de.types[a.type];

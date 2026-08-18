@@ -339,8 +339,8 @@ const LeaguesScreen = {
         if (country === 'Germany') {
             const G = GameState.league && GameState.league.germanReleg;
             if (!G) return `<p class="hint">${I18n.t('leagues.relegDecided46')}</p>`;
-            return `<div class="section-label">Bundesliga / 2. Bundesliga</div><div class="fcard">${this.relegTie(G.top)}</div>
-                <div class="section-label">2. Bundesliga / 3. Liga</div><div class="fcard">${this.relegTie(G.bottom)}</div>`;
+            return `<div class="section-label">${compName('BUNDES')} / ${compName('2BUNDES')}</div><div class="fcard">${this.relegTie(G.top)}</div>
+                <div class="section-label">${compName('2BUNDES')} / ${compName('3LIGA')}</div><div class="fcard">${this.relegTie(G.bottom)}</div>`;
         }
         if (country === 'Spain') {
             const P = GameState.league && GameState.league.playoffs;
@@ -376,7 +376,7 @@ const LeaguesScreen = {
                 if (!po) return `<div class="section-label">${title}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
                 return `<div class="section-label">${title}</div><div class="fcard">${hd(I18n.t('leagues.round1'))}${this.tie(po.g1)}${hd(I18n.t('leagues.round2barrage'))}${this.tie(po.g2)}${po.winner ? `<div class="frow"><span class="frow__k">${I18n.t('leagues.intoBarrage')}</span><span class="frow__v" style="color:var(--info-text)">${UI.clubName(po.winner)}</span></div>` : ''}</div>`;
             }).join('');
-            const BAR = [['L1L2', 'Ligue 1 / Ligue 2'], ['L2L3', 'Ligue 2 / Ligue 3'], ['L3L4', 'Ligue 3 / Ligue 4'], ['L4L5', 'Ligue 4 / Ligue 5']];
+            const BAR = [['L1L2', `${compName('Ligue1')} / ${compName('Ligue2')}`], ['L2L3', `${compName('Ligue2')} / ${compName('Ligue3')}`], ['L3L4', `${compName('Ligue3')} / ${compName('Ligue4')}`], ['L4L5', `${compName('Ligue4')} / ${compName('Ligue5')}`]];
             const barrages = BAR.map(([k, label]) => {
                 const t = bar && bar[k];
                 if (!t) return `<div class="section-label">${I18n.t('leagues.barrageLabel', { comp: label })}</div><p class="hint">${I18n.t('leagues.notYet46')}</p>`;
@@ -479,7 +479,7 @@ const LeaguesScreen = {
         const c = ed.comps[comp];
         const live = GameState.league && GameState.league.europe;
         const seasonNote = live ? '' : `<p class="hint" style="margin-bottom:var(--space-3)">${I18n.t('leagues.lastSeasonComps')}</p>`;
-        const dd = `<select class="select-input" style="margin-bottom:var(--space-3)" onchange="LeaguesScreen.setEuComp(this.value)">${[['UCL', 'Champions League'], ['UEL', 'Europa League'], ['UECL', 'Conference League']].map(([k, l]) => `<option value="${k}" ${comp === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+        const dd = `<select class="select-input" style="margin-bottom:var(--space-3)" onchange="LeaguesScreen.setEuComp(this.value)">${['UCL', 'UEL', 'UECL'].map(k => `<option value="${k}" ${comp === k ? 'selected' : ''}>${compName(k)}</option>`).join('')}</select>`;
         const icon = (typeof europeTrophyIcon === 'function') ? europeTrophyIcon(comp) : '🏆';
         const euHidden = c.ko && c.ko.final && c.ko.final._attendId && typeof Attend !== 'undefined' && Attend.isHidden(c.ko.final._attendId);
         const winner = (c.ko && c.ko.winner && !euHidden) ? `<div class="result ok" style="text-align:center;margin-bottom:var(--space-3)">${icon} ${I18n.t('leagues.euWinnerLine', { comp: (COMPETITIONS[comp] || {}).name, club: UI.clubName(c.ko.winner) })}</div>` : '';

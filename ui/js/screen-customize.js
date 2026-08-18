@@ -514,7 +514,12 @@ const CustomizeScreen = {
             let map;
             try { map = this._parseNamesText(String(reader.result || '')); } catch (e) { this._toast(I18n.t('customize.importBad')); return; }
             let n = 0;
-            Object.entries(map).forEach(([id, nm]) => { if (Clubs.getClubById(id) && nm) { this._setOverride(id, { name: String(nm).slice(0, 40) }); n++; } });
+            Object.entries(map).forEach(([id, nm]) => {
+                if (!nm) return;
+                const name = String(nm).slice(0, 40);
+                if (Clubs.getClubById(id)) { this._setOverride(id, { name }); n++; }
+                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { if (!this.db.competitions) this.db.competitions = {}; this.db.competitions[id] = { name }; n++; }
+            });
             this._snapshot = JSON.stringify(this.db.overrides);   // fold imports into the cancel baseline
             this._refreshTable();
             this._toast(I18n.t('customize.namesImported', { n }));
@@ -716,7 +721,11 @@ const CustomizeScreen = {
             try { map = this._parseNamesText(String(reader.result || '')); } catch (e) { this._toast(I18n.t('customize.importBad')); return; }
             let n = 0;
             Object.entries(map).forEach(([id, nm]) => {
-                if (nm && typeof Clubs !== 'undefined' && Clubs.getClubById(id) && typeof GameState !== 'undefined') { GameState.setClubName(id, String(nm).slice(0, 40)); n++; }
+                if (!nm || typeof GameState === 'undefined') return;
+                const name = String(nm).slice(0, 40);
+                // the same file carries both clubs and competitions — route each id to the right one
+                if (typeof Clubs !== 'undefined' && Clubs.getClubById(id)) { GameState.setClubName(id, name); n++; }
+                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { GameState.setCompName(id, name); n++; }
             });
             if (typeof GameState !== 'undefined' && GameState.save) GameState.save();
             if (typeof Router !== 'undefined' && Router.refresh) Router.refresh();

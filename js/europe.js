@@ -22,14 +22,15 @@ const EUROPE_VIRTUAL_MAP = (function () {
 
 // tag -> row styling for the domestic top-division highlighting (section 5). 'CHAMP' is the champion
 // (darkest); the rest mirror the berth each finishing position earns.
+// Labels are read by getter so they follow the current (generic, or imported-real) competition names.
 const EUROPE_TAG_INFO = {
     CHAMP: { label: 'Champion', color: '#14532D', text: '#ffffff' },
-    U: { label: 'Champions League', color: '#16A34A', text: '#ffffff' },
-    UCLq: { label: 'Champions League qualifying', color: '#86EFAC', text: '#0b3d1e' },
-    UEL: { label: 'Europa League', color: '#2563EB', text: '#ffffff' },
-    UELcup: { label: 'Europa League', color: '#2563EB', text: '#ffffff' },
-    UELq: { label: 'Europa League qualifying', color: '#60A5FA', text: '#0b2a5b' },
-    UECL: { label: 'Conference League', color: '#93C5FD', text: '#0b2a5b' },
+    U: { get label() { return compName('UCL'); }, color: '#16A34A', text: '#ffffff' },
+    UCLq: { get label() { return compName('UCL') + ' qualifying'; }, color: '#86EFAC', text: '#0b3d1e' },
+    UEL: { get label() { return compName('UEL'); }, color: '#2563EB', text: '#ffffff' },
+    UELcup: { get label() { return compName('UEL'); }, color: '#2563EB', text: '#ffffff' },
+    UELq: { get label() { return compName('UEL') + ' qualifying'; }, color: '#60A5FA', text: '#0b2a5b' },
+    UECL: { get label() { return compName('UECL'); }, color: '#93C5FD', text: '#0b2a5b' },
 };
 
 // Distinct trophy silhouettes for the three competitions (used on honours pills, client history,

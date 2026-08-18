@@ -1180,12 +1180,12 @@ const Sim = {
             const nm = id => Clubs.getClubById(id)?.name || id;
             GameState.addMail({
                 kind: 'news', subject: I18n.t('sim.prorel.subj'),
-                body: `${I18n.t('sim.prorel.upTo', { div: 'Eredivisie' })} ${prorel.eedUp.map(nm).join(', ')}<br>` +
-                    `${I18n.t('sim.prorel.downFrom', { div: 'Eredivisie' })} ${prorel.ereDown.map(nm).join(', ')}<br><br>` +
-                    `${I18n.t('sim.prorel.upTo', { div: 'Eerste' })} ${prorel.twdUp.map(nm).join(', ')}<br>` +
-                    `${I18n.t('sim.prorel.downFrom', { div: 'Eerste' })} ${prorel.eedDown.map(nm).join(', ')}<br><br>` +
-                    `${I18n.t('sim.prorel.upTo', { div: 'Tweede' })} ${prorel.drdUp.map(nm).join(', ')}<br>` +
-                    `${I18n.t('sim.prorel.downFrom', { div: 'Tweede' })} ${prorel.twdDown.map(nm).join(', ')}`, ttl: 6
+                body: `${I18n.t('sim.prorel.upTo', { div: compName('ERE') })} ${prorel.eedUp.map(nm).join(', ')}<br>` +
+                    `${I18n.t('sim.prorel.downFrom', { div: compName('ERE') })} ${prorel.ereDown.map(nm).join(', ')}<br><br>` +
+                    `${I18n.t('sim.prorel.upTo', { div: compName('EED') })} ${prorel.twdUp.map(nm).join(', ')}<br>` +
+                    `${I18n.t('sim.prorel.downFrom', { div: compName('EED') })} ${prorel.eedDown.map(nm).join(', ')}<br><br>` +
+                    `${I18n.t('sim.prorel.upTo', { div: compName('TWD') })} ${prorel.drdUp.map(nm).join(', ')}<br>` +
+                    `${I18n.t('sim.prorel.downFrom', { div: compName('TWD') })} ${prorel.twdDown.map(nm).join(', ')}`, ttl: 6
             });
         }
         GameState.players.forEach(p => {
