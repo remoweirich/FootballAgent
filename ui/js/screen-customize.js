@@ -1211,7 +1211,7 @@ const CustomizeScreen = {
     _injectCSS() {
         if (document.getElementById('cxCSS')) return;
         const css = `
-        .cx-wrap{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0) + 8px) 0 calc(env(safe-area-inset-bottom,0) + 8px)}
+        .cx-wrap{position:fixed;inset:0;background:var(--bg);color:var(--text);z-index:50;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0) + 8px) 0 calc(env(safe-area-inset-bottom,0) + 8px)}
         .cx-head{display:flex;align-items:center;gap:8px;padding:6px 12px 10px;border-bottom:1px solid var(--line)}
         .cx-back{background:none;border:none;color:var(--text-secondary);font-size:22px;cursor:pointer;display:flex;padding:4px}
         .cx-htitle{font-size:var(--fs-lg);font-weight:var(--weight-semibold);color:var(--text-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -46,13 +46,18 @@ function copyDir(src, dest) {
     }
 }
 
+// Music feature is disabled for now (playback commented out in the UI). Keep the ~16MB of mp3s out of
+// the bundle/APK. To bring music back: set this true AND uncomment the Sound.startPlaylist() calls
+// (main.js / screen-start.js) + the Settings music UI. The source mp3s stay in ui/assets/audio/music/.
+const INCLUDE_MUSIC = false;
+
 // Scan ui/assets/audio/music/ and (re)write ui/js/music-manifest.js so the playlist matches
 // whatever mp3s are actually present. The display name is the filename (underscores → spaces).
 const AUDIO_EXT = new Set(['.mp3', '.ogg', '.m4a', '.aac', '.wav']);
 function genMusicManifest() {
     const dir = path.join(ROOT, 'ui', 'assets', 'audio', 'music');
     let tracks = [];
-    if (fs.existsSync(dir)) {
+    if (INCLUDE_MUSIC && fs.existsSync(dir)) {
         tracks = fs.readdirSync(dir)
             .filter(f => AUDIO_EXT.has(path.extname(f).toLowerCase()))
             .sort((a, b) => a.localeCompare(b))
@@ -76,6 +81,8 @@ function build() {
     // static assets (audio, and anything else under ui/assets) — optional; the app runs without them
     const assetsSrc = path.join(ROOT, 'ui', 'assets');
     if (fs.existsSync(assetsSrc)) copyDir(assetsSrc, path.join(OUT, 'assets'));
+    // music disabled -> keep the mp3s out of the bundle (source files remain for re-instatement)
+    if (!INCLUDE_MUSIC) rmrf(path.join(OUT, 'assets', 'audio', 'music'));
 
     let html = fs.readFileSync(path.join(ROOT, 'ui', 'index.html'), 'utf8');
     // ui/index.html loads the engine via "../js/x.js" (relative to ui/, i.e. the

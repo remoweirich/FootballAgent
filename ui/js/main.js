@@ -15,7 +15,8 @@ const Main = {
     },
     afterLoad() {
         if (typeof Monetization !== 'undefined') Monetization.applyToGame();   // reflect owned entitlements into the loaded game
-        if (typeof Sound !== 'undefined') Sound.startPlaylist();   // music plays continuously across menu + in-game
+        // MUSIC DISABLED for now (SFX stays). Uncomment to bring the background playlist back.
+        // if (typeof Sound !== 'undefined') Sound.startPlaylist();   // music plays continuously across menu + in-game
         Router.start();
     }
 };

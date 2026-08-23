@@ -39,7 +39,8 @@ const StartScreen = {
                 <button class="ss-icon" onclick="StartScreen.store()" aria-label="${I18n.t('store.title')}">${this.BAG}<span>${I18n.t('store.title')}</span></button>
             </div>
         </div></div>`;
-        if (typeof Sound !== 'undefined') Sound.startPlaylist();
+        // MUSIC DISABLED for now. Uncomment to bring the background playlist back.
+        // if (typeof Sound !== 'undefined') Sound.startPlaylist();
     },
 
     // label under the Continue button, from the autosave summary read in show()

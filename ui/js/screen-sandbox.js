@@ -122,7 +122,7 @@ const Sandbox = {
     _css() {
         if (document.getElementById('sbxCSS')) return;
         const css = `
-        .sbx-wrap{position:fixed;inset:0;background:var(--bg);z-index:56;display:flex;flex-direction:column}
+        .sbx-wrap{position:fixed;inset:0;background:var(--bg);color:var(--text);z-index:56;display:flex;flex-direction:column}
         .sbx-bar{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top,0) + 10px) 12px 10px;border-bottom:.5px solid var(--line-strong);background:var(--surface)}
         .sbx-back{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex}
         .sbx-title{font-weight:var(--weight-semibold);font-size:var(--fs-lg)}

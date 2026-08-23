@@ -192,7 +192,10 @@ const Router = {
         const app = document.getElementById('app');
         let chrome;
         if (def.isMain) {
-            chrome = `<div class="app-bar"><span class="app-bar__title app-bar__title--shrink">${this.title(def, params)}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
+            // show the tab's own bottom-nav symbol as the header, instead of the screen-name text
+            const nav = this.NAV.find(n => n[0] === name);
+            const titleHTML = nav ? `<i class="ti ${nav[1]}" style="font-size:26px"></i>` : this.title(def, params);
+            chrome = `<div class="app-bar"><span class="app-bar__title app-bar__title--shrink">${titleHTML}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
         } else {
             chrome = `<div class="push-bar"><button class="push-bar__back" onclick="Router.back()" aria-label="${I18n.t('common.back')}"><i class="ti ti-chevron-left" style="font-size:24px"></i></button><span class="push-bar__title">${this.title(def, params)}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
         }

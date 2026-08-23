@@ -84,7 +84,7 @@ const StoreScreen = {
     _css() {
         if (document.getElementById('stCSS')) return;
         const css = `
-        .st-wrap{position:fixed;inset:0;background:var(--bg);z-index:57;display:flex;flex-direction:column}
+        .st-wrap{position:fixed;inset:0;background:var(--bg);color:var(--text);z-index:57;display:flex;flex-direction:column}
         .st-bar{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top,0) + 10px) 12px 10px;border-bottom:.5px solid var(--line-strong);background:var(--surface)}
         .st-back{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex}
         .st-title{font-weight:var(--weight-semibold);font-size:var(--fs-lg)}

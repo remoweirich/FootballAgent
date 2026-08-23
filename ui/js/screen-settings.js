@@ -50,8 +50,9 @@ const SettingsScreen = {
         const COIN = `<i class="ti ti-coin set-row__ico"></i>`;
         const currencyRow = `<div class="set-row set-row--static">${COIN}<span class="set-row__label">${I18n.t('settings.currency')}</span>
             <div class="set-seg">${curCodes.map(c => `<button class="set-seg__btn${curCode === c ? ' is-on' : ''}" onclick="SettingsScreen.setCurrency('${c}')">${c}</button>`).join('')}</div></div>`;
-        // Per-track enable/disable list (only shown when bundled music exists)
-        const tracks = (typeof Sound !== 'undefined') ? Sound.allTracks() : [];
+        // MUSIC DISABLED for now — the per-track list is hidden. Restore the block below to re-enable.
+        const trackGroup = '';
+        /* const tracks = (typeof Sound !== 'undefined') ? Sound.allTracks() : [];
         const trackGroup = tracks.length ? `<div class="set-heading" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
             <span>${I18n.t('settings.musicTracks')}</span>
             <button class="gbtn" onclick="SettingsScreen.skipTrack()"><i class="ti ti-player-track-next"></i>${I18n.t('settings.skipTrack')}</button></div>
@@ -61,7 +62,7 @@ const SettingsScreen = {
                 return `<div class="set-row" style="cursor:pointer" onclick="SettingsScreen.playTrack('${enc}')">
                     <i class="ti ti-player-play set-row__ico"></i><span class="set-row__label">${UI.esc(tk.name)}</span>
                     <span class="set-check${on ? ' is-on' : ''}" onclick="event.stopPropagation();SettingsScreen.toggleTrack('${enc}')"></span></div>`;
-            }).join('')}</div>` : '';
+            }).join('')}</div>` : ''; */
         // mid-save logo import is only meaningful when a game is running
         const inGame = typeof GameState !== 'undefined' && GameState.players && GameState.players.length > 0;
         const M = (typeof Monetization !== 'undefined') ? Monetization : null;
@@ -101,7 +102,7 @@ const SettingsScreen = {
                 <div class="set-heading">${I18n.t('settings.groupAppearance')}</div>
                 <div class="set-group">
                     ${themeRow}
-                    ${aRow('music', MUSIC, I18n.t('settings.music'))}
+                    ${/* MUSIC DISABLED for now — restore aRow('music', MUSIC, I18n.t('settings.music')) to re-enable */ ''}
                     ${aRow('sfx', VOL, I18n.t('settings.sfx'))}
                 </div>
 
@@ -209,7 +210,7 @@ const SettingsScreen = {
     _injectCSS() {
         if (document.getElementById('setCSS')) return;
         const css = `
-        .set-wrap{position:fixed;inset:0;background:var(--bg);z-index:55;display:flex;flex-direction:column}
+        .set-wrap{position:fixed;inset:0;background:var(--bg);color:var(--text);z-index:55;display:flex;flex-direction:column}
         .set-bar{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top,0) + 10px) 12px 10px;border-bottom:.5px solid var(--line-strong);background:var(--surface)}
         .set-close{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex}
         .set-title{font-weight:var(--weight-semibold);font-size:var(--fs-lg)}

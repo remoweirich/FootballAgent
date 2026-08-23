@@ -1063,6 +1063,9 @@ const Agency = {
             // agreed outside a window: park the package, complete it when the window opens
             p.pendingTransfer = pkg;
             p.joiningClubId = toClub.id;   // shows the "Joining X" tag in the UI
+            // agreeing a move ahead of the window settles his wage worries in the meantime (+10); it's
+            // fully resolved (→ 100) when the transfer actually completes in _finalizeTransfer
+            if (p.morale) p.morale.wage = Math.min(100, (p.morale.wage || 0) + 10);
             // the season the move actually completes in (winter window = this season; otherwise next) —
             // used to label "Joining 26/27" instead of the old undefined -> "NaN/NaN"
             p._joinSeason = (GameState.week >= 7 && GameState.week <= 27) ? GameState.seasonStartYear : GameState.seasonStartYear + 1;
@@ -1123,6 +1126,8 @@ const Agency = {
         p.morale.club = MORALE.CLUB_RESET_ON_MOVE;
         // a move — any move — is a fresh start for how he feels about playing time
         p.morale.time = MORALE.TIME_RESET_ON_MOVE; p._playStreak = 0; p._benchStreak = 0;
+        // the new deal settles his wage for good: he agreed to it, so any wage grievance is resolved
+        p.morale.wage = 100; p._badStreak && (p._badStreak.wage = 0);
         if (!pkg.credited) {
             this._checkPromiseKept(p, ['move', 'renegotiateRep']);
             // stage-3 forced moves went over the agent's head — no credit for doing nothing,
