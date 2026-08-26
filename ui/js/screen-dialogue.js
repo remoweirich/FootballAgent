@@ -189,7 +189,7 @@ const DialogueView = {
         .dlg-chat{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:8px}
         .dlg-b{max-width:82%;padding:9px 13px;border-radius:16px;font-size:var(--fs-md);line-height:1.45;white-space:pre-wrap}
         .dlg-b--cl{align-self:flex-start;background:#232B35;color:var(--text);border:.5px solid rgba(255,255,255,.10);border-bottom-left-radius:5px}
-        .dlg-b--me{align-self:flex-end;background:rgba(52,211,153,.16);color:var(--text);border:.5px solid rgba(52,211,153,.22);border-bottom-right-radius:5px}
+        .dlg-b--me{align-self:flex-end;background:var(--accent-tint);color:var(--text);border:.5px solid var(--accent-border);border-bottom-right-radius:5px}
         .dlg-sys{align-self:center;color:var(--text-secondary);font-size:var(--fs-sm);background:var(--surface-raised);border:.5px dashed var(--line-strong);border-radius:12px;padding:4px 12px;margin:2px 0}
         .dlg-dots{display:inline-flex;gap:4px;padding:3px 2px}
         .dlg-dots i{width:6px;height:6px;border-radius:50%;background:var(--text-faint);animation:dlgBlink 1s infinite}

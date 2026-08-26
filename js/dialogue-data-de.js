@@ -32,7 +32,7 @@ const DIALOGUE_DE = {
         C022: "Ich halte dir schon lange die Treue, {agent}. Sag mir einfach, dass das noch etwas bedeutet.",
         C023: "Wir sind übers Reden hinaus, {agent}. Bring mich zum Spielen oder bring mich hier weg. Das sind die Optionen.",
         C024: "Jede Woche auf dieser Bank kostet mich etwas. Ich will jetzt eine Lösung, nicht noch ein Gespräch.",
-        C025: "Es reicht! Ich stelle selbst einen Transferantrag, wenn es das braucht, um Fußball zu spielen.",
+        C025: "Es reicht! Ich stelle selbst einen Transferantrag, wenn es sein muss, um Fußball zu spielen.",
         C026: "Jetzt ist es mir ernst. Fang an, nach einem Ausweg zu suchen, oder ich mache öffentlich, dass ich weg will.",
         C027: "Meine Meinung über diesen Ort steht fest. Was ich von dir brauche, ist ein Plan, diese Woche.",
         C028: "Letztes Mal, als wir geredet haben, ist nichts passiert. Besorg mir einen anständigen Vertrag, oder ich finde jemanden, der es kann.",
@@ -109,7 +109,7 @@ const DIALOGUE_DE = {
         F023: "Du musst mich nicht bestechen, {agent}. Aber gut, abgemacht.",
         F090: "Wir haben heute alles richtig gemacht, {agent}. Es hat einfach nicht gereicht — der Titel ist durch das andere Ergebnis weg.",
         F091: "Wir gewinnen und er entgleitet uns trotzdem. So knapp. Ich kann nicht glauben, dass es vorbei ist.",
-        F092: "Unseren Teil haben wir erledigt — wir haben unseren Job gemacht. Es ist das Spiel, das wir nicht in der Hand hatten, das uns umgebracht hat.",
+        F092: "Unseren Teil haben wir erledigt — wir haben unseren Job gemacht. Es ist das Spiel, das parallel verlief, welches uns den Titel gekostet hat...",
         F024: "WIR HABEN ES GESCHAFFT! Kannst du das glauben?! Komm her, {agent}!",
         F025: "Meister! Davon träume ich, seit ich ein Kind bin!",
         F026: "Hast du DAS gesehen?! Davon werden sie noch Jahre reden!",
@@ -138,7 +138,7 @@ const DIALOGUE_DE = {
         F049: "Klar. Nach einer Niederlage geht immer jeder. Notiert.",
         F050: "Du hast recht. Nächste Saison beginnt morgen. Wir machen weiter.",
         F051: "Korrekt. Niederlagen sind Daten. Wir werden dadurch besser.",
-        F052: "Nächste Saison? Wir haben GERADE verloren, {agent}. Lies die Situation.",
+        F052: "Nächste Saison? Wir haben GERADE verloren, {agent}. Sieh dir mal die Lage an.",
         // Farewell
         W001: "Also, {agent}. Das war's. Schuhe an den Nagel gehängt. Danke für die Arbeit über all die Jahre.",
         W002: "Dann ist es offiziell. Der Ruhestand. Wir hatten unsere Höhen und Tiefen, aber wir haben den Job erledigt.",
@@ -326,7 +326,7 @@ const DIALOGUE_DE = {
     //     English value → German. Occasions are dative to fit "bei/zu {occasion}" (see M039–M041). ---
     vocab: {
         golf: "Golf", fishing: "Angeln", gaming: "Gaming", chess: "Schach", cooking: "Kochen",
-        'classic cars': "Oldtimer", photography: "Fotografie", 'making music': "Musikmachen", padel: "Padel", poker: "Poker",
+        'classic cars': "Oldtimer", photography: "Fotografie", 'making music': "Musizieren", padel: "Padel", poker: "Poker",
         'a signed shirt from his debut': "ein signiertes Trikot von seinem Debüt",
         'a watch with a date engraved on the back': "eine Uhr mit einem eingravierten Datum auf der Rückseite",
         'a framed photo of the two of you at his first signing': "ein gerahmtes Foto von euch beiden bei seiner ersten Unterschrift",

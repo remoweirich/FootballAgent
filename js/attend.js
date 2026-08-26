@@ -249,13 +249,13 @@ const Attend = {
     _clubName(id) { return (typeof UI !== 'undefined' && UI.clubName) ? UI.clubName(id) : String(id); },
 
     // Human label for a match's competition + fixture, e.g. "the Cup Final".
-    COMP_TITLES: { 'cup-final': 'Cup Final', 'europe-final': 'European Final', 'playoff-final': 'Promotion Play-off Final', 'title-decider': 'Title decider', 'promotion-decider': 'Promotion decider' },
+    COMP_TITLE_KEYS: { 'cup-final': 'att.cupFinal', 'europe-final': 'att.euFinal', 'playoff-final': 'att.poFinal', 'title-decider': 'att.titleDeciderPlain', 'promotion-decider': 'att.promoDeciderPlain' },
     _compTitle(m) {
         const divName = (typeof compName === 'function') ? compName(m.compId) : null;
-        if (m.kind === 'title-decider') return (divName || 'League') + ' title decider';
-        if (m.kind === 'promotion-decider') return (divName || 'League') + ' promotion decider';
-        if (divName) return divName + (['cup-final', 'europe-final', 'playoff-final'].includes(m.kind) ? ' Final' : '');
-        return this.COMP_TITLES[m.kind] || 'the match';
+        if (m.kind === 'title-decider') return I18n.t('att.titleDecider', { comp: divName || I18n.t('att.league') });
+        if (m.kind === 'promotion-decider') return I18n.t('att.promoDecider', { comp: divName || I18n.t('att.league') });
+        if (divName) return ['cup-final', 'europe-final', 'playoff-final'].includes(m.kind) ? I18n.t('att.finalOf', { comp: divName }) : divName;
+        return I18n.t(this.COMP_TITLE_KEYS[m.kind] || 'att.match');
     },
 
     // The invitation letter + a short header, for the popup. Pure text.
@@ -274,27 +274,26 @@ const Attend = {
             const fl = inviter === 'home' ? m.firstLeg : { scored: m.firstLeg.conceded, conceded: m.firstLeg.scored };
             body = LiveSim.playoffFinalInvite({ agentName: agent, client: names, teamName, oppName, targetDivision: m.targetDivision, firstLeg: fl });
         } else {
-            body = `Dear ${agent || 'Sir/Madam'},\n\n`
-                + `${teamName} have reserved a seat for you: come and watch ${names} in the ${comp} against ${oppName}.`;
+            body = I18n.t(agent ? 'att.dear' : 'att.dearAnon', { agent }) + '\n\n'
+                + I18n.t('att.seat', { teamName, names, comp, oppName });
         }
         // your clients on the opposing side are named separately, with their real club (D1)
         if (oppClients.length) {
-            body += `\n\n(${this._clientList(oppClients)} also play${oppClients.length > 1 ? '' : 's'} in this game, but for ${oppName}.)`;
+            body += I18n.t(oppClients.length > 1 ? 'att.oppAlsoPl' : 'att.oppAlsoSg', { names: this._clientList(oppClients), oppName });
         }
         // honest caveat when a named client is unlikely to see much of the pitch (decision 6) — inviter's players only
         const benchers = ownClients.filter(c => ['rotation', 'fringe', 'youth'].includes(c.squadRole));
         if (benchers.length) {
-            const who = this._clientList(benchers);
-            body += `\n\nA word of honesty: ${who} may not play much — ${benchers.length > 1 ? 'they are' : 'he is'} not a guaranteed starter — but you're welcome all the same.`;
+            body += I18n.t(benchers.length > 1 ? 'att.benchPl' : 'att.benchSg', { who: this._clientList(benchers) });
         }
         // a last-day title decider hinges on more than this pitch: even a win may not be enough
         if (m.kind === 'title-decider') {
-            body += `\n\nOne caveat: this is the last day, and the title isn't in their hands alone — even a win may not be enough if the rivals get their result too.`;
+            body += I18n.t('att.titleCaveat');
         }
         return {
             id: m.id,
-            title: `${teamName} — ${comp}`,
-            header: `Watch ${names} in the ${comp} against ${oppName}`,
+            title: I18n.t('att.title', { teamName, comp }),
+            header: I18n.t('att.header', { names, comp, oppName }),
             body, teamName, oppName, competition: comp, clients: m.clients,
         };
     },
@@ -307,8 +306,8 @@ const Attend = {
     _clientList(clients) {
         const names = [...new Set(clients.map(c => c.name))];
         if (names.length === 1) return names[0];
-        if (names.length === 2) return names[0] + ' and ' + names[1];
-        return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
+        if (names.length === 2) return names[0] + I18n.t('att.and') + names[1];
+        return names.slice(0, -1).join(', ') + I18n.t('att.andList') + names[names.length - 1];
     },
 
     // Turn a captured match into a spec for LiveSim.buildTimeline. Only clients who actually

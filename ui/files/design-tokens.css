@@ -28,14 +28,16 @@
   --text-dim:       #6C7480;  /* axis labels, disabled */
   --text-chevron:   #5A626D;  /* chevrons, small arrows */
 
-  /* ---- Accent (mint) ---- */
-  --accent:        #34D399;  /* primary action, active nav/tab, current */
-  --accent-ink:    #053A2A;  /* text/icon ON solid accent */
-  --accent-text:   #7FD7BC;  /* accent text on dark (tinted contexts) */
-  --accent-text-2: #8CE6C4;  /* brighter accent text (counts) */
-  --accent-tint:   rgba(52,211,153,.13);  /* tinted pill / button bg */
-  --accent-fill:   rgba(52,211,153,.07);  /* subtle fill (current card) */
-  --accent-border: rgba(52,211,153,.34);  /* tinted pill / button border */
+  /* ---- Accent (cream + gold, from the shield logo). NOTE: this is the brand/secondary
+     colour only (buttons, active nav/tab, links). The GREEN highlights in tables and
+     ratings are separate tokens (--state-good, --zone-promote, --ability-*). ---- */
+  --accent:        #ECE8CC;  /* primary action, active nav/tab, current — logo cream */
+  --accent-ink:    #2B281F;  /* dark warm text/icon ON the solid cream accent */
+  --accent-text:   #E0D3A5;  /* accent text on dark (warm gold-cream, tinted contexts) */
+  --accent-text-2: #ECE1BC;  /* brighter accent text (counts) */
+  --accent-tint:   rgba(236,232,204,.14);  /* tinted pill / button bg */
+  --accent-fill:   rgba(236,232,204,.07);  /* subtle fill (current card) */
+  --accent-border: rgba(236,232,204,.34);  /* tinted pill / button border */
 
   /* ---- Semantic ---- */
   --danger:        #F0596A;  /* notification badge, destructive, low state */
@@ -157,12 +159,15 @@
   --text-dim:       #8A94A1;
   --text-chevron:   #A6AEB9;
 
-  /* ---- Accent (mint): keep --accent + --accent-ink; retune text/tints for white ---- */
-  --accent-text:   #0B8F63;
-  --accent-text-2: #0A7E58;
-  --accent-tint:   rgba(52,211,153,.16);
-  --accent-fill:   rgba(52,211,153,.10);
-  --accent-border: rgba(52,211,153,.42);
+  /* ---- Accent: a light cream can't carry a button on a white surface, so the light
+     theme uses the logo's deeper GOLD instead; the dark warm ink still reads on it ---- */
+  --accent:        #C0A24F;
+  --accent-ink:    #2B281F;
+  --accent-text:   #8A6D1B;
+  --accent-text-2: #7A6018;
+  --accent-tint:   rgba(192,162,79,.16);
+  --accent-fill:   rgba(192,162,79,.10);
+  --accent-border: rgba(192,162,79,.42);
 
   /* ---- Semantic: deepened for contrast on white ---- */
   --danger:        #E23A4E;

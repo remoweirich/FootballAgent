@@ -1272,7 +1272,7 @@ const CustomizeScreen = {
         .cx-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:95;opacity:0;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
         .cx-toast--in{opacity:1;transform:translate(-50%,0)}
         .cx-bbtn{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2,rgba(255,255,255,.05));color:var(--text-secondary);font-size:11px;font-weight:700;cursor:pointer;flex:none}
-        .cx-bbtn--on{background:var(--accent,#34D399);color:#08331f;border-color:transparent}
+        .cx-bbtn--on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
         .cx-area{width:100%;resize:vertical;font-family:inherit;line-height:1.5}
         .cx-regcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
         .cx-reghead{display:flex;align-items:center;justify-content:space-between;gap:8px}

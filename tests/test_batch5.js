@@ -58,30 +58,30 @@ check('2: nobody loses ability before turning 30', run(`
 check('2: decline age is individual, not a fixed birthday', run(`
   const seen = new Set();
   for (let i=0;i<200;i++) seen.add(PlayerGen.declineAgeFor(PlayerGen.peakAgeFor(PlayerGen.randPos())));
-  return seen.size >= 4 && Math.min(...seen) >= 30;
+  return seen.size >= 4 && Math.min(...seen) >= 29;
 `));
-check('2: a peak lasts 2-7 years (never longer, and only shorter where the "not before 30" floor lifts it)', run(`
+check('2: a peak lasts 1-6 years (never longer, and only shorter where the "not before 29" floor lifts it)', run(`
   const durations = new Set();
   for (let i=0;i<4000;i++) {
     const peak = PlayerGen.peakAgeFor(PlayerGen.randPos());
     const d = PlayerGen.declineAgeFor(peak) - peak;
-    if (peak + 7 <= 30 || peak + 2 >= 38) continue;   // clamped by the floor/ceiling, not a free draw
-    if (d < 2 || d > 7) return false;
+    if (peak + 6 <= 29 || peak + 1 >= 37) continue;   // clamped by the floor/ceiling, not a free draw
+    if (d < 1 || d > 6) return false;
     durations.add(d);
   }
-  return durations.size >= 5;   // the full 2-7 range actually occurs
+  return durations.size >= 5;   // the full 1-6 range actually occurs
 `));
-check('2: an outfielder can peak 26->33 and a keeper 30->37', run(`
+check('2: an outfielder can peak 26->32 and a keeper 30->36', run(`
   let longOutfield = false, longGK = false;
   for (let i=0;i<3000;i++) {
-    if (PlayerGen.declineAgeFor(26) >= 33) longOutfield = true;
-    if (PlayerGen.declineAgeFor(30) >= 37) longGK = true;
+    if (PlayerGen.declineAgeFor(26) >= 32) longOutfield = true;
+    if (PlayerGen.declineAgeFor(30) >= 36) longGK = true;
   }
   return longOutfield && longGK;
 `));
 check('2: a save with no declineAge gets one assigned lazily', run(`
   const p = { peakAge: 26 };
-  return declineAgeOf(p) >= 30 && p.declineAge === declineAgeOf(p);
+  return declineAgeOf(p) >= 29 && p.declineAge === declineAgeOf(p);
 `));
 
 // ---------- 3: renewal kills open bids ----------

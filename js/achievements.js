@@ -93,6 +93,10 @@ const Achievements = {
         if (this.DEFS) return this.DEFS;
         const D = [];
         const money = n => (typeof UI !== 'undefined' && UI.money) ? UI.money(n) : String(n);
+        // current display name of a competition — a getter so it tracks the live name (generic by
+        // default, the real trademarked name once the real-names pack is imported). DEFS is cached, so
+        // resolving lazily is what keeps the European-title achievements in step with the import.
+        const compVar = id => ({ get comp() { return (typeof compName === 'function' ? compName(id) : id); } });
         const add = (id, group, reward, key, vars, done) => D.push({ id, group, reward, key, vars: vars || {}, done });
         [[1, 1000], [5, 10000], [20, 150000], [50, 1500000]].forEach(([n, r]) => add('sign' + n, 'signings', r, 'ach.sign', { n }, g => g.signings >= n));
         add('release1', 'release', 5000, 'ach.release', {}, g => g.releases >= 1);
@@ -101,9 +105,9 @@ const Achievements = {
         [[6, 10000], [5, 10000], [4, 25000], [3, 50000], [2, 100000], [1, 250000]].forEach(([tier, r]) => add('league' + tier, 'leagueTitles', r, 'ach.league', { ord: _achOrd(tier), n: tier }, g => g.leagueTiers.has(tier)));
         add('cupSecondary', 'cups', 50000, 'ach.cup.secondary', {}, g => g.cupSecondary);
         add('cupPrimary', 'cups', 250000, 'ach.cup.primary', {}, g => g.cupPrimary);
-        add('euroUECL', 'euroCups', 500000, 'ach.euro.UECL', {}, g => g.euro.has('UECL'));
-        add('euroUEL', 'euroCups', 800000, 'ach.euro.UEL', {}, g => g.euro.has('UEL'));
-        add('euroUCL', 'euroCups', 2500000, 'ach.euro.UCL', {}, g => g.euro.has('UCL'));
+        add('euroUECL', 'euroCups', 500000, 'ach.euro.win', compVar('UECL'), g => g.euro.has('UECL'));
+        add('euroUEL', 'euroCups', 800000, 'ach.euro.win', compVar('UEL'), g => g.euro.has('UEL'));
+        add('euroUCL', 'euroCups', 2500000, 'ach.euro.win', compVar('UCL'), g => g.euro.has('UCL'));
         [[1000000, 10000], [10000000, 50000], [100000000, 1000000]].forEach(([n, r]) => add('transfer' + n, 'transfers', r, 'ach.transfer', { v: money(n) }, g => g.maxFee >= n));
         [[250, 25000], [500, 100000], [750, 500000], [1000, 2000000]].forEach(([n, r]) => add('games' + n, 'games', r, 'ach.games', { n }, g => g.maxApps >= n));
         [[5, 150000], [10, 500000], [15, 2000000]].forEach(([n, r]) => add('ctitles' + n, 'clientTitles', r, 'ach.ctitles', { n }, g => g.maxTitles >= n));

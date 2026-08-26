@@ -3,8 +3,9 @@
 //  plus the Client History screen (every past & present client).
 // ============================================================
 const ClientsScreen = {
-    state: { filter: 'all', sort: 'ability', dir: 'desc' },
+    state: { filter: 'all', sort: 'ability', dir: 'desc', positions: [] },
     SORTS: [['ability', 'Ability'], ['age', 'Age'], ['apps', 'Appearances'], ['avg', 'Avg rating'], ['contract', 'Contract left'], ['morale', 'Morale'], ['wage', 'Wage'], ['repterm', 'Rep. term left']],
+    POSITIONS: ['GK', 'LB', 'CB', 'RB', 'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'],
 
     rows() {
         const year = GameState.seasonStartYear;
@@ -21,11 +22,14 @@ const ClientsScreen = {
         });
     },
     filtered() {
-        const rows = this.rows(), f = this.state.filter;
-        if (f === 'offers') return rows.filter(r => r.hasOffer);
-        if (f === 'sponsors') return rows.filter(r => r.hasSponsor);
-        if (f === 'injury') return rows.filter(r => r.p.injury);
-        if (f === 'listed') return rows.filter(r => r.listed);
+        let rows = this.rows();
+        const f = this.state.filter;
+        if (f === 'offers') rows = rows.filter(r => r.hasOffer);
+        else if (f === 'sponsors') rows = rows.filter(r => r.hasSponsor);
+        else if (f === 'injury') rows = rows.filter(r => r.p.injury);
+        else if (f === 'listed') rows = rows.filter(r => r.listed);
+        // position filter (independent, multi-select): empty = every position
+        if (this.state.positions.length) rows = rows.filter(r => this.state.positions.includes(r.p.position));
         return rows;
     },
     sorted() {
@@ -52,7 +56,7 @@ const ClientsScreen = {
             <button class="gbtn" onclick="ClientsScreen.pickSort()"><i class="ti ti-arrows-sort"></i>${I18n.t('clients.sort.' + this.state.sort)}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>
         </div>
         <div class="chip-row" style="margin-bottom:var(--space-4)">
-            ${chip('all', 'ti-users', I18n.t('common.all'))}${chip('offers', 'ti-currency-euro', I18n.t('clients.filter.offers'))}${chip('sponsors', 'ti-tag', I18n.t('clients.filter.sponsors'))}${chip('injury', 'ti-bandage', I18n.t('clients.filter.injury'))}${chip('listed', 'ti-list-check', I18n.t('clients.filter.listed'))}
+            ${chip('all', 'ti-users', I18n.t('common.all'))}${chip('offers', 'ti-currency-euro', I18n.t('clients.filter.offers'))}${chip('sponsors', 'ti-tag', I18n.t('clients.filter.sponsors'))}${chip('injury', 'ti-bandage', I18n.t('clients.filter.injury'))}${chip('listed', 'ti-list-check', I18n.t('clients.filter.listed'))}<button class="cl-chip ${this.state.positions.length ? 'cl-on' : ''}" onclick="ClientsScreen.pickPositions()"><i class="ti ti-user-pin" style="font-size:13px"></i>${I18n.t('clients.filter.position')}${this.state.positions.length ? ` <span class="cl-ct">${this.state.positions.length}</span>` : ''}<i class="ti ti-chevron-down" style="font-size:12px;color:var(--text-faint)"></i></button>
         </div>
         ${rows.length ? rows.map(r => this.card(r)).join('') : (all.length
             ? `<div class="empty"><div class="empty__icon"><i class="ti ti-filter-off"></i></div><div class="empty__title">${I18n.t('clients.noMatches')}</div><div class="empty__hint">${I18n.t('clients.noMatchesSub')}</div></div>`
@@ -93,6 +97,32 @@ const ClientsScreen = {
         return ['club', 'time', 'wage', 'agent'].map(k => `<span class="cl-md" style="background:var(${UI.moraleVar(m[k] || 0)})"></span>`).join('');
     },
     setFilter(f) { this.state.filter = f; Router.refresh(); },
+    // Position filter: a multi-select of positions (any combination, or none = all). Toggling one
+    // updates both the picker and the list underneath live; the sheet stays open (like pickSort).
+    pickPositions() {
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('clients.positionTitle')}</div>
+            <div id="posPickerBody">${this.positionPickerRows()}</div>
+            <div class="flex-row" style="margin-top:var(--space-4);gap:var(--space-2)">
+                <button class="btn btn--ghost" style="flex:1" onclick="ClientsScreen.setAllPos()">${I18n.t('common.all')}</button>
+                <button class="btn btn--ghost" style="flex:1" onclick="ClientsScreen.clearPos()">${I18n.t('common.clear')}</button>
+                <button class="btn btn--primary" style="flex:1" onclick="Router.closeSheet()">${I18n.t('common.done')}</button>
+            </div>`);
+    },
+    positionPickerRows() {
+        return `<div class="chip-row" style="flex-wrap:wrap;gap:6px">${this.POSITIONS.map(pos =>
+            `<button class="htog ${this.state.positions.includes(pos) ? 'is-on' : ''}" onclick="ClientsScreen.togglePos('${pos}')">${pos}</button>`).join('')}</div>`;
+    },
+    _refreshPos() {
+        const body = document.getElementById('posPickerBody'); if (body) body.innerHTML = this.positionPickerRows();
+        const screenBody = document.getElementById('screenBody'); if (screenBody) this.render(screenBody);
+    },
+    togglePos(pos) {
+        const i = this.state.positions.indexOf(pos);
+        if (i >= 0) this.state.positions.splice(i, 1); else this.state.positions.push(pos);
+        this._refreshPos();
+    },
+    setAllPos() { this.state.positions = this.POSITIONS.slice(); this._refreshPos(); },
+    clearPos() { this.state.positions = []; this._refreshPos(); },
     // Selecting an attribute applies it immediately (and re-sorts the list live, right
     // underneath) but leaves the sheet open — you often want to flip direction or try
     // another attribute right after, and having to re-open the picker for that was
@@ -245,6 +275,7 @@ const ClientRecords = {
             mk(I18n.t('records.highestWage'), p => { let m = p.wage || 0; ((p.history && p.history.wage) || []).forEach(h => { if (h.value > m) m = h.value; }); return m > 0 ? { val: m } : null; }, euro),
             mk(I18n.t('records.highestSponsor'), p => { const active = (p.sponsorDeals || []).reduce((a, d) => a + (d.weekly || 0), 0); const v = Math.max(p.sponsorIncome || 0, active); return v > 0 ? { val: v } : null; }, v => euro(v) + '/wk'),
             mk(I18n.t('records.highestFee'), p => { let m = 0; ((p.history && p.history.fees) || []).forEach(h => { if (h.value > m) m = h.value; }); return m > 0 ? { val: m } : null; }, euro),
+            mk(I18n.t('records.highestFeeSum'), p => { const fees = (p.history && p.history.fees) || []; const s = fees.reduce((a, h) => a + (h.value || 0), 0); return s > 0 ? { val: s, extra: fees.length + ' ' + I18n.t('records.movesShort') } : null; }, euro),
             mk(I18n.t('records.mostSeasons'), p => { const n = seasonsActiveLeague(p); return n > 0 ? { val: n } : null; }, num),
             mk(I18n.t('records.mostClubs'), p => { const n = Object.keys(seniorYearsByClub(p)).length; return n > 0 ? { val: n } : null; }, num),
             mk(I18n.t('records.longestSpell'), p => {

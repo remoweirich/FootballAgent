@@ -1053,11 +1053,12 @@ const Sim = {
         });
         const homeDivs = (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[hc]) || ['ERE', 'EED', 'TWD', 'DRD'];
         const champs = homeDivs.map(d => `${COMPETITIONS[d].name}: ${Clubs.getClubById(League.sortedTable(d)[0]?.clubId)?.name || '—'}`).join('<br>');
-        const CUP_KEY_COMP = { beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC', dfb: 'DFB', lpokal: 'LPOKAL', cdr: 'CDR', cfed: 'CFED' };
-        const homeCups = (typeof COUNTRY_CUPS !== 'undefined' && COUNTRY_CUPS[hc]) || [['beker', 'KNVB Beker'], ['kbek', 'De kleine Beker']];
-        const cupLine = homeCups.map(([key, label]) => {
+        const CUP_KEY_COMP = { beker: 'BEKER', kbek: 'KBEK', facup: 'FACUP', llc: 'LLC', dfb: 'DFB', lpokal: 'LPOKAL', cdr: 'CDR', cfed: 'CFED', schwcup: 'SCHWCUP', cupabass: 'CUPABASS', lichcup: 'LICHCUP', coppaitalia: 'COPPA', coppacompagno: 'COPPACOMP', tacaportugal: 'TACAPT', segundataca: 'SEGTACA', belgiancup: 'BELCUP', notrecoupe: 'NOTRECOUPE', coupefrance: 'COUPEFR', coupenational: 'COUPENAT' };
+        const homeCups = (typeof COUNTRY_CUPS !== 'undefined' && COUNTRY_CUPS[hc]) || [['beker', 'Dutch Cup'], ['kbek', 'De kleine Beker']];
+        const cupLine = homeCups.map(([key, fallback]) => {
             const wid = L && L[key] ? L[key].winner : null;
             const nm = wid ? (Clubs.getClubById(wid)?.name || League.teamName(wid)) : '—';
+            const label = (typeof compName === 'function' && compName(CUP_KEY_COMP[key])) || fallback;
             return `${label}: ${nm}`;
         }).join('<br>');
         let poLine = homeDivs.filter((d, i) => i > 0).map(d => L?.playoffs?.[d] ? I18n.t('sim.rev.poWon', { comp: COMPETITIONS[d].short, club: Clubs.getClubById(L.playoffs[d].winner)?.name || League.teamName(L.playoffs[d].winner) }) : null).filter(Boolean).join('<br>');

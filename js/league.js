@@ -98,7 +98,9 @@ const CUP_WEEKS_NO32 = [4, 7, 15, 26, 38, 47];
 // still run in these weeks; league matchdays are spread across the remaining ones.
 const NO_LEAGUE_WEEKS = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
 // cups shown per country in the Leagues tab (extend this when adding more countries)
-const COUNTRY_CUPS = { Netherlands: [['beker', 'KNVB Beker'], ['kbek', 'kleine Beker']], England: [['facup', 'FA Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'DFB Pokal'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Copa del Rey'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Schweizer Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']], Italy: [['coppaitalia', 'Coppa Italia'], ['coppacompagno', 'Coppa Compagno']], Portugal: [['tacaportugal', 'Taça de Portugal'], ['segundataca', 'Segunda Taça']], Belgium: [['belgiancup', 'Belgian Cup'], ['notrecoupe', 'Notre Coupe']], France: [['coupefrance', 'Coupe de France'], ['coupenational', 'Coupe National']] };
+// Second element is a generic fallback label only; the Leagues tab and season review display
+// compName(<COMPETITIONS id>) instead, so real names load from real-club-names.json when imported.
+const COUNTRY_CUPS = { Netherlands: [['beker', 'Dutch Cup'], ['kbek', 'De kleine Beker']], England: [['facup', 'English Cup'], ['llc', 'Lower Leagues Cup']], Germany: [['dfb', 'German Cup'], ['lpokal', 'Landespokal']], Spain: [['cdr', 'Spanish Cup'], ['cfed', 'Copa Federación']], Switzerland: [['schwcup', 'Swiss Cup'], ['cupabass', 'Cupa Bass'], ['lichcup', 'Liechtensteiner Cup']], Italy: [['coppaitalia', 'Italian Cup'], ['coppacompagno', 'Coppa Compagno']], Portugal: [['tacaportugal', 'Portuguese Cup'], ['segundataca', 'Segunda Taça']], Belgium: [['belgiancup', 'Belgian Cup'], ['notrecoupe', 'Notre Coupe']], France: [['coupefrance', 'French Cup'], ['coupenational', 'Coupe National']] };
 function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) if (ds.includes(div)) return c; return 'Netherlands'; }
 
 // ---- weekly squad index (world model) ----

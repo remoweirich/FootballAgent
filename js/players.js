@@ -69,12 +69,12 @@ const PlayerGen = {
     },
 
     // Peaking and declining are two different ages: a winger who tops out at 26 doesn't start
-    // losing ability at 27 — he holds that level for years first. A peak lasts 2-7 years, so an
-    // outfielder might be at his best from 26 to 33 and a keeper from 30 to 37. Nobody declines
-    // before 30, and when it starts is individual, not a fixed birthday.
+    // losing ability at 27 — he holds that level for years first. A peak lasts 1-6 years, so an
+    // outfielder might be at his best from 26 to 32 and a keeper from 30 to 36. Nobody declines
+    // before 29, and when it starts is individual, not a fixed birthday.
     declineAgeFor(peakAge) {
         const peakYears = 2 + Math.floor(Rng.next() * 6);
-        return Math.max(30, Math.min(38, (peakAge || 28) + peakYears));
+        return Math.max(29, Math.min(37, (peakAge || 28) + peakYears - 1));
     },
 
     // pay scales with the club's actual reputation, not its tier label — a Dutch Derde Divisie side

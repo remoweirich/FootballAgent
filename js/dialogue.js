@@ -109,6 +109,7 @@ const Dialogue = {
         const surname = parts.length > 1 ? parts.slice(1).join(' ') : first;
         if (gender === 'male') return (this._isDe() ? 'Herr ' : 'Mr ') + surname;
         if (gender === 'female') return (this._isDe() ? 'Frau ' : 'Mrs ') + surname;
+        if (gender === 'other') return (this._isDe() ? 'Hallo ' : 'Dear ') + full;   // non-binary / prefer not to say
         return full;
     },
     fill(text, p, extra) {
@@ -876,6 +877,9 @@ const Dialogue = {
         }
         if (entry.type === 'thanks') extra.thing = extra.thing || entry.thing || 'a gift';
         const open = this._pick(DIALOGUE_DATA.moments.filter(r => r.kind === entry.type && r.beat === 'open'), p, extra);
+        // an invite line can open with the occasion itself (e.g. "the little one's christening. It's…"),
+        // which starts a sentence lowercase — capitalise the first letter so it reads as a message.
+        if (entry.type === 'invite' && open && open.text) open.text = open.text.charAt(0).toUpperCase() + open.text.slice(1);
         const keys = entry.type === 'injury' ? ['there', 'flowers']
             : entry.type === 'thanks' ? ['cherish', 'banter']
             : entry.type === 'invite' ? ['attend', 'gift', 'decline']

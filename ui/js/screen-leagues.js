@@ -24,7 +24,7 @@ const LeaguesScreen = {
             if (this.state.euAutoTab) this.state.tab = this.euCurrentDefault();          // follow the live phase
             else if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = this.euCurrentDefault();
         } else {
-            const cups = COUNTRY_CUPS[country] || [];
+            const cups = (COUNTRY_CUPS[country] || []).map(([k]) => [k, compName(this.CUP_KEY_COMP[k]) || k]);
             tabs = [['tables', I18n.t('leagues.tables')], ...cups, ['po', I18n.t('leagues.playoffs')]];
             if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = 'tables';
         }
@@ -82,7 +82,7 @@ const LeaguesScreen = {
         } else if (tab === 'po') {
             body.innerHTML = this.playoffs(country);
         } else {
-            const key = tab, label = (cups => { const f = cups.find(c => c[0] === tab); return f ? f[1] : tab; })(COUNTRY_CUPS[country] || []);
+            const key = tab, label = compName(this.CUP_KEY_COMP[tab]) || tab;
             const comp = GameState.league && GameState.league[key];
             const C = comp || (GameState.lastSeasonReport && GameState.lastSeasonReport[key]);
             // the bracket becomes available once a knockout round of 16/8/4 teams (8/4/2 ties) has been drawn

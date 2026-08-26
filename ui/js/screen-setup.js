@@ -19,11 +19,8 @@ const Setup = {
     ],
     idx: 0,
 
-    // simple football-pentagon crest — the one expressive mark on this screen
-    CREST: `<svg class="setup-crest" viewBox="0 0 28 28" aria-hidden="true" fill="none">
-        <path d="M14 1.5 26 6.2v7.8c0 8-5.2 12.8-12 13.5-6.8-.7-12-5.5-12-13.5V6.2Z" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M14 8 19.7 12.15 17.53 18.85 10.47 18.85 8.3 12.15Z" fill="var(--accent)"/>
-    </svg>`,
+    // brand logo (shield badge) — the one expressive mark on this screen
+    CREST: `<img class="setup-crest" src="assets/img/fa-logo.png" alt="">`,
 
     show() {
         const countries = (typeof REGIONS_BY_COUNTRY !== 'undefined') ? Object.keys(REGIONS_BY_COUNTRY) : ['Netherlands'];
@@ -48,6 +45,7 @@ const Setup = {
                 <select id="setupGender" class="select-input">
                     <option value="male">${I18n.t('setup.genderMale')}</option>
                     <option value="female">${I18n.t('setup.genderFemale')}</option>
+                    <option value="other">${I18n.t('setup.genderOther')}</option>
                 </select>
                 <i class="ti ti-chevron-down select-wrap__chevron"></i>
             </div>

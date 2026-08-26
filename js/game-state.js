@@ -88,7 +88,7 @@ const GameState = {
         Agency.init();
         this.agency.name = (name && name.trim()) ? name.trim() : 'Your Agency';
         this.agency.agentName = (agentName && agentName.trim()) ? agentName.trim() : '';
-        this.agency.agentGender = (agentGender === 'male' || agentGender === 'female') ? agentGender : '';
+        this.agency.agentGender = ['male', 'female', 'other'].includes(agentGender) ? agentGender : '';
         this.agency.homeCountry = this.homeCountry;
         PlayerGen.seedKnownProspects();
         League.setupSeason();

@@ -31,6 +31,10 @@ const LIVE_SIM = {
 const LiveSim = {
     _idx: null,
 
+    // German swap for piece text and engine-built feed lines. Returns false (English) when no
+    // i18n is loaded (e.g. the headless live-sim test) or the locale is not German.
+    _deOn() { return typeof I18n !== 'undefined' && I18n.locale === 'de'; },
+
     // corner cues, matched against a start piece's prose (see init)
     CORNER_ATTACK_RE: /corner\s+(for|won)|up come the giants|plants the ball in the quadrant/i,
     CORNER_DEFEND_RE: /corner against/i,
@@ -44,6 +48,9 @@ const LiveSim = {
         if (!D) throw new Error('LIVE_SIM_DATA not loaded');
         const prep = list => list.map((p, i) => ({
             id: i, key: p.k, text: p.t, weight: p.w, tags: p.r || '',
+            // German display text (from the js/live-sim-data-de.js overlay), or null to fall back
+            // to English. Only the display swaps — names/corner cues stay read off the English text.
+            de: (typeof LIVE_SIM_DE !== 'undefined' && LIVE_SIM_DE[p.t]) || null,
             codes: new Set(p.c),
             keys: this.parseKey(p.k),
             names: p.t.indexOf(LIVE_SIM.PLACEHOLDER_CLIENT) >= 0,   // does this piece name its player?
@@ -189,7 +196,7 @@ const LiveSim = {
     PLACEHOLDER_TEAM_RE: /xy\s*\([^)]*\)/g,
     PLACEHOLDER_OPP_RE: /yx\s*\([^)]*\)/g,
     renderPiece(piece, player, ctx) {
-        let t = piece.text;
+        let t = (this._deOn() && piece.de) ? piece.de : piece.text;
         t = t.replace(this.PLACEHOLDER_OPP_RE, ctx.oppName || '');
         t = t.replace(this.PLACEHOLDER_TEAM_RE, ctx.teamName || '');
         if (player) t = t.split(LIVE_SIM.PLACEHOLDER_CLIENT).join(player.name);
@@ -598,7 +605,7 @@ const LiveSim = {
         // anonymous goal (GOAL:T, "an unnamed team-mate finishes"), so read the ledger, not anonGoals
         for (const side of ['home', 'away'])
             for (let i = 0; i < ledger.anon[side]; i++)
-                units.push([{ kind: 'goal', side, client: null, lines: [`GOAL — ${nameOf(side)}`], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
+                units.push([{ kind: 'goal', side, client: null, lines: [this._deOn() ? `Tor für ${nameOf(side)}.` : `GOAL — ${nameOf(side)}`], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
 
         // ---- corners: a live stat that ticks up, and now and then the cue for a corner event.
         // The count must match what the feed shows, so first flag every chain already built that is
@@ -625,7 +632,7 @@ const LiveSim = {
                 if (cornerEvents < LIVE_SIM.CORNER_EVENT_MAX && rnd() < LIVE_SIM.CORNER_EVENT_CHANCE)
                     ev = this._cornerEvent(side, live(), rnd, ctxFor, used, usedPieces);
                 if (ev) cornerEvents += 1;
-                const unit = [ev || { kind: 'corner', side, client: null, corner: side, events: [], lines: [`Corner — ${nameOf(side)}`] }];
+                const unit = [ev || { kind: 'corner', side, client: null, corner: side, events: [], lines: [this._deOn() ? `Ecke für ${nameOf(side)}.` : `Corner — ${nameOf(side)}`] }];
                 // a plain corner sometimes leads to something the moment after — a header or shot that
                 // doesn't go in (goals are the engine's to award, so this is pure flavour, no score)
                 if (!ev && rnd() < LIVE_SIM.CORNER_FOLLOW_CHANCE) unit.push(this._cornerFollow(side, rnd));
@@ -719,8 +726,17 @@ const LiveSim = {
         'A scramble in the six-yard box — hacked off the line at the last!',
         'Flicked on at the front post, but nobody gambled at the back stick.',
     ],
+    CORNER_FOLLOW_LINES_DE: [
+        'Die Hereingabe findet einen Kopf am ersten Pfosten, knapp vorbei!',
+        'Aus sechs Metern wuchtig getroffen, aber genau auf den Torwart.',
+        'Halb geklärt an den Rand, der Nachschuss wird geblockt.',
+        'Hereingebracht und aus kurzer Distanz über die Latte geköpft.',
+        'Gewühl im Fünfmeterraum, im letzten Moment von der Linie geschlagen!',
+        'Am ersten Pfosten verlängert, aber am zweiten ist niemand mitgegangen.',
+    ],
     _cornerFollow(side, rnd) {
-        return { kind: 'cornerfollow', side, client: null, events: [], lines: [this.CORNER_FOLLOW_LINES[Math.floor(rnd() * this.CORNER_FOLLOW_LINES.length)]] };
+        const lines = this._deOn() ? this.CORNER_FOLLOW_LINES_DE : this.CORNER_FOLLOW_LINES;
+        return { kind: 'cornerfollow', side, client: null, events: [], lines: [lines[Math.floor(rnd() * lines.length)]] };
     },
 
     // A corner narrated as a client puzzle event. `won` is the team that has the corner. First try
@@ -864,20 +880,25 @@ const LiveSim = {
         if (rnd() < this.PEN_CONVERSION && ledger.anon[forSide] > 0) {
             ledger.anon[forSide] -= 1;
             return { kind: 'penalty', side: forSide, client: null, chain: null,
-                lines: [`Penalty to ${team}… and it's buried. GOAL — ${team}.`],
+                lines: [this._deOn() ? `Elfmeter für ${team}… und der sitzt. Tor für ${team}.` : `Penalty to ${team}… and it's buried. GOAL — ${team}.`],
                 events: [{ tag: 'GOAL', ref: 'T', player: null, anonymous: true, side: 'own' }] };
         }
         const saved = rnd() < 0.5;
         return { kind: 'penalty', side: forSide, client: null, chain: null,
-            lines: [saved ? `Penalty to ${team}… and the keeper saves it!` : `Penalty to ${team}… and it's missed! Off the woodwork and away.`],
+            lines: [this._deOn()
+                ? (saved ? `Elfmeter für ${team}… und der Torwart hält!` : `Elfmeter für ${team}… und vergeben! An den Pfosten und weg.`)
+                : (saved ? `Penalty to ${team}… and the keeper saves it!` : `Penalty to ${team}… and it's missed! Off the woodwork and away.`)],
             events: [{ tag: saved ? 'PENSAVE' : 'PENMISS', ref: 'O', player: null, anonymous: true, side: 'opp' }] };
     },
 
     // Fallback commentary when the workbook has no chain that can carry a required outcome for
     // this role. Clients are the one thing this feature is allowed to name, so it still reads.
     _plainLine(need, player, teamName) {
-        const what = { GOAL: 'GOAL', ASSIST: 'Assist', YC: 'Yellow card', RC: 'RED CARD' }[need] || need;
-        return `${what} — ${player.name} (${teamName})`;
+        const de = this._deOn();
+        const what = (de
+            ? { GOAL: 'Tor', ASSIST: 'Vorlage', YC: 'Gelbe Karte', RC: 'Rote Karte' }
+            : { GOAL: 'GOAL', ASSIST: 'Assist', YC: 'Yellow card', RC: 'RED CARD' })[need] || need;
+        return de ? `${what}: ${player.name} (${teamName})` : `${what} — ${player.name} (${teamName})`;
     },
 
     // Does an end piece's tags deliver `need` to the piece's own player?
@@ -898,21 +919,11 @@ const LiveSim = {
     playoffFinalInvite({ agentName, client, teamName, oppName, targetDivision, firstLeg }) {
         const s = (firstLeg && firstLeg.scored) | 0, c = (firstLeg && firstLeg.conceded) | 0;
         const diff = s - c, score = `${s}:${c}`;
-        const div = targetDivision || 'the division above';
-        let line;
-        if (diff >= 3)
-            line = `We looked quite comfortable when we beat them ${score} in the first leg, but we haven't won the tie yet! And I know ${client} will certainly want to play to impress.`;
-        else if (diff >= 1)
-            line = `The first leg was quite the nailbiter, with our narrow ${score} win giving us a bit of an edge for the return leg, but it is far from decided yet. With the help of ${client}, I am sure we will succeed!`;
-        else if (diff === 0)
-            line = `What a competitive game that ${score} draw was — we really had to put in the fight. I know our players are hot and hungry for the return leg, so come and watch us reach for promotion! Maybe ${client} will be the one to put us over the line.`;
-        else if (diff >= -2)
-            line = `With our narrow ${score} loss in the first leg, we will need to dig in and give it our all to overcome ${oppName}. Will ${client} be the one to bring us back into the tie? Come along and help us reach ${div}!`;
-        else
-            line = `I know it didn't look good when we lost ${score} in the first leg, but it's not over till it's over. I know our players have it in them, and maybe ${client} can prove to be a deciding factor in creating a historic remontada.`;
-        return `Dear ${agentName || 'Sir/Madam'},\n\n`
-            + `The season is reaching its climax, and ${client} is right in the thick of it. If you'd be interested, ${teamName} would like to invite you to come and watch the game.\n\n`
-            + line;
+        const div = targetDivision || I18n.t('att.po.divDefault');
+        const bucket = diff >= 3 ? 'big' : diff >= 1 ? 'slim' : diff === 0 ? 'draw' : diff >= -2 ? 'narrowLoss' : 'bigLoss';
+        return I18n.t(agentName ? 'att.dear' : 'att.dearAnon', { agent: agentName }) + '\n\n'
+            + I18n.t('att.po.intro', { client, teamName }) + '\n\n'
+            + I18n.t('att.po.' + bucket, { score, client, oppName, div });
     },
 };
 

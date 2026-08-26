@@ -15,7 +15,7 @@ const ENGINE_FILES = [
     'i18n.js', 'i18n-en.js', 'i18n-de.js',
     'names-data.js', 'clubs.js', 'players.js', 'storage.js', 'game-state.js',
     'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'achievements.js', 'injuries-data.js', 'simulation.js',
-    'live-sim-data.js', 'live-sim.js', 'attend.js', 'dialogue-data.js', 'dialogue-data-de.js', 'dialogue.js'
+    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim.js', 'attend.js', 'dialogue-data.js', 'dialogue-data-de.js', 'dialogue.js'
 ];
 const UI_JS_FILES = [
     'prefs.js',

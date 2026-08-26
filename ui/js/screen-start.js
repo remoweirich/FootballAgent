@@ -8,10 +8,8 @@
 const StartScreen = {
     TITLE: 'Football Agency Simulator',   // working title — easy to change in one place
 
-    // small inline crest, reused from Setup's mark so branding stays consistent
-    CREST: `<svg viewBox="0 0 28 28" width="46" height="46" aria-hidden="true" fill="none">
-        <path d="M14 1.5 26 6.2v7.8c0 8-5.2 12.8-12 13.5-6.8-.7-12-5.5-12-13.5V6.2Z" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>
-        <path d="M14 8 19.7 12.15 17.53 18.85 10.47 18.85 8.3 12.15Z" fill="var(--accent)"/></svg>`,
+    // brand logo (shield badge); shared visual with Setup so branding stays consistent
+    CREST: `<img src="assets/img/fa-logo.png" alt="" style="height:140px;width:auto;display:block;margin:0 auto">`,
     GEAR: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>`,
     WAND: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 5 5L8 21l-5 1 1-5Z"/><path d="m14 5 5 5"/><path d="M19 3v2M21 8h-2"/></svg>`,
     BAG: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
@@ -168,7 +166,7 @@ const StartScreen = {
     _injectCSS() {
         if (document.getElementById('ssCSS')) return;
         const css = `
-        .ss-wrap{position:fixed;inset:0;background:radial-gradient(120% 80% at 50% 0%, rgba(52,211,153,.10), transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;padding:calc(env(safe-area-inset-top,0) + 20px) 22px calc(env(safe-area-inset-bottom,0) + 20px)}
+        .ss-wrap{position:fixed;inset:0;background:radial-gradient(120% 80% at 50% 0%, rgba(236,232,204,.10), transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;padding:calc(env(safe-area-inset-top,0) + 20px) 22px calc(env(safe-area-inset-bottom,0) + 20px)}
         .ss-inner{width:100%;max-width:400px;display:flex;flex-direction:column;min-height:min(560px,90vh)}
         .ss-brand{text-align:center;margin-top:8vh}
         .ss-title{font-size:26px;font-weight:var(--weight-bold);color:var(--text-bright);margin:14px 0 4px;letter-spacing:-.01em}

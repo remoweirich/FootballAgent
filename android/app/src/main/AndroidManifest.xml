@@ -25,7 +25,8 @@
              (AdMob console > App settings) before publishing. Required, or the app crashes on launch. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-3940256099942544~3347511713"
+        />
 
         <provider
             android:name="androidx.core.content.FileProvider"
