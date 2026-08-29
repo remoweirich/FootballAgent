@@ -16,25 +16,30 @@ const Monetization = {
     // `grants` = the entitlements a non-consumable unlocks (bundles list all of theirs, so owns()
     // stays a flat set lookup). Prices here are placeholders for the dev UI; the live store returns
     // its own localized prices, which the Store screen prefers when a real provider is attached.
+    // `storeId` = the Play / RevenueCat product identifier. They differ from these internal catalog
+    // keys (which the Store UI + i18n key off), so the RevenueCat adapter maps between the two.
     PRODUCTS: {
-        remove_ads:   { kind: 'nonconsumable', price: '€1.99', grants: ['removeAds'] },
-        insights:     { kind: 'nonconsumable', price: '€1.99', grants: ['insights'] },
-        editor:       { kind: 'nonconsumable', price: '€1.99', grants: ['editor'] },
-        pro:          { kind: 'nonconsumable', price: '€5.99', grants: ['removeAds', 'insights', 'editor'], bundle: true },
+        remove_ads:   { kind: 'nonconsumable', price: '€1.99', grants: ['removeAds'], storeId: 'One_time' },
+        insights:     { kind: 'nonconsumable', price: '€1.99', grants: ['insights'], storeId: 'consumable_2' },
+        editor:       { kind: 'nonconsumable', price: '€1.99', grants: ['editor'], storeId: 'consumable_3' },
+        pro:          { kind: 'nonconsumable', price: '€5.99', grants: ['removeAds', 'insights', 'editor'], bundle: true, storeId: 'consumable' },
         // sandbox is the top tier: everything Pro has + the full in-game editor (ages, names, abilities,
         // your reputation, your finances). No cash-boost consumables — editing money lives here instead.
-        sandbox:      { kind: 'nonconsumable', price: '€9.99', grants: ['removeAds', 'insights', 'editor', 'sandbox'], bundle: true },
-        supporter_2:  { kind: 'nonconsumable', price: '€1.99', grants: ['supporter'], tier: 1 },
-        supporter_5:  { kind: 'nonconsumable', price: '€4.99', grants: ['supporter'], tier: 2 },
-        supporter_10: { kind: 'nonconsumable', price: '€9.99', grants: ['supporter'], tier: 3 },
+        sandbox:      { kind: 'nonconsumable', price: '€9.99', grants: ['removeAds', 'insights', 'editor', 'sandbox'], bundle: true, storeId: 'consumable_4' },
+        supporter_2:  { kind: 'nonconsumable', price: '€1.99', grants: ['supporter'], tier: 1, storeId: 'sup_1' },
+        supporter_5:  { kind: 'nonconsumable', price: '€4.99', grants: ['supporter'], tier: 2, storeId: 'sup_2' },
+        supporter_10: { kind: 'nonconsumable', price: '€9.99', grants: ['supporter'], tier: 3, storeId: 'sup_3' },
     },
+    // every entitlement any product can grant — lets the adapter recognise a RevenueCat entitlement
+    // whose id already matches ours (it otherwise unlocks by owned-product-id -> that product's grants).
+    ALL_ENTITLEMENTS: ['removeAds', 'insights', 'editor', 'sandbox', 'supporter'],
     KEY: 'entitlements',       // Prefs key: array of owned entitlement ids
     KEY_TIER: 'supporterTier', // Prefs key: highest supporter tier bought (for the badge)
 
     // While true, everything except the "supporter" badge behaves as owned, so the prototype stays
     // fully usable before any store is live. Going to market = flip this false and attach a real
     // provider (see setProvider). Tests set it false to exercise real gating.
-    DEV_UNLOCK_ALL: true,
+    DEV_UNLOCK_ALL: false,
 
     // ---- entitlement state -----------------------------------------------------------------------
     _set() { try { return new Set(Prefs.get(this.KEY, [])); } catch (e) { return new Set(); } },
@@ -57,6 +62,15 @@ const Monetization = {
     insightsOn() { return this.owns('insights') && (typeof Prefs === 'undefined' || Prefs.get('insightsOn', true) !== false); },
     setInsights(on) { if (typeof Prefs !== 'undefined') Prefs.set('insightsOn', !!on); },
     priceOf(productId) { const p = this.PRODUCTS[productId]; return p ? (p._storePrice || p.price) : ''; },
+
+    // ---- internal catalog key <-> Play/RevenueCat store product id ----
+    storeIdOf(id) { const p = this.PRODUCTS[id]; return (p && p.storeId) || id; },
+    productByStoreId(storeId) {
+        for (const id of Object.keys(this.PRODUCTS)) { const p = this.PRODUCTS[id]; if (p.storeId === storeId || id === storeId) return { id, def: p }; }
+        return null;
+    },
+    // restore path: lift the supporter-badge tier to whatever an owned supporter pack grants
+    grantSupporterTier(tier) { if (typeof Prefs !== 'undefined' && tier) Prefs.set(this.KEY_TIER, Math.max(this.supporterTier(), tier)); },
 
     grant(ents) {
         const set = this._set();

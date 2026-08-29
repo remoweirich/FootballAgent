@@ -17,7 +17,9 @@
 //   calls below follow the documented @revenuecat/purchases-capacitor API and are wrapped defensively.
 // ============================================================
 const REVENUECAT_CONFIG = {
-    apiKeyAndroid: '',   // <- your RevenueCat ANDROID public SDK key
+    // NOTE: this is a RevenueCat *test* key (test_ prefix) — good for the RevenueCat Test Store /
+    // sandbox; swap in the production Android key (goog_…) before the public release.
+    apiKeyAndroid: 'test_TTdiEcFkhfivHXaILsHIBwVeHFb',
     apiKeyIos: '',       // <- your RevenueCat iOS public SDK key (Step 6)
 };
 
@@ -45,36 +47,54 @@ const RevenueCatProvider = {
         const P = this._p(); if (!P) return;
         try {
             const res = await P.getOfferings();
-            const offs = res && res.offerings;
+            // getOfferings() resolves to PurchasesOfferings ({ all, current }) directly in the
+            // installed plugin; older/wrapped shapes nest it under .offerings — handle both.
+            const offs = res && (res.offerings || res);
             const packages = [];
             if (offs && offs.current && offs.current.availablePackages) packages.push(...offs.current.availablePackages);
             if (offs && offs.all) Object.values(offs.all).forEach(o => o && o.availablePackages && packages.push(...o.availablePackages));
             this._offerings = packages;
-            // map each Play product id -> its store-localized price string, shown on the Store cards
+            // map each store product's localized price onto its catalog entry (matched by storeId)
             packages.forEach(pkg => {
                 const prod = pkg && (pkg.product || pkg.storeProduct);
                 const pid = prod && (prod.identifier || prod.productIdentifier);
-                if (pid && Monetization.PRODUCTS[pid] && prod.priceString) Monetization.PRODUCTS[pid]._storePrice = prod.priceString;
+                if (!pid || !prod.priceString || typeof Monetization === 'undefined') return;
+                const entry = Monetization.productByStoreId(pid);
+                if (entry) entry.def._storePrice = prod.priceString;
             });
         } catch (e) { /* prices simply fall back to the catalog placeholders */ }
     },
     _packageFor(productId) {
+        const sid = (typeof Monetization !== 'undefined') ? Monetization.storeIdOf(productId) : productId;
         return (this._offerings || []).find(pkg => {
             const prod = pkg && (pkg.product || pkg.storeProduct);
-            return prod && (prod.identifier === productId || prod.productIdentifier === productId);
+            return prod && (prod.identifier === sid || prod.productIdentifier === sid);
         }) || null;
     },
-    async _activeEntitlements() {
-        const P = this._p(); if (!P) return [];
-        try {
-            const info = await P.getCustomerInfo();
-            const ci = info && (info.customerInfo || info);
-            return Object.keys((ci && ci.entitlements && ci.entitlements.active) || {});
-        } catch (e) { return []; }
+    // Resolve everything a customerInfo says the user owns into OUR internal entitlements. Unlocking is
+    // driven by owned product ids -> that product's catalog grants (robust no matter how the RevenueCat
+    // entitlements are named); any active RC entitlement that already matches one of ours is honoured too.
+    _grantsFrom(info) {
+        const ci = info && (info.customerInfo || info);
+        const grants = new Set(); let tier = 0;
+        const owned = new Set();
+        ((ci && ci.allPurchasedProductIdentifiers) || []).forEach(id => id && owned.add(id));
+        ((ci && ci.nonSubscriptionTransactions) || []).forEach(t => t && t.productIdentifier && owned.add(t.productIdentifier));
+        if (typeof Monetization !== 'undefined') owned.forEach(sid => {
+            const entry = Monetization.productByStoreId(sid);
+            if (entry) { (entry.def.grants || []).forEach(g => grants.add(g)); if (entry.def.tier) tier = Math.max(tier, entry.def.tier); }
+        });
+        const internal = (typeof Monetization !== 'undefined') ? Monetization.ALL_ENTITLEMENTS : [];
+        Object.keys((ci && ci.entitlements && ci.entitlements.active) || {}).forEach(e => { if (internal.includes(e)) grants.add(e); });
+        return { grants: Array.from(grants), tier };
     },
     async _sync() {
-        const active = await this._activeEntitlements();
-        if (active.length && typeof Monetization !== 'undefined') Monetization.grant(active);
+        const P = this._p(); if (!P) return;
+        let info; try { info = await P.getCustomerInfo(); } catch (e) { return; }
+        const { grants, tier } = this._grantsFrom(info);
+        if (typeof Monetization === 'undefined') return;
+        if (grants.length) Monetization.grant(grants);
+        if (tier) Monetization.grantSupporterTier(tier);
     },
 
     // ---- the interface Monetization.purchase()/restore() call ----
@@ -82,9 +102,10 @@ const RevenueCatProvider = {
         const P = this._p(); if (!P) return { ok: false, error: 'no-plugin' };
         if (!this._offerings) await this._loadOfferings();
         const pkg = this._packageFor(productId);
+        const sid = (typeof Monetization !== 'undefined') ? Monetization.storeIdOf(productId) : productId;
         try {
             if (pkg) await P.purchasePackage({ aPackage: pkg });
-            else await P.purchaseStoreProduct({ product: { identifier: productId } });   // fallback: product not in an offering
+            else await P.purchaseStoreProduct({ product: { identifier: sid } });   // fallback: product not in an offering
             return { ok: true };
         } catch (e) {
             const msg = String((e && e.message) || e || '');
@@ -96,9 +117,9 @@ const RevenueCatProvider = {
         const P = this._p(); if (!P) return { ok: false, error: 'no-plugin' };
         try {
             const info = await P.restorePurchases();
-            const ci = info && (info.customerInfo || info);
-            const active = Object.keys((ci && ci.entitlements && ci.entitlements.active) || {});
-            return { ok: true, entitlements: active };
+            const { grants, tier } = this._grantsFrom(info);
+            if (typeof Monetization !== 'undefined' && tier) Monetization.grantSupporterTier(tier);
+            return { ok: true, entitlements: grants };
         } catch (e) { return { ok: false, error: 'restore' }; }
     },
 };

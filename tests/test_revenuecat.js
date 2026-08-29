@@ -22,7 +22,9 @@ const check = (l, c) => { console.log((c ? 'PASS' : 'FAIL') + '  ' + l); if (!c)
 
 (async () => {
     check('no Capacitor plugin present -> _p() is null', RC._p() === null);
-    check('config keys start empty (nothing to leak)', CFG.apiKeyAndroid === '' && CFG.apiKeyIos === '');
+    // the Android public/test SDK key is intentionally embedded (public keys are safe); the guard now
+    // is that no SECRET key (sk_…) ever gets committed.
+    check('no secret RevenueCat key committed (public/test key is fine)', !/^sk_/.test(CFG.apiKeyAndroid || '') && !/^sk_/.test(CFG.apiKeyIos || ''));
 
     const devProvider = M._provider;
     await initRC();
