@@ -17,7 +17,7 @@ const StoreScreen = {
     isOwned(id) {
         const M = this._M(); if (!M) return false;
         const p = M.PRODUCTS[id]; if (!p) return false;
-        if (p.tier) return M.supporterTier() >= p.tier;              // supporter: any tier at/below current reads as done
+        if (p.tier) return false;                                    // supporter packs are consumable — always buyable again (a fan can donate repeatedly)
         return (p.grants || []).every(e => M.purchased(e));          // bundle/single: all its entitlements really owned
     },
     _card(id) {

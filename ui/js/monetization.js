@@ -19,16 +19,17 @@ const Monetization = {
     // `storeId` = the Play / RevenueCat product identifier. They differ from these internal catalog
     // keys (which the Store UI + i18n key off), so the RevenueCat adapter maps between the two.
     PRODUCTS: {
-        remove_ads:   { kind: 'nonconsumable', price: '€1.99', grants: ['removeAds'], storeId: 'One_time' },
-        insights:     { kind: 'nonconsumable', price: '€1.99', grants: ['insights'], storeId: 'consumable_2' },
-        editor:       { kind: 'nonconsumable', price: '€1.99', grants: ['editor'], storeId: 'consumable_3' },
-        pro:          { kind: 'nonconsumable', price: '€5.99', grants: ['removeAds', 'insights', 'editor'], bundle: true, storeId: 'consumable' },
+        remove_ads:   { kind: 'nonconsumable', price: '€1.99', grants: ['removeAds'], storeId: 'remove_ads' },
+        insights:     { kind: 'nonconsumable', price: '€1.99', grants: ['insights'], storeId: 'enhanced_insights' },
+        editor:       { kind: 'nonconsumable', price: '€1.99', grants: ['editor'], storeId: 'database_editor' },
+        pro:          { kind: 'nonconsumable', price: '€5.99', grants: ['removeAds', 'insights', 'editor'], bundle: true, storeId: 'agent_pro' },
         // sandbox is the top tier: everything Pro has + the full in-game editor (ages, names, abilities,
         // your reputation, your finances). No cash-boost consumables — editing money lives here instead.
-        sandbox:      { kind: 'nonconsumable', price: '€9.99', grants: ['removeAds', 'insights', 'editor', 'sandbox'], bundle: true, storeId: 'consumable_4' },
-        supporter_2:  { kind: 'nonconsumable', price: '€1.99', grants: ['supporter'], tier: 1, storeId: 'sup_1' },
-        supporter_5:  { kind: 'nonconsumable', price: '€4.99', grants: ['supporter'], tier: 2, storeId: 'sup_2' },
-        supporter_10: { kind: 'nonconsumable', price: '€9.99', grants: ['supporter'], tier: 3, storeId: 'sup_3' },
+        sandbox:      { kind: 'nonconsumable', price: '€9.99', grants: ['removeAds', 'insights', 'editor', 'sandbox'], bundle: true, storeId: 'sandbox_editor' },
+        // supporter packs are CONSUMABLE — a fan can buy them repeatedly (the badge tier is the highest bought)
+        supporter_2:  { kind: 'consumable', price: '€1.99', grants: ['supporter'], tier: 1, storeId: 'sup_1' },
+        supporter_5:  { kind: 'consumable', price: '€4.99', grants: ['supporter'], tier: 2, storeId: 'sup_2' },
+        supporter_10: { kind: 'consumable', price: '€9.99', grants: ['supporter'], tier: 3, storeId: 'sup_3' },
     },
     // every entitlement any product can grant — lets the adapter recognise a RevenueCat entitlement
     // whose id already matches ours (it otherwise unlocks by owned-product-id -> that product's grants).

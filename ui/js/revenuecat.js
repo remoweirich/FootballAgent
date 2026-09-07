@@ -17,9 +17,7 @@
 //   calls below follow the documented @revenuecat/purchases-capacitor API and are wrapped defensively.
 // ============================================================
 const REVENUECAT_CONFIG = {
-    // NOTE: this is a RevenueCat *test* key (test_ prefix) — good for the RevenueCat Test Store /
-    // sandbox; swap in the production Android key (goog_…) before the public release.
-    apiKeyAndroid: 'test_TTdiEcFkhfivHXaILsHIBwVeHFb',
+    apiKeyAndroid: 'goog_KjLcaHiBqfZWaxXJIOyMyCoGCwG',   // RevenueCat Android public SDK key (production, Google Play)
     apiKeyIos: '',       // <- your RevenueCat iOS public SDK key (Step 6)
 };
 
