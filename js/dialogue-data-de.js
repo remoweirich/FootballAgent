@@ -312,7 +312,7 @@ const DIALOGUE_DE = {
         'checkin|q-ambition': { label: "Nach seinen Ambitionen fragen", hint: "" },
         'checkin|q-room': { label: "Nach der Kabine fragen", hint: "" },
         'checkin|q-none': { label: "Nichts Bestimmtes", hint: "Manchmal sagt das am meisten." },
-        'moment|praise': { label: "Viel Aufhebens um ihn machen", hint: "" },
+        'moment|praise': { label: "Ihm ordentlich Auftrieb geben", hint: "" },
         'moment|modest': { label: "Es ruhig angehen", hint: "" },
         'injury|there': { label: "Ihn persönlich besuchen", hint: "" },
         'injury|flowers': { label: "Blumen schicken", hint: "" },

@@ -12,10 +12,10 @@
 //  EU consent (UMP) is requested at init by the real provider — required for your DACH audience.
 // ============================================================
 const AD_CONFIG = {
-    // Google's public TEST ids — safe during development; policy REQUIRES test ads while building.
-    // Replace `interstitial` with your own unit id and flip `testing` to false to go live.
-    testing: true,
-    interstitial: 'ca-app-pub-3940256099942544/1033173712',   // Android test interstitial
+    // Live AdMob ids (ch.jens.footballagent). During development flip `testing` back to true to use
+    // Google's public test ids and avoid invalid-activity strikes; test id kept below for reference.
+    testing: false,
+    interstitial: 'ca-app-pub-9156400497236757/6996258921',   // live Android interstitial (test: ca-app-pub-3940256099942544/1033173712)
 };
 
 const Ads = {

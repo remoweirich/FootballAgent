@@ -2139,7 +2139,7 @@ const DIALOGUE_DATA = {
   {
    "scene": "moment",
    "choice": "praise",
-   "label": "Make a fuss of him",
+   "label": "Hype him up about it",
    "hint": ""
   },
   {

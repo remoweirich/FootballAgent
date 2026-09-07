@@ -136,7 +136,7 @@ I18n.register('de', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Urheberrecht',
     'settings.privacy': 'Datenschutz',
-    'settings.version': 'Football Agency Simulator · Prototyp',
+    'settings.version': 'Football Agency Simulator · v1.0.6',
     'settings.saveNote': 'Benenne diesen Spielstand. Tippe einen vorhandenen Namen an, um ihn zu überschreiben. Du kannst bis zu {max} behalten ({used} belegt).',
     'settings.saved': 'Gespeichert',
     'store.title': 'Shop',
@@ -170,9 +170,9 @@ I18n.register('de', {
     'store.supporter_10.desc': 'Ein fantastisches Geschenk zur Unterstützung der Entwicklung — mit Unterstützer-Abzeichen.',
     'settings.saveUnavailable': 'Speichern ist hier nicht verfügbar.',
     'settings.couldNotSave': 'Konnte nicht speichern.',
-    'settings.privacyBody': 'Dieses Spiel läuft vollständig auf deinem Gerät. Es erfasst, überträgt und teilt keine personenbezogenen Daten. Deine Spielstände liegen nur im lokalen Speicher dieser App und verlassen das Gerät nie. Es gibt keine Konten, keine Analyse und keine Tracker von Dritten.',
-    'settings.copyrightBody': 'Football Agency Simulator — Prototyp. Aller Spielcode und Text © beim Autor. Vereins-, Liga- und Wettbewerbsnamen sind Platzhalter und stehen in keiner Verbindung zu realen Organisationen, werden von ihnen nicht unterstützt und sind nicht lizenziert; sie lassen sich über „Anpassen“ (demnächst) durch eigene Namenspakete ersetzen.',
-    'settings.creditsBody': 'Musik\n\nAlle Titel werden unter ihren jeweiligen Lizenzen verwendet. Vollständige Titel- und Künstlerangaben werden hier aufgeführt.',
+    'settings.privacyBody': 'Deine Spielstände liegen nur im lokalen Speicher dieser App — es gibt keine Konten und keine Anmeldung, und wir erfassen sie nicht. Zwei Drittanbieter-Dienste verarbeiten jedoch einige Daten: Google AdMob zeigt Werbung (dabei können deine Werbe-ID, der ungefähre Standort aus deiner IP-Adresse und Interaktionen mit Anzeigen genutzt werden; im EWR, in der Schweiz und in Großbritannien wird zuvor deine Zustimmung abgefragt), und In-App-Käufe laufen über Google Play Billing und RevenueCat, die Kaufdaten und eine anonyme App-Nutzer-ID verarbeiten. Wir setzen keine eigene Analyse ein und verkaufen niemals Daten. Die vollständige Datenschutzerklärung ist auf der Google-Play-Seite des Spiels verlinkt.',
+    'settings.copyrightBody': 'Football Agency Simulator. Aller Spielcode und Text © beim Autor, JWP Pastimes. Vereins-, Liga- und Wettbewerbsnamen sind Platzhalter und stehen in keiner Verbindung zu realen Organisationen, werden von ihnen nicht unterstützt und sind nicht lizenziert; du kannst sie über „Anpassen“ durch eigene Namenspakete ersetzen.',
+    'settings.creditsBody': 'Danke\n\nEin großes Dankeschön an alle, die geholfen haben, dieses Spiel zum Leben zu erwecken — die Testspieler, Freunde und die Familie, die Rückmeldungen gegeben, Fehler gejagt und das Projekt am Laufen gehalten haben. Football Agency Simulator wäre ohne euch nicht das, was es ist.\n\nAudio\n\nAlle Musik und Soundeffekte werden unter ihren jeweiligen Lizenzen verwendet.',
 
     // ---- shared (more) ----
     'common.continue': 'Weiter',
