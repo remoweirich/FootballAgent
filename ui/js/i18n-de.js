@@ -618,6 +618,8 @@ I18n.register('de', {
     'customize.regionsSaved': 'Scouting-Regionen gespeichert.',
     'customize.poolEmpty': 'Alle Vereine sind bereits zugeordnet.',
     'customize.howto': 'So funktioniert’s',
+    'customize.howImport': 'Import-Anleitung',
+    'customize.howImportBody': '<p class="cx-note" style="line-height:1.5;margin-bottom:10px"><strong>Namen.</strong> Tippe auf <em>Namensvorlage exportieren</em>, um eine Tabelle (CSV) mit jedem Verein und Wettbewerb samt aktuellem Namen herunterzuladen. Benenne sie um und tippe dann auf <em>Namen importieren</em>, um sie wieder zu laden. Ein von der Community erstelltes Namenspaket (eine .csv- oder .json-Datei) wird genauso importiert.</p><p class="cx-note" style="line-height:1.5;margin-bottom:10px"><strong>Logos.</strong> Tippe auf <em>Logos importieren</em> und wähle deine Bilder — oder eine einzelne .zip mit einem Logo-Ordner. Benenne jede Datei nach ihrem Verein (zum Beispiel Basel.png), dann wird sie automatisch zugeordnet; alles Unzugeordnete kannst du auf dem nächsten Bildschirm von Hand zuweisen. Logos sollten kleine, quadratische PNGs sein.</p><p class="cx-note" style="line-height:1.5;margin-bottom:10px"><strong>Community-Pakete.</strong> Das Spiel wird mit erfundenen Vereins- und Wettbewerbsnamen und schlichten Wappen ausgeliefert. Namens- und Logo-Pakete mit echten Vorbildern werden von der Community erstellt und geteilt — sie sind nicht Teil des Spiels — und ein Import gestaltet hier die ganze Welt auf einmal um.</p><p class="cx-note" style="line-height:1.5">Alles, was du importierst, wird in dieser Datenbank gespeichert. Starte ein neues Spiel damit, um mit deinen Namen und Logos zu spielen.</p>',
     'customize.explainCreate': 'Wähle europäisch oder nicht und wie viele eingebaute Spielernamen das Land bekommt. Dann wähle das Land und baue seine Liga.',
     'customize.explainCountryMenu': 'Baue die Liga (Vereine, Farben, Reputationen, B-Teams), füge Spielernamen hinzu und lege 6 Scouting-Regionen fest. Dann ist es als Heimatland spielbar.',
     'customize.explainBuild': 'Jede Liga hat ein Reputationslimit und ein B-Team-Limit. Tippe einen Verein zum Bearbeiten; mit B wird er zur Reserve. Der Stift benennt Ligen und Pokale um.',
@@ -643,6 +645,8 @@ I18n.register('de', {
     'setup.watch.text': 'Wenn der Klub eines Klienten ein saisonentscheidendes Spiel erreicht — ein Titelfinale in der Liga, ein Pokalfinale, ein Europapokalfinale — kannst du eingeladen werden, es live zu verfolgen, Minute für Minute. Persönlich dabei zu sein ist eine der stärksten Möglichkeiten, eure Bindung zu vertiefen.',
     'setup.grow.title': 'Lass deine Agentur wachsen',
     'setup.grow.text': 'Erfolge und große Wechsel steigern dein Ansehen, was bessere Klienten, mehr Scouts und bessere Anlagen freischaltet. Investiere deine Provision in Upgrades.',
+    'setup.customize.title': 'Mach es zu deinem Spiel',
+    'setup.customize.text': 'Vereine und Wettbewerbe starten mit erfundenen Namen und schlichten Wappen. Unter „Anpassen“ im Startmenü kannst du sie umbenennen, Vereine neu einfärben und eigene Logos festlegen — oder ein von der Community erstelltes Namens- oder Logo-Paket importieren, das die ganze Welt auf einmal umgestaltet. Tippe unter „Anpassen“ auf „Import-Anleitung“ für die Schritt-für-Schritt-Anleitung.',
     'setup.week.title': 'Spiele Woche für Woche',
     'setup.week.text': 'Rücke eine Woche vor, um Spiele, Angebote, Entwicklung und Scouting voranzubringen. Die meisten Deals passieren in den Transferfenstern (Wochen 1–6 und 28–33).',
 

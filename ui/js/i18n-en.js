@@ -619,6 +619,8 @@ I18n.register('en', {
     'customize.regionsSaved': 'Scouting regions saved.',
     'customize.poolEmpty': 'Every club is already assigned.',
     'customize.howto': 'How it works',
+    'customize.howImport': 'How to import',
+    'customize.howImportBody': '<p class="cx-note" style="line-height:1.5;margin-bottom:10px"><strong>Names.</strong> Tap <em>Export names template</em> to download a spreadsheet (CSV) of every club and competition with its current name. Rename them, then tap <em>Import names</em> to load them back in. A community-made names pack (a .csv or .json file) imports exactly the same way.</p><p class="cx-note" style="line-height:1.5;margin-bottom:10px"><strong>Logos.</strong> Tap <em>Import logos</em> and choose your images — or a single .zip of a logos folder. Name each file after its club (for example Basel.png) and it is matched automatically; anything unmatched you can assign by hand on the next screen. Logos should be small, square PNGs.</p><p class="cx-note" style="line-height:1.5;margin-bottom:10px"><strong>Community packs.</strong> The game ships with made-up club and competition names and plain crests. Real-world name and logo packs are created and shared by the community — they are not part of the game — and importing one here reskins the whole world at once.</p><p class="cx-note" style="line-height:1.5">Everything you import is saved into this database. Start a new game on it to play with your names and logos.</p>',
     'customize.explainCreate': 'Choose European or not, and how many built-in player names the country gets. Then pick the country and build its league.',
     'customize.explainCountryMenu': 'Build the league (clubs, colours, reputations, B-teams), add player names, and set 6 scouting regions. Then it’s playable as a home country.',
     'customize.explainBuild': 'Each division has a reputation cap and B-team limit. Tap a club to edit it; use B to make it a reserve side. The pencil renames leagues and cups.',
@@ -644,6 +646,8 @@ I18n.register('en', {
     'setup.watch.text': "When a client's club reaches a season-defining game — a league title decider, a cup final, a European final — you can be invited to watch it live, following it minute by minute. Turning up in person is one of the strongest ways to deepen your bond with him.",
     'setup.grow.title': 'Grow your agency',
     'setup.grow.text': 'Wins and big moves build your reputation, which unlocks bigger clients, more scouts and better facilities. Reinvest your commission in upgrades.',
+    'setup.customize.title': 'Make it your own',
+    'setup.customize.text': 'Clubs and competitions ship with made-up names and plain crests. In Customize on the start menu you can rename them, recolour clubs and set your own logos — or import a community-made name or logo pack to reskin the whole world at once. Tap “How to import” in Customize for the step-by-step.',
     'setup.week.title': 'Play week by week',
     'setup.week.text': 'Advance the week to roll matches, offers, development and scouting forward. Deals happen in the transfer windows (weeks 1–6 and 28–33).',
 

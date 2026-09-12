@@ -15,6 +15,7 @@ const Setup = {
         { icon: 'ti-heartbeat', id: 'happy' },
         { icon: 'ti-ticket', id: 'watch' },
         { icon: 'ti-arrows-transfer-up', id: 'grow' },
+        { icon: 'ti-palette', id: 'customize' },
         { icon: 'ti-trophy', id: 'week' }
     ],
     idx: 0,

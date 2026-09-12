@@ -156,6 +156,7 @@ const CustomizeScreen = {
                 <button class="cx-toolbtn" data-act="impnames"><i class="ti ti-file-text"></i>${I18n.t('customize.importNames')}</button>
                 <button class="cx-toolbtn" data-act="implogos"><i class="ti ti-photo"></i>${I18n.t('customize.importLogos')}</button>
                 <button class="cx-toolbtn" data-act="exporttpl"><i class="ti ti-download"></i>${I18n.t('customize.exportTemplate')}</button>
+                <button class="cx-toolbtn" data-act="howimport"><i class="ti ti-help"></i>${I18n.t('customize.howImport')}</button>
             </div>`;
         const rows = this._divisionRows(this.division, gate);
         const body = `
@@ -484,6 +485,13 @@ const CustomizeScreen = {
         const lines = ['id,name'];
         (Clubs.allClubs || []).forEach(c => { const v = this.clubView(c.id); lines.push(`${this._csv(c.id)},${this._csv(v.name)}`); });
         this._download(`${this._slug(this.db.name)}-names.csv`, lines.join('\n'), 'text/csv');
+    },
+    // Persistent, revisitable guide for importing names/logos + community packs (unlike the one-time
+    // _explain popups). Opened from the "How to import" toolbar button.
+    howImport() {
+        this._overlay(I18n.t('customize.howImport'),
+            `${I18n.t('customize.howImportBody')}<button class="btn btn--primary cx-wide" style="margin-top:8px" data-act="ovcancel">${I18n.t('common.ok')}</button>`);
+        this._delegate(this._ov());
     },
     importNames() {
         const inp = document.createElement('input');
@@ -819,6 +827,7 @@ const CustomizeScreen = {
             case 'livecountry': this._livePickCountry(id); break;
             case 'livecancel': this._live = false; this._closeOverlay(); break;
             case 'exporttpl': this.exportTemplate(); break;
+            case 'howimport': this.howImport(); break;
             case 'ovcancel': this._closeOverlay(); break;
             // ---- add-a-new-country ----
             case 'createcountry': this.createCountry(); break;
