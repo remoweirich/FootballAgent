@@ -1249,7 +1249,7 @@ const League = {
         return pick.id;
     },
     _swissCupEligible(id, usedSet) {
-        if (id === 'Eschen/Mauren' || id === 'Vaduz' || isReserveClub(id)) return this._swissVirtualSub(SWISSCUP_VIRTUAL, usedSet);
+        if (id === 'Eschen-Mauren' || id === 'Vaduz' || isReserveClub(id)) return this._swissVirtualSub(SWISSCUP_VIRTUAL, usedSet);
         return id;
     },
 
@@ -1298,7 +1298,7 @@ const League = {
     // random reserve side -> a clean 64; Promotion League seeded away, one fewer round than the others ----
     _buildCupaBass() {
         const pool = ['PromotionLeague', '1.LigaCH', '2.LigaCH'].reduce((a, d) => a.concat(Clubs.getClubsByDivision(d).map(c => c.id)), []);
-        let entrants = pool.filter(id => id !== 'Eschen/Mauren');
+        let entrants = pool.filter(id => id !== 'Eschen-Mauren');
         const reserves = entrants.filter(isReserveClub);
         if (entrants.length > 64 && reserves.length) {
             const drop = reserves[Math.floor(Rng.next() * reserves.length)];
@@ -1338,7 +1338,7 @@ const League = {
     // ---- Liechtensteiner Cup: Vaduz + Eschen/Mauren + 6 Liechtenstein amateur sides; QF & SF are
     // two-legged, the final is a single match ----
     _buildLichCup() {
-        const teams = ['Vaduz', 'Eschen/Mauren', ...LICHCUP_VIRTUAL.map(v => v.id)];
+        const teams = ['Vaduz', 'Eschen-Mauren', ...LICHCUP_VIRTUAL.map(v => v.id)];
         return { remaining: this.shuffle(teams), results: [], winner: null };
     },
     _lichCupRoundName(week) { return ({ 32: 'Viertelfinal', 38: 'Halbfinal', 47: 'Final' })[week] || 'Runde'; },

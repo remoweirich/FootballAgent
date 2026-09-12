@@ -2606,7 +2606,7 @@ const EUROPE_DATA = {
           "real": true
         },
         {
-          "id": "Eschen/Mauren",
+          "id": "Eschen-Mauren",
           "name": "USV Eschen/Mauren",
           "rep": 24,
           "likelihood": 18,

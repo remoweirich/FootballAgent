@@ -26,13 +26,13 @@ check('Vaduz is a real club, not virtual', runv(`
 `));
 check('Liechtenstein pool references real ids and is flagged real', runv(`
   const cl=EUROPE_DATA.pools['Liechtenstein'].clubs;
-  return cl.length===2 && cl.every(c=>c.real===true) && cl.some(c=>c.id==='Vaduz') && cl.some(c=>c.id==='Eschen/Mauren');
+  return cl.length===2 && cl.every(c=>c.real===true) && cl.some(c=>c.id==='Vaduz') && cl.some(c=>c.id==='Eschen-Mauren');
 `));
 check("Liechtenstein's UEL cup entrant resolves to a real Liechtenstein club", runv(`
   // build an edition and confirm the Liechtenstein UEL R1 entrant is Vaduz or Eschen-Mauren (real ids)
   const snap = Europe.syntheticStandings(); const ed = Europe.buildEurope(snap.standings, snap.cups, 2050);
   const r1 = ed.qpools.UEL[1].unseeded;
-  return r1.includes('Vaduz') || r1.includes('Eschen/Mauren');
+  return r1.includes('Vaduz') || r1.includes('Eschen-Mauren');
 `));
 // UECL qualifying starts in week 3, not week 1
 check('UECL qualifying first round is week 3 (not 1)', runv(`return EUROPE_DATA.qualifying.UECL.rounds[0].week===3 && EUROPE_DATA.qualifying.UEL.rounds[0].week===2 && EUROPE_DATA.qualifying.UCL.rounds[0].week===1;`));

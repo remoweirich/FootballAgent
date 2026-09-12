@@ -1338,7 +1338,7 @@ const CITY_REGION = {
     "Monthey":"ticinovalais",
     "Basel":"nordwestschweiz","Aarau":"nordwestschweiz","Baden":"nordwestschweiz","Solothurn":"nordwestschweiz","Muttenz":"nordwestschweiz","Wohlen":"nordwestschweiz",
     "Zürich":"nordostschweiz","Winterthur":"nordostschweiz","Schaffhausen":"nordostschweiz","Dietikon":"nordostschweiz","Thalwil":"nordostschweiz","Kreuzlingen":"nordostschweiz","Marthalen":"nordostschweiz","Wettswil-Bonstetten":"nordostschweiz",
-    "St. Gallen":"ostschweiz","Rapperswil-Jona":"ostschweiz","Wil":"ostschweiz","Gossau SG":"ostschweiz","Widnau":"ostschweiz","Vaduz":"ostschweiz","Eschen/Mauren":"ostschweiz",
+    "St. Gallen":"ostschweiz","Rapperswil-Jona":"ostschweiz","Wil":"ostschweiz","Gossau SG":"ostschweiz","Widnau":"ostschweiz","Vaduz":"ostschweiz","Eschen-Mauren":"ostschweiz",
     "Luzern":"innerschweiz","Kriens":"innerschweiz","Zug":"innerschweiz","Buochs":"innerschweiz","Freienbach":"innerschweiz","Tuggen":"innerschweiz","Schötz":"innerschweiz","Cham":"innerschweiz",
     "Bern":"bern","Thun":"bern","Biel-Bienne":"bern","Langenthal":"bern","Gümligen":"bern","Münsingen":"bern",
     "Lugano":"ticinovalais","Bellinzona":"ticinovalais","Naters":"ticinovalais","Mendrisio":"ticinovalais","Collina d'Oro":"ticinovalais","Paradiso":"ticinovalais","Locarno":"ticinovalais","Sion":"ticinovalais","Taverne":"ticinovalais",
