@@ -242,6 +242,15 @@
   background:var(--surface-raised); color:var(--text-secondary);
 }
 .pic .ti{ font-size:18px; }
+.pic-img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; cursor:zoom-in; }
+.pic--locked .pic-img{ opacity:.55; }
+/* Tap-to-enlarge vehicle artwork (see AgencyScreen.zoomVehicle). Above sheets(50)/modals(60). */
+.veh-lightbox{ position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center;
+  background:rgba(4,7,11,.72); cursor:zoom-out; animation:vehFade .15s ease; }
+.veh-lightbox img{ width:250px; max-width:82vw; height:auto; border-radius:var(--radius-lg);
+  box-shadow:0 14px 44px rgba(0,0,0,.55); animation:vehPop .18s cubic-bezier(.2,.8,.3,1.2); }
+@keyframes vehFade{ from{opacity:0} to{opacity:1} }
+@keyframes vehPop{ from{transform:scale(.86);opacity:0} to{transform:scale(1);opacity:1} }
 .pic--owned{ background:var(--accent-tint); color:var(--accent); }
 .pic--current{ background:var(--accent); color:var(--accent-ink); }
 .pic--locked{ background:var(--surface-sunken); color:#4A525C; border:.5px solid var(--line-faint); }

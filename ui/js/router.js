@@ -96,6 +96,10 @@ const Router = {
     // see navStack above). Falls through to Home, then exits, matching how Android
     // users expect the back button to behave.
     hardwareBack() {
+        // A full-screen overlay (e.g. the vehicle-artwork lightbox) swallows the first back press,
+        // closing itself rather than navigating underneath — matching tap-anywhere-to-dismiss.
+        const lightbox = document.getElementById('vehLightbox');
+        if (lightbox) { lightbox.remove(); return; }
         const def = this.screens[this.current];
         if (this.navStack.length || (def && !def.isMain)) { this.back(); return; }
         if (this.current !== 'home') { this.go('home'); return; }
