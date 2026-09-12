@@ -668,7 +668,7 @@ const LEAGUES_DATA = {
                     { id: "FC Kosova", name: "Zürich Red", city: "Zürich", colors: { primary: "#E2001A", secondary: "#000000" }, reputation: 25},
                     { id: "FC Winterthur U21", name: "Winterthur II", city: "Winterthur", colors: { primary: "#FFD500", secondary: "#000000" }, reputation: 23 },
                     { id: "FC Lugano U21", name: "Lugano II", city: "Lugano", colors: { primary: "#000000", secondary: "#FFFFFF" }, reputation: 30 },
-                    { id: "Eschen/Mauren", name: "Eschen/Mauren", city: "Eschen/Mauren", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 24 },
+                    { id: "Eschen-Mauren", name: "Eschen/Mauren", city: "Eschen/Mauren", colors: { primary: "#003DA5", secondary: "#FFFFFF" }, reputation: 24 },
                     { id: "Grasshoppers U21", name: "Zürich Sky II", city: "Zürich", colors: { primary: "#5BA4D8", secondary: "#FFFFFF" }, reputation: 30 },
                     { id: "FC Langenthal", name: "Langenthal", city: "Langenthal", colors: { primary: "#00A19A", secondary: "#000000" }, reputation: 33 },
                     { id: "SV Muttenz", name: "Muttenz", city: "Muttenz", colors: { primary: "#0033A0", secondary: "#FCD200" }, reputation: 29},
