@@ -98,7 +98,7 @@ const Router = {
     hardwareBack() {
         // A full-screen overlay (e.g. the vehicle-artwork lightbox) swallows the first back press,
         // closing itself rather than navigating underneath — matching tap-anywhere-to-dismiss.
-        const lightbox = document.getElementById('vehLightbox');
+        const lightbox = document.getElementById('artLightbox');
         if (lightbox) { lightbox.remove(); return; }
         const def = this.screens[this.current];
         if (this.navStack.length || (def && !def.isMain)) { this.back(); return; }

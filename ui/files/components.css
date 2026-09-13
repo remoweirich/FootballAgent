@@ -243,8 +243,7 @@
 }
 .pic .ti{ font-size:18px; }
 .pic-img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; cursor:zoom-in; }
-.pic--locked .pic-img{ opacity:.55; }
-/* Tap-to-enlarge vehicle artwork (see AgencyScreen.zoomVehicle). Above sheets(50)/modals(60). */
+/* Tap-to-enlarge artwork (see AgencyScreen.zoomArt). Above sheets(50)/modals(60). */
 .veh-lightbox{ position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center;
   background:rgba(4,7,11,.72); cursor:zoom-out; animation:vehFade .15s ease; }
 .veh-lightbox img{ width:250px; max-width:82vw; height:auto; border-radius:var(--radius-lg);

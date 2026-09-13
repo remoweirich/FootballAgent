@@ -26,23 +26,41 @@ const AgencyScreen = {
         const i = kind === 'office' ? Math.floor(idx / 3) : idx;
         return arr[Math.min(i, arr.length - 1)];
     },
-    // pictogram markup for a ladder rung: vehicles use the custom artwork in
-    // ui/assets/img/vehicles/<id>.png; offices/properties keep their Tabler icon.
-    picInner(kind, idx) {
-        if (kind === 'vehicle' && typeof VEHICLES !== 'undefined') {
-            const v = VEHICLES[Math.min(Math.max(idx, 0), VEHICLES.length - 1)];
-            if (v) return `<img class="pic-img" src="assets/img/vehicles/${v.id}.png" alt="" onclick="AgencyScreen.zoomVehicle(event,'${v.id}')">`;
+    // Ladder kinds that have custom artwork, and where it lives. Offices stay on Tabler icons.
+    ART_DIR: { vehicle: 'vehicles', property: 'properties' },
+    artList(kind) {
+        if (kind === 'vehicle') return (typeof VEHICLES !== 'undefined') ? VEHICLES : null;
+        if (kind === 'property') return (typeof PROPERTIES !== 'undefined') ? PROPERTIES : null;
+        return null;
+    },
+    // Pictogram markup for a ladder rung. Vehicles/properties use custom artwork in two states:
+    // "<id>_buy.png" while it is still to be bought, "<id>.png" once owned. Anything without a
+    // file (offices, or artwork not drawn yet) falls back to the Tabler icon - see artFallback.
+    picInner(kind, idx, owned) {
+        const dir = this.ART_DIR[kind], list = this.artList(kind);
+        if (dir && list) {
+            const item = list[Math.min(Math.max(idx, 0), list.length - 1)];
+            if (item) {
+                const src = `assets/img/${dir}/${item.id}${owned ? '' : '_buy'}.png`;
+                return `<img class="pic-img" src="${src}" alt="" onclick="AgencyScreen.zoomArt(event,'${src}')" onerror="AgencyScreen.artFallback(this,'${this.iconFor(kind, idx)}')">`;
+            }
         }
         return `<i class="ti ${this.iconFor(kind, idx)}"></i>`;
     },
-    // Tap a vehicle thumbnail to enlarge its artwork centre-screen; tap anywhere to dismiss.
+    // Artwork missing on disk: quietly swap the broken image for the kind's icon.
+    artFallback(img, icon) {
+        const i = document.createElement('i');
+        i.className = 'ti ' + icon;
+        if (img && img.parentNode) img.parentNode.replaceChild(i, img);
+    },
+    // Tap a thumbnail to enlarge its artwork centre-screen; tap anywhere to dismiss.
     // stopPropagation so tapping the art inside a clickable tier row doesn't also open the ladder.
-    zoomVehicle(ev, id) {
+    zoomArt(ev, src) {
         if (ev) { ev.stopPropagation(); ev.preventDefault(); }
-        const old = document.getElementById('vehLightbox'); if (old) old.remove();
+        const old = document.getElementById('artLightbox'); if (old) old.remove();
         const box = document.createElement('div');
-        box.id = 'vehLightbox'; box.className = 'veh-lightbox';
-        box.innerHTML = `<img src="assets/img/vehicles/${id}.png" alt="">`;
+        box.id = 'artLightbox'; box.className = 'veh-lightbox';
+        box.innerHTML = `<img src="${src}" alt="">`;
         box.addEventListener('click', () => box.remove());
         document.body.appendChild(box);
     },
@@ -78,7 +96,7 @@ const AgencyScreen = {
         <div class="section-label">${I18n.t('agency.vehicles')} <span class="muted" style="font-weight:400">${I18n.t('agency.buyInOrder')}</span></div>
         <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('vehicle')">
             <div class="tier__body ${vNext ? '' : 'tier__body--current'}">
-                <div class="pic ${vNext ? 'pic--locked' : 'pic--current'}">${this.picInner('vehicle', vNext ? Upgrades.state().vehicleIndex + 1 : Upgrades.state().vehicleIndex)}</div>
+                <div class="pic ${vNext ? 'pic--locked' : 'pic--current'}">${this.picInner('vehicle', vNext ? Upgrades.state().vehicleIndex + 1 : Upgrades.state().vehicleIndex, !vNext)}</div>
                 <div style="flex:1"><div class="tier__name">${I18n.t('agency.ownedN', { n: Upgrades.ownedVehicles().length })}</div><div class="tier__benefit muted">${vNext ? I18n.t('agency.next', { name: vNext.name, price: UI.euro(vNext.price) }) : I18n.t('agency.fullGarage')}</div></div>
                 <i class="ti ti-chevron-right row-chev"></i>
             </div>
@@ -87,7 +105,7 @@ const AgencyScreen = {
         <div class="section-label">${I18n.t('agency.properties')} <span class="muted" style="font-weight:400">${I18n.t('agency.buyInOrder')}</span></div>
         <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('property')">
             <div class="tier__body ${pNext ? '' : 'tier__body--current'}">
-                <div class="pic ${pNext ? 'pic--locked' : 'pic--current'}"><i class="ti ${this.iconFor('property', pNext ? Upgrades.state().propertyIndex + 1 : Upgrades.state().propertyIndex)}"></i></div>
+                <div class="pic ${pNext ? 'pic--locked' : 'pic--current'}">${this.picInner('property', pNext ? Upgrades.state().propertyIndex + 1 : Upgrades.state().propertyIndex, !pNext)}</div>
                 <div style="flex:1"><div class="tier__name">${I18n.t('agency.ownedN', { n: Upgrades.ownedProperties().length })}</div><div class="tier__benefit muted">${pNext ? I18n.t('agency.next', { name: pNext.name, price: UI.euro(pNext.price) }) : I18n.t('agency.ownAllProps')}</div></div>
                 <i class="ti ti-chevron-right row-chev"></i>
             </div>
@@ -164,7 +182,7 @@ const AgencyScreen = {
             const pic = state === 'owned' ? 'pic--owned' : state === 'current' ? 'pic--current' : state === 'locked' ? 'pic--locked' : '';
             const action = state === 'buyable' ? `<button class="btn btn--primary btn--sm" style="width:auto" onclick="AgencyScreen.buy('${kind}')">${kind === 'office' ? I18n.t('agency.moveIn') : I18n.t('agency.buyPrefix')}${UI.euro(price)}</button>`
                 : state === 'current' ? `<span class="pill pill--accent">${I18n.t('common.current')}</span>` : state === 'owned' ? `<span class="pill">${I18n.t('common.owned')}</span>` : '<i class="ti ti-lock" style="color:var(--text-dim)"></i>';
-            return `<div class="tier" style="margin-bottom:var(--space-3)"><div class="tier__body ${cls}"><div class="pic ${pic}">${this.picInner(kind, i)}</div><div style="flex:1"><div class="tier__name">${item.name}</div><div class="tier__benefit muted">${meta}</div></div>${action}</div></div>`;
+            return `<div class="tier" style="margin-bottom:var(--space-3)"><div class="tier__body ${cls}"><div class="pic ${pic}">${this.picInner(kind, i, state === 'owned' || state === 'current')}</div><div style="flex:1"><div class="tier__name">${item.name}</div><div class="tier__benefit muted">${meta}</div></div>${action}</div></div>`;
         }).join('');
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('agency.ladder' + kind[0].toUpperCase() + kind.slice(1))}</div>
             <div style="max-height:60vh;overflow-y:auto">${rows}</div>
