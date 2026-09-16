@@ -189,9 +189,10 @@ const SettingsScreen = {
     rateApp() { UI.openExternal(APP_LINKS.playStore); },
     feedback() { UI.openExternal(APP_LINKS.feedbackMail); },
     legal(which) {
+        // pre-line: the copyright text carries an "Open source" sub-block on its own lines
         const body = which === 'privacy'
-            ? `<p class="set-note">${I18n.t('settings.privacyBody')}</p>`
-            : `<p class="set-note">${I18n.t('settings.copyrightBody')}</p>`;
+            ? `<p class="set-note" style="white-space:pre-line">${I18n.t('settings.privacyBody')}</p>`
+            : `<p class="set-note" style="white-space:pre-line">${I18n.t('settings.copyrightBody')}</p>`;
         this._overlay(which === 'privacy' ? I18n.t('settings.privacy') : I18n.t('settings.copyright'), body);
     },
 
