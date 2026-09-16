@@ -1,9 +1,13 @@
 // ============================================================
 //  Central Game State
 // ============================================================
+// Every game starts in this season; a full season played to its end rolls seasonStartYear on by one,
+// so seasonsCompleted() = seasonStartYear - START_SEASON_YEAR (needs no extra saved counter).
+const START_SEASON_YEAR = 2025;
+
 const GameState = {
     week: 1,
-    seasonStartYear: 2025,
+    seasonStartYear: START_SEASON_YEAR,
     players: [],
     inbox: [],           // email messages (offers, news, summaries)
     log: [],             // short activity log
@@ -50,6 +54,8 @@ const GameState = {
         return `${a}/${b}`;
     },
     seasonLabel() { return this.seasonLabelFor(this.seasonStartYear); },
+    // full seasons the agent has played to the end (i.e. rolled over into the next one)
+    seasonsCompleted() { return this.seasonStartYear - START_SEASON_YEAR; },
 
     // ---- init ----
     // async now (IndexedDB has no synchronous read) — the only call sites are the two
@@ -63,7 +69,7 @@ const GameState = {
         }
     },
     startNewGame(country, name, agentName, database, agentGender) {
-        this.week = 1; this.seasonStartYear = 2025;
+        this.week = 1; this.seasonStartYear = START_SEASON_YEAR;
         // Fix this game's RNG seed up front so the very first pool is drawn from the seeded stream;
         // it rides along in every save (see save/load) and also anchors background-squad regen.
         this.rngSeed = (Date.now() >>> 0) || 1;

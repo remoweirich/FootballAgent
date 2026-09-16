@@ -110,6 +110,8 @@ const SettingsScreen = {
 
                 <div class="set-heading">${I18n.t('settings.groupAbout')}</div>
                 <div class="set-group">
+                    ${row(ic('ti-star'), I18n.t('settings.rateApp'), '', 'SettingsScreen.rateApp()')}
+                    ${row(ic('ti-mail'), I18n.t('settings.feedback'), '', 'SettingsScreen.feedback()')}
                     ${row(ic('ti-music'), I18n.t('settings.credits'), '', "SettingsScreen.credits()")}
                     ${row(ic('ti-license'), I18n.t('settings.copyright'), '', "SettingsScreen.legal('copyright')")}
                     ${row(ic('ti-lock'), I18n.t('settings.privacy'), '', "SettingsScreen.legal('privacy')")}
@@ -183,6 +185,9 @@ const SettingsScreen = {
         this._closeOverlay();
         this._overlay(res.ok ? I18n.t('settings.saved') : I18n.t('settings.saveGame'), `<p class="set-note">${UI.esc(res.message || (res.ok ? I18n.t('settings.saved') : I18n.t('settings.couldNotSave')))}</p>`);
     },
+    // Rate: the Play listing (the rating widget lives there). Feedback: a pre-addressed, pre-subjected mail.
+    rateApp() { UI.openExternal(APP_LINKS.playStore); },
+    feedback() { UI.openExternal(APP_LINKS.feedbackMail); },
     legal(which) {
         const body = which === 'privacy'
             ? `<p class="set-note">${I18n.t('settings.privacyBody')}</p>`

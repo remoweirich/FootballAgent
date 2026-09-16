@@ -117,6 +117,10 @@ Home._doAdvance = function () {
     Home._spotlights = res.spotlights || [];
     Home._pendingAttend = (res.attend || []).slice();   // finals the agent may watch this week
     Home._adPending = !!res.windowClosed;               // one interstitial when a transfer window shuts (Ads gates the rest)
+    // Ask for a rating once, the first time a fifth season rolls over. Device-scoped (Prefs) so a
+    // new save never re-asks; surfaced at the very end of the advance flow so it never stacks.
+    Home._ratePending = !!res.rolledSeason && typeof Prefs !== 'undefined' && !Prefs.get('ratePromptShown', false)
+        && typeof GameState.seasonsCompleted === 'function' && GameState.seasonsCompleted() >= 5;
     const lines = res.events.map(e => `<div class="frow"><span class="frow__k">${e.text}</span></div>`).join('');
     // tap anywhere in the card to continue (not just the button) — lets you rattle through
     // several quiet weeks by tapping the same spot repeatedly
@@ -154,7 +158,22 @@ Home._nextSpotlight = function () { Home._spotIndex++; Home._showSpotlight(); };
 // show one interstitial ad on top. Ads gates removal/frequency itself; failures never surface.
 Home._finishAdvance = function () {
     Router.refresh();
+    // the rate prompt takes the slot this week; the (opportunistic) ad simply waits for the next window close
+    if (Home._ratePending) { Home._ratePending = false; Home._adPending = false; Home._showRatePrompt(); return; }
     if (Home._adPending) { Home._adPending = false; if (typeof Ads !== 'undefined') Ads.maybeShowInterstitial('window-close'); }
+};
+
+// ---- rate-the-app prompt (once, after the fifth season) ----
+// The × is deliberately the modal's FIRST child: Router's backdrop tap "clicks" the first child,
+// so tapping outside dismisses too, while a tap inside the card never closes it by accident.
+Home._showRatePrompt = function () {
+    if (typeof Prefs !== 'undefined') Prefs.set('ratePromptShown', true);
+    Router.modal(`<button class="modal-x" onclick="Router.closeModal()" aria-label="${I18n.t('common.close')}"><i class="ti ti-x"></i></button>
+        <div style="font-size:30px;text-align:center;margin-bottom:var(--space-2)">⭐</div>
+        <h2 style="margin:0 0 var(--space-3);text-align:center">${I18n.t('rate.title')}</h2>
+        <p style="margin:0 0 var(--space-5);line-height:1.6;text-align:center;color:var(--text-secondary)">${I18n.t('rate.body')}</p>
+        <button class="btn btn--primary" style="width:100%" onclick="Router.closeModal(); UI.openExternal(APP_LINKS.playStore)">${I18n.t('rate.cta')}</button>
+        <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeModal(); UI.openExternal(APP_LINKS.feedbackMail)">${I18n.t('rate.feedback')}</button>`);
 };
 
 // ---- "Attend the Final" invitations ----

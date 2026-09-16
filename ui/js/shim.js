@@ -23,6 +23,12 @@ const NATIONALITY_ISO = {
     Jamaica: 'jm', Pakistan: 'pk', Paraguay: 'py', Bolivia: 'bo', Iran: 'ir'
 };
 
+// External destinations shared by Settings > About and the post-season rate prompt.
+const APP_LINKS = {
+    playStore: 'https://play.google.com/store/apps/details?id=ch.jens.footballagent',
+    feedbackMail: 'mailto:jwp.pastimes@proton.me?subject=' + encodeURIComponent('My feedback and Ideas'),
+};
+
 const UI = {
     // the active currency symbol ('€' by default; '£' / 'CHF ' when the player picks another)
     cur() { return (typeof Currency !== 'undefined') ? Currency.sym() : '€'; },
@@ -80,6 +86,19 @@ const UI = {
     },
 
     esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
+
+    // Open a Play Store page / mailto: etc. outside the game. On a native build Capacitor's WebView
+    // intercepts any off-app URL and launches the matching system intent (Play app, mail chooser),
+    // so a plain navigation is the reliable route; on the web build a new tab keeps the game open.
+    openExternal(url) {
+        const cap = (typeof window !== 'undefined') && window.Capacitor;
+        const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+        try {
+            if (native) { window.location.href = url; return; }
+            const w = window.open(url, '_blank', 'noopener');
+            if (!w) window.location.href = url;   // popup blocked -> let the browser handle it
+        } catch (e) { try { window.location.href = url; } catch (e2) { /* nothing sensible left to do */ } }
+    },
 
     // ---- crisp SVG flag (looks up by nationality name, not the stored emoji — so it
     // renders correctly even for players saved before this was added) ----
