@@ -74,9 +74,9 @@ const AgencyScreen = {
 
         el.innerHTML = `
         <div class="info-grid" style="margin-bottom:var(--space-5)">
-            <div class="info"><span><i class="ti ti-star"></i>${I18n.t('agency.reputation')}</span><b>${Math.round(ag.reputation)}<span class="muted" style="font-size:11px">/${Agency.repLimit()}</span></b></div>
-            <a class="info" href="#clients" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-users"></i>${I18n.t('nav.clients')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${Agency.clients().length}<span class="muted" style="font-size:11px">/${Agency.capacity()}</span></b></a>
-            <a class="info" href="#scouting" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-zoom-scan"></i>${I18n.t('agency.scouts')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${ag.scouts.length}<span class="muted" style="font-size:11px">/${Upgrades.maxScouts()}</span></b></a>
+            <div class="info"><span><i class="ti ti-star"></i>${I18n.t('agency.reputation')}</span><b>${Math.round(ag.reputation)}<span class="muted" style="font-size:var(--fs-xs)">/${Agency.repLimit()}</span></b></div>
+            <a class="info" href="#clients" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-users"></i>${I18n.t('nav.clients')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${Agency.clients().length}<span class="muted" style="font-size:var(--fs-xs)">/${Agency.capacity()}</span></b></a>
+            <a class="info" href="#scouting" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-zoom-scan"></i>${I18n.t('agency.scouts')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${ag.scouts.length}<span class="muted" style="font-size:var(--fs-xs)">/${Upgrades.maxScouts()}</span></b></a>
             <div class="info"><span><i class="ti ti-broadcast"></i>${I18n.t('agency.sponsorReach')}</span><b>${sl}</b></div>
         </div>
         <a class="list-row" href="#finance" style="cursor:pointer;justify-content:space-between;margin-bottom:var(--space-5)">

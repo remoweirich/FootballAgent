@@ -206,7 +206,7 @@ const BestXI = {
         .bx-pitch::after{content:"";position:absolute;left:15%;right:15%;top:38%;bottom:38%;border:2px solid rgba(255,255,255,.16);border-radius:50%;pointer-events:none}
         .bx-slot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;
             background:transparent;border:none;cursor:pointer;font:inherit;width:70px}
-        .bx-slotlab{font-size:9px;font-weight:var(--weight-bold);color:rgba(255,255,255,.7);letter-spacing:.04em;text-transform:uppercase}
+        .bx-slotlab{font-size:9px;font-weight:var(--weight-bold);color:rgba(255,255,255,.7);letter-spacing:var(--tracking-caps);text-transform:uppercase}
         .bx-circle{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
             background:rgba(6,20,12,.55);border:2px dashed rgba(255,255,255,.4);color:#fff;font-size:15px;font-weight:var(--weight-bold);
             line-height:1;font-variant-numeric:tabular-nums}
@@ -214,7 +214,7 @@ const BestXI = {
         .bx-slotname{max-width:74px;font-size:10px;font-weight:var(--weight-semibold);color:#fff;text-align:center;line-height:1.1;
             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.65)}
         .bx-plus{font-size:18px;color:rgba(255,255,255,.65);font-weight:var(--weight-regular)}
-        .bx-benchlab{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.07em;margin:16px 2px 8px}
+        .bx-benchlab{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:16px 2px 8px}
         .bx-bench{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
         .bx-slot--bench{position:static;transform:none;width:80px;flex:0 0 80px}
         .bx-slot--bench .bx-circle{width:100%;height:40px;border-radius:10px}
@@ -227,7 +227,7 @@ const BestXI = {
         .bx-clear{width:100%;background:none;border:1px solid var(--line-strong);color:var(--state-bad,#e5484d);border-radius:10px;padding:9px;font:inherit;cursor:pointer;margin-bottom:6px}
         .bx-empty{color:var(--text-dim);text-align:center;padding:20px 8px}
         .bx-xirating{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:0 0 12px}
-        .bx-xilbl{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim)}
+        .bx-xilbl{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-dim)}
         .bx-xival{font-size:var(--fs-xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums}
         .bx-xisub{font-size:var(--fs-xs);color:var(--text-muted);font-variant-numeric:tabular-nums}`;
         const el = document.createElement('style'); el.id = 'bxCSS'; el.textContent = css; document.head.appendChild(el);

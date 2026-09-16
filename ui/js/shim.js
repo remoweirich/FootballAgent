@@ -145,7 +145,7 @@ const UI = {
             <i class="ti ti-heart-handshake" style="color:var(${cvar})"></i>
             <span style="color:var(${cvar});font-weight:var(--weight-semibold)">${label}</span>
             <span style="width:44px;height:5px;border-radius:5px;background:var(--line-strong);overflow:hidden;display:inline-block"><span style="display:block;height:100%;width:${v}%;background:var(${cvar})"></span></span>
-            <span class="muted" style="font-size:11px">${v}</span></span>`;
+            <span class="muted" style="font-size:var(--fs-xs)">${v}</span></span>`;
     },
 
     clubName(id) {

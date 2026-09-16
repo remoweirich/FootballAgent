@@ -101,8 +101,15 @@
   --fs-xl:  16px;  /* app-bar / section title */
   --fs-2xl: 19px;  /* detail name, big metric value */
   --fs-3xl: 20px;  /* hero number (agreed fee) */
+  --fs-display: 24px; /* modal / sheet emoji, section pictograms */
+  --fs-hero:    30px; /* modal hero emoji, standout stats */
   --weight-regular:  400;
   --weight-semibold: 600;
+  /* Inter ships only the 400 and 600 faces, so "medium" and "bold" both resolve to semibold.
+     Defined so a stray var(--weight-bold) can never silently fall back to regular again. */
+  --weight-medium:   600;
+  --weight-bold:     600;
+  --tracking-caps:   .06em; /* letter-spacing for every uppercase label / eyebrow heading */
 
   /* ---- Component sizes ---- */
   --nav-icon:      24px;

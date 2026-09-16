@@ -200,7 +200,7 @@ const Sound = {
         .np-toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
         .np-note{color:var(--accent);font-size:15px;flex:none}
         .np-main{min-width:0;display:flex;flex-direction:column;line-height:1.2}
-        .np-lbl{color:var(--text-dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+        .np-lbl{color:var(--text-dim);font-size:10px;text-transform:uppercase;letter-spacing:var(--tracking-caps)}
         .np-name{color:var(--text-bright);font-size:var(--fs-sm);font-weight:var(--weight-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .np-skip{flex:none;background:var(--surface);border:1px solid var(--line-strong);color:var(--text-secondary);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
         .np-skip:active{background:var(--accent-tint);color:var(--accent-text)}`;

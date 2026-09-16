@@ -212,7 +212,7 @@ const LeaguesScreen = {
         // "Attend the Final": a final you're invited to but haven't watched keeps its result hidden
         // so the Competitions tab can't spoil it (see Attend / the inbox overview).
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId))
-            return `<div class="tie-block"><div class="fixture"><span class="fx-home">${lk(t.h)}</span><span class="fx-score muted" style="font-size:11px">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${lk(t.a)}</span></div></div>`;
+            return `<div class="tie-block"><div class="fixture"><span class="fx-home">${lk(t.h)}</span><span class="fx-score muted" style="font-size:var(--fs-xs)">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${lk(t.a)}</span></div></div>`;
         if (t.bye) return `<div class="tie-block"><div class="fixture"><span class="fx-home fx-win">${lk(t.h)}</span><span class="fx-score muted">${I18n.t('leagues.bye')}</span><span class="fx-away"></span></div></div>`;
         if (t.leg1) {
             const l1 = t.leg1, l2 = t.leg2;
@@ -232,8 +232,8 @@ const LeaguesScreen = {
         const hw = t.winner === t.h, aw = t.winner === t.a;
         // single-match cup tie: penalties show the definitive shootout score, extra time a plain (ET)
         // — both in red, next to the result (the score already includes any ET goals)
-        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.h, t.pens.a).join('–')})</span>`
-            : t.et ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.etTag')})</span>` : '';
+        const penTag = t.pens ? ` <span style="color:var(--danger);font-size:var(--fs-xs);white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.h, t.pens.a).join('–')})</span>`
+            : t.et ? ` <span style="color:var(--danger);font-size:var(--fs-xs);white-space:nowrap">(${I18n.t('leagues.etTag')})</span>` : '';
         return `<div class="tie-block"><div class="fixture"><span class="fx-home ${hw ? 'fx-win' : ''}">${lk(t.h)}</span><span class="fx-score">${t.hg}–${t.ag}${penTag}</span><span class="fx-away ${aw ? 'fx-win' : ''}">${lk(t.a)}</span></div></div>`;
     },
     cupBlurb(key) {
@@ -306,10 +306,10 @@ const LeaguesScreen = {
         const side = (id, winId) => {
             const win = id && winId && id === winId;
             const txt = id ? UI.clubName(id) : I18n.t('leagues.tbd');
-            return `<div style="padding:6px 9px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${win ? 'font-weight:700;color:#16A34A' : (id ? '' : 'color:var(--text-secondary)')}">${txt}</div>`;
+            return `<div style="padding:6px 9px;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${win ? 'font-weight:var(--weight-semibold);color:#16A34A' : (id ? '' : 'color:var(--text-secondary)')}">${txt}</div>`;
         };
         const box = (aid, bid, winId) => `<div style="border:1px solid rgba(128,128,128,.28);border-radius:8px;overflow:hidden;background:rgba(128,128,128,.06)">${side(aid, winId)}<div style="border-top:1px solid rgba(128,128,128,.28)"></div>${side(bid, winId)}</div>`;
-        const col = (title, cells) => `<div style="display:flex;flex-direction:column;min-width:150px;flex:none"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:center;margin-bottom:8px">${title}</div><div style="display:flex;flex-direction:column;justify-content:space-around;gap:8px;flex:1;min-height:470px">${cells}</div></div>`;
+        const col = (title, cells) => `<div style="display:flex;flex-direction:column;min-width:150px;flex:none"><div style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-secondary);text-align:center;margin-bottom:8px">${title}</div><div style="display:flex;flex-direction:column;justify-content:space-around;gap:8px;flex:1;min-height:470px">${cells}</div></div>`;
         const labelKey = { 8: 'r16Tab', 4: 'qfTab', 2: 'sfTab', 1: 'final' };
         const cols = [];
         for (let n = start; n >= 1; n = n / 2) {
@@ -326,11 +326,11 @@ const LeaguesScreen = {
         if (!t) return `<p class="muted">${I18n.t('leagues.notYet46')}</p>`;
         const nm = id => `<a href="${Router.link('clubs', id)}" style="color:inherit">${UI.clubName(id)}</a>`;
         const l1 = t.leg1, l2 = t.leg2;
-        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:var(--fs-xs);white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
         // an unwatched invited decider: keep leg 2, the aggregate and the winner hidden
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId))
-            return `${leg(I18n.t('leagues.leg1'), l1)}<div class="fixture fixture--labeled"><span class="fx-label">${I18n.t('leagues.leg2')}</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${nm(l2.a)}</span></div>`;
+            return `${leg(I18n.t('leagues.leg1'), l1)}<div class="fixture fixture--labeled"><span class="fx-label">${I18n.t('leagues.leg2')}</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:var(--fs-xs)">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${nm(l2.a)}</span></div>`;
         return `${leg(I18n.t('leagues.leg1'), l1)}${leg(I18n.t('leagues.leg2'), l2)}
             <div class="frow"><span class="frow__k">${I18n.t('leagues.aggregate')}</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('leagues.winnerLabel')}</span><span class="frow__v" style="color:var(--state-good)">🏆 ${UI.clubName(t.winner)}</span></div>`;
@@ -448,9 +448,9 @@ const LeaguesScreen = {
         const leg = (label, l) => `<div class="fixture fixture--labeled"><span class="fx-label">${label}</span><span class="fx-home">${nm(l.h)}</span><span class="fx-score">${l.hg}–${l.ag}</span><span class="fx-away">${nm(l.a)}</span></div>`;
         // an unwatched invited play-off decider: leg 1 already happened, but keep leg 2 + aggregate hidden
         if (t._attendId && typeof Attend !== 'undefined' && Attend.isHidden(t._attendId)) {
-            return `${leg(I18n.t('leagues.leg1'), l1)}<div class="fixture fixture--labeled"><span class="fx-label">${I18n.t('leagues.leg2')}</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:11px">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${nm(l2.a)}</span></div>`;
+            return `${leg(I18n.t('leagues.leg1'), l1)}<div class="fixture fixture--labeled"><span class="fx-label">${I18n.t('leagues.leg2')}</span><span class="fx-home">${nm(l2.h)}</span><span class="fx-score muted" style="font-size:var(--fs-xs)">${I18n.t('leagues.notPlayedYet')}</span><span class="fx-away">${nm(l2.a)}</span></div>`;
         }
-        const pens = t.pens ? ` <span style="color:var(--danger);font-size:11px;white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
+        const pens = t.pens ? ` <span style="color:var(--danger);font-size:var(--fs-xs);white-space:nowrap">(${I18n.t('leagues.pens')} ${League.penFixPair(t.pens.a, t.pens.b).join('–')})</span>` : '';
         return `${leg(I18n.t('leagues.leg1'), l1)}${leg(I18n.t('leagues.leg2'), l2)}<div class="frow"><span class="frow__k">Aggregate</span><span class="frow__v">${UI.clubName(t.a)} ${t.aggA}–${t.aggB} ${UI.clubName(t.b)}${pens}</span></div>`;
     },
 
@@ -548,10 +548,10 @@ const LeaguesScreen = {
         const side = (id, ph, winId) => {
             const win = id && winId && id === winId;
             const txt = id ? UI.clubName(id) : ph;
-            return `<div style="padding:6px 9px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${win ? 'font-weight:700;color:#16A34A' : (id ? '' : 'color:var(--text-secondary)')}">${txt}</div>`;
+            return `<div style="padding:6px 9px;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${win ? 'font-weight:var(--weight-semibold);color:#16A34A' : (id ? '' : 'color:var(--text-secondary)')}">${txt}</div>`;
         };
         const box = (aid, bid, winId, aPh, bPh) => `<div style="border:1px solid rgba(128,128,128,.28);border-radius:8px;overflow:hidden;background:rgba(128,128,128,.06)">${side(aid, aPh, winId)}<div style="border-top:1px solid rgba(128,128,128,.28)"></div>${side(bid, bPh, winId)}</div>`;
-        const col = (title, cells) => `<div style="display:flex;flex-direction:column;min-width:148px;flex:none"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:center;margin-bottom:8px">${title}</div><div style="display:flex;flex-direction:column;justify-content:space-around;gap:8px;flex:1;min-height:470px">${cells}</div></div>`;
+        const col = (title, cells) => `<div style="display:flex;flex-direction:column;min-width:148px;flex:none"><div style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-secondary);text-align:center;margin-bottom:8px">${title}</div><div style="display:flex;flex-direction:column;justify-content:space-around;gap:8px;flex:1;min-height:470px">${cells}</div></div>`;
         const cR16 = r16.ties.map(t => box(t.a, t.b, t.winner)).join('');
         const cQF = [0, 1, 2, 3].map(i => box(w(r16, 2 * i), w(r16, 2 * i + 1), qf && qf.winners ? qf.winners[i] : null, I18n.t('leagues.r16winner'), I18n.t('leagues.r16winner'))).join('');
         const cSF = [0, 1].map(i => box(qf ? w(qf, 2 * i) : null, qf ? w(qf, 2 * i + 1) : null, sf && sf.winners ? sf.winners[i] : null, I18n.t('leagues.qfwinner'), I18n.t('leagues.qfwinner'))).join('');
@@ -606,7 +606,7 @@ const LeaguesScreen = {
         return header + `<div class="fcard">${fx || `<p class="hint">${I18n.t('leagues.noFixtures')}</p>`}</div>`;
     },
     euPots(c) {
-        return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${c.pots.map((p, i) => `<div class="fcard" style="padding:8px 12px"><div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);padding:4px 0">${I18n.t('leagues.potN', { n: i + 1 })}</div>${p.map(id => `<div class="frow" style="padding:2px 0"><span class="frow__k" style="font-size:12px">${UI.clubName(id)}</span><span class="frow__v muted" style="font-size:11px">${Europe.repOf(id)}</span></div>`).join('')}</div>`).join('')}</div>`;
+        return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${c.pots.map((p, i) => `<div class="fcard" style="padding:8px 12px"><div class="frow__k" style="font-weight:var(--weight-semibold);color:var(--text);padding:4px 0">${I18n.t('leagues.potN', { n: i + 1 })}</div>${p.map(id => `<div class="frow" style="padding:2px 0"><span class="frow__k" style="font-size:var(--fs-sm)">${UI.clubName(id)}</span><span class="frow__v muted" style="font-size:var(--fs-xs)">${Europe.repOf(id)}</span></div>`).join('')}</div>`).join('')}</div>`;
     },
     euQualifying(c) {
         if (!c.qual || !c.qual.rounds.length) return '';
@@ -699,7 +699,7 @@ const CompHistory = {
             const line = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${gk ? r.cs + ' ' + I18n.t('common.csShort') : r.goals + ' ' + I18n.t('common.goalsShort')} · ${r.assists} ${I18n.t('common.assistsShort')}`;
             return `<a href="${Router.link('client', r.p.id)}" class="list-row" style="cursor:pointer">
                 <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${r.p.name}</div><div class="row-sub">${r.p.position} · ${r.apps} ${I18n.t('common.appsShort')}${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
-                <div style="text-align:right;font-size:12px;color:var(--text-muted)">${line}<br>${UI.ratingText(r.avg)}</div></a>`;
+                <div style="text-align:right;font-size:var(--fs-sm);color:var(--text-muted)">${line}<br>${UI.ratingText(r.avg)}</div></a>`;
         }).join('');
     },
     // same "stays open" sort picker used elsewhere (ClientHistory.pickSort)

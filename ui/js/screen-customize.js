@@ -1229,13 +1229,13 @@ const CustomizeScreen = {
         .cx-note--warn{color:var(--state-bad,#e0574a)}
         .cx-err{color:var(--state-bad,#e0574a);font-size:var(--fs-sm);margin:8px 0 0}
         .cx-wide{width:100%}
-        .cx-listhead{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin:20px 0 8px}
+        .cx-listhead{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-secondary);margin:20px 0 8px}
         .cx-list{display:flex;flex-direction:column;gap:8px}
         .cx-item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}
         .cx-item__main{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
         .cx-item__name{color:var(--text-bright);font-weight:var(--weight-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .cx-item__sub{color:var(--text-secondary);font-size:12px}
-        .cx-item__go{color:var(--text-dim);font-size:20px}
+        .cx-item__sub{color:var(--text-secondary);font-size:var(--fs-sm)}
+        .cx-item__go{color:var(--text-dim);font-size:var(--fs-3xl)}
         .cx-del{background:none;border:none;color:var(--text-dim);font-size:15px;cursor:pointer;padding:4px 6px}
         .cx-empty,.cx-note--muted{color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:14px}
         .cx-dbtag{color:var(--text-secondary);font-size:var(--fs-sm);margin-bottom:16px}
@@ -1243,9 +1243,9 @@ const CustomizeScreen = {
         .cx-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:2px 0;z-index:2}
         .cx-selwrap{flex:1}
         .cx-tbbtn{background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text-secondary);width:40px;height:40px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
-        .cx-count{font-size:12px;color:var(--text-secondary);margin:2px 0 8px;text-align:right}
+        .cx-count{font-size:var(--fs-sm);color:var(--text-secondary);margin:2px 0 8px;text-align:right}
         .cx-count--bad{color:var(--state-bad,#e0574a);font-weight:var(--weight-semibold)}
-        .cx-sizebanner{background:rgba(224,87,74,.12);border:1px solid var(--state-bad,#e0574a);color:var(--state-bad,#e0574a);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12px;line-height:1.5}
+        .cx-sizebanner{background:rgba(224,87,74,.12);border:1px solid var(--state-bad,#e0574a);color:var(--state-bad,#e0574a);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:var(--fs-sm);line-height:1.5}
         .cx-table{display:flex;flex-direction:column;gap:6px}
         .cx-row{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 8px;touch-action:pan-y}
         .cx-logo{background:none;border:none;padding:0;cursor:pointer;flex:none;display:flex;width:30px;height:30px;align-items:center;justify-content:center}
@@ -1280,26 +1280,26 @@ const CustomizeScreen = {
         .cx-errlist{margin:6px 0 0;padding-left:18px;color:var(--text-secondary);font-size:var(--fs-sm);line-height:1.6}
         .cx-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:95;opacity:0;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
         .cx-toast--in{opacity:1;transform:translate(-50%,0)}
-        .cx-bbtn{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2,rgba(255,255,255,.05));color:var(--text-secondary);font-size:11px;font-weight:700;cursor:pointer;flex:none}
+        .cx-bbtn{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2,rgba(255,255,255,.05));color:var(--text-secondary);font-size:var(--fs-xs);font-weight:var(--weight-semibold);cursor:pointer;flex:none}
         .cx-bbtn--on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
         .cx-area{width:100%;resize:vertical;font-family:inherit;line-height:1.5}
         .cx-regcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
         .cx-reghead{display:flex;align-items:center;justify-content:space-between;gap:8px}
         .cx-regname{background:none;border:none;color:var(--text-bright);font:inherit;font-weight:var(--weight-semibold);cursor:pointer;padding:0;text-align:left}
         .cx-regcost{font-size:var(--fs-sm);color:var(--accent,#34D399);font-weight:var(--weight-semibold);flex:none}
-        .cx-regmeta{font-size:12px;color:var(--text-secondary);margin:3px 0 8px}
+        .cx-regmeta{font-size:var(--fs-sm);color:var(--text-secondary);margin:3px 0 8px}
         .cx-chips2{display:flex;flex-wrap:wrap;gap:6px}
-        .cx-chip2{background:var(--surface-2,rgba(255,255,255,.06));border:1px solid var(--line);border-radius:14px;color:var(--text);font-size:12px;padding:4px 10px;cursor:pointer}
+        .cx-chip2{background:var(--surface-2,rgba(255,255,255,.06));border:1px solid var(--line);border-radius:14px;color:var(--text);font-size:var(--fs-sm);padding:4px 10px;cursor:pointer}
         .cx-chip2--add{border-style:dashed;color:var(--text-secondary)}
         .cx-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-        .cx-toolbtn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;font-size:13px;padding:8px 12px;cursor:pointer}
+        .cx-toolbtn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;font-size:var(--fs-md);padding:8px 12px;cursor:pointer}
         .cx-toolbtn i{color:var(--text-secondary)}
-        .cx-ncount{color:var(--text-dim);font-weight:400;font-size:12px}
+        .cx-ncount{color:var(--text-dim);font-weight:400;font-size:var(--fs-sm)}
         .cx-palgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
         .cx-pal{width:100%;aspect-ratio:1;border-radius:8px;border:1px solid rgba(255,255,255,.22);cursor:pointer;padding:0}
         .cx-pal[data-sel="1"]{outline:2px solid var(--accent,#34D399);outline-offset:1px}
         .cx-prev{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);flex:none;display:inline-block}
-        .cx-customcol{position:relative;width:44px;height:44px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;font-size:20px}
+        .cx-customcol{position:relative;width:44px;height:44px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;font-size:var(--fs-3xl)}
         .cx-customcol input[type=color]{position:absolute;inset:0;opacity:0;width:100%;height:100%;border:none;padding:0;cursor:pointer}`;
         const st = document.createElement('style'); st.id = 'cxCSS'; st.textContent = css;
         document.head.appendChild(st);

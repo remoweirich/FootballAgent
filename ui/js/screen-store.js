@@ -90,13 +90,13 @@ const StoreScreen = {
         .st-title{font-weight:var(--weight-semibold);font-size:var(--fs-lg)}
         .st-body{flex:1;overflow-y:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0) + 28px)}
         .st-intro{color:var(--text-secondary);font-size:var(--fs-sm);line-height:1.5;margin:0 0 8px}
-        .st-head{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.07em;margin:18px 2px 8px}
+        .st-head{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:18px 2px 8px}
         .st-group{display:flex;flex-direction:column;gap:10px}
         .st-card{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
         .st-card--owned{opacity:.75}
         .st-cardmain{flex:1;min-width:0}
         .st-name{font-size:var(--fs-md);font-weight:var(--weight-semibold);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-        .st-badge{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:var(--weight-bold);color:var(--accent-ink,#04140c);background:var(--accent);border-radius:999px;padding:2px 7px}
+        .st-badge{font-size:10px;text-transform:uppercase;letter-spacing:var(--tracking-caps);font-weight:var(--weight-bold);color:var(--accent-ink,#04140c);background:var(--accent);border-radius:999px;padding:2px 7px}
         .st-desc{color:var(--text-secondary);font-size:var(--fs-sm);line-height:1.4;margin-top:3px}
         .st-cardright{flex:none}
         .st-buy{min-width:74px}

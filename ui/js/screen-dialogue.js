@@ -182,7 +182,7 @@ const DialogueView = {
         .dlg-wrap{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);z-index:60}
         .dlg-head{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;border-bottom:.5px solid var(--line-strong);background:var(--surface)}
         .dlg-who{flex:1;min-width:0;cursor:pointer}
-        .dlg-namechev{font-size:14px;color:var(--text-faint);vertical-align:middle}
+        .dlg-namechev{font-size:var(--fs-lg);color:var(--text-faint);vertical-align:middle}
         .dlg-name{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .dlg-sub{color:var(--text-muted);font-size:var(--fs-sm);margin-top:1px}
         .dlg-ava{width:38px;height:38px;border-radius:50%;background:var(--accent-fill);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:var(--weight-semibold);flex:none}

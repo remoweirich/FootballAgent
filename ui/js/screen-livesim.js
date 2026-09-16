@@ -446,7 +446,7 @@ const LiveView = {
         const css = `
         .lv-wrap{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:60;overflow:hidden}
         .lv-board{padding:calc(env(safe-area-inset-top,0) + 16px) 16px 14px;background:var(--surface);border-bottom:1px solid var(--line);text-align:center}
-        .lv-comp{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+        .lv-comp{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin-bottom:8px}
         .lv-score{display:flex;align-items:center;justify-content:center;gap:10px}
         .lv-team{flex:1;font-size:var(--fs-sm);color:var(--text-secondary);text-align:right;line-height:1.2}
         .lv-team--a{text-align:left}
@@ -457,10 +457,10 @@ const LiveView = {
         .lv-clock{margin-top:6px;font-size:var(--fs-sm);color:var(--accent);font-variant-numeric:tabular-nums}
         .lv-ftbanner{margin-top:8px;font-size:var(--fs-sm);color:var(--text-bright);font-weight:var(--weight-semibold)}
         .lv-pens{margin:10px auto 2px;max-width:340px;background:var(--surface-raised);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px}
-        .lv-penttl{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+        .lv-penttl{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin-bottom:6px}
         .lv-penrow{display:flex;align-items:center;gap:8px;padding:2px 0}
         .lv-penteam{flex:none;width:84px;text-align:left;font-size:var(--fs-xs);color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .lv-penmks{flex:1;display:flex;flex-wrap:wrap;gap:3px;font-size:13px;line-height:1}
+        .lv-penmks{flex:1;display:flex;flex-wrap:wrap;gap:3px;font-size:var(--fs-md);line-height:1}
         .lv-penmk{opacity:.9}
         .lv-pentot{flex:none;min-width:18px;text-align:right;font-weight:var(--weight-semibold);color:var(--text-bright);font-variant-numeric:tabular-nums}
         .lv-ctrl{display:flex;gap:6px;justify-content:center;margin-top:12px}
@@ -480,7 +480,7 @@ const LiveView = {
         .lv-line{color:var(--text-secondary);font-size:var(--fs-sm);line-height:1.5}
         .lv-stats{max-width:460px;margin:0 auto}
         .lv-strow{display:flex;align-items:center;justify-content:space-between;padding:10px 0}
-        .lv-stl{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em}
+        .lv-stl{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
         .lv-stv{color:var(--text-bright);font-size:var(--fs-md);font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
         .lv-possbar{height:6px;border-radius:3px;background:var(--surface-raised);overflow:hidden;margin:-4px 0 4px}
         .lv-possfill{height:100%;background:var(--accent);transition:width .4s ease}
@@ -494,7 +494,7 @@ const LiveView = {
         .lv-ft{align-items:center;justify-content:center}
         .lv-ftcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px 24px;max-width:400px;width:88%;text-align:center}
         .lv-fttrophy{font-size:42px;margin-bottom:8px}
-        .lv-ftlabel{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em}
+        .lv-ftlabel{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps)}
         .lv-ftscore{font-size:var(--fs-lg);color:var(--text-bright);font-weight:var(--weight-semibold);margin-top:8px}
         .lv-ftpens{color:var(--danger-text);font-size:var(--fs-sm);margin-top:6px}
         .lv-ftclients{margin-top:16px;text-align:left}
@@ -521,14 +521,14 @@ const AttendOverview = {
             let action;
             if (revealed) {
                 const note = m.pens ? I18n.t('livesim.pensNote', { score: League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–') }) : m.et ? I18n.t('livesim.etNote') : '';
-                action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></div>`;
+                action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:var(--fs-xs)">${note}</span></div>`;
             } else if (watchable) {
                 action = `<button class="btn btn--primary lv-ov-btn" onclick="AttendOverview.watch(${i})">${I18n.t('livesim.attend')}</button>`;
             } else if (Attend._attendClash(i)) {
                 // you're committed to another final that day, so you can't attend this one — just show how
                 // it finished (no need to go hunting through the Competitions tab for it)
                 const note = m.pens ? I18n.t('livesim.pensNote', { score: League.penFixPair(m.pens.h != null ? m.pens.h : m.pens.a, m.pens.h != null ? m.pens.a : m.pens.b).join('–') }) : m.et ? I18n.t('livesim.etNote') : '';
-                action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:11px">${note}</span></div><div class="lv-ov-clashnote">${I18n.t('livesim.clashResult')}</div>`;
+                action = `<div class="lv-ov-res">${m.hg}–${m.ag}<span style="color:var(--danger-text);font-size:var(--fs-xs)">${note}</span></div><div class="lv-ov-clashnote">${I18n.t('livesim.clashResult')}</div>`;
             } else {
                 const reason = Attend.watchBlockReason(i) || I18n.t('livesim.inThePast');
                 action = `<div class="lv-ov-locked"><i class="ti ti-lock"></i> ${reason}</div>`;

@@ -72,7 +72,7 @@ const ClientsScreen = {
                 <div style="flex:1;min-width:0">
                     <div class="flex-row" style="gap:6px">
                         <span class="cl-name">${UI.flag(p.nationality)} ${p.name}</span>
-                        <span style="font-size:12px;color:var(--text-faint)">${p.age}y</span>
+                        <span style="font-size:var(--fs-sm);color:var(--text-faint)">${p.age}y</span>
                         ${r.hasOffer ? '<i class="ti ti-currency-euro" style="font-size:14px;color:var(--accent)"></i>' : ''}
                         ${p.injury ? '<i class="ti ti-bandage" style="font-size:14px;color:var(--danger)"></i>' : ''}
                         ${p.retiringThisSeason ? `<span class="pill pill--gold" style="padding:1px 7px;font-size:10px">${I18n.t('clients.retiring')}</span>` : ''}
@@ -188,7 +188,7 @@ const ClientHistory = {
         const line2 = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${r.p.position === 'GK' ? r.cs + ' ' + I18n.t('common.csShort') : r.goals + ' ' + I18n.t('common.goalsShort')} · ${r.assists} ${I18n.t('common.assistsShort')}`;
         return `<a href="#client/${r.p.id}" class="list-row" style="cursor:pointer">
             <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${r.p.name}</div><div class="row-sub">${r.p.position} · ${I18n.t('clienthist.seasonsN', { n: r.seasons })} · <span class="pill" style="padding:1px 7px;font-size:10.5px">${r.status}</span>${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
-            <div style="text-align:right;font-size:12px;color:var(--text-muted)">${r.apps} ${I18n.t('common.appsShort')} · ${line2}<br>${UI.ratingText(r.avg)}</div>
+            <div style="text-align:right;font-size:var(--fs-sm);color:var(--text-muted)">${r.apps} ${I18n.t('common.appsShort')} · ${line2}<br>${UI.ratingText(r.avg)}</div>
         </a>`;
     },
     setPos(id) { this.state.pos = id; Router.refresh(); },
@@ -223,7 +223,7 @@ const ClientRecords = {
     },
     card(r) {
         return `<a href="${Router.link('client', r.p.id)}" class="fcard" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:11px 14px">
-            <div style="min-width:0"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-secondary)">${r.label}</div><div style="font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.flag(r.p.nationality)} ${r.p.name}${r.sub ? ` <span class="muted">· ${r.sub}</span>` : ''}</div></div>
+            <div style="min-width:0"><div style="font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-secondary)">${r.label}</div><div style="font-size:var(--fs-lg);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.flag(r.p.nationality)} ${r.p.name}${r.sub ? ` <span class="muted">· ${r.sub}</span>` : ''}</div></div>
             <div style="font-size:var(--fs-xl);font-weight:var(--weight-semibold);color:var(--gold);flex:none;margin-left:12px">${r.value}</div></a>`;
     },
     compute(players) {

@@ -35,8 +35,8 @@ button { font-family: inherit; }
 .app-bar { gap: var(--space-3); }
 .app-bar__title--shrink { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hdr-finance { display: flex; align-items: center; gap: 9px; flex: none; cursor: pointer; }
-.hf-item { display: flex; align-items: center; gap: 3px; font-size: 11px; font-weight: var(--weight-semibold); color: var(--text-secondary); white-space: nowrap; }
-.hf-item i { font-size: 13px; }
+.hf-item { display: flex; align-items: center; gap: 3px; font-size: var(--fs-xs); font-weight: var(--weight-semibold); color: var(--text-secondary); white-space: nowrap; }
+.hf-item i { font-size: var(--fs-md); }
 
 /* ---------- Push header (detail / negotiation screens: back + title, no bottom nav) ---------- */
 .screen--push { padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom)); }
@@ -78,7 +78,7 @@ button { font-family: inherit; }
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 .info-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
 .info { background: var(--surface-raised); border-radius: var(--radius-md); padding: 9px 11px; }
-.info > span { font-size: 11px; color: var(--text-faint); }
+.info > span { font-size: var(--fs-xs); color: var(--text-faint); }
 .info > span .ti { font-size: 12px; vertical-align: -2px; margin-right: 4px; }
 .info > b { display: block; font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text); margin-top: 1px; }
 
@@ -92,7 +92,7 @@ button { font-family: inherit; }
 .fx-home.fx-win, .fx-away.fx-win { color: var(--text); font-weight: var(--weight-semibold); }
 .fx-home.fx-adv, .fx-away.fx-adv { color: var(--accent); font-weight: var(--weight-semibold); }
 .fx-score { flex: none; min-width: 40px; text-align: center; font-weight: var(--weight-semibold); color: var(--text); }
-.fixture--labeled .fx-label { flex: none; width: 40px; font-size: 11px; color: var(--text-faint); }
+.fixture--labeled .fx-label { flex: none; width: 40px; font-size: var(--fs-xs); color: var(--text-faint); }
 /* Groups the 1-3 .fixture rows that make up a single tie so different ties in the
    same round get one clear separator, instead of every leg bordering the next. */
 .tie-block .fixture { border-bottom: none; }
@@ -118,7 +118,7 @@ button { font-family: inherit; }
 .letter__sub { font-size: var(--fs-sm); color: var(--text-muted); margin-top: 1px; }
 .letter__fee { text-align: right; }
 .letter__fee-label { font-size: 10.5px; color: var(--text-faint); }
-.letter__fee-value { font-size: 14.5px; font-weight: var(--weight-semibold); color: var(--text); }
+.letter__fee-value { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text); }
 
 /* ---------- Bottom sheet (quick confirmations / pickers) ---------- */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
@@ -147,7 +147,7 @@ button { font-family: inherit; }
 .standings { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .standings th {
   background: var(--bg);
-  text-align: left; font-weight: var(--weight-semibold); color: var(--text-faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em; padding: var(--space-2) var(--space-2); border-bottom: .5px solid var(--line-strong);
+  text-align: left; font-weight: var(--weight-semibold); color: var(--text-faint); font-size: 10.5px; text-transform: uppercase; letter-spacing:var(--tracking-caps); padding: var(--space-2) var(--space-2); border-bottom: .5px solid var(--line-strong);
 }
 .standings td { padding: 8px var(--space-2); border-bottom: .5px solid var(--line-faint); color: var(--text-secondary); }
 .standings td.club-cell { color: var(--text); font-weight: var(--weight-semibold); display: flex; align-items: center; gap: var(--space-3); }
@@ -204,11 +204,11 @@ button { font-family: inherit; }
 /* ---------- Chart card ---------- */
 .chart-card { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 11px 12px 8px; margin-bottom: var(--space-4); }
 .chart-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
-.chart-title { font-size: 13.5px; font-weight: var(--weight-semibold); }
+.chart-title { font-size: var(--fs-lg); font-weight: var(--weight-semibold); }
 .chart-value { font-size: var(--fs-md); font-weight: var(--weight-semibold); }
-.chart-unit { font-size: 11px; color: var(--text-faint); font-weight: var(--weight-regular); }
+.chart-unit { font-size: var(--fs-xs); color: var(--text-faint); font-weight: var(--weight-regular); }
 .chart-svg { width: 100%; height: auto; display: block; }
-.chart-svg text { fill: var(--text-dim); font-size: 11px; }
+.chart-svg text { fill: var(--text-dim); font-size: var(--fs-xs); }
 .chart-svg .grid-line { stroke: var(--grid); }
 .chart-svg .axis-line { stroke: var(--line-strong); }
 
@@ -227,8 +227,8 @@ button { font-family: inherit; }
 .season-row.is-open { background: #1E2530; border-radius: var(--radius-sm); }
 .season-top { display: flex; align-items: center; justify-content: space-between; }
 .season-name { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text-bright); }
-.season-club { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
-.season-stat { font-size: 11.5px; color: var(--text-secondary); text-align: right; }
+.season-club { font-size: var(--fs-sm); color: var(--text-muted); margin-top: 2px; }
+.season-stat { font-size: var(--fs-sm); color: var(--text-secondary); text-align: right; }
 .season-stat .ti { font-size: 12px; }
 .season-body { padding: var(--space-3) var(--space-3) var(--space-2); background: #0A0C10; border-radius: var(--radius-sm); margin-top: var(--space-2); }
 .comp-row { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-sm); padding: 7px 2px; border-top: 1px dashed var(--line-strong); color: var(--text-secondary); }
@@ -243,7 +243,7 @@ button { font-family: inherit; }
 
 /* ---------- Toggle chip row (career mode, position filter) ---------- */
 .chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
-.htog { font-size: 11px; font-weight: var(--weight-semibold); padding: 4px 9px; border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-muted); cursor: pointer; border: .5px solid var(--line-strong); }
+.htog { font-size: var(--fs-xs); font-weight: var(--weight-semibold); padding: 4px 9px; border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-muted); cursor: pointer; border: .5px solid var(--line-strong); }
 .htog.is-on { background: var(--accent-tint); color: var(--accent-text); border-color: var(--accent-border); }
 
 /* ---------- How-to / setup screen ----------
@@ -266,7 +266,7 @@ button { font-family: inherit; }
 .setup-brand__tag { font-size: var(--fs-sm); color: var(--text-faint); margin-top: 3px; }
 
 .howto { background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6); text-align: center; touch-action: pan-y; user-select: none; }
-.howto-icon { width: 54px; height: 54px; margin: 0 auto var(--space-3); border-radius: var(--radius-round); background: var(--surface-raised); border: .5px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--accent); }
+.howto-icon { width: 54px; height: 54px; margin: 0 auto var(--space-3); border-radius: var(--radius-round); background: var(--surface-raised); border: .5px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: var(--fs-display); color: var(--accent); }
 .howto h3 { font-size: var(--fs-lg); color: var(--text); margin: 0 0 var(--space-2); }
 .howto p { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.5; margin: 0 auto; max-width: 40ch; }
 .howto-nav { display: flex; align-items: center; justify-content: center; gap: var(--space-4); margin-top: var(--space-4); }
@@ -279,7 +279,7 @@ button { font-family: inherit; }
 /* ---- Select with a fake dropdown chevron (appearance:none hides the native one) ---- */
 .select-wrap { position: relative; }
 .select-wrap .select-input { padding-right: 34px; }
-.select-wrap__chevron { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 16px; pointer-events: none; }
+.select-wrap__chevron { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: var(--fs-xl); pointer-events: none; }
 
 /* ---- Fixed CTA footer (mirrors .cta-dock; no bottom-nav on this screen, so
    it sits flush with the safe-area bottom instead of --nav-h above it) ---- */
@@ -295,7 +295,7 @@ button { font-family: inherit; }
 .cl-stats { display: flex; margin-top: 9px; padding-top: 9px; border-top: .5px solid var(--line-faint); }
 .cl-st { flex: 1; text-align: center; }
 .cl-st b { display: block; font-size: var(--fs-md); font-weight: var(--weight-semibold); color: var(--text); }
-.cl-st span { font-size: 11px; color: var(--text-faint); }
+.cl-st span { font-size: var(--fs-xs); color: var(--text-faint); }
 .cl-chip { font-size: var(--fs-sm); color: var(--text-secondary); background: var(--surface-raised); border: .5px solid var(--line-strong); border-radius: var(--radius-pill); padding: 5px 9px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 .cl-chip.cl-on { background: var(--accent-tint); border-color: var(--accent-border); color: var(--accent-text); }
 .cl-ct { font-size: var(--fs-xs); font-weight: var(--weight-semibold); background: rgba(255,255,255,.10); border-radius: var(--radius-xs); padding: 0 5px; min-width: 15px; text-align: center; }

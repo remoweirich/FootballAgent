@@ -51,7 +51,7 @@ Router.register('home', {
         <div class="flex-row" style="justify-content:space-between;margin-bottom:2px">
             <div>
                 <div class="flex-row" style="gap:7px">
-                    <span style="font-size:11.5px;color:var(--text-dim);letter-spacing:.02em">${I18n.t('home.season', { label: GameState.seasonLabel() })}</span>
+                    <span style="font-size:var(--fs-xs);color:var(--text-dim);letter-spacing:.02em">${I18n.t('home.season', { label: GameState.seasonLabel() })}</span>
                     ${windowOpen ? `<span class="pill pill--accent"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></span>${I18n.t('home.windowOpen')}</span>` : ''}
                 </div>
                 <div style="font-size:var(--fs-xl);font-weight:var(--weight-semibold);margin-top:3px">${I18n.t('home.weekMonth', { w: GameState.week, month: UI.monthLabel(GameState.week, GameState.seasonStartYear) })}</div>
@@ -76,10 +76,10 @@ Router.register('home', {
             return `<a class="list-row" href="#client/${p.id}" style="cursor:pointer">
                 ${UI.crest(club)}
                 <div style="flex:1;min-width:0"><div class="row-title">${p.name}</div><div class="row-sub">${p.position} · ${club ? club.name : I18n.t('common.freeAgent')}</div></div>
-                <div style="font-size:12.5px;color:var(--text-muted);text-align:right">${tot.apps} ${I18n.t('common.appsShort')} · ${UI.ratingText(tot.avg)}</div>
+                <div style="font-size:var(--fs-md);color:var(--text-muted);text-align:right">${tot.apps} ${I18n.t('common.appsShort')} · ${UI.ratingText(tot.avg)}</div>
             </a>`;
         }).join('') : `<div class="empty"><div class="empty__icon"><i class="ti ti-zoom-scan"></i></div><div class="empty__title">${I18n.t('home.noClients')}</div><div class="empty__hint">${I18n.t('home.noClientsSub')}</div><a class="btn btn--accent-outline btn--sm empty__cta" href="#scouting"><i class="ti ti-zoom-scan"></i>${I18n.t('home.openScouting')}</a></div>`}
-        ${clients.length ? `<a class="list-row" href="#clients" style="cursor:pointer;justify-content:space-between"><span style="color:var(--accent-text);font-size:12.5px;font-weight:var(--weight-semibold)">${I18n.t('home.seeAll')}</span><i class="ti ti-chevron-right" style="color:var(--accent-text)"></i></a>` : ''}
+        ${clients.length ? `<a class="list-row" href="#clients" style="cursor:pointer;justify-content:space-between"><span style="color:var(--accent-text);font-size:var(--fs-md);font-weight:var(--weight-semibold)">${I18n.t('home.seeAll')}</span><i class="ti ti-chevron-right" style="color:var(--accent-text)"></i></a>` : ''}
         `;
 
         if (el.parentElement) el.parentElement.classList.add('screen--has-cta');
@@ -98,7 +98,7 @@ Home.advance = function () {
     if (typeof Attend !== 'undefined' && Attend.hasUnwatched()) {
         const n = Attend.watchesLeft();
         Router.modal(`<div>
-            <div style="font-size:30px;text-align:center;margin-bottom:var(--space-2)">🎟️</div>
+            <div style="font-size:var(--fs-hero);text-align:center;margin-bottom:var(--space-2)">🎟️</div>
             <h2 style="margin:0 0 var(--space-3);text-align:center">${I18n.t('home.finalsToWatch')}</h2>
             <p style="color:var(--text-secondary);line-height:1.6">${n === 1 ? I18n.t('home.finalsBody1', { n }) : I18n.t('home.finalsBodyN', { n })}</p>
             <div class="flex-row" style="margin-top:var(--space-5);gap:var(--space-3)">
@@ -169,7 +169,7 @@ Home._finishAdvance = function () {
 Home._showRatePrompt = function () {
     if (typeof Prefs !== 'undefined') Prefs.set('ratePromptShown', true);
     Router.modal(`<button class="modal-x" onclick="Router.closeModal()" aria-label="${I18n.t('common.close')}"><i class="ti ti-x"></i></button>
-        <div style="font-size:30px;text-align:center;margin-bottom:var(--space-2)">⭐</div>
+        <div style="font-size:var(--fs-hero);text-align:center;margin-bottom:var(--space-2)">⭐</div>
         <h2 style="margin:0 0 var(--space-3);text-align:center">${I18n.t('rate.title')}</h2>
         <p style="margin:0 0 var(--space-5);line-height:1.6;text-align:center;color:var(--text-secondary)">${I18n.t('rate.body')}</p>
         <button class="btn btn--primary" style="width:100%" onclick="Router.closeModal(); UI.openExternal(APP_LINKS.playStore)">${I18n.t('rate.cta')}</button>
@@ -190,7 +190,7 @@ Home._showInvite = function () {
     const body = inv.body.split('\n').map(l => l.trim() ? `<p style="margin:0 0 var(--space-3);line-height:1.6">${UI.esc(l)}</p>` : '').join('');
     const last = i >= list.length - 1;
     Router.modal(`<div>
-        <div style="font-size:30px;text-align:center;margin-bottom:var(--space-2)">🎟️</div>
+        <div style="font-size:var(--fs-hero);text-align:center;margin-bottom:var(--space-2)">🎟️</div>
         <h2 style="margin:0 0 var(--space-4);text-align:center">${UI.esc(inv.header)}</h2>
         <div style="color:var(--text-secondary);max-height:40vh;overflow-y:auto">${body}</div>
         <p class="hint" style="margin-top:var(--space-3)">${I18n.t('home.watchFromInbox')}</p>

@@ -29,10 +29,10 @@ const ScoutingScreen = {
                 const club = Clubs.getClubById(p.clubId);
                 const isNew = p.discoveredWeek != null && (GameState.absWeek() - p.discoveredWeek) < 3;
                 return `<a href="${Router.link('client', p.id)}" class="cl-card" style="display:block;position:relative">
-                    <button onclick="event.preventDefault();event.stopPropagation();ScoutingScreen.remove('${p.id}')" style="position:absolute;top:8px;right:8px;background:none;border:0;color:var(--text-dim);font-size:16px;cursor:pointer;z-index:1" aria-label="${I18n.t('common.remove')}"><i class="ti ti-x"></i></button>
+                    <button onclick="event.preventDefault();event.stopPropagation();ScoutingScreen.remove('${p.id}')" style="position:absolute;top:8px;right:8px;background:none;border:0;color:var(--text-dim);font-size:var(--fs-xl);cursor:pointer;z-index:1" aria-label="${I18n.t('common.remove')}"><i class="ti ti-x"></i></button>
                     <div class="flex-row">
                         <div style="flex:1;min-width:0">
-                            <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.flag(p.nationality)} ${p.name}</span><span style="font-size:12px;color:var(--text-faint)">${p.age}y</span>${isNew ? `<span class="pill pill--accent" style="padding:1px 7px;font-size:10px">${I18n.t('scouting.new')}</span>` : ''}</div>
+                            <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.flag(p.nationality)} ${p.name}</span><span style="font-size:var(--fs-sm);color:var(--text-faint)">${p.age}y</span>${isNew ? `<span class="pill pill--accent" style="padding:1px 7px;font-size:10px">${I18n.t('scouting.new')}</span>` : ''}</div>
                             <div class="cl-sub">${p.position} <span style="color:var(--text-chevron)">·</span> <span class="flex-row" style="gap:5px;display:inline-flex">${UI.crest(club)}${club ? club.name : '—'}</span></div>
                         </div>
                         ${UI.abilityBadge(p.ability)}

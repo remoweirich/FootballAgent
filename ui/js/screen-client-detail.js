@@ -186,7 +186,7 @@ const ClientDetail = {
             const rows = clubs.map(c => `<label class="comp-row" style="cursor:pointer"><span class="flex-row" style="gap:8px"><input type="checkbox" ${shop.selected.has(c.id) ? 'checked' : ''} onchange="ClientDetail.toggleShopClub('${id}','${UI.esc(c.id)}')">${c.name}</span><span class="muted">${I18n.t('agency.eff.rep')} ${c.reputation}</span></label>`).join('');
             return `<div class="section-head" style="margin-top:var(--space-3);margin-bottom:0">
                 <span class="section-label">${COMPETITIONS[div].name}</span>
-                <button class="gbtn" style="padding:3px 9px;font-size:11px" onclick="ClientDetail.toggleShopDivision('${id}','${div}')">${allSelected ? I18n.t('cd.deselectAll') : I18n.t('cd.pitchToAll')}</button>
+                <button class="gbtn" style="padding:3px 9px;font-size:var(--fs-xs)" onclick="ClientDetail.toggleShopDivision('${id}','${div}')">${allSelected ? I18n.t('cd.deselectAll') : I18n.t('cd.pitchToAll')}</button>
                 </div>${rows}`;
         }).join('');
     },
@@ -298,7 +298,7 @@ const ClientDetail = {
         const bars = rows.map(([k, label, hint]) => {
             const v = Math.round(m[k] || 0);
             return `<div style="margin-bottom:15px">
-                <div class="flex-row" style="justify-content:space-between;margin-bottom:6px"><span style="font-size:13.5px;font-weight:var(--weight-semibold)">${label}</span><span class="flex-row" style="gap:5px"><span style="font-size:12.5px;font-weight:var(--weight-semibold);color:var(${UI.moraleVar(v)})">${v}</span>${trend(k, v)}</span></div>
+                <div class="flex-row" style="justify-content:space-between;margin-bottom:6px"><span style="font-size:var(--fs-lg);font-weight:var(--weight-semibold)">${label}</span><span class="flex-row" style="gap:5px"><span style="font-size:var(--fs-md);font-weight:var(--weight-semibold);color:var(${UI.moraleVar(v)})">${v}</span>${trend(k, v)}</span></div>
                 <div class="bar"><div class="bar__fill" style="width:${v}%;background:var(${UI.moraleVar(v)})"></div></div>
                 <div class="hint" style="margin-top:6px">${hint}</div>
             </div>`;

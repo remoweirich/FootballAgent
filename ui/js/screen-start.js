@@ -179,9 +179,9 @@ const StartScreen = {
         .ss-btn--primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,#04140c)}
         .ss-btn__sub{font-weight:var(--weight-regular);font-size:var(--fs-xs);opacity:.85}
         .ss-foot{display:flex;justify-content:space-around;gap:8px;margin-top:22px}
-        .ss-icon{background:none;border:none;color:var(--text-secondary);display:flex;flex-direction:column;align-items:center;gap:5px;font:inherit;font-size:11px;cursor:pointer;padding:8px 10px;border-radius:12px}
+        .ss-icon{background:none;border:none;color:var(--text-secondary);display:flex;flex-direction:column;align-items:center;gap:5px;font:inherit;font-size:var(--fs-xs);cursor:pointer;padding:8px 10px;border-radius:12px}
         .ss-icon:active{background:var(--surface)}
-        .ss-q{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:var(--weight-bold);border:1.7px solid currentColor;border-radius:50%}
+        .ss-q{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xl);font-weight:var(--weight-bold);border:1.7px solid currentColor;border-radius:50%}
         .ss-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:70;padding:22px}
         .ss-ovcard{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}
         .ss-ovtitle{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);margin-bottom:12px}

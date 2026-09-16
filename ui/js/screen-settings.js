@@ -220,7 +220,7 @@ const SettingsScreen = {
         .set-close{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex}
         .set-title{font-weight:var(--weight-semibold);font-size:var(--fs-lg)}
         .set-body{flex:1;overflow-y:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0) + 24px)}
-        .set-heading{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.07em;margin:18px 4px 7px}
+        .set-heading{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:18px 4px 7px}
         .set-group{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
         .set-row{width:100%;display:flex;align-items:center;gap:12px;background:none;border:none;border-bottom:.5px solid var(--line-faint);color:var(--text);font:inherit;font-size:var(--fs-md);padding:14px 14px;cursor:pointer;text-align:left}
         .set-group .set-row:last-child{border-bottom:none}
@@ -240,11 +240,11 @@ const SettingsScreen = {
         .set-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--line-strong);flex:none;position:relative}
         .set-check.is-on{background:var(--accent);border-color:var(--accent)}
         .set-check.is-on::after{content:"";position:absolute;left:6px;top:2px;width:4px;height:9px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg)}
-        .set-row__ico{font-size:20px;color:var(--text-secondary);width:22px;text-align:center}
+        .set-row__ico{font-size:var(--fs-3xl);color:var(--text-secondary);width:22px;text-align:center}
         .set-row__svg{width:20px;height:20px}
         .set-row__label{flex:1}
         .set-val{color:var(--text-muted);font-size:var(--fs-sm);margin-right:8px}
-        .set-soon{color:var(--accent-text,var(--accent));background:var(--accent-tint,rgba(52,211,153,.12));font-size:10px;font-weight:var(--weight-semibold);padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+        .set-soon{color:var(--accent-text,var(--accent));background:var(--accent-tint,rgba(52,211,153,.12));font-size:10px;font-weight:var(--weight-semibold);padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:var(--tracking-caps)}
         .set-ver{color:var(--text-faint);font-size:var(--fs-xs);text-align:center;margin-top:22px}
         .set-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:80;padding:22px}
         .set-ovcard{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}

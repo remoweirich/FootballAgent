@@ -96,17 +96,17 @@ const AchievementsScreen = {
         .ach-tally{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:3px}
         .ach-tally i{font-size:22px}
         .ach-tallyn{font-size:var(--fs-xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums}
-        .ach-tallylbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);text-align:center}
+        .ach-tallylbl{font-size:10px;text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-dim);text-align:center}
         .ach-row{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:.5px solid var(--line-faint)}
         .set-group .ach-row:last-child{border-bottom:none}
         .ach-row--locked{opacity:.72}
-        .ach-ico{font-size:19px;flex:none}
+        .ach-ico{font-size:var(--fs-2xl);flex:none}
         .ach-name{flex:1;min-width:0;font-size:var(--fs-sm);color:var(--text)}
         .ach-reward{font-size:var(--fs-xs);color:var(--text-dim);white-space:nowrap;font-variant-numeric:tabular-nums}
         .ach-collected{font-size:var(--fs-xs);color:var(--state-good);white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
         .ach-collect{flex:none;background:var(--accent);border:none;color:var(--accent-ink,#04140c);border-radius:999px;padding:6px 12px;font:inherit;font-size:var(--fs-xs);font-weight:var(--weight-semibold);cursor:pointer;white-space:nowrap}
         .ach-collect:active{filter:brightness(.94)}
-        .set-badge{margin-left:auto;background:var(--accent);color:var(--accent-ink,#04140c);border-radius:999px;min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:var(--weight-bold)}`;
+        .set-badge{margin-left:auto;background:var(--accent);color:var(--accent-ink,#04140c);border-radius:999px;min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--weight-bold)}`;
         const el = document.createElement('style'); el.id = 'achCSS'; el.textContent = css; document.head.appendChild(el);
     },
 };

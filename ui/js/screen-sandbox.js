@@ -128,7 +128,7 @@ const Sandbox = {
         .sbx-title{font-weight:var(--weight-semibold);font-size:var(--fs-lg)}
         .sbx-body{flex:1;overflow-y:auto;padding:14px 14px calc(env(safe-area-inset-bottom,0) + 24px)}
         .sbx-note{color:var(--text-secondary);font-size:var(--fs-sm);margin:0 0 14px;line-height:1.45}
-        .sbx-head{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.07em;margin:16px 2px 7px}
+        .sbx-head{color:var(--text-dim);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tracking-caps);margin:16px 2px 7px}
         .sbx-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
         .sbx-lbl{display:block;color:var(--text-secondary);font-size:var(--fs-sm);margin:0 0 6px}
         .sbx-inrow{display:flex;gap:8px;align-items:center}
