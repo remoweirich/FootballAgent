@@ -20,6 +20,13 @@ const SettingsScreen = {
         const SUN = svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>');
         const MUSIC = svg('<circle cx="6.5" cy="18" r="2.5"/><circle cx="18" cy="16" r="2.5"/><path d="M9 18V6l11-2v12"/>');
         const VOL = svg('<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>');
+        // ti-route / ti-shopping-bag / ti-photo / ti-text-caption / ti-coin are all absent from the
+        // trimmed font too, so these rows were rendering with no symbol at all.
+        const REPLAY = svg('<path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/>');
+        const STORE = svg('<path d="M4 8h16l-1.2 11.1a2 2 0 0 1-2 1.9H7.2a2 2 0 0 1-2-1.9Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>');
+        const PHOTO = svg('<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m4 17 5-4 4 3 3-2 4 3"/>');
+        const NAMES = svg('<path d="M4 6h16M4 12h10M4 18h7"/><path d="M15.5 18.5 18 16l2.5 2.5"/>');
+        const COINS = svg('<path d="M12 3v18"/><path d="M16.5 7.5c0-1.7-2-2.5-4.5-2.5S7.5 5.9 7.5 7.8 9.6 10.3 12 10.9s4.5 1.2 4.5 3.1S14.5 17 12 17s-4.5-.8-4.5-2.5"/>');
         const VOLX = svg('<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M22 9l-6 6M16 9l6 6"/>');
         // Music / SFX rows: a mute toggle + a compact 0–100 volume slider, backed by Sound.
         const aRow = (ch, iconHTML, label) => {
@@ -47,7 +54,7 @@ const SettingsScreen = {
         // Currency picker — EUR is the baseline; GBP/CHF are converted for display
         const curCode = (typeof Currency !== 'undefined') ? Currency.get() : 'EUR';
         const curCodes = (typeof Currency !== 'undefined') ? Currency.CODES : ['EUR'];
-        const COIN = `<i class="ti ti-coin set-row__ico"></i>`;
+        const COIN = COINS;
         const currencyRow = `<div class="set-row set-row--static">${COIN}<span class="set-row__label">${I18n.t('settings.currency')}</span>
             <div class="set-seg">${curCodes.map(c => `<button class="set-seg__btn${curCode === c ? ' is-on' : ''}" onclick="SettingsScreen.setCurrency('${c}')">${c}</button>`).join('')}</div></div>`;
         // MUSIC DISABLED for now — the per-track list is hidden. Restore the block below to re-enable.
@@ -66,8 +73,8 @@ const SettingsScreen = {
         // mid-save logo import is only meaningful when a game is running
         const inGame = typeof GameState !== 'undefined' && GameState.players && GameState.players.length > 0;
         const M = (typeof Monetization !== 'undefined') ? Monetization : null;
-        const logoRow = inGame ? row(ic('ti-photo'), I18n.t('settings.importLogos'), '', 'SettingsScreen.importLogos()') : '';
-        const nameRow = inGame ? row(ic('ti-text-caption'), I18n.t('settings.importNames'), '', 'SettingsScreen.importNames()') : '';
+        const logoRow = inGame ? row(PHOTO, I18n.t('settings.importLogos'), '', 'SettingsScreen.importLogos()') : '';
+        const nameRow = inGame ? row(NAMES, I18n.t('settings.importNames'), '', 'SettingsScreen.importNames()') : '';
         // Enhanced Insights: an on/off toggle, shown only once the entitlement is owned
         const insightsRow = (M && M.owns('insights'))
             ? `<div class="set-row set-row--static">${ic('ti-eye')}<span class="set-row__label">${I18n.t('settings.insights')}</span>
@@ -83,14 +90,14 @@ const SettingsScreen = {
             <div class="set-body">
                 <div class="set-group">
                     ${row(ic('ti-info-circle'), I18n.t('common.howToPlay'), '', 'SettingsScreen.help()')}
-                    ${inGame ? row(ic('ti-route'), I18n.t('settings.walkthrough'), '', 'SettingsScreen.walkthrough()') : ''}
+                    ${inGame ? row(REPLAY, I18n.t('settings.walkthrough'), '', 'SettingsScreen.walkthrough()') : ''}
                     ${row(ic('ti-file-text'), I18n.t('settings.saveGame'), '', 'SettingsScreen.saveGame()')}
                     ${row(ic('ti-home'), I18n.t('settings.backToStart'), '', 'SettingsScreen.toStart()')}
                 </div>
 
                 <div class="set-heading">${I18n.t('settings.groupGame')}</div>
                 <div class="set-group">
-                    ${row(ic('ti-shopping-bag'), I18n.t('store.title'), '', 'SettingsScreen.openStore()')}
+                    ${row(STORE, I18n.t('store.title'), '', 'SettingsScreen.openStore()')}
                     ${row(ic('ti-trophy'), I18n.t('settings.achievements'), achRight, 'SettingsScreen.openAchievements()')}
                     ${insightsRow}
                     ${sandboxRow}
@@ -113,7 +120,7 @@ const SettingsScreen = {
                 <div class="set-group">
                     ${row(ic('ti-star'), I18n.t('settings.rateApp'), '', 'SettingsScreen.rateApp()')}
                     ${row(ic('ti-mail'), I18n.t('settings.feedback'), '', 'SettingsScreen.feedback()')}
-                    ${row(ic('ti-music'), I18n.t('settings.credits'), '', "SettingsScreen.credits()")}
+                    ${row(MUSIC, I18n.t('settings.credits'), '', "SettingsScreen.credits()")}
                     ${row(ic('ti-license'), I18n.t('settings.copyright'), '', "SettingsScreen.legal('copyright')")}
                     ${row(ic('ti-lock'), I18n.t('settings.privacy'), '', "SettingsScreen.legal('privacy')")}
                 </div>

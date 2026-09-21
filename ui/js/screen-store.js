@@ -39,7 +39,7 @@ const StoreScreen = {
         if (from) this._from = from;
         const M = this._M(); if (!M) return;
         this._css();
-        const thanks = M.supporterTier() > 0 ? `<div class="st-thanks"><i class="ti ti-heart-filled"></i> ${I18n.t('store.thanks')}</div>` : '';
+        const thanks = M.supporterTier() > 0 ? `<div class="st-thanks"><i class="ti ti-heart"></i> ${I18n.t('store.thanks')}</div>` : '';
         const groups = this.GROUPS.map(g => `
             <div class="st-head">${I18n.t(g.head)}</div>
             ${g.head === 'store.support' ? thanks : ''}

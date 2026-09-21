@@ -57,7 +57,7 @@ const AchievementsScreen = {
         if (collected) right = `<span class="ach-collected">${I18n.t('ach.collected')} <i class="ti ti-check"></i></span>`;
         else if (unlocked) right = `<button class="ach-collect" onclick="AchievementsScreen.collect('${d.id}')">${I18n.t('ach.collect')} · ${reward}</button>`;
         else right = `<span class="ach-reward">${reward}</span>`;
-        const icon = collected ? 'ti-circle-check-filled' : unlocked ? 'ti-gift' : 'ti-lock';
+        const icon = collected ? 'ti-circle-check' : unlocked ? 'ti-gift' : 'ti-lock';
         const iconCol = collected ? 'var(--state-good)' : unlocked ? 'var(--accent)' : 'var(--text-dim)';
         return `<div class="ach-row${unlocked ? '' : ' ach-row--locked'}">
             <i class="ti ${icon} ach-ico" style="color:${iconCol}"></i>
