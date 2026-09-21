@@ -23,7 +23,7 @@ I18n.register('en', {
     'tier.any': 'Any level',
     'tier.dev': '4th-tier prospect',
     'tier.pro': '3rd-tier / lower-league',
-    'tier.top': 'top-league talent',
+    'tier.top': 'top-division talent',
     'tier.elite': 'international superstar',
     'tier.legend': 'Legend of the game',
     // --- negotiation: club greeting (agency.js greetingFor) ---

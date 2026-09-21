@@ -908,6 +908,7 @@ I18n.register('en', {
     'cd.sponsorCut': 'Your sponsor cut:',
     'cd.repLength': 'Representation length:',
     'cd.proposeTerms': 'Propose terms',
+    'cd.signSealed': "Alright — let's get this contract signed.",
     // potential
     'cd.scoutingReport': 'Scouting report',
     'cd.ceiling': 'Ceiling',

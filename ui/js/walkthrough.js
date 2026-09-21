@@ -73,7 +73,7 @@ const Walkthrough = {
 
         // Season 30/31, late in the campaign: Johan has 32 appearances behind him.
         G.seasonStartYear = 2030;
-        G.week = 36;
+        G.week = 34;
         G.log = [];
         G.agency = Object.assign({}, this._saved.agency, {
             balance: 1850000,

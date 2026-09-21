@@ -249,8 +249,18 @@ const ClientDetail = {
         const p = GameState.getPlayer(id), s = this.ctx(id).sign;
         const r = Agency.negotiateSign(p, s.wage, s.sponsor, s.term, s.round++);
         if (r.status === 'accept') {
-            Agency.signPlayer(p, s.wage, s.sponsor, s.term); GameState.save();
-            Router.closeSheet(); Router.go(`client/${id}`);
+            // let him actually say yes in the chat before it disappears — an instant close read as
+            // if the deal had simply vanished. The sheet is frozen for those two seconds so a second
+            // tap on "Propose terms" can't sign him twice.
+            if (s.settling) return;
+            s.settling = true;
+            Router.result(I18n.t('cd.signSealed'), 'ok');
+            const btn = document.querySelector('.sheet button.btn--primary');
+            if (btn) btn.disabled = true;
+            setTimeout(() => {
+                Agency.signPlayer(p, s.wage, s.sponsor, s.term); GameState.save();
+                Router.closeSheet(); Router.go(`client/${id}`);
+            }, 2000);
         } else if (r.status === 'walk') {
             Router.result(r.message, 'bad'); GameState.save();
         } else {

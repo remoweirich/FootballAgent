@@ -907,6 +907,7 @@ I18n.register('de', {
     'cd.sponsorCut': 'Dein Sponsoringanteil:',
     'cd.repLength': 'Mandatsdauer:',
     'cd.proposeTerms': 'Konditionen vorschlagen',
+    'cd.signSealed': 'Alles klar — dann lass uns den Vertrag unterschreiben.',
     // potential
     'cd.scoutingReport': 'Scout-Bericht',
     'cd.ceiling': 'Maximum',

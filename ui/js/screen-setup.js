@@ -146,12 +146,6 @@ const Setup = {
 
     // Standalone version of the how-to for screens that live OUTSIDE the Router shell (Start, Settings),
     // where Router.sheet has no layer to render into: a self-contained overlay appended to <body>.
-    // The first-run slide deck hands straight over to the interactive walkthrough: the new player
-    // gets the overview first, then the guided tour of the real screens.
-    closeIntro() {
-        const ov = document.getElementById('helpOverlay'); if (ov) ov.remove();
-        if (typeof Walkthrough !== 'undefined') setTimeout(() => Walkthrough.maybeOffer(), 120);
-    },
     openHelpOverlay(isIntro) {
         // the first-run intro marks itself seen the moment it appears, so it never auto-shows again
         if (isIntro && typeof Prefs !== 'undefined') Prefs.set('introSeen', true);
@@ -159,8 +153,8 @@ const Setup = {
         if (ov) ov.remove();
         ov = document.createElement('div');
         ov.id = 'helpOverlay'; ov.className = 'help-overlay';
-        ov.innerHTML = `<div class="help-overlay__card"><div class="help-overlay__title">${I18n.t('common.howToPlay')}</div>${this.howtoHTML()}<button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="${isIntro ? 'SetupScreen.closeIntro()' : "document.getElementById('helpOverlay').remove()"}">${isIntro ? I18n.t('setup.skipIntro') : I18n.t('common.close')}</button></div>`;
-        ov.addEventListener('click', e => { if (e.target === ov) { if (isIntro) SetupScreen.closeIntro(); else ov.remove(); } });
+        ov.innerHTML = `<div class="help-overlay__card"><div class="help-overlay__title">${I18n.t('common.howToPlay')}</div>${this.howtoHTML()}<button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="document.getElementById('helpOverlay').remove()">${isIntro ? I18n.t('setup.skipIntro') : I18n.t('common.close')}</button></div>`;
+        ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
         if (!document.getElementById('helpOvCSS')) {
             const st = document.createElement('style'); st.id = 'helpOvCSS';
             st.textContent = `.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:90;padding:22px}
@@ -237,9 +231,10 @@ const Setup = {
         }
         GameState.startNewGame(country, name, agent, database, gender);
         Main.afterLoad();
-        // first time into a brand-new game: play the how-to full-screen (skippable). It stays reachable
-        // afterwards from the Home screen and Settings. (Needs a real DOM — skipped in headless tests.)
+        // First time into a brand-new game the interactive walkthrough takes over: it is the main
+        // explanation now, and "How to play" is supplementary (reachable from Home and Settings).
+        // (Needs a real DOM — skipped in headless tests.)
         if (typeof document !== 'undefined' && typeof document.createElement === 'function' &&
-            (typeof Prefs === 'undefined' || !Prefs.get('introSeen', false))) this.openHelpOverlay(true);
+            typeof Walkthrough !== 'undefined') setTimeout(() => Walkthrough.maybeOffer(), 150);
     }
 };

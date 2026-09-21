@@ -19,7 +19,7 @@ I18n.register('de', {
     'tier.any': 'Alle Stufen',
     'tier.dev': 'Viertliga-Talent',
     'tier.pro': 'Drittliga-/Unterhaus-Niveau',
-    'tier.top': 'Topliga-Talent',
+    'tier.top': 'Erstliga-Talent',
     'tier.elite': 'Internationaler Superstar',
     'tier.legend': 'Legende des Spiels',
     // --- Verhandlung: Begrüßung des Klubs (agency.js greetingFor) ---

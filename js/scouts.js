@@ -298,7 +298,7 @@ const Scouts = {
         any: { label: 'Any level' },
         dev: { pot: [38, 58], label: '4th-tier prospect' },
         pro: { pot: [55, 72], label: '3rd-tier / lower-league' },
-        top: { pot: [70, 85], label: 'top-league talent' },
+        top: { pot: [70, 85], label: 'top-division talent' },
         elite: { pot: [85, 95], label: 'international superstar' },
         legend: { pot: [96, 99], label: 'Legend of the game' },   // the once-in-a-generation ceiling (>95)
     },
