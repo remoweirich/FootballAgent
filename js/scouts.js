@@ -245,7 +245,14 @@ const Scouts = {
     },
 
     // reports arrive every 6-7 weeks
-    nextFindDelay(quality = 50) { return 6 + Math.floor(Rng.next() * 2) + (quality < 30 ? 3 : quality < 50 ? 1 : 0); },
+    // The walkthrough promises her first report in three weeks, so during the tour the roll is
+    // fixed — otherwise the toast on posting her and the "next report" line both contradict it.
+    _demoDelay() { return (typeof GameState !== 'undefined' && GameState.demoMode) ? 3 : null; },
+    nextFindDelay(quality = 50) {
+        const demo = this._demoDelay();
+        if (demo != null) return demo;
+        return 6 + Math.floor(Rng.next() * 2) + (quality < 30 ? 3 : quality < 50 ? 1 : 0);
+    },
 
     // scout quality -> the calibre of talent he can unearth: [minAbility, maxAbility, centrePotential, potentialCap]
     tierRanges(q) {

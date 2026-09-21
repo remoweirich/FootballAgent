@@ -52,6 +52,7 @@ const Walkthrough = {
     finish(skipped) {
         if (!this._active) return;
         this._active = false;
+        this._explore = false;
         clearInterval(this._tick); this._tick = null;
         this._restore();
         this.markDone();
@@ -60,6 +61,16 @@ const Walkthrough = {
         if (!skipped && typeof Router !== 'undefined') Router.result(I18n.t('wt.finished'), 'ok');
     },
     skip() { this.finish(true); },
+
+    // The tour is over but the demo world is left standing so he can wander it. Home swaps its
+    // advance button for "Leave tutorial", which is what finally restores his own save.
+    isExploring() { return !!this._explore; },
+    explore() {
+        this._explore = true;
+        clearInterval(this._tick); this._tick = null;
+        const l = document.getElementById('wtLayer'); if (l) l.remove();
+        if (typeof Router !== 'undefined') { Router.go('home'); Router.refresh(); }
+    },
 
     // ---- demo save -------------------------------------------------------------------------
     // Replace only the fields the tutorial shows. league/clubHistory and the rest stay as they are,
@@ -90,6 +101,7 @@ const Walkthrough = {
             scoutMarketWeek: G.absWeek() + 500,
         });
         G.players = [this._demoPlayer()];
+        this._demoClub(G);
         G.inbox = [];
         // newest first, so the welcome sits on top
         const vars = { agency: G.agency.name };
@@ -147,6 +159,29 @@ const Walkthrough = {
         p.stats = this._demoStats();
         p.trophies = [];
         return p;
+    },
+
+    // Birmingham Claret's record, plus an agency that has clearly been going a while — so the club
+    // page and the Agency/Finance screens have something real on them if he wanders off-script.
+    _demoClub(G) {
+        G.clubHistory = Object.assign({}, G.clubHistory, {
+            'Aston Villa': [
+                { year: 2025, division: 'PREM', position: 6, trophies: [] },
+                { year: 2026, division: 'PREM', position: 8, trophies: [] },
+                { year: 2027, division: 'PREM', position: 4, trophies: ['UECL'] },
+                { year: 2028, division: 'PREM', position: 13, trophies: [] },
+            ],
+        });
+        // stage index: 3 = Round of 16, 4 = Quarter-final, 7 = Winner
+        G.clubEuropeBest = Object.assign({}, G.clubEuropeBest, {
+            'Aston Villa': { UCL: { stage: 3, year: 2028 }, UEL: { stage: 4, year: 2026 }, UECL: { stage: 7, year: 2027 } },
+        });
+        if (!G.agency.relationships) G.agency.relationships = {};
+        G.agency.relationships['Aston Villa'] = 50;   // Neutral
+        const up = G.agency.upgrades || (G.agency.upgrades = {});
+        up.officeIndex = 6; up.vehicleIndex = 2; up.propertyIndex = 1;
+        if (!G.agency.ledger) G.agency.ledger = {};
+        if (!G.agency.ledgerAll) G.agency.ledgerAll = {};
     },
 
     // A real scouting report (role label + written description), with the verdict pinned.
@@ -387,12 +422,20 @@ const Walkthrough = {
             }
         },
         { key: 'wt.adv.third', target: '.cta-dock button', until: () => GameState.week >= 37 },
-        { key: 'wt.adv.found', target: '.modal-card', place: 'top' },
+        {
+            key: 'wt.adv.found', target: '.modal-card', place: 'top',
+            // no Next: the player closes the weekly summary himself, so it cannot be skipped past
+            until: () => !document.querySelector('.modal-card')
+        },
 
         // ---------------- Wayne Kane: look him over and sign him ----------------
-        { key: 'wt.found.toScouting', target: 'a.nav-item[href="#scouting"]', tap: true },
+        {
+            key: 'wt.found.toScouting', target: 'a.nav-item[href="#scouting"]', tap: true,
+            // he was last on "Your scouts"; the find is on the Finds list
+            before: () => { if (typeof ScoutingScreen !== 'undefined') ScoutingScreen.tab = 'finds'; }
+        },
         { key: 'wt.found.tapWayne', target: 'a.cl-card[href*="wt_wayne"]', tap: true },
-        { key: 'wt.wayne.card', place: 'bottom' },
+        { key: 'wt.wayne.card', place: 'below', anchor: 'button[onclick*="openSign"]' },
         { key: 'wt.wayne.toPotential', target: 'button.tab[onclick*="\'potential\'"]', tap: true },
         { key: 'wt.wayne.potential' },
         { key: 'wt.wayne.offerRep', target: 'button[onclick*="openSign"]', tap: true },
@@ -413,6 +456,47 @@ const Walkthrough = {
             }
         },
         { key: 'wt.wayne.signed' },
+
+        // ---------------- can he expect to play? -> a loan ----------------
+        { key: 'wt.loan.checkClub', target: '.cl-sub a[href*="clubs"]', tap: true },
+        { key: 'wt.loan.clubProfile', place: 'bottom' },
+        { key: 'wt.loan.back', target: '.push-bar__back', tap: true },
+        {
+            key: 'wt.loan.request', target: 'button[onclick*="reqLoan"]', place: 'above',
+            until: () => {
+                const w = (GameState.players || []).find(p => p.id === 'wt_wayne');
+                return !!(w && w._loanOk);
+            }
+        },
+        { key: 'wt.loan.agreed', target: 'button[onclick*="openShop"]', tap: true },
+        {
+            key: 'wt.shop.loanMode', target: 'button.htog[onclick*="\'loan\'"]', place: 'bottom',
+            until: () => {
+                if (typeof ClientDetail === 'undefined') return false;
+                const c = ClientDetail.ctx && ClientDetail.ctx('wt_wayne');
+                return !!(c && c.shop && c.shop.mode === 'loan');
+            }
+        },
+        {
+            key: 'wt.shop.pitchAll', target: 'button.gbtn[onclick*="toggleShopDivision"][onclick*="LEAGUE1"]', place: 'top',
+            until: () => {
+                if (typeof ClientDetail === 'undefined') return false;
+                const c = ClientDetail.ctx && ClientDetail.ctx('wt_wayne');
+                return !!(c && c.shop && c.shop.selected && c.shop.selected.size > 0);
+            }
+        },
+        {
+            key: 'wt.shop.send', target: '#shopPitchBtn', place: 'top',
+            until: () => (GameState.inbox || []).some(m => m.kind === 'loan')
+        },
+        {
+            key: 'wt.shop.offers', place: 'top',
+            until: () => {
+                const w = (GameState.players || []).find(p => p.id === 'wt_wayne');
+                return !!(w && w.onLoanAt);
+            }
+        },
+        { key: 'wt.outro' },
     ],
 
     // Narrow her brief to what the script describes, so the find that follows is the one the
@@ -424,6 +508,7 @@ const Walkthrough = {
         sc.position = null;
         sc.tier = 'top';
         sc.weeksUntilFind = 3;   // the card must agree with the narration: three weeks, not a roll
+        if (typeof Router !== 'undefined') Router.refresh();
     },
 
     // values the narration can interpolate
@@ -438,7 +523,7 @@ const Walkthrough = {
     next() {
         if (!this._active) return;
         this._i++;
-        if (this._i >= this._steps.length) { this.finish(false); return; }
+        if (this._i >= this._steps.length) { this.explore(); return; }
         this._show();
     },
 
@@ -521,7 +606,10 @@ const Walkthrough = {
         l.querySelector('.wt-hide').textContent = I18n.t('wt.hide');
         const nextBtn = l.querySelector('.wt-next');
         const gated = !!(s.tap || s.until);
+        // inline display beats the .btn class rule, which was keeping Next clickable on tap steps
+        // and letting the player skip a step whose whole point was performing the action
         nextBtn.hidden = gated;
+        nextBtn.style.display = gated ? 'none' : '';
         nextBtn.textContent = I18n.t(this._i >= this._steps.length - 1 ? 'wt.done' : 'wt.next');
         l.querySelector('.wt-progress').textContent = I18n.t('wt.step', { n: this._i + 1, total: this._steps.length });
         l.classList.toggle('wt-gated', gated);
@@ -540,6 +628,8 @@ const Walkthrough = {
         if (!l || !s) return;
         if (s.until) this._pollUntil();
         const el = s.target ? document.querySelector(s.target) : null;
+        // a step may position its card against one element while highlighting another (or none)
+        const anchorEl = s.anchor ? document.querySelector(s.anchor) : el;
         const ring = l.querySelector('.wt-ring'), tap = l.querySelector('.wt-tap'), card = l.querySelector('.wt-card');
         const W = window.innerWidth, H = window.innerHeight;
         const pane = (p, x, y, w, h) => {
@@ -571,9 +661,7 @@ const Walkthrough = {
         if (!el) {   // narration with nothing to point at: dim gently, place the card
             pane('t', 0, 0, W, H); pane('b', 0, 0, 0, 0); pane('l', 0, 0, 0, 0); pane('r', 0, 0, 0, 0);
             ring.style.display = 'none'; tap.style.display = 'none';
-            card.style.cssText = s.place === 'top' ? `left:50%;transform:translateX(-50%);top:${this.EDGE}px`
-                : s.place === 'bottom' ? `left:50%;transform:translateX(-50%);bottom:${this.EDGE}px;top:auto`
-                    : 'left:50%;top:50%;transform:translate(-50%,-50%)';
+            this._placeCard(card, s, anchorEl, H);
             return;
         }
         const r = el.getBoundingClientRect(), pad = 6;
@@ -589,16 +677,27 @@ const Walkthrough = {
         if (s.tap) {
             tap.style.cssText = `display:block;left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px`;
         } else tap.style.display = 'none';
-        // Where the card sits. A step can pin it (the advance summary and the negotiation sliders
-        // both need it out of the way); otherwise it goes under the target when there is room.
+        this._placeCard(card, s, anchorEl, H);
+    },
+
+    // Where the card sits. A step can pin it (the weekly summary and the negotiation sliders both
+    // need it out of the way); otherwise it goes under its anchor when there is room, above it if not.
+    _placeCard(card, s, anchorEl, H) {
+        card.classList.toggle('wt-card--top', s.place === 'top');
+        if (s.place === 'top') { card.style.cssText = 'left:50%;transform:translateX(-50%)'; return; }
         const CH = card.offsetHeight || 170;
+        const lo = this.EDGE, hi = Math.max(lo, H - CH - this.EDGE);
+        const clamp = v => Math.max(lo, Math.min(hi, v));
         let top;
-        if (s.place === 'top') top = this.EDGE;
-        else if (s.place === 'bottom') top = Math.max(this.EDGE, H - CH - this.EDGE);
-        else if (s.place === 'above') top = Math.max(this.EDGE, y - CH - 14);
-        else if (s.place === 'below') top = Math.min(y + h + 14, H - CH - this.EDGE);
-        else top = (H - (y + h) > CH + 30) ? Math.min(y + h + 14, H - CH - this.EDGE)
-            : Math.max(this.EDGE, y - CH - 14);
+        if (!anchorEl) top = s.place === 'bottom' ? hi : Math.max(lo, (H - CH) / 2);
+        else {
+            const r = anchorEl.getBoundingClientRect(), pad = 6;
+            const y = r.top - pad, h = r.height + pad * 2;
+            if (s.place === 'bottom') top = hi;
+            else if (s.place === 'above') top = clamp(y - CH - 14);
+            else if (s.place === 'below') top = clamp(y + h + 14);
+            else top = (H - (y + h) > CH + 30) ? clamp(y + h + 14) : clamp(y - CH - 14);
+        }
         card.style.cssText = `left:50%;transform:translateX(-50%);top:${Math.round(top)}px`;
     },
 
@@ -627,6 +726,7 @@ const Walkthrough = {
         .wt-tap span{position:absolute;left:-19px;top:-19px;width:38px;height:38px;border-radius:50%;
             border:2px solid var(--accent);animation:wtPulse 1.4s ease-out infinite}
         @keyframes wtPulse{0%{transform:scale(.55);opacity:.95}100%{transform:scale(1.5);opacity:0}}
+        .wt-card--top{top:calc(env(safe-area-inset-top,0px) + 14px)}
         .wt-card{position:fixed;width:min(92vw,400px);background:var(--surface);color:var(--text);
             border:1px solid var(--accent);border-radius:var(--radius-lg);padding:var(--space-5);
             box-shadow:0 0 0 9999px rgba(4,7,11,.18), 0 18px 48px rgba(0,0,0,.75);pointer-events:auto}

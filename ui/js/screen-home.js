@@ -91,7 +91,12 @@ Router.register('home', {
         dock.className = 'cta-dock';
         const nextWk = GameState.week + 1 > 52 ? 1 : GameState.week + 1;
         dock.innerHTML = `<button class="btn btn--primary"><span class="btn__stack">${I18n.t('home.advanceTo', { n: nextWk })}${attention.length ? `<small>${attention.length === 1 ? I18n.t('home.taskPending1', { n: attention.length }) : I18n.t('home.taskPendingN', { n: attention.length })}</small>` : ''}</span><i class="ti ti-player-play" style="font-size:20px"></i></button>`;
-        dock.querySelector('button').onclick = () => Home.advance();
+        // Once the scripted tour is done the demo world stays open to poke around in, but the
+        // advance button would only spin the frozen world - so it becomes the way back out.
+        if (typeof Walkthrough !== 'undefined' && Walkthrough.isExploring && Walkthrough.isExploring()) {
+            dock.innerHTML = `<button class="btn btn--primary"><span class="btn__stack">${I18n.t('wt.leave')}<small>${I18n.t('wt.leaveSub')}</small></span><i class="ti ti-door-exit" style="font-size:20px"></i></button>`;
+            dock.querySelector('button').onclick = () => Walkthrough.finish(false);
+        } else dock.querySelector('button').onclick = () => Home.advance();
         el.appendChild(dock);
     }
 });

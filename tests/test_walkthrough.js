@@ -294,10 +294,88 @@ check('steps that would sit over what they describe are pinned', runv(`
   const by = k => Walkthrough.SCRIPT.find(s => s.key === k);
   return by('wt.client.youth').place === 'above'
       && by('wt.adv.sponsor').place === 'top' && by('wt.adv.found').place === 'top'
-      && by('wt.wayne.card').place === 'bottom'
+      && by('wt.wayne.card').place === 'below'
+      && by('wt.wayne.card').anchor === 'button[onclick*="openSign"]'
       && by('wt.wayne.neg1').place === 'top' && by('wt.wayne.neg2').place === 'top'
       && by('wt.scout.hireGemma').scrollTo === true
       && by('wt.wayne.neg1').waitFor === 'button[onclick*="proposeSign"]';`));
+
+check('her report is three weeks away in every field the UI prints', runv(`
+  // both the toast shown on posting her and the "next report" line read the same roll
+  GameState.demoMode = true;
+  const rolled = Scouts.nextFindDelay(75);
+  GameState.demoMode = false;
+  return rolled === 3 && Scouts.nextFindDelay(75) >= 6;`));
+
+check('the weekly-summary step cannot be skipped with Next', runv(`
+  const s = Walkthrough.SCRIPT.find(x => x.key === 'wt.adv.found');
+  return !!s.until;`));
+
+check('arriving at Scouting for the find opens the Finds list', runv(`
+  const s = Walkthrough.SCRIPT.find(x => x.key === 'wt.found.toScouting');
+  if (typeof s.before !== 'function') return false;
+  globalThis.ScoutingScreen = { tab: 'scouts' };
+  s.before();
+  const ok = globalThis.ScoutingScreen.tab === 'finds';
+  delete globalThis.ScoutingScreen;
+  return ok;`));
+
+// ---- part 2 stage D: the loan chain, run through the real engine ----
+check("Birmingham Claret's record reads as scripted", runv(`
+  const h = GameState.clubHistory['Aston Villa'];
+  const eb = GameState.clubEuropeBest['Aston Villa'];
+  const f = y => h.find(x => x.year === y);
+  return h.length === 4
+      && f(2025).position === 6 && f(2026).position === 8
+      && f(2027).position === 4 && f(2027).trophies[0] === 'UECL'
+      && f(2028).position === 13
+      && h.every(x => x.division === 'PREM')
+      && eb.UCL.stage === 3 && eb.UCL.year === 2028
+      && eb.UEL.stage === 4 && eb.UEL.year === 2026
+      && eb.UECL.stage === 7 && eb.UECL.year === 2027;`));
+
+check('relationship with the club is Neutral (50)', runv(`
+  return Agency.relationship('Aston Villa') === 50;`));
+
+check('the club is far too big for him (rep 83 vs ability 56)', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  return Clubs.getClubById('Aston Villa').reputation === 83 && w.ability === 56;`));
+
+check('the club always sanctions the loan during the tour', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  GameState.demoMode = true;
+  let ok = false;
+  for (let i = 0; i < 6 && !ok; i++) {   // would refuse on some rolls outside the tour
+    w._loanOk = false; delete w._cooldowns;
+    ok = Agency.requestLoan(w).ok;
+  }
+  return ok && w._loanOk === true && w.loanListed === true;`));
+
+check('the loan-request step unlocks once the club agrees', runv(`
+  return Walkthrough.SCRIPT.find(s => s.key === 'wt.loan.request').until();`));
+
+check('pitching him out on loan produces offers to accept', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  const three = Clubs.getClubsByDivision('LEAGUE1').filter(c => c.id !== w.clubId).slice(0, 4);
+  three.forEach(c => Agency.shopPlayerLoan(w, c.id));
+  const step = Walkthrough.SCRIPT.find(s => s.key === 'wt.shop.send');
+  return three.length === 4 && step.until();`));
+
+// ---- part 2 stage E: the tour ends into an explorable demo, not straight out ----
+check('finishing the script opens explore mode rather than restoring', runv(`
+  Walkthrough._explore = false;
+  Walkthrough.explore();
+  return Walkthrough.isExploring() === true && GameState.demoMode === true;`));
+
+check('leaving explore mode hands the real save back', runv(`
+  Walkthrough._active = true;          // explore() left it active on purpose
+  Walkthrough.finish(false);
+  return Walkthrough.isExploring() === false && GameState.demoMode === false
+      && GameState.seasonStartYear === 2025 && Agency.clients().length === 0;`));
+
+check('the leave-tutorial strings exist in both languages', runv(`
+  return ['wt.leave', 'wt.leaveSub', 'wt.outro']
+    .every(k => (k in I18n.packs.en) && (k in I18n.packs.de));`));
 
 // ---- the overlay must never fence the player in ----
 // The tour strands the player if a step both (a) fences the screen to one element and (b) expects

@@ -357,7 +357,8 @@ const Agency = {
         let sanction = 0.55 + (rel - 55) / 200 + (['youth', 'fringe', 'rotation'].includes(p.squadRole) ? 0.2 : p.squadRole === 'starter' ? -0.45 : -0.6);
         const floor = (p.squadRole === 'key' || p.squadRole === 'starter') ? 0.03 : 0.1;
         sanction = Math.max(floor, Math.min(0.95, sanction));
-        if (Rng.next() > sanction) {
+        // the tutorial leans on the club saying yes; outside it the roll stands
+        if (!GameState.demoMode && Rng.next() > sanction) {
             this.changeRelationship(p.clubId, -1);
             GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.loanRefusedSubj', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), body: I18n.t('ag.mail.loanRefusedBody', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 4 });
             return { ok: false, message: I18n.t('ag.loan.refused', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }) };
