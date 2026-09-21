@@ -209,6 +209,41 @@ check('the books actually moved money and logged it', runv(`
   const l = GameState.agency.ledger || {};
   return l.Commission > 0 && l.Scouts < 0;`));
 
+// ---- part 2 stage C: the scripted negotiation, run through the real engine ----
+check('Wayne is willing to talk to this agency at all', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  return Agency.signConcession(w) === 10 && Agency.canSign(w).ok !== false;`));
+
+check('14% wages / 12% sponsor / 4 seasons is refused', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  const r = Agency.negotiateSign(w, 14, 12, 4, 1);
+  return r.status === 'counter' && !!r.message;`));
+
+check('11% wages / 9% sponsor / 5 seasons is accepted', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  const r = Agency.negotiateSign(w, 11, 9, 5, 2);
+  return r.status === 'accept';`));
+
+check('the scripted second offer is the FIRST that works at 5 seasons', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  // anything greedier on wages at the same term must still be refused
+  return Agency.negotiateSign(w, 13, 9, 5, 2).status === 'counter'
+      && Agency.negotiateSign(w, 11, 9, 5, 2).status === 'accept';`));
+
+check('signing him makes him a client of the agency', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  Agency.signPlayer(w, 11, 9, 5);
+  return w.agentId === 'me' && w.wageCommission > 0;`));
+
+check('the sign step unlocks once he has signed', runv(`
+  return Walkthrough.SCRIPT.find(s => s.key === 'wt.wayne.neg2').until();`));
+
+check('narration can interpolate the agency name', runv(`
+  const v = Walkthrough.vars();
+  return v.agency === GameState.agency.name
+      && I18n.t('wt.wayne.signed', v).indexOf('{agency}') === -1
+      && I18n.t('wt.wayne.signed', v).indexOf(v.agency) !== -1;`));
+
 // ---- the real save is never written while the demo is up ----
 check('save() is a no-op in demo mode', runv(`
   let wrote = false;

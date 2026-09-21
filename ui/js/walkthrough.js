@@ -79,7 +79,7 @@ const Walkthrough = {
         G.homeCountry = 'England';
         G.agency = Object.assign({}, this._saved.agency, {
             balance: 1850000,
-            reputation: 58,
+            reputation: 80,
             homeCountry: 'England',
             scouts: [],
             // A fixed shortlist instead of the random catalogue. Wages come from the game's own
@@ -258,7 +258,7 @@ const Walkthrough = {
         p.nationality = 'England';
         p.nationalityFlag = (typeof getNationalityFlag === 'function') ? getNationalityFlag('England') : '';
         p.clubId = 'Aston Villa';
-        p.ability = 56; p.peakAbility = 56; p.potential = 88;
+        p.ability = 56; p.peakAbility = 56; p.potential = 83;
         p.wage = 5050;
         p.contractUntilSeason = GameState.seasonStartYear + 1;   // two seasons including this one
         p.squadRole = 'youth';
@@ -367,6 +367,30 @@ const Walkthrough = {
         { key: 'wt.adv.sponsor' },
         { key: 'wt.adv.third', target: '.cta-dock button', until: () => GameState.week >= 37 },
         { key: 'wt.adv.found' },
+
+        // ---------------- Wayne Kane: look him over and sign him ----------------
+        { key: 'wt.found.toScouting', target: 'a.nav-item[href="#scouting"]', tap: true },
+        { key: 'wt.found.tapWayne', target: 'a.cl-card[href*="wt_wayne"]', tap: true },
+        { key: 'wt.wayne.card' },
+        { key: 'wt.wayne.toPotential', target: 'button.tab[onclick*="\'potential\'"]', tap: true },
+        { key: 'wt.wayne.potential' },
+        { key: 'wt.wayne.offerRep', target: 'button[onclick*="openSign"]', tap: true },
+        {
+            key: 'wt.wayne.neg1', target: 'button[onclick*="proposeSign"]',
+            until: () => {
+                if (typeof ClientDetail === 'undefined') return false;
+                const c = ClientDetail.ctx && ClientDetail.ctx('wt_wayne');
+                return !!(c && c.sign && c.sign.round >= 2);
+            }
+        },
+        {
+            key: 'wt.wayne.neg2', target: 'button[onclick*="proposeSign"]',
+            until: () => {
+                const w = (GameState.players || []).find(p => p.id === 'wt_wayne');
+                return !!(w && w.agentId === 'me');
+            }
+        },
+        { key: 'wt.wayne.signed' },
     ],
 
     // Narrow her brief to what the script describes, so the find that follows is the one the
@@ -377,6 +401,12 @@ const Walkthrough = {
         sc.maxTalentAge = 19;
         sc.position = null;
         sc.tier = 'top';
+    },
+
+    // values the narration can interpolate
+    vars() {
+        const ag = (typeof GameState !== 'undefined' && GameState.agency) || {};
+        return { agency: ag.name || 'your agency' };
     },
 
     // ---- step machinery --------------------------------------------------------------------
@@ -445,7 +475,7 @@ const Walkthrough = {
 
     _paint() {
         const l = this._layer(), s = this.step(); if (!s) return;
-        l.querySelector('.wt-text').innerHTML = I18n.t(s.key);
+        l.querySelector('.wt-text').innerHTML = I18n.t(s.key, this.vars());
         l.querySelector('.wt-skip').textContent = I18n.t('wt.skip');
         const nextBtn = l.querySelector('.wt-next');
         const gated = !!(s.tap || s.until);
