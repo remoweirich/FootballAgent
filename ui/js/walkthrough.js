@@ -63,7 +63,7 @@ const Walkthrough = {
     // ---- demo save -------------------------------------------------------------------------
     // Replace only the fields the tutorial shows. league/clubHistory and the rest stay as they are,
     // so screens that read them keep working; restoring puts the original references straight back.
-    FIELDS: ['players', 'inbox', 'log', 'week', 'seasonStartYear', 'agency'],
+    FIELDS: ['players', 'inbox', 'log', 'week', 'seasonStartYear', 'agency', 'homeCountry'],
 
     _installDemo() {
         const G = GameState;
@@ -75,9 +75,18 @@ const Walkthrough = {
         G.seasonStartYear = 2030;
         G.week = 34;
         G.log = [];
+        // Part 2 is set in England: West Midlands scouting, Birmingham Claret, the Third Division.
+        G.homeCountry = 'England';
         G.agency = Object.assign({}, this._saved.agency, {
             balance: 1850000,
             reputation: 58,
+            homeCountry: 'England',
+            scouts: [],
+            // A fixed shortlist instead of the random catalogue. Wages come from the game's own
+            // salaryFor(quality) so the tutorial never shows a price the real game couldn't produce.
+            scoutMarket: this.DEMO_SCOUTS.map(sc => Object.assign({ region: null, maxTalentAge: 22 }, sc)),
+            // parked far ahead so the two-weekly refresh can't swap the shortlist out mid-tutorial
+            scoutMarketWeek: G.absWeek() + 500,
         });
         G.players = [this._demoPlayer()];
         G.inbox = [];
@@ -158,6 +167,13 @@ const Walkthrough = {
         return st;
     },
 
+    // Quality drives both the title (>=70 Chief, >=52 Senior) and the wage, via Scouts.salaryFor.
+    DEMO_SCOUTS: [
+        { id: 'wt_wilson', name: 'James Wilson', title: 'Senior scout', quality: 61, weeklyCost: 1760 },
+        { id: 'wt_harris', name: 'Gemma Harris', title: 'Chief scout', quality: 75, weeklyCost: 4590 },
+        { id: 'wt_jackson', name: 'Mo Jackson', title: 'Chief scout', quality: 85, weeklyCost: 8200 },
+    ],
+
     // Two mails every new save starts with (also seeded in GameState.startNewGame).
     STARTER_MAILS: [
         { kind: 'news', subj: 'mail.welcome.subj', body: 'mail.welcome.body' },
@@ -226,7 +242,32 @@ const Walkthrough = {
         { key: 'wt.clients.history', target: 'a.gbtn[href="#clienthist"]' },
         { key: 'wt.clients.bestxi', target: 'a.gbtn[href="#bestxi"]' },
         { key: 'wt.clients.outro' },
+
+        // ---------------- Scouting: hire and post a scout ----------------
+        { key: 'wt.scout.tab', target: 'a.nav-item[href="#scouting"]', tap: true },
+        { key: 'wt.scout.empty' },
+        { key: 'wt.scout.toHire', target: 'button.tab[onclick*="\'market\'"]', tap: true },
+        { key: 'wt.scout.list' },
+        { key: 'wt.scout.regions', target: '[data-wt="scout-regions"]' },
+        { key: 'wt.scout.hireGemma', target: '[data-scout="wt_harris"] button', tap: true },
+        { key: 'wt.scout.toYours', target: 'button.tab[onclick*="\'scouts\'"]', tap: true },
+        {
+            key: 'wt.scout.assign',
+            until: () => (GameState.agency.scouts || []).some(s => s.region === 'west-midlands')
+        },
+        { key: 'wt.scout.brief', before: () => Walkthrough._briefGemma() },
+        { key: 'wt.scout.advance', target: 'a.nav-item[href="#home"]', tap: true },
     ],
+
+    // Narrow her brief to what the script describes, so the find that follows is the one the
+    // tutorial promises: any position, a top-division prospect, nobody older than 19.
+    _briefGemma() {
+        const sc = (GameState.agency.scouts || []).find(s => s.region === 'west-midlands');
+        if (!sc) return;
+        sc.maxTalentAge = 19;
+        sc.position = null;
+        sc.tier = 'top';
+    },
 
     // ---- step machinery --------------------------------------------------------------------
     step() { return this._steps[this._i]; },
@@ -244,6 +285,7 @@ const Walkthrough = {
             const cur = (location.hash || '').replace(/^#/, '').split('/')[0];
             if (cur !== s.go) Router.go(s.go);
         }
+        if (typeof s.before === 'function') { try { s.before(); } catch (e) { /* never block the tour */ } }
         if (s.scroll === 'bottom') {
             const scr = document.querySelector('.screen');
             if (scr) scr.scrollTo({ top: scr.scrollHeight, behavior: 'smooth' });

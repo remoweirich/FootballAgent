@@ -124,7 +124,7 @@ const ScoutingScreen = {
     // ---------------- Hiring market ----------------
     market() {
         const cat = Scouts.market();
-        const rows = cat.map(o => `<div class="card" style="margin-bottom:var(--space-3)">
+        const rows = cat.map(o => `<div class="card" style="margin-bottom:var(--space-3)" data-scout="${o.id}">
             <div class="flex-row" style="justify-content:space-between">
                 <div><div class="row-title">${o.name}</div><div class="row-sub">${o.title}</div></div>
                 ${UI.abilityBadge(o.quality)}
@@ -139,8 +139,8 @@ const ScoutingScreen = {
         const regTable = regionsForCountry(hc).map(r => `<button class="frow" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ScoutingScreen.showRegionClubs('${UI.esc(r.id)}')"><span class="frow__k">${regionName(r.id)} <span class="muted">${r.blurb || ''}</span></span><span class="frow__v flex-row" style="gap:5px">${UI.euro(Scouts.regionReportCost(r.id))} <i class="ti ti-chevron-right" style="color:var(--text-faint);font-size:13px"></i></span></button>`).join('');
         return `<p class="hint" style="margin-bottom:var(--space-4)">${I18n.t('scouting.marketIntro')}</p>
             ${rows}<div id="actionResult"></div>
-            <div class="section-label" style="margin-top:var(--space-5)">${I18n.t('scouting.regionCost', { country: hc })} <span class="muted" style="font-weight:400">${I18n.t('scouting.regionCostHint')}</span></div>
-            <div class="fcard">${regTable}</div>`;
+            <div data-wt="scout-regions"><div class="section-label" style="margin-top:var(--space-5)">${I18n.t('scouting.regionCost', { country: hc })} <span class="muted" style="font-weight:400">${I18n.t('scouting.regionCostHint')}</span></div>
+            <div class="fcard">${regTable}</div></div>`;
     },
     // clubs that live in a scouting region — the pool a scout posted there draws finds from
     showRegionClubs(regionId) {

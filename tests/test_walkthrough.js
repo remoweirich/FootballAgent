@@ -112,6 +112,46 @@ check('control strings exist in both languages', runv(`
 check('tap steps all name a target to tap', runv(`
   return Walkthrough.SCRIPT.filter(s => s.tap).every(s => !!s.target) && Walkthrough.SCRIPT.some(s => s.tap);`));
 
+// ---- part 2: the scouting stage is set up in England with a fixed shortlist ----
+check('demo is based in England (West Midlands / Birmingham Claret)', runv(`
+  return GameState.homeCountry === 'England'
+      && regionsForCountry('England').some(r => r.id === 'west-midlands')
+      && Clubs.getClubById('Aston Villa').name === 'Birmingham Claret';`));
+
+check("scout shortlist is the scripted three, at the game's own wages", runv(`
+  const m = Scouts.market();
+  const want = [['James Wilson', 61, 'Senior scout'], ['Gemma Harris', 75, 'Chief scout'], ['Mo Jackson', 85, 'Chief scout']];
+  return m.length === 3 && want.every(([n, q, t], i) =>
+      m[i].name === n && m[i].quality === q && m[i].title === t
+      && m[i].title === Scouts.titleFor(q) && m[i].weeklyCost === Scouts.salaryFor(q));`));
+
+check('all three scouts read as High find quality (>=55)', runv(`
+  return Scouts.market().every(o => o.quality >= 55);`));
+
+check('the shortlist cannot be refreshed away mid-tutorial', runv(`
+  const before = Scouts.market().map(o => o.id).join(',');
+  GameState.week += 3;
+  const after = Scouts.market().map(o => o.id).join(',');
+  GameState.week -= 3;
+  return before === after;`));
+
+check('hiring Gemma puts her on the books, ready to be posted', runv(`
+  const offer = Scouts.market().find(o => o.name === 'Gemma Harris');
+  const r = Scouts.hire(offer);
+  const hired = GameState.agency.scouts.find(s => s.name === 'Gemma Harris');
+  return r.ok && hired && hired.region === null;`));
+
+check('posting her to the West Midlands satisfies the assign step', runv(`
+  const hired = GameState.agency.scouts.find(s => s.name === 'Gemma Harris');
+  Scouts.assignRegion(hired.id, 'west-midlands');
+  const step = Walkthrough.SCRIPT.find(s => s.key === 'wt.scout.assign');
+  return step.until();`));
+
+check('the brief narrows her to under-20s, any position, top division', runv(`
+  Walkthrough._briefGemma();
+  const g = GameState.agency.scouts.find(s => s.region === 'west-midlands');
+  return g.maxTalentAge === 19 && g.position === null && g.tier === 'top';`));
+
 // ---- the real save is never written while the demo is up ----
 check('save() is a no-op in demo mode', runv(`
   let wrote = false;
