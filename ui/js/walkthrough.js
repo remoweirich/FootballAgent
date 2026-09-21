@@ -457,15 +457,19 @@ const Walkthrough = {
         l = document.createElement('div');
         l.id = 'wtLayer';
         l.innerHTML = `
-            <div class="wt-pane" data-p="t"></div><div class="wt-pane" data-p="b"></div>
-            <div class="wt-pane" data-p="l"></div><div class="wt-pane" data-p="r"></div>
+            <div class="wt-pane" data-p="t" onclick="Walkthrough.collapse()"></div>
+            <div class="wt-pane" data-p="b" onclick="Walkthrough.collapse()"></div>
+            <div class="wt-pane" data-p="l" onclick="Walkthrough.collapse()"></div>
+            <div class="wt-pane" data-p="r" onclick="Walkthrough.collapse()"></div>
             <div class="wt-ring"></div>
             <div class="wt-tap"><span></span></div>
+            <button class="wt-fab" onclick="Walkthrough.expand()" aria-label="${I18n.t('wt.reopen')}"><i class="ti ti-route"></i></button>
             <div class="wt-card">
                 <div class="wt-progress"></div>
                 <p class="wt-text"></p>
                 <div class="wt-actions">
                     <button class="wt-skip" onclick="Walkthrough.skip()"></button>
+                    <button class="wt-hide" onclick="Walkthrough.collapse()"></button>
                     <button class="wt-next btn btn--primary btn--sm" onclick="Walkthrough.next()"></button>
                 </div>
             </div>`;
@@ -475,8 +479,10 @@ const Walkthrough = {
 
     _paint() {
         const l = this._layer(), s = this.step(); if (!s) return;
+        this._min = false;                       // every new step arrives open, ready to be read
         l.querySelector('.wt-text').innerHTML = I18n.t(s.key, this.vars());
         l.querySelector('.wt-skip').textContent = I18n.t('wt.skip');
+        l.querySelector('.wt-hide').textContent = I18n.t('wt.hide');
         const nextBtn = l.querySelector('.wt-next');
         const gated = !!(s.tap || s.until);
         nextBtn.hidden = gated;
@@ -485,6 +491,11 @@ const Walkthrough = {
         l.classList.toggle('wt-gated', gated);
         this._position();
     },
+
+    // Tucking the card away to a handle on the right is what makes the tour usable: you can read
+    // the step, put it aside, look at (or work with) whatever it just described, then bring it back.
+    collapse() { if (!this._active) return; this._min = true; this._position(); },
+    expand() { if (!this._active) return; this._min = false; this._position(); },
 
     // Lay the four dim panes around the target's rect, leaving it exposed and tappable.
     _position() {
@@ -499,23 +510,46 @@ const Walkthrough = {
             const d = l.querySelector(`.wt-pane[data-p="${p}"]`);
             d.style.cssText = `left:${x}px;top:${y}px;width:${Math.max(0, w)}px;height:${Math.max(0, h)}px`;
         };
-        if (!el) {   // narration: dim everything, centre the card
-            pane('t', 0, 0, W, H); pane('b', 0, H, W, 0); pane('l', 0, 0, 0, 0); pane('r', 0, 0, 0, 0);
+        const hidePanes = () => { pane('t', 0, 0, 0, 0); pane('b', 0, 0, 0, 0); pane('l', 0, 0, 0, 0); pane('r', 0, 0, 0, 0); };
+
+        // An "until" step is a job the player does across several screens (open both mails, post a
+        // scout, haggle a deal). Fencing the screen there strands him — the target he is allowed to
+        // touch disappears the moment he navigates. So those steps never block, and neither does a
+        // step whose target is not on screen.
+        const freeRoam = !!s.until || !el;
+        const blocking = !!(s.tap && el && !this._min);
+        l.classList.toggle('wt-block', blocking);
+        l.classList.toggle('wt-free', freeRoam);
+        l.classList.toggle('wt-min', !!this._min);
+
+        if (this._min) {   // tucked away: nothing dimmed, nothing fenced, ring left as a breadcrumb
+            hidePanes();
+            if (el) {
+                const r0 = el.getBoundingClientRect(), p0 = 6;
+                ring.style.cssText = `display:block;left:${r0.left - p0}px;top:${r0.top - p0}px;width:${r0.width + p0 * 2}px;height:${r0.height + p0 * 2}px`;
+            } else ring.style.display = 'none';
+            tap.style.display = 'none';
+            return;
+        }
+
+        if (!el) {   // narration with nothing to point at: dim gently, centre the card
+            pane('t', 0, 0, W, H); pane('b', 0, 0, 0, 0); pane('l', 0, 0, 0, 0); pane('r', 0, 0, 0, 0);
             ring.style.display = 'none'; tap.style.display = 'none';
             card.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%)';
             return;
         }
         const r = el.getBoundingClientRect(), pad = 6;
         const x = r.left - pad, y = r.top - pad, w = r.width + pad * 2, h = r.height + pad * 2;
-        pane('t', 0, 0, W, y);
-        pane('b', 0, y + h, W, H - (y + h));
-        pane('l', 0, y, x, h);
-        pane('r', x + w, y, W - (x + w), h);
-        ring.style.display = 'block';
-        ring.style.cssText += `;display:block;left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
+        if (freeRoam) hidePanes();   // keep the highlight, drop the shroud
+        else {
+            pane('t', 0, 0, W, y);
+            pane('b', 0, y + h, W, H - (y + h));
+            pane('l', 0, y, x, h);
+            pane('r', x + w, y, W - (x + w), h);
+        }
+        ring.style.cssText = `display:block;left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
         if (s.tap) {
-            tap.style.display = 'block';
-            tap.style.cssText += `;display:block;left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px`;
+            tap.style.cssText = `display:block;left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px`;
         } else tap.style.display = 'none';
         // card goes under the target when there is room, otherwise above it
         const below = H - (y + h) > 190;
@@ -528,7 +562,18 @@ const Walkthrough = {
         if (document.getElementById('wtCSS')) return;
         const css = `
         #wtLayer{position:fixed;inset:0;z-index:150;pointer-events:none}
-        .wt-pane{position:fixed;background:rgba(4,7,11,.76);pointer-events:auto}
+        /* the shroud is only ever clickable on a single-tap step, and tapping it tucks the card
+           away rather than swallowing the tap silently */
+        .wt-pane{position:fixed;background:rgba(4,7,11,.58);pointer-events:none;transition:background .15s}
+        #wtLayer.wt-block .wt-pane{pointer-events:auto}
+        #wtLayer.wt-free .wt-pane{background:transparent}
+        #wtLayer.wt-min .wt-card,#wtLayer.wt-min .wt-tap{display:none}
+        .wt-fab{position:fixed;right:10px;top:50%;transform:translateY(-50%);width:44px;height:44px;
+            border-radius:50%;border:1px solid var(--accent);background:var(--surface);color:var(--accent);
+            display:none;align-items:center;justify-content:center;pointer-events:auto;cursor:pointer;
+            box-shadow:0 6px 18px rgba(0,0,0,.45);z-index:2}
+        .wt-fab .ti{font-size:22px}
+        #wtLayer.wt-min .wt-fab{display:flex}
         .wt-ring{position:fixed;display:none;border:2px solid var(--accent);border-radius:var(--radius-md);
             box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);pointer-events:none;
             transition:left .18s,top .18s,width .18s,height .18s}
@@ -545,6 +590,8 @@ const Walkthrough = {
         .wt-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}
         .wt-skip{background:none;border:none;color:var(--text-dim);font:inherit;font-size:var(--fs-sm);
             cursor:pointer;padding:6px 2px;text-decoration:underline}
+        .wt-hide{background:none;border:1px solid var(--line-strong);color:var(--text-secondary);font:inherit;
+            font-size:var(--fs-sm);cursor:pointer;padding:6px 12px;border-radius:var(--radius-sm);margin-left:auto;margin-right:8px}
         .wt-gated .wt-next{display:none}`;
         const st = document.createElement('style'); st.id = 'wtCSS'; st.textContent = css;
         document.head.appendChild(st);

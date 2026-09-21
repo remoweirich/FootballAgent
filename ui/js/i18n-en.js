@@ -62,6 +62,8 @@ I18n.register('en', {
     'settings.walkthrough': 'Replay the walkthrough',
     // ---- first-run walkthrough ----
     'wt.skip': 'Skip the walkthrough',
+    'wt.hide': 'Hide',
+    'wt.reopen': 'Reopen the walkthrough',
     'wt.next': 'Next',
     'wt.done': 'Finish',
     'wt.step': 'Step {n} of {total}',
@@ -219,7 +221,7 @@ I18n.register('en', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Copyright',
     'settings.privacy': 'Privacy policy',
-    'settings.version': 'Football Agency Simulator · v1.0.9',
+    'settings.version': 'Football Agency Simulator · v1.0.10',
     'settings.saveNote': 'Name this save. Tap an existing name to overwrite it. You can keep up to {max} ({used} used).',
     'settings.saved': 'Saved',
     'store.title': 'Store',

@@ -244,6 +244,32 @@ check('narration can interpolate the agency name', runv(`
       && I18n.t('wt.wayne.signed', v).indexOf('{agency}') === -1
       && I18n.t('wt.wayne.signed', v).indexOf(v.agency) !== -1;`));
 
+// ---- the overlay must never fence the player in ----
+// The tour strands the player if a step both (a) fences the screen to one element and (b) expects
+// him to do something that navigates away from it. Only single-tap steps may fence.
+check('no step both fences the screen and expects multi-step work', runv(`
+  const bad = Walkthrough.SCRIPT.filter(s => s.tap && s.until);
+  return bad.length === 0;`));
+
+check('every free-roam (until) step is unfenced by design', runv(`
+  // _position() computes freeRoam from s.until, so any such step drops the shroud
+  return Walkthrough.SCRIPT.filter(s => s.until).every(s => !s.tap);`));
+
+check('the card can be tucked away and brought back', runv(`
+  return typeof Walkthrough.collapse === 'function'
+      && typeof Walkthrough.expand === 'function'
+      && (I18n.packs.en['wt.hide'] && I18n.packs.de['wt.hide'])
+      && (I18n.packs.en['wt.reopen'] && I18n.packs.de['wt.reopen']) ? true : false;`));
+
+check('the inbox read-both step is free-roam, not a fenced tap', runv(`
+  const s = Walkthrough.SCRIPT.find(x => x.key === 'wt.inbox.read');
+  return !!s.until && !s.tap;`));
+
+check('the negotiation steps leave the sliders reachable', runv(`
+  return ['wt.wayne.neg1', 'wt.wayne.neg2']
+    .map(k => Walkthrough.SCRIPT.find(s => s.key === k))
+    .every(s => !!s.until && !s.tap);`));
+
 // ---- the real save is never written while the demo is up ----
 check('save() is a no-op in demo mode', runv(`
   let wrote = false;
