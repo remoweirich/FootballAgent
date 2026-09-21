@@ -218,6 +218,12 @@ const ClientDetail = {
         const lines = targets.map(cid => (loan ? Agency.shopPlayerLoan(p, cid) : Agency.shopPlayer(p, cid)).message);
         GameState.save();
         shop.selected = new Set();
+        // Interested clubs reply immediately, and those replies live on the page UNDER this sheet —
+        // so refresh it now instead of leaving them invisible until something else forces a
+        // re-render. Router.refresh() would tear the sheet down (route() closes sheets), hence
+        // rendering the screen body directly, the same way the agency upgrade ladder does.
+        const body = document.getElementById('screenBody');
+        if (body) this.render(body, id);
         this.renderShop(id);
         Router.result(lines.join('<br>'), 'info');
     },
