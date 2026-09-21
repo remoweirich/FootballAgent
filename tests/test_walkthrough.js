@@ -244,6 +244,61 @@ check('narration can interpolate the agency name', runv(`
       && I18n.t('wt.wayne.signed', v).indexOf('{agency}') === -1
       && I18n.t('wt.wayne.signed', v).indexOf(v.agency) !== -1;`));
 
+// ---- content the playtest found empty or wrong ----
+check('Johan: scouting report carries a written description + role label', runv(`
+  const r = GameState.players.find(p => p.id === 'wt_johan').report;
+  return r.role === 'attacking_midfielder' && !!r.roleLabel
+      && typeof r.desc === 'string' && r.desc.length > 20;`));
+
+check('Johan: boyhood club reads Basel Red and is discovered', runv(`
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  const f = Dialogue.ensureFacts(j);
+  return f.favClub.discovered === true && f.favClub.clubId === 'Basel'
+      && Clubs.getClubById(f.favClub.clubId).name === 'Basel Red';`));
+
+check('Johan: ambition and home life stay undiscovered (ask him sometime)', runv(`
+  const f = Dialogue.ensureFacts(GameState.players.find(p => p.id === 'wt_johan'));
+  return f.ambition.discovered !== true && f.family.discovered !== true;`));
+
+check('Johan: commissions are 8% and 9%, not fractions', runv(`
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  return j.wageCommission === 8 && j.sponsorCommission === 9;`));
+
+check('Johan: has one live sponsorship deal', runv(`
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  return (j.sponsorDeals || []).length === 1
+      && j.sponsorDeals[0].untilSeason > GameState.seasonStartYear
+      && j.sponsorIncome === j.sponsorDeals[0].weekly;`));
+
+check('Wayne: report describes a complete forward', runv(`
+  const r = GameState.players.find(p => p.id === 'wt_wayne').report;
+  return r.role === 'complete_forward' && !!r.roleLabel
+      && typeof r.desc === 'string' && r.desc.length > 20
+      && r.ceiling === 'International Superstar'
+      && r.floor === 'English First Division regular';`));
+
+check("Gemma's card agrees with the narration: three weeks to her report", runv(`
+  const g = GameState.agency.scouts.find(s => s.region === 'west-midlands');
+  return g.weeksUntilFind === 3;`));
+
+check('the sponsor step refuses to pass until a deal is taken', runv(`
+  const step = Walkthrough.SCRIPT.find(s => s.key === 'wt.adv.sponsor');
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  const before = step.until();
+  j.sponsorDeals.push({ company: 'Kestrel Energy', weekly: 6400, annual: 430000, untilSeason: GameState.seasonStartYear + 3 });
+  const after = step.until();
+  j.sponsorDeals.pop();
+  return before === false && after === true;`));
+
+check('steps that would sit over what they describe are pinned', runv(`
+  const by = k => Walkthrough.SCRIPT.find(s => s.key === k);
+  return by('wt.client.youth').place === 'above'
+      && by('wt.adv.sponsor').place === 'top' && by('wt.adv.found').place === 'top'
+      && by('wt.wayne.card').place === 'bottom'
+      && by('wt.wayne.neg1').place === 'top' && by('wt.wayne.neg2').place === 'top'
+      && by('wt.scout.hireGemma').scrollTo === true
+      && by('wt.wayne.neg1').waitFor === 'button[onclick*="proposeSign"]';`));
+
 // ---- the overlay must never fence the player in ----
 // The tour strands the player if a step both (a) fences the screen to one element and (b) expects
 // him to do something that navigates away from it. Only single-tap steps may fence.

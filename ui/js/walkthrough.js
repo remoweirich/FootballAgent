@@ -15,6 +15,7 @@
 // ============================================================
 const Walkthrough = {
     KEY: 'walkthroughDone',       // Prefs flag: device-scoped, so it runs once per device
+    EDGE: 14,                     // keep the card this far off the top/bottom of the screen
     _active: false,
     _i: 0,
     _saved: null,                 // snapshot of the real GameState fields we replace
@@ -119,28 +120,41 @@ const Walkthrough = {
         p.agentId = 'me';
         p.repUntilSeason = 2033;               // -> "33/34"
         p.repExpired = false;
-        p.wageCommission = 0.08;
-        p.sponsorCommission = 0.09;
+        // commissions are whole percents in the engine (8 = 8%), not fractions
+        p.wageCommission = 8;
+        p.sponsorCommission = 9;
+        // one sponsorship already running, so the Contract tab has something real to show
+        p.sponsorDeals = [{ company: 'Halvard Sportswear', weekly: 7400, annual: 180000, untilSeason: GameState.seasonStartYear + 2 }];
+        p.sponsorIncome = 7400;
         p.transferListed = false; p.loanListed = false;
         p.onLoanAt = null; p.loanUntilSeason = null;
         p.morale = { club: 47, time: 100, wage: 59, agent: 83 };
         p.bond = 38;                            // 25-49 -> "Trusted"
         p.personality = { primary: 'professional', secondary: 'homebody', revP: true, revS: false };
-        // Ambition and life are deliberately left unknown -> the Morale tab shows its own
-        // "ask him sometime" / "on his own for now" copy, which is what the script asks for.
-        p.facts = { boyhoodClub: 'Basel', boyhoodKnown: true };
+        // Facts live in the Dialogue shape ({favClub, ambition, family}); only the boyhood club is
+        // known, so ambition and life keep showing their own "ask him sometime" copy.
+        if (typeof Dialogue !== 'undefined') {
+            const facts = Dialogue.ensureFacts(p);
+            if (facts && facts.favClub) { facts.favClub.clubId = 'Basel'; facts.favClub.discovered = true; }
+        }
         p.injury = { type: 'Ankle sprain', weeksOut: 3, total: 3, specialistUsed: false, treatedWeek: null };
         p.injuryHistory = [{ type: 'Hamstring tear', weeks: 22, season: '26/27' }];
+        // Build the report through the real generator so it carries the role description and label
+        // the Potential tab prints, then pin the verdict to what the script quotes.
         p.styleRole = 'attacking_midfielder';
         p.scoutQuality = 78;
-        p.report = {
-            role: 'attacking_midfielder',
-            ceiling: 'International Superstar',
-            floor: 'International Regular',
-        };
+        this._report(p, 78, 'International Superstar', 'International Regular');
         p.stats = this._demoStats();
         p.trophies = [];
         return p;
+    },
+
+    // A real scouting report (role label + written description), with the verdict pinned.
+    _report(p, quality, ceiling, floor) {
+        if (typeof Scouting !== 'undefined' && Scouting.generateReport) Scouting.generateReport(p, quality);
+        if (!p.report) p.report = { role: p.styleRole, scoutQuality: quality };
+        p.report.ceiling = ceiling;
+        p.report.floor = floor;
     },
 
     // Career: Basel U21 23/24 · Basel (U21 + first team) 24/25 · Basel 25/26 · Stuttgart 26/27-27/28
@@ -271,7 +285,7 @@ const Walkthrough = {
         p.dismissedTalent = false; p.archived = false;
         p.styleRole = 'complete_forward';
         p.scoutQuality = 75;
-        p.report = { role: 'complete_forward', ceiling: 'International Superstar', floor: 'English First Division regular' };
+        this._report(p, 75, 'International Superstar', 'English First Division regular');
         p.stats = {};
         p.trophies = [];
         return p;
@@ -317,7 +331,7 @@ const Walkthrough = {
         { key: 'wt.client.transferList', target: 'button[onclick*="toggleTL"]' },
         { key: 'wt.client.shop', target: 'button[onclick*="openShop"]' },
         { key: 'wt.client.loan', target: 'button[onclick*="reqLoan"]' },
-        { key: 'wt.client.youth', target: 'button[onclick*="sendU21"]' },
+        { key: 'wt.client.youth', target: 'button[onclick*="sendU21"]', place: 'above' },
         { key: 'wt.client.chat', target: 'button[onclick*="checkIn"]' },
         { key: 'wt.client.renew', target: 'button[onclick*="reqRenewal"]' },
 
@@ -352,7 +366,7 @@ const Walkthrough = {
         { key: 'wt.scout.toHire', target: 'button.tab[onclick*="\'market\'"]', tap: true },
         { key: 'wt.scout.list' },
         { key: 'wt.scout.regions', target: '[data-wt="scout-regions"]' },
-        { key: 'wt.scout.hireGemma', target: '[data-scout="wt_harris"] button', tap: true },
+        { key: 'wt.scout.hireGemma', target: '[data-scout="wt_harris"] button', tap: true, scrollTo: true },
         { key: 'wt.scout.toYours', target: 'button.tab[onclick*="\'scouts\'"]', tap: true },
         {
             key: 'wt.scout.assign',
@@ -364,19 +378,27 @@ const Walkthrough = {
         // ---------------- three weeks pass ----------------
         { key: 'wt.adv.first', go: 'home', target: '.cta-dock button', until: () => GameState.week >= 35 },
         { key: 'wt.adv.second', target: '.cta-dock button', until: () => GameState.week >= 36 },
-        { key: 'wt.adv.sponsor' },
+        {
+            key: 'wt.adv.sponsor', target: '.modal-card', place: 'top',
+            // you have to actually take one of the three deals before moving on
+            until: () => {
+                const j = (GameState.players || []).find(p => p.id === 'wt_johan');
+                return !!(j && (j.sponsorDeals || []).some(d => d.company !== 'Halvard Sportswear'));
+            }
+        },
         { key: 'wt.adv.third', target: '.cta-dock button', until: () => GameState.week >= 37 },
-        { key: 'wt.adv.found' },
+        { key: 'wt.adv.found', target: '.modal-card', place: 'top' },
 
         // ---------------- Wayne Kane: look him over and sign him ----------------
         { key: 'wt.found.toScouting', target: 'a.nav-item[href="#scouting"]', tap: true },
         { key: 'wt.found.tapWayne', target: 'a.cl-card[href*="wt_wayne"]', tap: true },
-        { key: 'wt.wayne.card' },
+        { key: 'wt.wayne.card', place: 'bottom' },
         { key: 'wt.wayne.toPotential', target: 'button.tab[onclick*="\'potential\'"]', tap: true },
         { key: 'wt.wayne.potential' },
         { key: 'wt.wayne.offerRep', target: 'button[onclick*="openSign"]', tap: true },
         {
-            key: 'wt.wayne.neg1', target: 'button[onclick*="proposeSign"]',
+            key: 'wt.wayne.neg1', target: 'button[onclick*="proposeSign"]', place: 'top',
+            waitFor: 'button[onclick*="proposeSign"]',
             until: () => {
                 if (typeof ClientDetail === 'undefined') return false;
                 const c = ClientDetail.ctx && ClientDetail.ctx('wt_wayne');
@@ -384,7 +406,7 @@ const Walkthrough = {
             }
         },
         {
-            key: 'wt.wayne.neg2', target: 'button[onclick*="proposeSign"]',
+            key: 'wt.wayne.neg2', target: 'button[onclick*="proposeSign"]', place: 'top',
             until: () => {
                 const w = (GameState.players || []).find(p => p.id === 'wt_wayne');
                 return !!(w && w.agentId === 'me');
@@ -401,6 +423,7 @@ const Walkthrough = {
         sc.maxTalentAge = 19;
         sc.position = null;
         sc.tier = 'top';
+        sc.weeksUntilFind = 3;   // the card must agree with the narration: three weeks, not a roll
     },
 
     // values the narration can interpolate
@@ -426,6 +449,7 @@ const Walkthrough = {
             if (cur !== s.go) Router.go(s.go);
         }
         if (typeof s.before === 'function') { try { s.before(); } catch (e) { /* never block the tour */ } }
+        if (s.scrollTo) this._scrollIntoView(s.target);
         if (s.scroll === 'bottom') {
             const scr = document.querySelector('.screen');
             if (scr) scr.scrollTo({ top: scr.scrollHeight, behavior: 'smooth' });
@@ -433,11 +457,23 @@ const Walkthrough = {
         this._awaitTarget(s, 0);
     },
 
+    // Bring a highlighted element back into view before talking about it — after a long scroll the
+    // thing the step describes can otherwise be off-screen behind the card.
+    _scrollIntoView(sel) {
+        if (!sel) return;
+        setTimeout(() => {
+            const el = document.querySelector(sel);
+            if (el && el.scrollIntoView) { try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { el.scrollIntoView(); } }
+        }, 120);
+    },
+
     // Screens re-render asynchronously after navigation, so wait (briefly) for the target to exist
     // rather than measuring a node that is not in the DOM yet.
     _awaitTarget(s, tries) {
         if (!this._active || this.step() !== s) return;
-        if (!s.target || document.querySelector(s.target) || tries > 40) { this._paint(); return; }
+        // waitFor is a hard gate (don't speak until the sheet is open); target is a soft one
+        const gate = s.waitFor || s.target;
+        if (!gate || document.querySelector(gate) || tries > 60) { this._paint(); return; }
         setTimeout(() => this._awaitTarget(s, tries + 1), 60);
     },
 
@@ -532,10 +568,12 @@ const Walkthrough = {
             return;
         }
 
-        if (!el) {   // narration with nothing to point at: dim gently, centre the card
+        if (!el) {   // narration with nothing to point at: dim gently, place the card
             pane('t', 0, 0, W, H); pane('b', 0, 0, 0, 0); pane('l', 0, 0, 0, 0); pane('r', 0, 0, 0, 0);
             ring.style.display = 'none'; tap.style.display = 'none';
-            card.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%)';
+            card.style.cssText = s.place === 'top' ? `left:50%;transform:translateX(-50%);top:${this.EDGE}px`
+                : s.place === 'bottom' ? `left:50%;transform:translateX(-50%);bottom:${this.EDGE}px;top:auto`
+                    : 'left:50%;top:50%;transform:translate(-50%,-50%)';
             return;
         }
         const r = el.getBoundingClientRect(), pad = 6;
@@ -551,11 +589,17 @@ const Walkthrough = {
         if (s.tap) {
             tap.style.cssText = `display:block;left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px`;
         } else tap.style.display = 'none';
-        // card goes under the target when there is room, otherwise above it
-        const below = H - (y + h) > 190;
-        card.style.cssText = below
-            ? `left:50%;transform:translateX(-50%);top:${Math.min(y + h + 14, H - 180)}px`
-            : `left:50%;transform:translateX(-50%);top:${Math.max(12, y - 174)}px`;
+        // Where the card sits. A step can pin it (the advance summary and the negotiation sliders
+        // both need it out of the way); otherwise it goes under the target when there is room.
+        const CH = card.offsetHeight || 170;
+        let top;
+        if (s.place === 'top') top = this.EDGE;
+        else if (s.place === 'bottom') top = Math.max(this.EDGE, H - CH - this.EDGE);
+        else if (s.place === 'above') top = Math.max(this.EDGE, y - CH - 14);
+        else if (s.place === 'below') top = Math.min(y + h + 14, H - CH - this.EDGE);
+        else top = (H - (y + h) > CH + 30) ? Math.min(y + h + 14, H - CH - this.EDGE)
+            : Math.max(this.EDGE, y - CH - 14);
+        card.style.cssText = `left:50%;transform:translateX(-50%);top:${Math.round(top)}px`;
     },
 
     _injectCSS() {
@@ -566,7 +610,9 @@ const Walkthrough = {
            away rather than swallowing the tap silently */
         .wt-pane{position:fixed;background:rgba(4,7,11,.58);pointer-events:none;transition:background .15s}
         #wtLayer.wt-block .wt-pane{pointer-events:auto}
-        #wtLayer.wt-free .wt-pane{background:transparent}
+        /* free-roam still dims — the panes are click-through there, so the shroud costs nothing
+           and keeps the card legible. Only tucking it away clears the screen. */
+        #wtLayer.wt-free .wt-pane{background:rgba(4,7,11,.5)}
         #wtLayer.wt-min .wt-card,#wtLayer.wt-min .wt-tap{display:none}
         .wt-fab{position:fixed;right:10px;top:50%;transform:translateY(-50%);width:44px;height:44px;
             border-radius:50%;border:1px solid var(--accent);background:var(--surface);color:var(--accent);
@@ -582,8 +628,8 @@ const Walkthrough = {
             border:2px solid var(--accent);animation:wtPulse 1.4s ease-out infinite}
         @keyframes wtPulse{0%{transform:scale(.55);opacity:.95}100%{transform:scale(1.5);opacity:0}}
         .wt-card{position:fixed;width:min(92vw,400px);background:var(--surface);color:var(--text);
-            border:1px solid var(--line-strong);border-radius:var(--radius-lg);padding:var(--space-5);
-            box-shadow:0 14px 44px rgba(0,0,0,.5);pointer-events:auto}
+            border:1px solid var(--accent);border-radius:var(--radius-lg);padding:var(--space-5);
+            box-shadow:0 0 0 9999px rgba(4,7,11,.18), 0 18px 48px rgba(0,0,0,.75);pointer-events:auto}
         .wt-progress{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;
             letter-spacing:var(--tracking-caps);margin-bottom:6px}
         .wt-text{margin:0 0 var(--space-4);font-size:var(--fs-lg);line-height:1.55}
