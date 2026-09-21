@@ -13,7 +13,12 @@ const sb = {
     localStorage: { getItem: () => null, setItem() { }, removeItem() { } },
     document: { addEventListener() { }, getElementById: () => null, querySelector: () => null, createElement: () => ({ style: {}, classList: { toggle() { } }, appendChild() { } }), head: { appendChild() { } }, body: { appendChild() { } } },
     window: { addEventListener() { }, innerWidth: 400, innerHeight: 800 },
-    UI: { money: n => Math.round(n || 0).toLocaleString('en-US') },
+    UI: {
+        money: n => Math.round(n || 0).toLocaleString('en-US'),
+        euro: n => '€' + Math.round(n || 0).toLocaleString('en-US'),
+        // resolved lazily: Clubs is only defined once the engine files below have run
+        clubName: id => { const c = sb.Clubs && sb.Clubs.getClubById(id); return (c && c.name) || id; },
+    },
 };
 vm.createContext(sb);
 for (const f of files) vm.runInContext(fs.readFileSync(path.join(base, f), 'utf8'), sb, { filename: f });
@@ -151,6 +156,58 @@ check('the brief narrows her to under-20s, any position, top division', runv(`
   Walkthrough._briefGemma();
   const g = GameState.agency.scouts.find(s => s.region === 'west-midlands');
   return g.maxTalentAge === 19 && g.position === null && g.tier === 'top';`));
+
+// ---- part 2 stage B: the three frozen advances play the same way every time ----
+check('advancing in demo mode never runs the real simulation', runv(`
+  const before = JSON.stringify(GameState.league || null);
+  Sim.advanceWeek();
+  return GameState.week === 35 && JSON.stringify(GameState.league || null) === before;`));
+
+check('week 35 is quiet: books only, no new mail, Johan still out', runv(`
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  const mails = GameState.inbox.length;
+  return mails === 2 && j.injury && j.injury.weeksOut === 2
+      && GameState.log !== undefined;`));
+
+check('week 36 brings exactly three sponsor offers for Johan', runv(`
+  Sim.advanceWeek();
+  const m = GameState.inbox.find(x => x.kind === 'sponsor');
+  return GameState.week === 36 && m && m.offer.playerId === 'wt_johan'
+      && m.offer.options.length === 3
+      && m.offer.options.every(o => o.company && o.weekly > 0 && o.annual > 0 && o.termSeasons >= 1);`));
+
+check('week 37: Gemma reports Wayne Kane, and Johan is fit again', runv(`
+  Sim.advanceWeek();
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  return GameState.week === 37 && w && j.injury === null;`));
+
+check('Wayne Kane: 17, ST, England, 56, Birmingham Claret, 5050/wk', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  return w.name === 'Wayne Kane' && w.age === 17 && w.position === 'ST'
+      && w.nationality === 'England' && w.ability === 56 && w.wage === 5050
+      && Clubs.getClubById(w.clubId).name === 'Birmingham Claret'
+      && w.squadRole === 'youth';`));
+
+check('Wayne shows up in the Scouting finds list, unsigned', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  return w.knownToAgent === true && w.agentId == null && !w.dismissedTalent
+      && !w.archived && w.age <= 22 && w.discoveredWeek != null;`));
+
+check('his report reads Superstar ceiling / English First Division floor', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  return w.report.role === 'complete_forward'
+      && w.report.ceiling === 'International Superstar'
+      && w.report.floor === 'English First Division regular'
+      && w.stats && Object.keys(w.stats).length === 0;`));
+
+check('the three advance steps unlock in order', runv(`
+  const wk = k => Walkthrough.SCRIPT.find(s => s.key === k);
+  return wk('wt.adv.first').until() && wk('wt.adv.second').until() && wk('wt.adv.third').until();`));
+
+check('the books actually moved money and logged it', runv(`
+  const l = GameState.agency.ledger || {};
+  return l.Commission > 0 && l.Scouts < 0;`));
 
 // ---- the real save is never written while the demo is up ----
 check('save() is a no-op in demo mode', runv(`

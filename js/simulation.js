@@ -128,6 +128,12 @@ function moralePromiseDeadline(type) {
 
 const Sim = {
     advanceWeek() {
+        // The walkthrough runs on a frozen world: advancing plays its three scripted beats instead
+        // of simulating, so the tutorial's weeks are identical every time it is taken. Guarded on
+        // demoMode + the UI object being present, so headless tests never take this path.
+        if (GameState.demoMode && typeof Walkthrough !== 'undefined' && Walkthrough.demoAdvance) {
+            return Walkthrough.demoAdvance();
+        }
         const events = [];
         // richer one-off "spotlight" moments (e.g. a client retiring) that deserve their own
         // pop-up after the week summary, instead of just another line in it

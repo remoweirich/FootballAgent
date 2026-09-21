@@ -174,6 +174,109 @@ const Walkthrough = {
         { id: 'wt_jackson', name: 'Mo Jackson', title: 'Chief scout', quality: 85, weeklyCost: 8200 },
     ],
 
+    // ---- frozen-world advance ------------------------------------------------------------
+    // Sim.advanceWeek() hands over to this while the tutorial is up. Nothing is simulated: the
+    // week ticks, the books are settled, and whichever beat belongs to this week is played.
+    demoAdvance() {
+        const G = GameState;
+        const events = [];
+        G.week += 1;
+        this._settleBooks(events);
+        this._tickInjury(events);
+        const beat = this.BEATS[G.week];
+        if (beat) { try { this[beat](events); } catch (e) { /* a broken beat must not strand the player */ } }
+        return { events, spotlights: [], rolledSeason: false, seasonFinished: false, windowClosed: false, attend: [] };
+    },
+    // week the beat fires on (the demo starts on 34, so the first advance lands on 35)
+    BEATS: { 36: '_beatSponsor', 37: '_beatScoutReport' },
+
+    // Wages out, commission in — so the header's weekly net and the Finance tab both mean something.
+    _settleBooks(events) {
+        const G = GameState, ag = G.agency;
+        const scoutCost = (ag.scouts || []).reduce((n, s) => n + (s.weeklyCost || 0), 0);
+        const office = (typeof Upgrades !== 'undefined' && Upgrades.office()) ? Upgrades.office().weekly : 0;
+        const commission = (typeof Agency !== 'undefined' ? Agency.clients() : []).reduce(
+            (n, p) => n + Math.round((p.wage || 0) * (p.wageCommission || 0)), 0);
+        if (commission) { ag.balance += commission; G.addFinance('Commission', commission); }
+        if (scoutCost) { ag.balance -= scoutCost; G.addFinance('Scouts', -scoutCost); }
+        if (office) { ag.balance -= office; G.addFinance('Office', -office); }
+        const net = commission - scoutCost - office;
+        events.push({ type: 'money', text: I18n.t('wt.ev.books', { net: UI.euro(Math.abs(net)), dir: I18n.t(net >= 0 ? 'wt.ev.up' : 'wt.ev.down') }) });
+    },
+
+    // He is three weeks out at the start; untreated that is exactly the length of this demo, and
+    // physio/specialist simply bring the good news forward.
+    _tickInjury(events) {
+        const p = (GameState.players || []).find(x => x.id === 'wt_johan');
+        if (!p || !p.injury) return;
+        p.injury.weeksOut = Math.max(0, p.injury.weeksOut - 1);
+        if (p.injury.weeksOut > 0) return;
+        const name = p.name;
+        p.injury = null;
+        GameState.addMail({ kind: 'news', subject: I18n.t('wt.mail.fit.subj', { name }), body: I18n.t('wt.mail.fit.body', { name }), ttl: 6 });
+        events.push({ type: 'injury', text: I18n.t('wt.ev.fit', { name }) });
+    },
+
+    // Beat 2: three sponsors want a piece of Johan.
+    _beatSponsor(events) {
+        const p = (GameState.players || []).find(x => x.id === 'wt_johan');
+        if (!p) return;
+        const offer = {
+            playerId: p.id, level: 'international', legend: false, hot: true, standout: false,
+            options: [
+                { company: 'Aster Athletic', weekly: 9800, annual: 260000, termSeasons: 2 },
+                { company: 'Kestrel Energy', weekly: 6400, annual: 430000, termSeasons: 3 },
+                { company: 'Nordwelle Bank', weekly: 12500, annual: 120000, termSeasons: 1 },
+            ],
+        };
+        GameState.addMail({ kind: 'sponsor', subject: I18n.t('sim.sponsorOffersSubj', { name: p.name }), offer, persistence: 0, ttl: 6 });
+        events.push({ type: 'offer', text: I18n.t('wt.ev.sponsor', { name: p.name }) });
+    },
+
+    // Beat 3: Gemma's first report — one name.
+    _beatScoutReport(events) {
+        const wayne = this._demoProspect();
+        GameState.players.push(wayne);
+        const scout = (GameState.agency.scouts || [])[0];
+        const who = scout ? scout.name : 'Gemma Harris';
+        GameState.addMail({
+            kind: 'news',
+            subject: I18n.t('wt.mail.scout.subj', { scout: who }),
+            body: I18n.t('wt.mail.scout.body', { scout: who, name: wayne.name, age: wayne.age, pos: wayne.position, club: UI.clubName(wayne.clubId) }),
+            ttl: 6,
+        });
+        events.push({ type: 'scout', text: I18n.t('wt.ev.scout', { scout: who, name: wayne.name }) });
+    },
+
+    // Wayne Kane — 17, striker, Birmingham Claret. Built through PlayerGen for shape, then pinned
+    // to the numbers the script quotes.
+    _demoProspect() {
+        const club = Clubs.getClubById('Aston Villa');
+        const p = PlayerGen.makePlayer(club, { ability: 56, age: 17, position: 'ST' });
+        p.id = 'wt_wayne';
+        p.name = 'Wayne Kane';
+        p.nationality = 'England';
+        p.nationalityFlag = (typeof getNationalityFlag === 'function') ? getNationalityFlag('England') : '';
+        p.clubId = 'Aston Villa';
+        p.ability = 56; p.peakAbility = 56; p.potential = 88;
+        p.wage = 5050;
+        p.contractUntilSeason = GameState.seasonStartYear + 1;   // two seasons including this one
+        p.squadRole = 'youth';
+        p.agentId = null; p.repUntilSeason = null; p.repExpired = false;
+        p.transferListed = false; p.loanListed = false;
+        p.onLoanAt = null; p.loanUntilSeason = null;
+        p.injury = null; p.injuryHistory = [];
+        p.knownToAgent = true;
+        p.discoveredWeek = GameState.absWeek();
+        p.dismissedTalent = false; p.archived = false;
+        p.styleRole = 'complete_forward';
+        p.scoutQuality = 75;
+        p.report = { role: 'complete_forward', ceiling: 'International Superstar', floor: 'English First Division regular' };
+        p.stats = {};
+        p.trophies = [];
+        return p;
+    },
+
     // Two mails every new save starts with (also seeded in GameState.startNewGame).
     STARTER_MAILS: [
         { kind: 'news', subj: 'mail.welcome.subj', body: 'mail.welcome.body' },
@@ -257,6 +360,13 @@ const Walkthrough = {
         },
         { key: 'wt.scout.brief', before: () => Walkthrough._briefGemma() },
         { key: 'wt.scout.advance', target: 'a.nav-item[href="#home"]', tap: true },
+
+        // ---------------- three weeks pass ----------------
+        { key: 'wt.adv.first', go: 'home', target: '.cta-dock button', until: () => GameState.week >= 35 },
+        { key: 'wt.adv.second', target: '.cta-dock button', until: () => GameState.week >= 36 },
+        { key: 'wt.adv.sponsor' },
+        { key: 'wt.adv.third', target: '.cta-dock button', until: () => GameState.week >= 37 },
+        { key: 'wt.adv.found' },
     ],
 
     // Narrow her brief to what the script describes, so the find that follows is the one the
