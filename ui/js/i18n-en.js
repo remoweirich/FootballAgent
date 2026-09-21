@@ -136,6 +136,7 @@ I18n.register('en', {
     'wt.shop.send': "<b>Now send the pitch.</b>",
     'wt.shop.offers': "Offers are in. <b>Open one from your inbox</b> to see the club and the role he'd have, then accept the move you like best — you'll need to take one to finish here.",
     'wt.outro': "And that's the shape of the job.<br><br>There's plenty more to find — upgrading your facilities, reputations that rise and fall, deep stats, tournament brackets and a balance sheet to keep an eye on — but you'll enjoy discovering that yourself. How to play is always in Settings if you want the details, and you can replay this walkthrough there any time.<br><br>Now go and build your own stories.",
+    'wt.mustAccept': "Wayne needs somewhere to play — accept one of the loan offers to finish the walkthrough.",
     'wt.leave': 'Leave the tutorial',
     'wt.leaveSub': 'back to your own agency',
     // events + mails the frozen weeks produce
@@ -233,7 +234,7 @@ I18n.register('en', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Copyright',
     'settings.privacy': 'Privacy policy',
-    'settings.version': 'Football Agency Simulator · v1.0.12',
+    'settings.version': 'Football Agency Simulator · v1.0.13',
     'settings.saveNote': 'Name this save. Tap an existing name to overwrite it. You can keep up to {max} ({used} used).',
     'settings.saved': 'Saved',
     'store.title': 'Store',

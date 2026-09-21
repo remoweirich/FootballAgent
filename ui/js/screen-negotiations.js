@@ -127,12 +127,19 @@ Nego.generic = function (el, m) {
         <div class="flex-row" style="margin-top:var(--space-6)"><button class="btn btn--ghost" onclick="Nego.dismiss('${m.id}')"><i class="ti ti-trash"></i>${I18n.t('nego.dismiss')}</button><button class="btn btn--primary" onclick="Router.back('inbox')">${I18n.t('common.close')}</button></div>`;
 };
 Nego.dismiss = function (id) {
-    const pid = this.playerIdOf(GameState.inbox.find(m => m.id === id));
+    const mail = GameState.inbox.find(m => m.id === id);
+    const pid = this.playerIdOf(mail);
+    // binning the mail would lose the offer just as surely as rejecting it
+    if (mail && mail.kind === 'loan' && typeof Walkthrough !== 'undefined'
+        && Walkthrough.blocksLoanReject(pid, false)) return Walkthrough.refuseLoanReject();
     GameState.removeMail(id); GameState.save(); this.goPlayer(pid);
 };
 Nego.reject = function (id) {
     const m = GameState.inbox.find(x => x.id === id) || {};
     const pid = this.playerIdOf(m);
+    // the walkthrough needs one loan accepted before it can finish
+    if (m.kind === 'loan' && typeof Walkthrough !== 'undefined'
+        && Walkthrough.blocksLoanReject(pid, false)) return Walkthrough.refuseLoanReject();
     Agency.declineMail(m); GameState.save(); this.goPlayer(pid);
 };
 

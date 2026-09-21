@@ -511,6 +511,25 @@ const Walkthrough = {
         if (typeof Router !== 'undefined') Router.refresh();
     },
 
+    // The tour cannot end unless Wayne actually goes somewhere, so while the loan offers are on
+    // the table the last one is protected and "reject all" is refused outright. Outside the tour
+    // (and once it is over and he is just exploring) this never fires.
+    LOAN_STEP: 'wt.shop.offers',
+    blocksLoanReject(playerId, rejectingAll) {
+        if (!this._active || this._explore) return false;
+        const step = this.step();
+        if (!step || step.key !== this.LOAN_STEP) return false;
+        if (playerId && playerId !== 'wt_wayne') return false;
+        const left = (GameState.inbox || []).filter(m =>
+            m.kind === 'loan' && m.offer && m.offer.playerId === 'wt_wayne').length;
+        return rejectingAll ? left > 0 : left <= 1;
+    },
+    // shared refusal, so all three reject paths say the same thing
+    refuseLoanReject() {
+        if (typeof Router !== 'undefined') Router.result(I18n.t('wt.mustAccept'), 'bad');
+        return true;
+    },
+
     // values the narration can interpolate
     vars() {
         const ag = (typeof GameState !== 'undefined' && GameState.agency) || {};

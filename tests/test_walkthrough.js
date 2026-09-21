@@ -361,6 +361,47 @@ check('pitching him out on loan produces offers to accept', runv(`
   const step = Walkthrough.SCRIPT.find(s => s.key === 'wt.shop.send');
   return three.length === 4 && step.until();`));
 
+// ---- the loan step cannot be dead-ended by rejecting everything ----
+check('rejecting all loan offers is refused outright', runv(`
+  Walkthrough._active = true; Walkthrough._explore = false;
+  Walkthrough._steps = Walkthrough.SCRIPT.slice();   // start() normally does this
+  Walkthrough._i = Walkthrough._steps.findIndex(s => s.key === 'wt.shop.offers');
+  return Walkthrough.blocksLoanReject('wt_wayne', true) === true;`));
+
+check('rejecting one offer is fine while others remain', runv(`
+  // the pitch only wins over the clubs that fancy him, so stage the inbox explicitly here
+  GameState.inbox = GameState.inbox.filter(m => m.kind !== 'loan');
+  const offer = to => ({ id: 'l_' + to, kind: 'loan', subject: to, read: false,
+      offer: { playerId: 'wt_wayne', fromClubId: 'Aston Villa', toClubId: to, role: 'starter' } });
+  GameState.inbox.push(offer('Blackpool'), offer('Exeter City'), offer('Bradford City'));
+  return GameState.inbox.filter(m => m.kind === 'loan').length === 3
+      && Walkthrough.blocksLoanReject('wt_wayne', false) === false;`));
+
+check('rejecting the LAST offer is refused', runv(`
+  const loans = GameState.inbox.filter(m => m.kind === 'loan');
+  GameState.inbox = GameState.inbox.filter(m => m.kind !== 'loan' || m === loans[0]);
+  return GameState.inbox.filter(m => m.kind === 'loan').length === 1
+      && Walkthrough.blocksLoanReject('wt_wayne', false) === true;`));
+
+check('the guard is silent outside the loan step', runv(`
+  Walkthrough._i = 0;
+  const off = Walkthrough.blocksLoanReject('wt_wayne', true);
+  Walkthrough._i = Walkthrough._steps.findIndex(s => s.key === 'wt.shop.offers');
+  return off === false;`));
+
+check('the guard is silent once the tour is over', runv(`
+  Walkthrough._explore = true;
+  const off = Walkthrough.blocksLoanReject('wt_wayne', true);
+  Walkthrough._explore = false;
+  return off === false;`));
+
+check('the guard never touches another player', runv(`
+  return Walkthrough.blocksLoanReject('someone_else', true) === false;`));
+
+check('the refusal message exists in both languages', runv(`
+  Walkthrough._active = false;
+  return ('wt.mustAccept' in I18n.packs.en) && ('wt.mustAccept' in I18n.packs.de);`));
+
 // ---- part 2 stage E: the tour ends into an explorable demo, not straight out ----
 check('finishing the script opens explore mode rather than restoring', runv(`
   Walkthrough._explore = false;

@@ -135,6 +135,7 @@ I18n.register('de', {
     'wt.shop.send': '<b>Jetzt raus mit der Anfrage.</b>',
     'wt.shop.offers': 'Die Angebote sind da. <b>Öffne eins in deinem Postfach</b>, sieh dir Verein und Rolle an und nimm das an, das dir am besten gefällt — eines musst du annehmen, um hier abzuschließen.',
     'wt.outro': 'Und das ist der Kern dieser Arbeit.<br><br>Es gibt noch einiges zu entdecken — der Ausbau deiner Einrichtungen, Reputationen, die steigen und fallen, ausführliche Statistiken, Turnierbäume und eine Bilanz, die du im Blick behalten solltest. Aber das findest du selbst am schönsten heraus. „So wird gespielt" findest du jederzeit in den Einstellungen, und dort kannst du auch diesen Rundgang jederzeit wiederholen.<br><br>Jetzt schreib deine eigenen Geschichten.',
+    'wt.mustAccept': 'Wayne braucht Spielpraxis — nimm eines der Leihangebote an, um den Rundgang abzuschließen.',
     'wt.leave': 'Rundgang verlassen',
     'wt.leaveSub': 'zurück zu deiner Agentur',
     // Ereignisse und Nachrichten der eingefrorenen Wochen
@@ -232,7 +233,7 @@ I18n.register('de', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Urheberrecht',
     'settings.privacy': 'Datenschutz',
-    'settings.version': 'Football Agency Simulator · v1.0.12',
+    'settings.version': 'Football Agency Simulator · v1.0.13',
     'settings.saveNote': 'Benenne diesen Spielstand. Tippe einen vorhandenen Namen an, um ihn zu überschreiben. Du kannst bis zu {max} behalten ({used} belegt).',
     'settings.saved': 'Gespeichert',
     'store.title': 'Shop',

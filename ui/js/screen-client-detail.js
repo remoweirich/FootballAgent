@@ -120,6 +120,7 @@ const ClientDetail = {
         return left <= 0 ? I18n.t('cd.finalYear') : I18n.t('cd.until', { season: GameState.seasonLabelFor(p.contractUntilSeason) });
     },
     rejectAll(id) {
+        if (typeof Walkthrough !== 'undefined' && Walkthrough.blocksLoanReject(id, true)) { Walkthrough.refuseLoanReject(); return; }
         GameState.inbox = GameState.inbox.filter(m => !(m.offer && m.offer.playerId === id && (m.kind === 'transfer' || m.kind === 'loan')));
         GameState.save(); Router.refresh();
     },
