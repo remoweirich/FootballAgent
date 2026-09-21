@@ -11,6 +11,11 @@ I18n.register('en', {
     'role.rotation': 'Rotation',
     'role.starter': 'Starter',
     'role.star': 'Star Player',
+    // ---- starter mails (every new save; also shown in the first-run walkthrough) ----
+    'mail.welcome.subj': 'Welcome to {agency}',
+    'mail.welcome.body': "Congratulations — your agency licence has come through and {agency} is officially open for business.<br><br>You start with no clients and a modest budget. Send a scout out to a region you know, watch the reports come in, and approach the first youngster you believe in. Everything after that — the moves, the contracts, the sponsorships — grows out of the players you choose to represent.<br><br>Good luck. You'll need a little of it.",
+    'mail.basics.subj': 'How the week works',
+    'mail.basics.body': "A quick note on the rhythm of the job.<br><br>The game moves one week at a time. Matches are played, your clients develop, scouts report back, and clubs make their moves — all when you advance the week.<br><br>Transfers only happen while a window is open (weeks 1-6 and 28-33). Outside those, you can still talk to your clients, renew contracts and line up sponsors.<br><br>Anything that genuinely needs you appears under 'Needs attention' on the home screen. Everything else waits quietly here in your inbox.",
     'role.backUp': 'Back Up',
     'role.firstChoice': 'First Choice',
     'role.cupKeeper': 'Cup Goalkeeper',

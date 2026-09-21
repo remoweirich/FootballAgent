@@ -59,6 +59,7 @@ Router.register('home', {
             <button onclick="Setup.openHelpOverlay()" aria-label="${I18n.t('common.howToPlay')}" title="${I18n.t('common.howToPlay')}" style="align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text-secondary);width:36px;height:36px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none"><i class="ti ti-help"></i></button>
         </div>
 
+        <div data-wt="attention">
         <div class="section-label" style="margin:var(--space-5) 0 var(--space-2)">${I18n.t('home.needsAttention')}</div>
         ${attention.length ? attention.map(a => `
             <a class="list-row" href="#${a.go}" style="cursor:pointer">
@@ -66,7 +67,9 @@ Router.register('home', {
                 <div style="flex:1;min-width:0"><div class="row-title">${a.title}</div><div class="row-sub">${UI.esc(a.sub)}</div></div>
                 <i class="ti ti-chevron-right row-chev"></i>
             </a>`).join('') : `<div class="empty empty--inline"><div class="empty__icon"><i class="ti ti-circle-check"></i></div><div class="empty__title">${I18n.t('home.allClear')}</div><div class="empty__hint">${I18n.t('home.allClearSub')}</div></div>`}
+        </div>
 
+        <div data-wt="clients-field">
         <div class="section-head">
             <span class="section-label">${I18n.t('home.yourClients')}</span>
             <span class="hint"><i class="ti ti-users" style="font-size:14px"></i> ${clients.length}/${Agency.capacity()}</span>
@@ -79,6 +82,7 @@ Router.register('home', {
                 <div style="font-size:var(--fs-md);color:var(--text-muted);text-align:right">${tot.apps} ${I18n.t('common.appsShort')} · ${UI.ratingText(tot.avg)}</div>
             </a>`;
         }).join('') : `<div class="empty"><div class="empty__icon"><i class="ti ti-zoom-scan"></i></div><div class="empty__title">${I18n.t('home.noClients')}</div><div class="empty__hint">${I18n.t('home.noClientsSub')}</div><a class="btn btn--accent-outline btn--sm empty__cta" href="#scouting"><i class="ti ti-zoom-scan"></i>${I18n.t('home.openScouting')}</a></div>`}
+        </div>
         ${clients.length ? `<a class="list-row" href="#clients" style="cursor:pointer;justify-content:space-between"><span style="color:var(--accent-text);font-size:var(--fs-md);font-weight:var(--weight-semibold)">${I18n.t('home.seeAll')}</span><i class="ti ti-chevron-right" style="color:var(--accent-text)"></i></a>` : ''}
         `;
 

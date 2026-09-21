@@ -102,6 +102,10 @@ const GameState = {
         // don't run in the first season (the Leagues > Europe view shows a disclaimer). They are built
         // at the first rollover from season 1's final tables + cup winners (see Simulation._rollNewSeason).
         // (Europe.syntheticStandings() remains available if we ever want to pre-populate season 1 instead.)
+        // Open every new save with a welcome + a short "how this works" note, so the inbox is
+        // never empty on week 1 (the first-run Walkthrough also shows these two).
+        this.addMail({ kind: 'news', subject: I18n.t('mail.welcome.subj', { agency: this.agency.name }), body: I18n.t('mail.welcome.body', { agency: this.agency.name }), ttl: 99 });
+        this.addMail({ kind: 'news', subject: I18n.t('mail.basics.subj'), body: I18n.t('mail.basics.body'), ttl: 99 });
         this.needsSetup = false;
         this.save();
     },
@@ -180,7 +184,11 @@ const GameState = {
             schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
         };
     },
+    demoMode: false,            // true while the Walkthrough runs on its scripted demo save
     save() {
+        // The tutorial swaps a demo state into GameState; save() is the single choke point every
+        // one of its ~66 call sites goes through, so guarding here keeps the real save untouched.
+        if (this.demoMode) return;
         this.namedClean = false;   // any ordinary autosave = progress not yet captured in a named slot
         try { Storage.saveGame(this._snapshot()); }
         catch (e) { console.warn('Save failed', e); }

@@ -50,7 +50,7 @@ Router.register('inbox', {
             <span class="hint">${I18n.t('nego.msgCount', { n: GameState.inbox.length, unread: GameState.unreadCount() })}</span>
             <div class="flex-row" style="gap:6px"><button class="gbtn" onclick="NegoInbox.markAllRead()"><i class="ti ti-checks"></i>${I18n.t('nego.markAllRead')}</button><button class="gbtn" onclick="NegoInbox.dismissAll()"><i class="ti ti-trash"></i>${I18n.t('nego.dismissAll')}</button></div>
         </div>${banner}
-        ${GameState.inbox.map(m => {
+        <div data-wt="inbox-list">${GameState.inbox.map(m => {
             const off = m.offer ? Nego.mailMeta(m) : '';
             // an invitation row opens the finals overview, not a mail detail
             const href = m.kind === 'attend' ? Router.link('attendfinals') : Router.link('mail', m.id);
@@ -59,7 +59,7 @@ Router.register('inbox', {
                 <div style="flex:1;min-width:0"><div class="row-title">${UI.esc(m.subject)}</div><div class="row-sub">W${m.week} ${m.season}${off ? ' · ' + off : ''}</div></div>
                 ${!m.read ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none"></span>' : ''}
             </a>`;
-        }).join('')}`;
+        }).join('')}</div>`;
     }
 });
 Nego.mailMeta = function (m) {

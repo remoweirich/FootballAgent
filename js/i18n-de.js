@@ -7,6 +7,11 @@ I18n.register('de', {
     'role.rotation': 'Rotationsspieler',
     'role.starter': 'Stammspieler',
     'role.star': 'Leistungsträger',
+    // ---- Startnachrichten (jeder neue Spielstand; auch im Einstiegs-Rundgang zu sehen) ----
+    'mail.welcome.subj': 'Willkommen bei {agency}',
+    'mail.welcome.body': 'Glückwunsch — deine Lizenz ist durch, und {agency} ist offiziell im Geschäft.<br><br>Du startest ohne Klienten und mit einem überschaubaren Budget. Schick einen Scout in eine Region, die du kennst, sieh dir seine Berichte an und sprich das erste Talent an, an das du glaubst. Alles Weitere — die Wechsel, die Verträge, die Sponsorendeals — wächst aus den Spielern, die du vertrittst.<br><br>Viel Erfolg. Ein bisschen davon wirst du brauchen.',
+    'mail.basics.subj': 'So läuft eine Woche ab',
+    'mail.basics.body': 'Kurz zum Rhythmus deiner Arbeit.<br><br>Das Spiel läuft Woche für Woche. Es wird gespielt, deine Klienten entwickeln sich, Scouts melden sich, und die Vereine werden aktiv — immer dann, wenn du eine Woche weitergehst.<br><br>Transfers sind nur möglich, solange ein Transferfenster offen ist (Wochen 1-6 und 28-33). Außerhalb davon kannst du trotzdem mit deinen Klienten sprechen, Verträge verlängern und Sponsoren gewinnen.<br><br>Alles, was dich wirklich braucht, erscheint auf dem Startbildschirm unter „Braucht Aufmerksamkeit". Der Rest wartet in Ruhe hier im Postfach.',
     'role.backUp': 'Ersatztorwart',
     'role.firstChoice': 'Stammtorwart',
     'role.cupKeeper': 'Pokaltorwart',

@@ -83,6 +83,7 @@ const SettingsScreen = {
             <div class="set-body">
                 <div class="set-group">
                     ${row(ic('ti-info-circle'), I18n.t('common.howToPlay'), '', 'SettingsScreen.help()')}
+                    ${inGame ? row(ic('ti-route'), I18n.t('settings.walkthrough'), '', 'SettingsScreen.walkthrough()') : ''}
                     ${row(ic('ti-file-text'), I18n.t('settings.saveGame'), '', 'SettingsScreen.saveGame()')}
                     ${row(ic('ti-home'), I18n.t('settings.backToStart'), '', 'SettingsScreen.toStart()')}
                 </div>
@@ -185,6 +186,8 @@ const SettingsScreen = {
         this._closeOverlay();
         this._overlay(res.ok ? I18n.t('settings.saved') : I18n.t('settings.saveGame'), `<p class="set-note">${UI.esc(res.message || (res.ok ? I18n.t('settings.saved') : I18n.t('settings.couldNotSave')))}</p>`);
     },
+    // Replay the first-run tutorial. It runs on its own demo save and restores the real one after.
+    walkthrough() { this.close(); if (typeof Walkthrough !== 'undefined') Walkthrough.start(); },
     // Rate: the Play listing (the rating widget lives there). Feedback: a pre-addressed, pre-subjected mail.
     rateApp() { UI.openExternal(APP_LINKS.playStore); },
     feedback() { UI.openExternal(APP_LINKS.feedbackMail); },

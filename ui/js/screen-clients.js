@@ -55,7 +55,7 @@ const ClientsScreen = {
             </div>
             <button class="gbtn" onclick="ClientsScreen.pickSort()"><i class="ti ti-arrows-sort"></i>${I18n.t('clients.sort.' + this.state.sort)}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>
         </div>
-        <div class="chip-row" style="margin-bottom:var(--space-4)">
+        <div class="chip-row" style="margin-bottom:var(--space-4)" data-wt="cl-filters">
             ${chip('all', 'ti-users', I18n.t('common.all'))}${chip('offers', 'ti-currency-euro', I18n.t('clients.filter.offers'))}${chip('sponsors', 'ti-tag', I18n.t('clients.filter.sponsors'))}${chip('injury', 'ti-bandage', I18n.t('clients.filter.injury'))}${chip('listed', 'ti-list-check', I18n.t('clients.filter.listed'))}<button class="cl-chip ${this.state.positions.length ? 'cl-on' : ''}" onclick="ClientsScreen.pickPositions()"><i class="ti ti-user-pin" style="font-size:13px"></i>${I18n.t('clients.filter.position')}${this.state.positions.length ? ` <span class="cl-ct">${this.state.positions.length}</span>` : ''}<i class="ti ti-chevron-down" style="font-size:12px;color:var(--text-faint)"></i></button>
         </div>
         ${rows.length ? rows.map(r => this.card(r)).join('') : (all.length
@@ -71,7 +71,7 @@ const ClientsScreen = {
             <div class="flex-row">
                 <div style="flex:1;min-width:0">
                     <div class="flex-row" style="gap:6px">
-                        <span class="cl-name">${UI.flag(p.nationality)} ${p.name}</span>
+                        <span class="cl-name" data-wt="cl-general">${UI.flag(p.nationality)} ${p.name}</span>
                         <span style="font-size:var(--fs-sm);color:var(--text-faint)">${p.age}y</span>
                         ${r.hasOffer ? '<i class="ti ti-currency-euro" style="font-size:14px;color:var(--accent)"></i>' : ''}
                         ${p.injury ? '<i class="ti ti-bandage" style="font-size:14px;color:var(--danger)"></i>' : ''}
@@ -79,7 +79,7 @@ const ClientsScreen = {
                     </div>
                     <div class="cl-sub"><span class="flex-row" style="gap:5px">${UI.crest(info ? info.club : club)}${teamHTML}</span><span style="color:var(--text-chevron)">·</span><span>${p.position}</span><span style="color:var(--text-chevron)">·</span><span>${roleName(p)}</span></div>
                 </div>
-                <div class="flex-row" style="gap:3px;margin-right:9px">${this.moraleDots(p)}</div>
+                <div class="flex-row" style="gap:3px;margin-right:9px" data-wt="cl-morale">${this.moraleDots(p)}</div>
                 ${UI.abilityBadge(p.ability)}
             </div>
             <div class="cl-stats">

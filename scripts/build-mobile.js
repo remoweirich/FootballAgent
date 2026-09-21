@@ -28,7 +28,7 @@ const UI_JS_FILES = [
     'screen-start.js', 'screen-settings.js', 'screen-achievements.js',
     'screen-setup.js', 'screen-customize.js', 'screen-sandbox.js', 'screen-store.js', 'screen-home.js', 'screen-clients.js', 'screen-club.js',
     'screen-client-detail.js', 'screen-negotiations.js', 'screen-agency.js', 'screen-bestxi.js',
-    'screen-finance.js', 'screen-leagues.js', 'screen-scouting.js', 'screen-livesim.js', 'screen-dialogue.js', 'main.js'
+    'screen-finance.js', 'screen-leagues.js', 'screen-scouting.js', 'screen-livesim.js', 'screen-dialogue.js', 'walkthrough.js', 'main.js'
 ];
 const CSS_FILES = ['files/design-tokens.css', 'files/components.css', 'app.css'];
 const VENDOR_DIRS = ['inter', 'tabler-icons', 'flag-icons'];
