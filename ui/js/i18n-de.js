@@ -233,7 +233,6 @@ I18n.register('de', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Urheberrecht',
     'settings.privacy': 'Datenschutz',
-    'settings.version': 'Football Agency Simulator · v1.0.17',
     'settings.saveNote': 'Benenne diesen Spielstand. Tippe einen vorhandenen Namen an, um ihn zu überschreiben. Du kannst bis zu {max} behalten ({used} belegt).',
     'settings.saved': 'Gespeichert',
     'store.title': 'Shop',
