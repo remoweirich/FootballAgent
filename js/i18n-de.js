@@ -533,3 +533,29 @@ I18n.register('de', {
     'dlg.ambProg.noEurope': 'noch kein Europapokal', 'dlg.ambProg.goals': '{n}/{target} Karrieretore',
     'dlg.ambProg.atHome': 'spielt noch in der Heimat',
 });
+
+// ---- live-sim: lines the ENGINE builds, plus how clients address you ---------------------
+// Commentary prose itself lives in js/live-sim-data.js and its per-locale overlays. These are
+// only the short lines live-sim.js assembles on its own — anonymous goals, corner ticks,
+// penalties and the plain fallback when no workbook chain fits the required outcome.
+I18n.register('de', {
+    'ls.goalAnon': 'Tor für {team}.',
+    'ls.cornerAnon': 'Ecke für {team}.',
+    'ls.cornerFollow1': 'Die Hereingabe findet einen Kopf am ersten Pfosten, knapp vorbei!',
+    'ls.cornerFollow2': 'Aus sechs Metern wuchtig getroffen, aber genau auf den Torwart.',
+    'ls.cornerFollow3': 'Halb geklärt an den Rand, der Nachschuss wird geblockt.',
+    'ls.cornerFollow4': 'Hereingebracht und aus kurzer Distanz über die Latte geköpft.',
+    'ls.cornerFollow5': 'Gewühl im Fünfmeterraum, im letzten Moment von der Linie geschlagen!',
+    'ls.cornerFollow6': 'Am ersten Pfosten verlängert, aber am zweiten ist niemand mitgegangen.',
+    'ls.penScored': 'Elfmeter für {team}… und der sitzt. Tor für {team}.',
+    'ls.penSaved': 'Elfmeter für {team}… und der Torwart hält!',
+    'ls.penMissed': 'Elfmeter für {team}… und vergeben! An den Pfosten und weg.',
+    'ls.plain': '{what}: {name} ({team})',
+    'ls.what.GOAL': 'Tor',
+    'ls.what.ASSIST': 'Vorlage',
+    'ls.what.YC': 'Gelbe Karte',
+    'ls.what.RC': 'Rote Karte',
+    'dlg.addr.mr': 'Herr {surname}',
+    'dlg.addr.mrs': 'Frau {surname}',
+    'dlg.addr.dear': 'Hallo {name}',
+});

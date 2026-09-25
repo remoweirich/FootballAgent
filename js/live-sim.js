@@ -31,9 +31,35 @@ const LIVE_SIM = {
 const LiveSim = {
     _idx: null,
 
-    // German swap for piece text and engine-built feed lines. Returns false (English) when no
-    // i18n is loaded (e.g. the headless live-sim test) or the locale is not German.
-    _deOn() { return typeof I18n !== 'undefined' && I18n.locale === 'de'; },
+    // ---- localisation ---------------------------------------------------------------------
+    // Active locale, or 'en' when no i18n is loaded (e.g. the headless live-sim test).
+    _loc() { return (typeof I18n !== 'undefined' && I18n.locale) || 'en'; },
+    // Locales that ship a commentary overlay. The overlay files declare a top-level const and load
+    // BEFORE this file, so they can neither self-register nor be read off globalThis — hence
+    // the explicit probes. Adding a language is one line here plus the data file.
+    OVERLAY_LOCALES: ['de', 'es'],
+    _overlayFor(loc) {
+        if (loc === 'de') return typeof LIVE_SIM_DE !== 'undefined' ? LIVE_SIM_DE : null;
+        if (loc === 'es') return typeof LIVE_SIM_ES !== 'undefined' ? LIVE_SIM_ES : null;
+        return null;
+    },
+    // Every overlay's text for one English piece — { de: '...', es: '...' } — leaving out
+    // locales with no entry, or null if none has one. Built once per piece at init, so rendering
+    // stays a plain lookup.
+    _translations(en) {
+        let out = null;
+        for (const loc of this.OVERLAY_LOCALES) {
+            const o = this._overlayFor(loc), t = o && o[en];
+            if (t) (out = out || {})[loc] = t;
+        }
+        return out;
+    },
+    // Locale text for a line the ENGINE builds (not workbook prose). `en` is the English source and
+    // is used verbatim when no i18n is loaded at all, so the headless live-sim test still reads.
+    _t(key, vars, en) {
+        if (typeof I18n !== 'undefined' && I18n.t) return I18n.t(key, vars);
+        return String(en).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+    },
 
     // corner cues, matched against a start piece's prose (see init)
     CORNER_ATTACK_RE: /corner\s+(for|won)|up come the giants|plants the ball in the quadrant/i,
@@ -48,9 +74,10 @@ const LiveSim = {
         if (!D) throw new Error('LIVE_SIM_DATA not loaded');
         const prep = list => list.map((p, i) => ({
             id: i, key: p.k, text: p.t, weight: p.w, tags: p.r || '',
-            // German display text (from the js/live-sim-data-de.js overlay), or null to fall back
-            // to English. Only the display swaps — names/corner cues stay read off the English text.
-            de: (typeof LIVE_SIM_DE !== 'undefined' && LIVE_SIM_DE[p.t]) || null,
+            // Translated display text per locale (from the js/live-sim-data-<loc>.js overlays), or
+            // null to fall back to English. Only the display swaps — names and corner cues
+            // stay read off the English text.
+            tr: this._translations(p.t),
             codes: new Set(p.c),
             keys: this.parseKey(p.k),
             names: p.t.indexOf(LIVE_SIM.PLACEHOLDER_CLIENT) >= 0,   // does this piece name its player?
@@ -196,7 +223,7 @@ const LiveSim = {
     PLACEHOLDER_TEAM_RE: /xy\s*\([^)]*\)/g,
     PLACEHOLDER_OPP_RE: /yx\s*\([^)]*\)/g,
     renderPiece(piece, player, ctx) {
-        let t = (this._deOn() && piece.de) ? piece.de : piece.text;
+        let t = (piece.tr && piece.tr[this._loc()]) || piece.text;
         t = t.replace(this.PLACEHOLDER_OPP_RE, ctx.oppName || '');
         t = t.replace(this.PLACEHOLDER_TEAM_RE, ctx.teamName || '');
         if (player) t = t.split(LIVE_SIM.PLACEHOLDER_CLIENT).join(player.name);
@@ -605,7 +632,7 @@ const LiveSim = {
         // anonymous goal (GOAL:T, "an unnamed team-mate finishes"), so read the ledger, not anonGoals
         for (const side of ['home', 'away'])
             for (let i = 0; i < ledger.anon[side]; i++)
-                units.push([{ kind: 'goal', side, client: null, lines: [this._deOn() ? `Tor für ${nameOf(side)}.` : `GOAL — ${nameOf(side)}`], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
+                units.push([{ kind: 'goal', side, client: null, lines: [this._t('ls.goalAnon', { team: nameOf(side) }, 'GOAL — {team}')], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
 
         // ---- corners: a live stat that ticks up, and now and then the cue for a corner event.
         // The count must match what the feed shows, so first flag every chain already built that is
@@ -632,7 +659,7 @@ const LiveSim = {
                 if (cornerEvents < LIVE_SIM.CORNER_EVENT_MAX && rnd() < LIVE_SIM.CORNER_EVENT_CHANCE)
                     ev = this._cornerEvent(side, live(), rnd, ctxFor, used, usedPieces);
                 if (ev) cornerEvents += 1;
-                const unit = [ev || { kind: 'corner', side, client: null, corner: side, events: [], lines: [this._deOn() ? `Ecke für ${nameOf(side)}.` : `Corner — ${nameOf(side)}`] }];
+                const unit = [ev || { kind: 'corner', side, client: null, corner: side, events: [], lines: [this._t('ls.cornerAnon', { team: nameOf(side) }, 'Corner — {team}')] }];
                 // a plain corner sometimes leads to something the moment after — a header or shot that
                 // doesn't go in (goals are the engine's to award, so this is pure flavour, no score)
                 if (!ev && rnd() < LIVE_SIM.CORNER_FOLLOW_CHANCE) unit.push(this._cornerFollow(side, rnd));
@@ -726,17 +753,11 @@ const LiveSim = {
         'A scramble in the six-yard box — hacked off the line at the last!',
         'Flicked on at the front post, but nobody gambled at the back stick.',
     ],
-    CORNER_FOLLOW_LINES_DE: [
-        'Die Hereingabe findet einen Kopf am ersten Pfosten, knapp vorbei!',
-        'Aus sechs Metern wuchtig getroffen, aber genau auf den Torwart.',
-        'Halb geklärt an den Rand, der Nachschuss wird geblockt.',
-        'Hereingebracht und aus kurzer Distanz über die Latte geköpft.',
-        'Gewühl im Fünfmeterraum, im letzten Moment von der Linie geschlagen!',
-        'Am ersten Pfosten verlängert, aber am zweiten ist niemand mitgegangen.',
-    ],
+    // Translations live in the i18n packs as ls.cornerFollow1..N, one per English line above.
     _cornerFollow(side, rnd) {
-        const lines = this._deOn() ? this.CORNER_FOLLOW_LINES_DE : this.CORNER_FOLLOW_LINES;
-        return { kind: 'cornerfollow', side, client: null, events: [], lines: [lines[Math.floor(rnd() * lines.length)]] };
+        const i = Math.floor(rnd() * this.CORNER_FOLLOW_LINES.length);
+        const line = this._t('ls.cornerFollow' + (i + 1), null, this.CORNER_FOLLOW_LINES[i]);
+        return { kind: 'cornerfollow', side, client: null, events: [], lines: [line] };
     },
 
     // A corner narrated as a client puzzle event. `won` is the team that has the corner. First try
@@ -880,25 +901,23 @@ const LiveSim = {
         if (rnd() < this.PEN_CONVERSION && ledger.anon[forSide] > 0) {
             ledger.anon[forSide] -= 1;
             return { kind: 'penalty', side: forSide, client: null, chain: null,
-                lines: [this._deOn() ? `Elfmeter für ${team}… und der sitzt. Tor für ${team}.` : `Penalty to ${team}… and it's buried. GOAL — ${team}.`],
+                lines: [this._t('ls.penScored', { team }, "Penalty to {team}… and it's buried. GOAL — {team}.")],
                 events: [{ tag: 'GOAL', ref: 'T', player: null, anonymous: true, side: 'own' }] };
         }
         const saved = rnd() < 0.5;
         return { kind: 'penalty', side: forSide, client: null, chain: null,
-            lines: [this._deOn()
-                ? (saved ? `Elfmeter für ${team}… und der Torwart hält!` : `Elfmeter für ${team}… und vergeben! An den Pfosten und weg.`)
-                : (saved ? `Penalty to ${team}… and the keeper saves it!` : `Penalty to ${team}… and it's missed! Off the woodwork and away.`)],
+            lines: [saved
+                ? this._t('ls.penSaved', { team }, 'Penalty to {team}… and the keeper saves it!')
+                : this._t('ls.penMissed', { team }, "Penalty to {team}… and it's missed! Off the woodwork and away.")],
             events: [{ tag: saved ? 'PENSAVE' : 'PENMISS', ref: 'O', player: null, anonymous: true, side: 'opp' }] };
     },
 
     // Fallback commentary when the workbook has no chain that can carry a required outcome for
     // this role. Clients are the one thing this feature is allowed to name, so it still reads.
     _plainLine(need, player, teamName) {
-        const de = this._deOn();
-        const what = (de
-            ? { GOAL: 'Tor', ASSIST: 'Vorlage', YC: 'Gelbe Karte', RC: 'Rote Karte' }
-            : { GOAL: 'GOAL', ASSIST: 'Assist', YC: 'Yellow card', RC: 'RED CARD' })[need] || need;
-        return de ? `${what}: ${player.name} (${teamName})` : `${what} — ${player.name} (${teamName})`;
+        const en = { GOAL: 'GOAL', ASSIST: 'Assist', YC: 'Yellow card', RC: 'RED CARD' };
+        const what = this._t('ls.what.' + need, null, en[need] || need);
+        return this._t('ls.plain', { what, name: player.name, team: teamName }, '{what} — {name} ({team})');
     },
 
     // Does an end piece's tags deliver `need` to the piece's own player?

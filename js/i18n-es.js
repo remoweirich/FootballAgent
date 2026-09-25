@@ -555,3 +555,29 @@ I18n.register('es', {
     'dlg.ambProg.noEurope': 'todavía sin competición europea', 'dlg.ambProg.goals': '{n}/{target} goles en su carrera',
     'dlg.ambProg.atHome': 'sigue jugando en casa',
 });
+
+// ---- live-sim: lines the ENGINE builds, plus how clients address you ---------------------
+// Commentary prose itself lives in js/live-sim-data.js and its per-locale overlays. These are
+// only the short lines live-sim.js assembles on its own — anonymous goals, corner ticks,
+// penalties and the plain fallback when no workbook chain fits the required outcome.
+I18n.register('es', {
+    'ls.goalAnon': 'GOL — {team}',
+    'ls.cornerAnon': 'Saque de esquina — {team}',
+    'ls.cornerFollow1': 'El centro encuentra un remate de cabeza en el primer palo, ¡fuera por muy poco!',
+    'ls.cornerFollow2': 'Golpeado con fuerza desde seis metros, pero directo a las manos del portero.',
+    'ls.cornerFollow3': 'Despeje a medias hasta la frontal; el disparo de vuelta lo blocan.',
+    'ls.cornerFollow4': 'Centro al área y cabezazo por encima del larguero desde muy cerca.',
+    'ls.cornerFollow5': 'Barullo en el área pequeña: ¡despejado bajo palos en el último instante!',
+    'ls.cornerFollow6': 'Peinado en el primer palo, pero nadie aparece en el segundo.',
+    'ls.penScored': 'Penalti a favor del {team}… y lo manda a la red. GOL — {team}.',
+    'ls.penSaved': 'Penalti a favor del {team}… ¡y el portero lo detiene!',
+    'ls.penMissed': 'Penalti a favor del {team}… ¡y lo falla! Al palo y fuera.',
+    'ls.plain': '{what} — {name} ({team})',
+    'ls.what.GOAL': 'GOL',
+    'ls.what.ASSIST': 'Asistencia',
+    'ls.what.YC': 'Tarjeta amarilla',
+    'ls.what.RC': 'TARJETA ROJA',
+    'dlg.addr.mr': 'Sr. {surname}',
+    'dlg.addr.mrs': 'Sra. {surname}',
+    'dlg.addr.dear': 'Hola, {name}',
+});

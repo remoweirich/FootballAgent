@@ -107,9 +107,9 @@ const Dialogue = {
         if (!p || this.bondOf(p) >= 25) return first;   // Trusted and up -> first name
         const gender = (GameState.agency && GameState.agency.agentGender) || '';
         const surname = parts.length > 1 ? parts.slice(1).join(' ') : first;
-        if (gender === 'male') return (this._isDe() ? 'Herr ' : 'Mr ') + surname;
-        if (gender === 'female') return (this._isDe() ? 'Frau ' : 'Mrs ') + surname;
-        if (gender === 'other') return (this._isDe() ? 'Hallo ' : 'Dear ') + full;   // non-binary / prefer not to say
+        if (gender === 'male') return this._t('dlg.addr.mr', { surname }, 'Mr {surname}');
+        if (gender === 'female') return this._t('dlg.addr.mrs', { surname }, 'Mrs {surname}');
+        if (gender === 'other') return this._t('dlg.addr.dear', { name: full }, 'Dear {name}');   // non-binary / prefer not to say
         return full;
     },
     fill(text, p, extra) {
@@ -121,22 +121,39 @@ const Dialogue = {
             .replace(/\{club\}/g, club ? club.name : 'the club')
             .replace(/\{agent\}/g, agent)
             .replace(/\{position\}/g, p.position || '');
+        const pk = this._pack();
         if (extra) for (const k of Object.keys(extra)) {
             let v = extra[k];
             // localize discovered "vocabulary" values (hobby, keepsake, occasion, ...) at fill time,
             // so a value stored/generated in one language still reads right in the current locale
-            if (this._isDe() && DIALOGUE_DE.vocab && DIALOGUE_DE.vocab[v]) v = DIALOGUE_DE.vocab[v];
+            if (pk && pk.vocab && pk.vocab[v]) v = pk.vocab[v];
             out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), v);
         }
         return out;
     },
-    // German dialogue lives in a parallel data file (js/dialogue-data-de.js, `DIALOGUE_DE`), keyed by
-    // the same stable line ids; any line without a translation falls back to the English workbook text.
-    _isDe() { return typeof I18n !== 'undefined' && I18n.locale === 'de' && typeof DIALOGUE_DE !== 'undefined'; },
-    _deTxt(row) { return (this._isDe() && DIALOGUE_DE.lines && DIALOGUE_DE.lines[row.id]) || row.text; },
+    // Translated dialogue lives in parallel data files (js/dialogue-data-<loc>.js, e.g. `DIALOGUE_DE`),
+    // keyed by the same stable line ids; any line without a translation falls back to the English
+    // workbook text, so a pack may lag the workbook safely. Those files declare a top-level const and
+    // load BEFORE this one, so they can neither self-register nor be read off globalThis - hence the
+    // explicit probes. Adding a language is one line here plus the data file.
+    _packFor(loc) {
+        if (loc === 'de') return typeof DIALOGUE_DE !== 'undefined' ? DIALOGUE_DE : null;
+        if (loc === 'es') return typeof DIALOGUE_ES !== 'undefined' ? DIALOGUE_ES : null;
+        return null;
+    },
+    // The active locale's dialogue pack, or null under English / an untranslated locale.
+    _pack() { return this._packFor((typeof I18n !== 'undefined' && I18n.locale) || 'en'); },
+    _locTxt(row) { const pk = this._pack(); return (pk && pk.lines && pk.lines[row.id]) || row.text; },
+    // Locale text for a line the ENGINE builds, with the English source as the fallback when no
+    // i18n is loaded at all (headless tests).
+    _t(key, vars, en) {
+        if (typeof I18n !== 'undefined' && I18n.t) return I18n.t(key, vars);
+        return String(en).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+    },
     // localized "{n} appearances" / "{n} career goals" milestone label (frozen when the moment is queued)
     _mileText(kind, n) {
-        if (this._isDe() && DIALOGUE_DE.mile && DIALOGUE_DE.mile[kind]) return DIALOGUE_DE.mile[kind].replace('{n}', n);
+        const pk = this._pack();
+        if (pk && pk.mile && pk.mile[kind]) return pk.mile[kind].replace('{n}', n);
         return kind === 'apps' ? `${n} appearances` : `${n} career goals`;
     },
     // localized display for the identifier-keyed engine values (personality poles, bond tiers, services);
@@ -145,7 +162,7 @@ const Dialogue = {
     poleLabel(key) { return this._tk('dlg.pers.' + key, this.POLE_LABEL[key] || key); },
     tierLabel(name) { return this._tk('dlg.tier.' + String(name).toLowerCase(), name); },
     serviceLabel(kind) { return this._tk('dlg.svc.' + kind, (this.SERVICES[kind] || {}).label); },
-    locVocab(v) { return (this._isDe() && DIALOGUE_DE.vocab && DIALOGUE_DE.vocab[v]) || v; },
+    locVocab(v) { const pk = this._pack(); return (pk && pk.vocab && pk.vocab[v]) || v; },
     // Prefer lines written for his personality over generic ones, and avoid anything he has said
     // recently. Falls back gracefully: personality pool -> any pool -> ignore the seen-filter.
     _pick(rows, p, extra) {
@@ -159,12 +176,12 @@ const Dialogue = {
         const fresh = pool.filter(r => !seen.includes(r.id));
         const row = (fresh.length ? fresh : pool)[Math.floor(Rng.next() * (fresh.length ? fresh.length : pool.length))];
         p._linesSeen = seen.concat(row.id).slice(-40);
-        return { id: row.id, text: this.fill(this._deTxt(row), p, extra) };
+        return { id: row.id, text: this.fill(this._locTxt(row), p, extra) };
     },
 
     choiceLabel(scene, choice) {
         const r = (DIALOGUE_DATA.choices || []).find(c => c.scene === scene && c.choice === choice);
-        const de = this._isDe() ? DIALOGUE_DE : null;
+        const de = this._pack();
         const dc = de && de.choices && de.choices[scene + '|' + choice];
         const say = (de && de.say && de.say[scene + ':' + choice]) || this.SAY[scene + ':' + choice] || '';
         if (r) return { label: (dc && dc.label) || r.label, hint: (dc && dc.hint) || r.hint, say };
@@ -663,7 +680,7 @@ const Dialogue = {
     // ("I want to {ambition}", "To {ambition}? Done.") — so never "his career" in the first person.
     ambitionText(p) {
         const f = this.ensureFacts(p), a = f.ambition;
-        const de = this._isDe() ? DIALOGUE_DE.amb : null;
+        const pk = this._pack(); const de = (pk && pk.amb) || null;
         const fav = f.favClub.clubId ? this._clubName(f.favClub.clubId) : (de ? de.favFallback : 'the club I grew up on');
         const league = (a.div && typeof compName === 'function' && compName(a.div)) || (de ? de.leagueFallback : 'a bigger league');
         const club = a.clubId ? this._clubName(a.clubId) : (de ? de.clubFallback : 'a big club');
@@ -864,7 +881,8 @@ const Dialogue = {
         if (entry.type === 'thanks' && !entry._paid) {
             entry._paid = true;
             if (entry.gift === 'money') {
-                extra.thing = (this._isDe() && DIALOGUE_DE.envelope) ? DIALOGUE_DE.envelope.replace('{amt}', UI.money(entry.value)) : `an envelope. Inside: €${UI.money(entry.value)} toward the agency`;
+                const gpk = this._pack();
+                extra.thing = (gpk && gpk.envelope) ? gpk.envelope.replace('{amt}', UI.money(entry.value)) : `an envelope. Inside: €${UI.money(entry.value)} toward the agency`;
                 GameState.agency.balance += entry.value;
                 GameState.addFinance('Gifts from clients', entry.value);
                 notes.push(`He covered €${UI.money(entry.value)} of the agency's costs.`);

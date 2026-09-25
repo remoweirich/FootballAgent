@@ -548,3 +548,29 @@ I18n.register('en', {
     'dlg.ambProg.noEurope': 'no European football yet', 'dlg.ambProg.goals': '{n}/{target} career goals',
     'dlg.ambProg.atHome': 'still playing at home',
 });
+
+// ---- live-sim: lines the ENGINE builds, plus how clients address you ---------------------
+// Commentary prose itself lives in js/live-sim-data.js and its per-locale overlays. These are
+// only the short lines live-sim.js assembles on its own — anonymous goals, corner ticks,
+// penalties and the plain fallback when no workbook chain fits the required outcome.
+I18n.register('en', {
+    'ls.goalAnon': 'GOAL — {team}',
+    'ls.cornerAnon': 'Corner — {team}',
+    'ls.cornerFollow1': 'The delivery picks out a head at the near post — flashed just wide!',
+    'ls.cornerFollow2': "Met firmly six yards out, but it's straight at the keeper.",
+    'ls.cornerFollow3': 'Half-cleared to the edge, the drive back in is charged down.',
+    'ls.cornerFollow4': 'Whipped in and headed over the bar from close range.',
+    'ls.cornerFollow5': 'A scramble in the six-yard box — hacked off the line at the last!',
+    'ls.cornerFollow6': 'Flicked on at the front post, but nobody gambled at the back stick.',
+    'ls.penScored': "Penalty to {team}… and it's buried. GOAL — {team}.",
+    'ls.penSaved': 'Penalty to {team}… and the keeper saves it!',
+    'ls.penMissed': "Penalty to {team}… and it's missed! Off the woodwork and away.",
+    'ls.plain': '{what} — {name} ({team})',
+    'ls.what.GOAL': 'GOAL',
+    'ls.what.ASSIST': 'Assist',
+    'ls.what.YC': 'Yellow card',
+    'ls.what.RC': 'RED CARD',
+    'dlg.addr.mr': 'Mr {surname}',
+    'dlg.addr.mrs': 'Mrs {surname}',
+    'dlg.addr.dear': 'Dear {name}',
+});

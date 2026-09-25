@@ -16,22 +16,23 @@ check('overlay: LIVE_SIM_DE is loaded', run(`return typeof LIVE_SIM_DE === 'obje
 check('overlay: every shipped piece has a German translation (no gaps)', run(`
   LiveSim.init();
   const missing=[];
-  for(const g of ['start','middle','end']) LiveSim._idx[g].forEach((p,i)=>{ if(!p.de) missing.push(g+'['+i+']'); });
+  for(const g of ['start','middle','end']) LiveSim._idx[g].forEach((p,i)=>{ if(!(p.tr&&p.tr.de)) missing.push(g+'['+i+']'); });
   if(missing.length) console.error('missing German: '+missing.slice(0,8).join(', '));
   return missing.length===0;
 `));
 
 // ---------------- locale switch ----------------
-check('locale: deOn() is true for de, false for en', run(`
-  I18n.locale='de'; const a=LiveSim._deOn();
-  I18n.locale='en'; const b=LiveSim._deOn();
-  I18n.locale='de'; return a===true && b===false;
+check('locale: _loc() follows I18n.locale and the de overlay is wired to it', run(`
+  I18n.locale='de'; const a=LiveSim._loc(), ov=LiveSim._overlayFor('de');
+  I18n.locale='en'; const b=LiveSim._loc();
+  I18n.locale='de';
+  return a==='de' && b==='en' && ov===LIVE_SIM_DE && LiveSim._overlayFor('fr')===null;
 `));
 check('render: German is used under de and English under en, for the same piece', run(`
   LiveSim.init(); const p=LiveSim._idx.start[0]; const pl={name:'Müller'}; const ctx={teamName:'Basel',oppName:'Zürich'};
   I18n.locale='de'; const de=LiveSim.renderPiece(p,pl,ctx);
   I18n.locale='en'; const en=LiveSim.renderPiece(p,pl,ctx);
-  I18n.locale='de'; return de===p.de.split('XY').join('Müller') && en!==de && /Müller/.test(de);
+  I18n.locale='de'; return de===p.tr.de.split('XY').join('Müller') && en!==de && /Müller/.test(de);
 `));
 
 // ---------------- placeholder safety (the critical invariant) ----------------
@@ -62,7 +63,8 @@ check('engine: a red card fallback label translates', run(`
 `));
 check('engine: corner-follow lines come from the German pool under de', run(`
   I18n.locale='de';
-  let n=0; for(let i=0;i<60;i++){ const f=LiveSim._cornerFollow('home',Math.random); if(LiveSim.CORNER_FOLLOW_LINES_DE.includes(f.lines[0])) n++; }
+  const pool=LiveSim.CORNER_FOLLOW_LINES.map((_,i)=>I18n.t('ls.cornerFollow'+(i+1)));
+  let n=0; for(let i=0;i<60;i++){ const f=LiveSim._cornerFollow('home',Math.random); if(pool.includes(f.lines[0])) n++; }
   return n===60;
 `));
 check('engine: anonymous goal + corner ticks read German under de, English under en', run(`
@@ -90,6 +92,20 @@ check('engine: a full German timeline never leaks a raw placeholder in any line'
       if(/\\bXY\\b/.test(l) || /xy\\s*\\(|yx\\s*\\(/.test(l)) { console.error('timeline leak: '+l.slice(0,80)); return false; }
   }
   return true;
+`));
+
+// ---------------- English fallback drift ----------------
+// live-sim.js passes the English source inline as a fallback for when no packs are loaded at all
+// (the headless live-sim test). If a pack value and its literal drift apart, the two paths disagree
+// silently, so pin them together here.
+check('engine: the English pack values match the in-code English fallbacks', run(`
+  I18n.locale='en'; const bad=[];
+  LiveSim.CORNER_FOLLOW_LINES.forEach((en,i)=>{ if(I18n.t('ls.cornerFollow'+(i+1))!==en) bad.push('cornerFollow'+(i+1)); });
+  if(I18n.t('ls.plain',{what:'GOAL',name:'X',team:'Y'})!=='GOAL — X (Y)') bad.push('plain');
+  if(I18n.t('ls.goalAnon',{team:'Y'})!=='GOAL — Y') bad.push('goalAnon');
+  if(I18n.t('ls.cornerAnon',{team:'Y'})!=='Corner — Y') bad.push('cornerAnon');
+  if(bad.length) console.error('drift: '+bad.join(', '));
+  I18n.locale='de'; return bad.length===0;
 `));
 
 check('no engine errors, got: ' + JSON.stringify(errs.slice(0, 2)), errs.length === 0);
