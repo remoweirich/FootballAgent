@@ -233,7 +233,7 @@ I18n.register('de', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Urheberrecht',
     'settings.privacy': 'Datenschutz',
-    'settings.version': 'Football Agency Simulator · v1.0.16',
+    'settings.version': 'Football Agency Simulator · v1.0.17',
     'settings.saveNote': 'Benenne diesen Spielstand. Tippe einen vorhandenen Namen an, um ihn zu überschreiben. Du kannst bis zu {max} behalten ({used} belegt).',
     'settings.saved': 'Gespeichert',
     'store.title': 'Shop',
@@ -663,6 +663,8 @@ I18n.register('de', {
     'customize.logoInvalid': 'Dieses Bild konnte nicht gelesen werden.',
     'customize.exported': '{file} exportiert.',
     'customize.exportFailed': 'Export fehlgeschlagen.',
+    'customize.shareFile': 'Länderdatei teilen',
+    'customize.savedTo': '{file} gespeichert.',
     'customize.justNow': 'gerade eben',
     // ---- Neues Land hinzufügen (Teil 2) ----
     'customize.addCountryNote': 'Füge dieser Datenbank ein ganzes neues Land hinzu — baue seine Ligen, benenne die Vereine und richte das Scouting ein. Du kannst auch ein geteiltes Land importieren.',

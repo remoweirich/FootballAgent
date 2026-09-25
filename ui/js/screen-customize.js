@@ -1197,7 +1197,32 @@ const CustomizeScreen = {
     _hex(s) { s = (s == null ? '' : String(s)).trim(); if (/^#?[0-9a-fA-F]{6}$/.test(s)) return (s[0] === '#' ? s : '#' + s).toUpperCase(); return null; },
     _csv(s) { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; },
     _slug(s) { return String(s || 'database').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'database'; },
-    _download(filename, text, mime) {
+    // Android's WebView ignores <a download> and blob: URLs, so the old implementation silently did
+    // nothing on a phone (and still claimed success). On a device the file is written for real and
+    // handed to the system share sheet, so it can go to Drive/email/Files like any other document.
+    // The browser path keeps the blob download, which is what works there.
+    async _download(filename, text, mime) {
+        const cap = (typeof window !== 'undefined') && window.Capacitor;
+        const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+        const P = (cap && cap.Plugins) || {};
+        if (native && P.Filesystem) {
+            try {
+                await P.Filesystem.writeFile({ path: filename, data: text, directory: 'CACHE', encoding: 'utf8' });
+                const { uri } = await P.Filesystem.getUri({ path: filename, directory: 'CACHE' });
+                if (P.Share) {
+                    await P.Share.share({ title: filename, url: uri, dialogTitle: I18n.t('customize.shareFile') });
+                } else {
+                    this._toast(I18n.t('customize.savedTo', { file: filename }));
+                }
+                return;
+            } catch (e) {
+                // a cancelled share sheet is not a failure worth shouting about
+                const msg = String((e && e.message) || e || '');
+                if (/cancel/i.test(msg)) return;
+                this._toast(I18n.t('customize.exportFailed'));
+                return;
+            }
+        }
         try {
             const blob = new Blob([text], { type: mime || 'text/plain' });
             const url = URL.createObjectURL(blob);

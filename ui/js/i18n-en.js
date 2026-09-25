@@ -234,7 +234,7 @@ I18n.register('en', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Copyright',
     'settings.privacy': 'Privacy policy',
-    'settings.version': 'Football Agency Simulator · v1.0.16',
+    'settings.version': 'Football Agency Simulator · v1.0.17',
     'settings.saveNote': 'Name this save. Tap an existing name to overwrite it. You can keep up to {max} ({used} used).',
     'settings.saved': 'Saved',
     'store.title': 'Store',
@@ -664,6 +664,8 @@ I18n.register('en', {
     'customize.logoInvalid': "That image couldn't be read.",
     'customize.exported': 'Exported {file}.',
     'customize.exportFailed': 'Export failed.',
+    'customize.shareFile': 'Share this country file',
+    'customize.savedTo': 'Saved {file}.',
     'customize.justNow': 'just now',
     // ---- Add a new country (Part 2) ----
     'customize.addCountryNote': 'Add a whole new country to this database — build its leagues, name its clubs, and set up scouting. You can also import one someone shared.',
