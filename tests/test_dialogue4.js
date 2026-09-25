@@ -81,7 +81,16 @@ check('invite: wedding queued at rollover for Confidant+ with a known partner', 
   P.bond = 60; P.facts.family = { status: 'partner', discovered: true };
   delete P._evWedding;
   let got = false;
-  for (let i = 0; i < 60 && !got; i++) { delete P._evWedding; GameState.agency.pendingScenes = []; Dialogue.onSeasonRollover(); got = GameState.agency.pendingScenes.some(e => e.type === 'invite'); }
+  // onSeasonRollover rolls family progression (partner -> kids, discovered reset) AFTER the invite
+  // roll, and that permanently disqualifies a wedding. So re-assert the fact on every attempt:
+  // otherwise this loop races that 14%/season and the check fails about a third of the time
+  // (0.25 / (0.25 + 0.75*0.14) = 70% pass).
+  for (let i = 0; i < 60 && !got; i++) {
+    delete P._evWedding; P.facts.family = { status: 'partner', discovered: true };
+    GameState.agency.pendingScenes = [];
+    Dialogue.onSeasonRollover();
+    got = GameState.agency.pendingScenes.some(e => e.type === 'invite');
+  }
   return got && P._evWedding === true;
 `));
 check('invite: never queued while the family fact is undiscovered', runv(`
