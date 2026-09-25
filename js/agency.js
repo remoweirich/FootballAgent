@@ -630,8 +630,10 @@ const Agency = {
         const role = this.maxRoleAt(p, target);
         if (!(role === 'key' || role === 'starter' || role === 'rotation'))
             return { ok: true, interested: false, message: I18n.t('ag.loanShop.noGameTime', { target: target.name, name: p.name }) };
-        // loans bite a little more readily than permanent deals (lower commitment), but still selective
-        if (Rng.next() >= 0.42) return { ok: true, interested: false, message: I18n.t('ag.loanShop.passed', { target: target.name, name: p.name }) };
+        // loans bite a little more readily than permanent deals (lower commitment), but still selective.
+        // The walkthrough waits for an offer before it can continue, so during the tour every club bites —
+        // otherwise a run where nobody fancied him would strand the player on that step for good.
+        if (!GameState.demoMode && Rng.next() >= 0.42) return { ok: true, interested: false, message: I18n.t('ag.loanShop.passed', { target: target.name, name: p.name }) };
         if (GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id && m.offer.toClubId === target.id))
             return { ok: true, interested: false, message: I18n.t('ag.loanShop.existing', { target: target.name, name: p.name }) };
         GameState.addMail({ kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: target.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: target.id, role }, persistence: 0, ttl: 3 });

@@ -354,6 +354,19 @@ check('the club always sanctions the loan during the tour', runv(`
 check('the loan-request step unlocks once the club agrees', runv(`
   return Walkthrough.SCRIPT.find(s => s.key === 'wt.loan.request').until();`));
 
+// Every club bites during the tour: a run where nobody fancied him would strand the player on
+// the step that waits for an offer (each club otherwise passes 58% of the time).
+// Every club bites during the tour. Outside it each one passes 58% of the time, so a run where
+// nobody fancied him would strand the player on the step that waits for an offer.
+check('during the tour every pitched club makes an offer', runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  const clubs = Clubs.getClubsByDivision('LEAGUE1').filter(c => c.id !== w.clubId).slice(0, 6);
+  GameState.inbox = GameState.inbox.filter(m => m.kind !== 'loan');
+  delete w._cooldowns;
+  GameState.demoMode = true;
+  clubs.forEach(c => Agency.shopPlayerLoan(w, c.id));
+  return clubs.length === 6 && GameState.inbox.filter(m => m.kind === 'loan').length === 6;`));
+
 check('pitching him out on loan produces offers to accept', runv(`
   const w = GameState.players.find(p => p.id === 'wt_wayne');
   const three = Clubs.getClubsByDivision('LEAGUE1').filter(c => c.id !== w.clubId).slice(0, 4);
