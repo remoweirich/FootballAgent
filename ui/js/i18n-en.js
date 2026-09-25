@@ -234,7 +234,7 @@ I18n.register('en', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Copyright',
     'settings.privacy': 'Privacy policy',
-    'settings.version': 'Football Agency Simulator · v1.0.15',
+    'settings.version': 'Football Agency Simulator · v1.0.16',
     'settings.saveNote': 'Name this save. Tap an existing name to overwrite it. You can keep up to {max} ({used} used).',
     'settings.saved': 'Saved',
     'store.title': 'Store',

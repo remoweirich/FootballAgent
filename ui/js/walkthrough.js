@@ -75,7 +75,8 @@ const Walkthrough = {
     // ---- demo save -------------------------------------------------------------------------
     // Replace only the fields the tutorial shows. league/clubHistory and the rest stay as they are,
     // so screens that read them keep working; restoring puts the original references straight back.
-    FIELDS: ['players', 'inbox', 'log', 'week', 'seasonStartYear', 'agency', 'homeCountry'],
+    FIELDS: ['players', 'inbox', 'log', 'week', 'seasonStartYear', 'agency', 'homeCountry',
+        'clubHistory', 'clubEuropeBest'],
 
     _installDemo() {
         const G = GameState;
@@ -89,7 +90,10 @@ const Walkthrough = {
         G.log = [];
         // Part 2 is set in England: West Midlands scouting, Birmingham Claret, the Third Division.
         G.homeCountry = 'England';
-        G.agency = Object.assign({}, this._saved.agency, {
+        // A deep copy: Object.assign copies only the top level, so upgrades/relationships/ledger
+        // would still be the very objects the real save owns - and dressing the demo world up would
+        // hand the player an upgraded office and a garage in his brand-new game.
+        G.agency = Object.assign(JSON.parse(JSON.stringify(this._saved.agency || {})), {
             balance: 1850000,
             reputation: 80,
             homeCountry: 'England',

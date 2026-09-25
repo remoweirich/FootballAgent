@@ -444,6 +444,46 @@ check('the negotiation steps leave the sliders reachable', runv(`
     .map(k => Walkthrough.SCRIPT.find(s => s.key === k))
     .every(s => !!s.until && !s.tap);`));
 
+// ---- the demo must not bleed into the player's own save ----
+// It once did: the demo agency was a SHALLOW copy, so writing its upgrades/relationships wrote
+// straight into the real one, and a brand-new game started with an upgraded office and a garage.
+check('the tour leaves the real agency untouched', runv(`
+  Walkthrough._restore();                       // make sure we start from the player's own save
+  const before = JSON.stringify({
+    up: GameState.agency.upgrades,
+    rel: GameState.agency.relationships,
+    ledger: GameState.agency.ledger || null,
+    hist: GameState.clubHistory || null,
+    eu: GameState.clubEuropeBest || null,
+    rep: GameState.agency.reputation,
+    bal: GameState.agency.balance,
+  });
+  Walkthrough._installDemo();
+  Sim.advanceWeek();                            // moves money + writes the ledger
+  Walkthrough._restore();
+  const after = JSON.stringify({
+    up: GameState.agency.upgrades,
+    rel: GameState.agency.relationships,
+    ledger: GameState.agency.ledger || null,
+    hist: GameState.clubHistory || null,
+    eu: GameState.clubEuropeBest || null,
+    rep: GameState.agency.reputation,
+    bal: GameState.agency.balance,
+  });
+  return before === after;`));
+
+check('a new save still has no office, vehicle or property upgrades', runv(`
+  const u = GameState.agency.upgrades;
+  return u.officeIndex === 0 && u.vehicleIndex === -1 && u.propertyIndex === -1;`));
+
+check('the demo DOES dress its own world up', runv(`
+  Walkthrough._installDemo();
+  const u = GameState.agency.upgrades;
+  const ok = u.officeIndex > 0 && u.vehicleIndex >= 0 && u.propertyIndex >= 0
+      && GameState.clubHistory['Aston Villa'].length === 4;
+  Walkthrough._restore();
+  return ok;`));
+
 // ---- the real save is never written while the demo is up ----
 check('save() is a no-op in demo mode', runv(`
   let wrote = false;
