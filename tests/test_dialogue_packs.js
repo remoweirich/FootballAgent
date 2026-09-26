@@ -4,12 +4,12 @@
 // is gated without writing a new test.
 const vm = require('vm'), fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..') + '/';
-const LOCALES = ['de', 'es'];
-const engine = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'storage.js', 'rng.js',
+const LOCALES = ['de', 'es', 'fr'];
+const engine = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'storage.js', 'rng.js',
     'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js',
     'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js',
     'live-sim-data.js', 'live-sim.js', 'attend.js',
-    'dialogue-data.js', 'dialogue-data-de.js', 'dialogue-data-es.js', 'dialogue.js'];
+    'dialogue-data.js', 'dialogue-data-de.js', 'dialogue-data-es.js', 'dialogue-data-fr.js', 'dialogue.js'];
 const errors = [];
 const sb = {
     console: { log() {}, warn() {}, error: (...a) => errors.push(a.map(String).join(' ')) },
