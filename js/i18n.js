@@ -12,7 +12,7 @@ const I18n = {
     locale: 'en',
     fallback: 'en',
     // languages offered in Settings — a pack must be registered for a code to be selectable
-    LANGS: [{ code: 'en', name: 'English' }, { code: 'de', name: 'Deutsch' }, { code: 'es', name: 'Español' }, { code: 'fr', name: 'Français' }, { code: 'pt', name: 'Português' }],
+    LANGS: [{ code: 'en', name: 'English' }, { code: 'de', name: 'Deutsch' }, { code: 'es', name: 'Español' }, { code: 'fr', name: 'Français' }, { code: 'pt', name: 'Português' }, { code: 'it', name: 'Italiano' }],
 
     register(loc, dict) { this.packs[loc] = Object.assign(this.packs[loc] || {}, dict); },
     available() { return this.LANGS.filter(l => this.packs[l.code]); },

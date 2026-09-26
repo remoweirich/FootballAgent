@@ -43,6 +43,7 @@ const LiveSim = {
         if (loc === 'es') return typeof LIVE_SIM_ES !== 'undefined' ? LIVE_SIM_ES : null;
         if (loc === 'fr') return typeof LIVE_SIM_FR !== 'undefined' ? LIVE_SIM_FR : null;
         if (loc === 'pt') return typeof LIVE_SIM_PT !== 'undefined' ? LIVE_SIM_PT : null;
+        if (loc === 'it') return typeof LIVE_SIM_IT !== 'undefined' ? LIVE_SIM_IT : null;
         return null;
     },
     // Every overlay's text for one English piece — { de: '...', es: '...' } — leaving out
