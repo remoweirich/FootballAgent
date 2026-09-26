@@ -30,7 +30,9 @@ const SettingsScreen = {
         const VOLX = svg('<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M22 9l-6 6M16 9l6 6"/>');
         // Music / SFX rows: a mute toggle + a compact 0–100 volume slider, backed by Sound.
         const aRow = (ch, iconHTML, label) => {
-            const v = (typeof Sound !== 'undefined') ? Sound.vol(ch) : ((Sound && Sound.DEFAULT[ch]) || 70);
+            // the fallback can't read Sound at all: `Sound && …` THROWS on an undeclared global
+            // (only typeof is safe), so with audio.js missing this whole screen used to blow up
+            const v = (typeof Sound !== 'undefined') ? Sound.vol(ch) : 70;
             const m = (typeof Sound !== 'undefined') ? Sound.muted(ch) : false;
             return `<div class="set-row set-row--static">${iconHTML}<span class="set-row__label">${label}</span>
                 <button class="set-iconbtn${m ? ' is-off' : ''}" onclick="SettingsScreen.toggleMute('${ch}')" aria-label="${I18n.t('settings.mute')}">${m ? VOLX : VOL}</button>
@@ -45,12 +47,15 @@ const SettingsScreen = {
         const tKey = { system: 'settings.themeSystem', dark: 'settings.themeDark', light: 'settings.themeLight' };
         const themeRow = `<div class="set-row set-row--static">${SUN}<span class="set-row__label">${I18n.t('settings.theme')}</span>
             <div class="set-seg">${tModes.map(m => `<button class="set-seg__btn${tMode === m ? ' is-on' : ''}" onclick="SettingsScreen.setTheme('${m}')">${I18n.t(tKey[m])}</button>`).join('')}</div></div>`;
-        // Language picker — one segment per registered locale
+        // Language picker — a row that opens a sheet. It used to be one segment per locale, but a
+        // segmented control stops fitting past three languages, and there are four now.
         const langs = (typeof I18n !== 'undefined') ? I18n.available() : [{ code: 'en', name: 'English' }];
         const curLang = (typeof I18n !== 'undefined') ? I18n.locale : 'en';
+        const curLangName = (langs.find(l => l.code === curLang) || langs[0] || {}).name || 'English';
         const WORLD = `<i class="ti ti-world set-row__ico"></i>`;
-        const langRow = `<div class="set-row set-row--static">${WORLD}<span class="set-row__label">${I18n.t('settings.language')}</span>
-            <div class="set-seg">${langs.map(l => `<button class="set-seg__btn${curLang === l.code ? ' is-on' : ''}" onclick="SettingsScreen.setLang('${l.code}')">${l.name}</button>`).join('')}</div></div>`;
+        const langRow = row(WORLD, I18n.t('settings.language'),
+            `<span class="set-val">${UI.esc(curLangName)}</span><i class="ti ti-chevron-right" style="font-size:var(--fs-lg);color:var(--text-faint)"></i>`,
+            'SettingsScreen.pickLang()');
         // Currency picker — EUR is the baseline; GBP/CHF are converted for display
         const curCode = (typeof Currency !== 'undefined') ? Currency.get() : 'EUR';
         const curCodes = (typeof Currency !== 'undefined') ? Currency.CODES : ['EUR'];
@@ -155,7 +160,22 @@ const SettingsScreen = {
         if (nb) nb.scrollTop = y;
     },
     setTheme(mode) { if (typeof Theme !== 'undefined') Theme.set(mode); this._reshow(); },
-    setLang(code) { if (typeof I18n !== 'undefined') I18n.set(code); this._reshow(); },
+    // One row per registered locale, current one ticked. All four packs are already in memory
+    // (they load as plain <script> data, ~265 KB each), so switching is instant — nothing is fetched.
+    pickLang() {
+        const langs = (typeof I18n !== 'undefined') ? I18n.available() : [{ code: 'en', name: 'English' }];
+        const cur = (typeof I18n !== 'undefined') ? I18n.locale : 'en';
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('settings.language')}</div>
+            <div>${langs.map(l => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="SettingsScreen.setLang('${l.code}')">
+                <span style="flex:1;color:var(--text)">${UI.esc(l.name)}</span>
+                ${cur === l.code ? `<i class="ti ti-check" style="color:var(--accent)"></i>` : ''}</button>`).join('')}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
+    },
+    setLang(code) {
+        if (typeof I18n !== 'undefined') I18n.set(code);
+        if (typeof Router !== 'undefined' && Router.closeSheet) Router.closeSheet();
+        this._reshow();
+    },
     setCurrency(code) { if (typeof Currency !== 'undefined') Currency.set(code); this._reshow(); },
     setVol(ch, v) { if (typeof Sound !== 'undefined') Sound.setVol(ch, v); },
     toggleMute(ch) { if (typeof Sound !== 'undefined') Sound.toggleMuted(ch); this._reshow(); },
