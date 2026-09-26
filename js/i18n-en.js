@@ -573,4 +573,22 @@ I18n.register('en', {
     'dlg.addr.mr': 'Mr {surname}',
     'dlg.addr.mrs': 'Mrs {surname}',
     'dlg.addr.dear': 'Dear {name}',
+    // --- dialogue system notes: the small grey lines in the chat feed. These lived as hardcoded
+    // English inside js/dialogue.js until every locale had a pack to put them in.
+    'dlg.addr.boss': 'boss',
+    'dlg.club.none': 'the club',
+    'dlg.favclub.none': 'a club back home',
+    'dlg.note.tab': 'The night is on you (−€{amt}).',
+    'dlg.note.boyhood': 'He got his wish: his last match came in the shirt he grew up worshipping.',
+    'dlg.note.farewellRep': 'Word gets around: you look after your people to the very end. (+2 reputation)',
+    'dlg.note.fam.single': 'Noted: it\'s just him right now.',
+    'dlg.note.fam.partner': 'Noted: he has a partner.',
+    'dlg.note.fam.kids': 'Noted: he has kids.',
+    'dlg.note.hobby': 'Noted: he\'s into {hobby}.',
+    'dlg.note.club': 'Noted: his boyhood club is {club}.',
+    'dlg.note.ambition': 'Noted: he wants to {amb}.',
+    'dlg.note.visit': 'You made the trip to see him (−€{amt}).',
+    'dlg.note.flowers': 'Flowers on their way (−€{amt}).',
+    'dlg.note.weekend': 'A weekend well spent (−€{amt}).',
+    'dlg.note.giftSent': 'The gift is on its way (−€{amt}).',
 });

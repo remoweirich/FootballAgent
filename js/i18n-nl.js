@@ -587,4 +587,22 @@ I18n.register('nl', {
     'dlg.addr.mr': 'Meneer {surname}',
     'dlg.addr.mrs': 'Mevrouw {surname}',
     'dlg.addr.dear': 'Hallo, {name}',
+    // --- dialogue system notes: the small grey lines in the chat feed. These lived as hardcoded
+    // English inside js/dialogue.js until every locale had a pack to put them in.
+    'dlg.addr.boss': 'baas',
+    'dlg.club.none': 'de club',
+    'dlg.favclub.none': 'een club uit mijn eigen streek',
+    'dlg.note.tab': 'De avond is voor uw rekening (−€{amt}).',
+    'dlg.note.boyhood': 'Hij kreeg zijn wens: zijn laatste wedstrijd speelde hij in het shirt dat hij als kind vereerde.',
+    'dlg.note.farewellRep': 'Het gaat rond: u staat tot het einde achter uw mensen. (+2 aanzien)',
+    'dlg.note.fam.single': 'Genoteerd: hij is er op dit moment alleen.',
+    'dlg.note.fam.partner': 'Genoteerd: hij heeft een partner.',
+    'dlg.note.fam.kids': 'Genoteerd: hij heeft kinderen.',
+    'dlg.note.hobby': 'Genoteerd: hij is gek op {hobby}.',
+    'dlg.note.club': 'Genoteerd: zijn jeugdclub is {club}.',
+    'dlg.note.ambition': 'Genoteerd: hij wil {amb}.',
+    'dlg.note.visit': 'U hebt de reis gemaakt om hem te bezoeken (−€{amt}).',
+    'dlg.note.flowers': 'De bloemen zijn onderweg (−€{amt}).',
+    'dlg.note.weekend': 'Een goed besteed weekend (−€{amt}).',
+    'dlg.note.giftSent': 'Het cadeau is onderweg (−€{amt}).',
 });

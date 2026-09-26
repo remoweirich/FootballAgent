@@ -590,4 +590,22 @@ I18n.register('pt', {
     'dlg.addr.mr': 'Sr. {surname}',
     'dlg.addr.mrs': 'Sra. {surname}',
     'dlg.addr.dear': 'Olá, {name}',
+    // --- dialogue system notes: the small grey lines in the chat feed. These lived as hardcoded
+    // English inside js/dialogue.js until every locale had a pack to put them in.
+    'dlg.addr.boss': 'chefe',
+    'dlg.club.none': 'o clube',
+    'dlg.favclub.none': 'um clube da minha terra',
+    'dlg.note.tab': 'A noite fica por sua conta (−€{amt}).',
+    'dlg.note.boyhood': 'Teve o que queria: o último jogo dele foi com a camisola que adorava em criança.',
+    'dlg.note.farewellRep': 'A notícia corre: cuida dos seus até ao fim. (+2 de reputação)',
+    'dlg.note.fam.single': 'Registado: por agora está sozinho.',
+    'dlg.note.fam.partner': 'Registado: tem companheira.',
+    'dlg.note.fam.kids': 'Registado: tem filhos.',
+    'dlg.note.hobby': 'Registado: é apaixonado por {hobby}.',
+    'dlg.note.club': 'Registado: o clube de infância dele é o {club}.',
+    'dlg.note.ambition': 'Registado: ele quer {amb}.',
+    'dlg.note.visit': 'Fez a viagem para o ver (−€{amt}).',
+    'dlg.note.flowers': 'As flores vão a caminho (−€{amt}).',
+    'dlg.note.weekend': 'Um fim de semana bem passado (−€{amt}).',
+    'dlg.note.giftSent': 'O presente vai a caminho (−€{amt}).',
 });

@@ -81,7 +81,7 @@ const DialogueView = {
             // promises are concrete: pick WHAT you are promising before he answers
             const labels = { move: I18n.t('dialogue.promise.move'), newContract: I18n.t('dialogue.promise.newContract'), playingTime: I18n.t('dialogue.promise.playingTime'), renegotiateRep: I18n.t('dialogue.promise.renegotiateRep') };
             const types = Agency.validPromiseTypes(this.p);
-            this.pendingChoices = types.map(t => ({ key: 'promise:' + t, label: labels[t] || t, hint: '', say: Dialogue.SAY['promise:' + t] || '' }))
+            this.pendingChoices = types.map(t => ({ key: 'promise:' + t, label: labels[t] || t, hint: '', say: Dialogue.sayFor('promise:' + t) }))
                 .concat([{ key: 'back', label: I18n.t('dialogue.secondThought'), hint: '' }]);
             this._paint();
             return;
@@ -89,7 +89,7 @@ const DialogueView = {
         if (s.kind === 'prematch' && key === 'bonus') {
             // pick the size of the promised gift; it only ever costs you if they win
             this.pendingChoices = ['small', 'medium', 'large'].map(t =>
-                ({ key: 'bonus:' + t, label: I18n.t('dialogue.gift.' + t, { amount: UI.money(Agency.giftCost(t, this.p)) }), hint: I18n.t('dialogue.gift.hint'), say: Dialogue.SAY['bonus:' + t] || '' }))
+                ({ key: 'bonus:' + t, label: I18n.t('dialogue.gift.' + t, { amount: UI.money(Agency.giftCost(t, this.p)) }), hint: I18n.t('dialogue.gift.hint'), say: Dialogue.sayFor('bonus:' + t) }))
                 .concat([{ key: 'back', label: I18n.t('dialogue.secondThought'), hint: '' }]);
             this._paint();
             return;

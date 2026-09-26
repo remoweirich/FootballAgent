@@ -102,7 +102,7 @@ const Dialogue = {
     // only Business. Falls back to the full name when no gender was chosen (e.g. an older save).
     _agentAddress(p) {
         const full = (GameState.agentName && GameState.agentName()) || '';
-        if (!full) return 'boss';
+        if (!full) return this._t('dlg.addr.boss', null, 'boss');
         const parts = full.split(/\s+/), first = parts[0];
         if (!p || this.bondOf(p) >= 25) return first;   // Trusted and up -> first name
         const gender = (GameState.agency && GameState.agency.agentGender) || '';
@@ -118,7 +118,7 @@ const Dialogue = {
         let out = String(text)
             .replace(/\{first\}/g, (p.name || '').split(' ')[0] || p.name)
             .replace(/\{name\}/g, p.name || '')
-            .replace(/\{club\}/g, club ? club.name : 'the club')
+            .replace(/\{club\}/g, club ? club.name : this._t('dlg.club.none', null, 'the club'))
             .replace(/\{agent\}/g, agent)
             .replace(/\{position\}/g, p.position || '');
         const pk = this._pack();
@@ -187,9 +187,16 @@ const Dialogue = {
         const r = (DIALOGUE_DATA.choices || []).find(c => c.scene === scene && c.choice === choice);
         const de = this._pack();
         const dc = de && de.choices && de.choices[scene + '|' + choice];
-        const say = (de && de.say && de.say[scene + ':' + choice]) || this.SAY[scene + ':' + choice] || '';
+        const say = this.sayFor(scene + ':' + choice);
         if (r) return { label: (dc && dc.label) || r.label, hint: (dc && dc.hint) || r.hint, say };
         return { label: (dc && dc.label) || choice, hint: (dc && dc.hint) || '', say };
+    },
+    // The agent's spoken line for a "scene:choice" key, from the locale pack with the English table as
+    // the fallback. Always go through this rather than reading SAY directly: the promise and bonus
+    // sub-choices are built in the UI, and reading SAY there left them English in every locale.
+    sayFor(key) {
+        const pk = this._pack();
+        return (pk && pk.say && pk.say[key]) || this.SAY[key] || '';
     },
     // What the AGENT actually SAYS when you pick a choice — full prose, so his side of the chat reads
     // like real speech instead of a stage direction ("Listen" → an actual line). The buttons keep their
@@ -442,7 +449,7 @@ const Dialogue = {
             GameState.addFinance('Gifts & relationships', -cost);
             this.addBond(p, 4, 'nightOnYou');
             p.morale.agent = Math.min(100, p.morale.agent + 4);
-            note = `The night is on you (−€${UI.money(cost)}).`;
+            note = this._t('dlg.note.tab', { amt: UI.money(cost) }, 'The night is on you (−€{amt}).');
         } else if (this.choiceMatches(p, choiceKey)) {
             this.addBond(p, won ? 3 : 4, won ? 'you celebrated it right' : 'you handled the defeat right');
             p.morale.agent = Math.min(100, p.morale.agent + (won ? 3 : 2));
@@ -477,7 +484,7 @@ const Dialogue = {
         // the quiet capstone: he ended his career at the club he supported as a boy
         const f = p.facts;
         const boyhoodNote = (f && f.ambition && f.ambition.type === 'boyhood' && f.ambition.fulfilled)
-            ? 'He got his wish: his last match came in the shirt he grew up worshipping.' : null;
+            ? this._t('dlg.note.boyhood', null, 'He got his wish: his last match came in the shirt he grew up worshipping.') : null;
         return { kind: 'farewell', playerId: p.id, tier, montage: this.careerMontage(p), boyhoodNote, open, choices };
     },
     resolveFarewell(p, choiceKey) {
@@ -486,7 +493,7 @@ const Dialogue = {
         let note = null;
         if (this.bondOf(p) >= 50 && !p._farewellDone) {
             Agency.bumpRep(2);
-            note = 'Word gets around: you look after your people to the very end. (+2 reputation)';
+            note = this._t('dlg.note.farewellRep', null, 'Word gets around: you look after your people to the very end. (+2 reputation)');
         }
         p._farewellDone = true;
         return { ok: true, reply: this._pick(rows, p), note };
@@ -761,18 +768,23 @@ const Dialogue = {
         Agency._creditAgentAction(p, 2);   // showing your face counts, and resets the neglect clock
         let variant = 'any', extra = {}, note = null;
         if (q === 'q-life') {
-            if (!f.family.discovered) { f.family.discovered = true; variant = f.family.status; note = `Noted: ${f.family.status === 'single' ? "it's just him right now" : f.family.status === 'partner' ? 'he has a partner' : 'he has kids'}.`; }
-            else if (!f.hobby.discovered) { f.hobby.discovered = true; variant = 'hobby'; extra.hobby = f.hobby.name; note = `Noted: he's into ${f.hobby.name}.`; }
+            if (!f.family.discovered) {
+                f.family.discovered = true; variant = f.family.status;
+                note = this._t('dlg.note.fam.' + f.family.status, null,
+                    { single: "Noted: it's just him right now.", partner: 'Noted: he has a partner.', kids: 'Noted: he has kids.' }[f.family.status] || '');
+            }
+            // the hobby is stored in English, so the note localises it the same way a line would
+            else if (!f.hobby.discovered) { f.hobby.discovered = true; variant = 'hobby'; extra.hobby = f.hobby.name; note = this._t('dlg.note.hobby', { hobby: this.locVocab(f.hobby.name) }, "Noted: he's into {hobby}."); }
             else variant = 'nothing';
         } else if (q === 'q-club') {
             f.favClub.discovered = true;
             const c = Clubs.getClubById(f.favClub.clubId);
-            extra.favclub = c ? c.name : 'a club back home';
-            note = `Noted: his boyhood club is ${extra.favclub}.`;
+            extra.favclub = c ? c.name : this._t('dlg.favclub.none', null, 'a club back home');
+            note = this._t('dlg.note.club', { club: extra.favclub }, 'Noted: his boyhood club is {club}.');
         } else if (q === 'q-ambition') {
             f.ambition.discovered = true;
             extra.ambition = this.ambitionText(p);
-            note = `Noted: he wants to ${extra.ambition}.`;
+            note = this._t('dlg.note.ambition', { amb: extra.ambition }, 'Noted: he wants to {amb}.');
         }
         const rows = DIALOGUE_DATA.checkin.filter(r => r.beat === 'reply' && r.choice === q
             && (r.variant === variant || r.variant === 'any' || (q !== 'q-life' && !r.variant)));
@@ -945,13 +957,13 @@ const Dialogue = {
             const cost = this.visitCost(p);
             GameState.agency.balance -= cost; GameState.addFinance('Gifts & relationships', -cost);
             this.addBond(p, 3, 'showedUp'); p.morale.agent = Math.min(100, p.morale.agent + 2);
-            note = `You made the trip to see him (−€${UI.money(cost)}).`;
+            note = this._t('dlg.note.visit', { amt: UI.money(cost) }, 'You made the trip to see him (−€{amt}).');
         }
         else if (key === 'flowers') {
             const cost = 50;
             GameState.agency.balance -= cost; GameState.addFinance('Gifts & relationships', -cost);
             this.addBond(p, 1);
-            note = `Flowers on their way (−€${UI.money(cost)}).`;
+            note = this._t('dlg.note.flowers', { amt: UI.money(cost) }, 'Flowers on their way (−€{amt}).');
         }
         else if (key === 'cherish' || key === 'banter') {
             // his gift to you: the graceful read for the sentimental, the laugh for the loud
@@ -966,13 +978,13 @@ const Dialogue = {
             GameState.addFinance('Gifts & relationships', -cost);
             this.addBond(p, 4, 'bigDay');
             p.morale.agent = Math.min(100, p.morale.agent + 3);
-            note = `A weekend well spent (−€${UI.money(cost)}).`;
+            note = this._t('dlg.note.weekend', { amt: UI.money(cost) }, 'A weekend well spent (−€{amt}).');
         } else if (key === 'gift') {
             const cost = Agency.giftCost('small', p);
             GameState.agency.balance -= cost;
             GameState.addFinance('Gifts & relationships', -cost);
             this.addBond(p, 1);
-            note = `The gift is on its way (−€${UI.money(cost)}).`;
+            note = this._t('dlg.note.giftSent', { amt: UI.money(cost) }, 'The gift is on its way (−€{amt}).');
         } else if (key === 'decline') {
             this.addBond(p, -1);
             p.morale.agent = Math.max(0, p.morale.agent - 2);

@@ -580,4 +580,22 @@ I18n.register('es', {
     'dlg.addr.mr': 'Sr. {surname}',
     'dlg.addr.mrs': 'Sra. {surname}',
     'dlg.addr.dear': 'Hola, {name}',
+    // --- dialogue system notes: the small grey lines in the chat feed. These lived as hardcoded
+    // English inside js/dialogue.js until every locale had a pack to put them in.
+    'dlg.addr.boss': 'jefe',
+    'dlg.club.none': 'el club',
+    'dlg.favclub.none': 'un club de mi tierra',
+    'dlg.note.tab': 'La noche corre por su cuenta (−€{amt}).',
+    'dlg.note.boyhood': 'Consiguió su deseo: su último partido lo jugó con la camiseta que adoraba de niño.',
+    'dlg.note.farewellRep': 'Se corre la voz: usted cuida de los suyos hasta el final. (+2 de reputación)',
+    'dlg.note.fam.single': 'Anotado: ahora mismo está solo.',
+    'dlg.note.fam.partner': 'Anotado: tiene pareja.',
+    'dlg.note.fam.kids': 'Anotado: tiene hijos.',
+    'dlg.note.hobby': 'Anotado: le gusta {hobby}.',
+    'dlg.note.club': 'Anotado: el club de su infancia es {club}.',
+    'dlg.note.ambition': 'Anotado: quiere {amb}.',
+    'dlg.note.visit': 'Ha hecho el viaje para verlo (−€{amt}).',
+    'dlg.note.flowers': 'Las flores van de camino (−€{amt}).',
+    'dlg.note.weekend': 'Un fin de semana bien invertido (−€{amt}).',
+    'dlg.note.giftSent': 'El regalo va de camino (−€{amt}).',
 });

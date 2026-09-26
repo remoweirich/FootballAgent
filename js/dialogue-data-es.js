@@ -365,7 +365,7 @@ const DIALOGUE_ES = {
             title: "ganar un título de liga",
             cup: "levantar una copa",
             europe: "jugar en Europa",
-            goals: "llegar a {target} goles en mi carrera",
+            goals: "llegar a los {target} goles",
             topflight: "jugar en una de las cinco grandes ligas",
             abroad: "jugar en el extranjero",
         },

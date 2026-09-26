@@ -583,4 +583,22 @@ I18n.register('fr', {
     'dlg.addr.mr': 'M. {surname}',
     'dlg.addr.mrs': 'Mme {surname}',
     'dlg.addr.dear': 'Bonjour {name}',
+    // --- dialogue system notes: the small grey lines in the chat feed. These lived as hardcoded
+    // English inside js/dialogue.js until every locale had a pack to put them in.
+    'dlg.addr.boss': 'chef',
+    'dlg.club.none': 'le club',
+    'dlg.favclub.none': 'un club de chez moi',
+    'dlg.note.tab': 'La soirée est à votre charge (−€{amt}).',
+    'dlg.note.boyhood': 'Il a eu ce qu\'il voulait : son dernier match, il l\'a joué sous le maillot qu\'il vénérait enfant.',
+    'dlg.note.farewellRep': 'Ça se sait : vous accompagnez les vôtres jusqu\'au bout. (+2 de réputation)',
+    'dlg.note.fam.single': 'Noté : pour l\'instant, il est seul.',
+    'dlg.note.fam.partner': 'Noté : il a une compagne.',
+    'dlg.note.fam.kids': 'Noté : il a des enfants.',
+    'dlg.note.hobby': 'Noté : il est à fond dans {hobby}.',
+    'dlg.note.club': 'Noté : le club de son enfance est {club}.',
+    'dlg.note.ambition': 'Noté : il veut {amb}.',
+    'dlg.note.visit': 'Vous avez fait le déplacement pour le voir (−€{amt}).',
+    'dlg.note.flowers': 'Les fleurs sont en route (−€{amt}).',
+    'dlg.note.weekend': 'Un week-end bien employé (−€{amt}).',
+    'dlg.note.giftSent': 'Le cadeau est en route (−€{amt}).',
 });
