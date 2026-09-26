@@ -139,6 +139,7 @@ const Dialogue = {
     _packFor(loc) {
         if (loc === 'de') return typeof DIALOGUE_DE !== 'undefined' ? DIALOGUE_DE : null;
         if (loc === 'es') return typeof DIALOGUE_ES !== 'undefined' ? DIALOGUE_ES : null;
+        if (loc === 'fr') return typeof DIALOGUE_FR !== 'undefined' ? DIALOGUE_FR : null;
         return null;
     },
     // The active locale's dialogue pack, or null under English / an untranslated locale.

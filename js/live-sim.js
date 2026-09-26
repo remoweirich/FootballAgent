@@ -41,6 +41,7 @@ const LiveSim = {
     _overlayFor(loc) {
         if (loc === 'de') return typeof LIVE_SIM_DE !== 'undefined' ? LIVE_SIM_DE : null;
         if (loc === 'es') return typeof LIVE_SIM_ES !== 'undefined' ? LIVE_SIM_ES : null;
+        if (loc === 'fr') return typeof LIVE_SIM_FR !== 'undefined' ? LIVE_SIM_FR : null;
         return null;
     },
     // Every overlay's text for one English piece — { de: '...', es: '...' } — leaving out

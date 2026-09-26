@@ -12,17 +12,17 @@ const OUT = path.join(ROOT, 'dist', 'mobile');
 
 const ENGINE_FILES = [
     'rng.js',
-    'i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js',
+    'i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js',
     'names-data.js', 'clubs.js', 'players.js', 'storage.js', 'game-state.js',
     'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'achievements.js', 'injuries-data.js', 'simulation.js',
-    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim.js', 'attend.js', 'dialogue-data.js', 'dialogue-data-de.js', 'dialogue-data-es.js', 'dialogue.js'
+    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim-data-fr.js', 'live-sim.js', 'attend.js', 'dialogue-data.js', 'dialogue-data-de.js', 'dialogue-data-es.js', 'dialogue-data-fr.js', 'dialogue.js'
 ];
 const UI_JS_FILES = [
     'prefs.js',
     'monetization.js',
     'ads.js',
     'revenuecat.js',
-    'i18n-en.js', 'i18n-de.js', 'i18n-es.js',
+    'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js',
     'music-manifest.js', 'audio.js',
     'shim.js', 'ui-helpers.js', 'router.js',
     'screen-start.js', 'screen-settings.js', 'screen-achievements.js',
