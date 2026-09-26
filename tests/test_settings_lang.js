@@ -35,11 +35,14 @@ const sb = {
 };
 sb.window = sb;
 vm.createContext(sb);
-// the real i18n engine plus every shipped pack, so available() reflects what actually ships
-for (const f of ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js'])
-    vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
-for (const f of ['i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js'])
-    vm.runInContext(fs.readFileSync(path.join(root, 'ui/js', f), 'utf8'), sb, { filename: 'ui/' + f });
+// The real i18n engine first, then a pack pair PER LOCALE IN LANGS — driven by LANGS rather than a
+// hardcoded list, so a new language is exercised here automatically instead of being quietly skipped.
+vm.runInContext(fs.readFileSync(path.join(root, 'js/i18n.js'), 'utf8'), sb, { filename: 'i18n.js' });
+const codes = JSON.parse(vm.runInContext('JSON.stringify(I18n.LANGS.map(function(l){return l.code;}))', sb));
+for (const c of codes) {
+    vm.runInContext(fs.readFileSync(path.join(root, `js/i18n-${c}.js`), 'utf8'), sb, { filename: `i18n-${c}.js` });
+    vm.runInContext(fs.readFileSync(path.join(root, `ui/js/i18n-${c}.js`), 'utf8'), sb, { filename: `ui/i18n-${c}.js` });
+}
 for (const f of ['prefs.js', 'screen-settings.js'])
     vm.runInContext(fs.readFileSync(path.join(root, 'ui/js', f), 'utf8'), sb, { filename: f });
 
@@ -47,9 +50,12 @@ const run = c => vm.runInContext('(function(){' + c + '})()', sb);
 let failed = false;
 const check = (l, c) => { console.log((c ? 'PASS' : 'FAIL') + '  ' + l); if (!c) failed = true; };
 
+// Derived from I18n.LANGS, not hardcoded: adding a language should not need a test edit, and
+// available() only returns locales whose pack actually registered, so this proves each one loaded.
+const LANGS = JSON.parse(run('return JSON.stringify(I18n.LANGS);'));
 const LOCALES = JSON.parse(run('return JSON.stringify(I18n.available().map(l => l.code));'));
-check('all four shipped locales are selectable (' + LOCALES.join(', ') + ')',
-    JSON.stringify(LOCALES) === JSON.stringify(['en', 'de', 'es', 'fr']));
+check('every locale in LANGS has a registered pack and is selectable (' + LOCALES.join(', ') + ')',
+    LANGS.length > 1 && JSON.stringify(LOCALES) === JSON.stringify(LANGS.map(l => l.code)));
 
 // ---------------- the row ----------------
 run("I18n.set('en'); SettingsScreen.show('game');");
@@ -58,13 +64,14 @@ check('the row opens the picker instead of listing every locale inline',
 check('the row no longer renders a per-locale segmented control',
     !/set-seg__btn[^>]*onclick="SettingsScreen\.setLang/.test(appHTML));
 check('the row shows the CURRENT language as its value', appHTML.includes('English'));
+const others = LANGS.filter(l => l.code !== 'en').map(l => l.name);
 check('the other languages are not on the settings page itself',
-    !appHTML.includes('Français') && !appHTML.includes('Español'));
+    others.length > 0 && others.every(n => !appHTML.includes(n)));
 
 // ---------------- the sheet ----------------
 run('SettingsScreen.pickLang();');
 check('the sheet opens', sheetOpen === true);
-for (const [code, name] of [['en', 'English'], ['de', 'Deutsch'], ['es', 'Español'], ['fr', 'Français']]) {
+for (const { code, name } of LANGS) {
     check(`the sheet offers ${name}`,
         sheetHTML.includes(name) && sheetHTML.includes(`SettingsScreen.setLang('${code}')`));
 }

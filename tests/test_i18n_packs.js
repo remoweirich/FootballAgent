@@ -23,7 +23,7 @@ const langSb = { console: { log() {} }, Math, Date, JSON }; langSb.window = lang
 vm.createContext(langSb);
 vm.runInContext(fs.readFileSync(path.join(root, 'js/i18n.js'), 'utf8'), langSb, { filename: 'i18n.js' });
 const codes = JSON.parse(vm.runInContext('JSON.stringify(I18n.LANGS.map(function(l){return l.code;}))', langSb));
-check('LANGS lists en, de, es and fr', ['en', 'de', 'es', 'fr'].every(c => codes.includes(c)));
+check('LANGS lists en, de, es, fr and pt', ['en', 'de', 'es', 'fr', 'pt'].every(c => codes.includes(c)));
 
 // Repeated placeholders are equivalent to one, so compare SETS.
 const ph = s => [...new Set(String(s).match(/\{[a-zA-Z0-9_]+\}/g) || [])].sort().join(',');
@@ -71,5 +71,33 @@ for (const dir of ['js', 'ui/js']) {
   }
 }
 
-if (failed) { console.error('i18n pack checks FAILED'); process.exit(1); }
-console.log('All i18n pack checks passed.');
+// ---- shipping wiring -----------------------------------------------------------------------
+// A locale can be complete and still not reach players: the packs only load if they are listed
+// in scripts/build-mobile.js AND in ui/index.html. Nothing else in the suite covers that, so a
+// missed line here would pass every other gate and ship a language that silently falls back to
+// English. Checked per locale, so adding one is caught rather than discovered on a device.
+const buildSrc = fs.readFileSync(path.join(root, 'scripts/build-mobile.js'), 'utf8');
+const indexSrc = fs.readFileSync(path.join(root, 'ui/index.html'), 'utf8');
+for (const code of codes.filter(c => c !== 'en')) {
+    const engine = [`i18n-${code}.js`, `live-sim-data-${code}.js`, `dialogue-data-${code}.js`];
+    const missBuild = engine.concat([`i18n-${code}.js`]).filter(f => !buildSrc.includes(`'${f}'`));
+    check(`${code}: every pack file is listed in scripts/build-mobile.js` +
+        (missBuild.length ? ` — missing ${[...new Set(missBuild)].join(', ')}` : ''), missBuild.length === 0);
+
+    // the UI pack is served from js/, the three engine files from ../js/ — both must be script tags
+    const tags = [`js/i18n-${code}.js`, `../js/i18n-${code}.js`,
+        `../js/live-sim-data-${code}.js`, `../js/dialogue-data-${code}.js`];
+    const missTag = tags.filter(t => !indexSrc.includes(`src="${t}"`));
+    check(`${code}: every pack file has a <script> tag in ui/index.html` +
+        (missTag.length ? ` — missing ${missTag.join(', ')}` : ''), missTag.length === 0);
+
+    // and the file has to exist at all
+    const missFile = [`js/i18n-${code}.js`, `ui/js/i18n-${code}.js`,
+        `js/live-sim-data-${code}.js`, `js/dialogue-data-${code}.js`]
+        .filter(f => !fs.existsSync(path.join(root, f)));
+    check(`${code}: all four pack files exist` + (missFile.length ? ` — missing ${missFile.join(', ')}` : ''),
+        missFile.length === 0);
+}
+
+if (failed) { console.error('i18n pack checks FAILED'); process.exitCode = 1; }
+else console.log('All i18n pack checks passed.');
