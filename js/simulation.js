@@ -145,7 +145,7 @@ const Sim = {
         GameState.players.forEach(p => { p._weekApps = 0; if (p._finalTalk) delete p._finalTalk; });   // any unsettled dressing-room promise lapses with the week
 
         // ---- detect season-end / rollover ----
-        let rolledSeason = false, seasonFinished = false, windowClosed = false;
+        let rolledSeason = false, seasonFinished = false, windowClosed = null;
         const prevWeek = GameState.week;
         GameState.week += 1;
 
@@ -169,7 +169,9 @@ const Sim = {
 
         // ---- transfer window just closed ----
         if (GameState.isTransferWindowOpen(prevWeek) && !GameState.isTransferWindowOpen(week)) {
-            windowClosed = true;   // UI shows one interstitial ad here (twice a season), unless ads are removed
+            // 'summer' (week 7) or 'winter' (week 34) — the UI offers its one interstitial a season
+            // after the WINTER close only (see Home._doAdvance and the policy in ui/js/ads.js).
+            windowClosed = prevWeek >= 28 ? 'winter' : 'summer';
             const reopens = prevWeek <= 6 ? I18n.t('sim.reopensWinter') : I18n.t('sim.reopensSummer', { season: GameState.seasonLabelFor(GameState.seasonStartYear + 1) });
             GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.windowClosedSubj'), body: I18n.t('sim.windowClosedBody', { reopens }), ttl: 4 });
             GameState.addLog(I18n.t('sim.windowClosedLog'), 'info');

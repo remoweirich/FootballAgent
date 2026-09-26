@@ -13,7 +13,7 @@ finish. Read "Where we are" then work the checklist top to bottom.
 | 1. Entitlements foundation (`Monetization`) | ✅ done |
 | 2. Feature gating (Insights, Sandbox editor, Database editor) | ✅ done |
 | 3. Store screen (Start-menu + Settings) | ✅ done |
-| 4. Ads (AdMob interstitial at window close, EU consent, frequency cap) | ✅ done, builds natively |
+| 4. Ads (one AdMob interstitial a season, EU consent) | ✅ done, builds natively |
 | 5. Real IAP (RevenueCat) | ⏳ **blocked on account setup below** |
 | 6. iOS | ⛔ not started |
 
@@ -23,7 +23,7 @@ flag to `false`.
 
 ### Already wired in the code (nothing to do here now)
 - `ui/js/monetization.js` — entitlements, product catalog, `owns()/hasAds()/purchase()/restore()`, dev provider.
-- `ui/js/ads.js` — interstitial orchestration + `AD_CONFIG` (currently **Google TEST ad ids**).
+- `ui/js/ads.js` — interstitial orchestration, the season frequency policy, + `AD_CONFIG` (currently **live AdMob ids**).
 - `ui/js/revenuecat.js` — the real billing provider, **inert** until you paste an SDK key.
 - `ui/js/screen-store.js` — the Store UI.
 - `android/app/build.gradle` + `android/keystore.properties` — **release signing** is set up.
@@ -153,6 +153,6 @@ npx cap sync android                                  # link native + copy web
 - **Individual unlocks** (players may want just one): Remove Ads · Enhanced Insights · Database Editor, €1.99 each.
 - **Supporter packs** €1.99 / €4.99 / €9.99 — "buy me a coffee", adds a supporter badge (consumable so fans
   can give again).
-- **Ads:** one interstitial at each transfer-window close (2×/season), frequency-capped, gone with Remove
+- **Ads:** one interstitial per season at most — after the WINTER transfer window shuts (week 34), and none at all in the player's first season, so the earliest any player sees one is week 34 of season 2. Gone entirely with Remove Ads / Pro.
   Ads/Pro. Kept minimal — the point is to nudge the €1.99 removal, not to earn from ads.
 - Real club names/logos import stays **free** (legal, and it's what courts the paying customizer crowd).

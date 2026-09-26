@@ -125,7 +125,7 @@ Home._doAdvance = function () {
     Router.lastWeekNet = GameState.agency.balance - before;
     Home._spotlights = res.spotlights || [];
     Home._pendingAttend = (res.attend || []).slice();   // finals the agent may watch this week
-    Home._adPending = !!res.windowClosed;               // one interstitial when a transfer window shuts (Ads gates the rest)
+    Home._adPending = res.windowClosed === 'winter';    // one a season, after the WINTER window only; Ads owns the rest of the policy
     // Ask for a rating once, the first time a fifth season rolls over. Device-scoped (Prefs) so a
     // new save never re-asks; surfaced at the very end of the advance flow so it never stacks.
     Home._ratePending = !!res.rolledSeason && typeof Prefs !== 'undefined' && !Prefs.get('ratePromptShown', false)

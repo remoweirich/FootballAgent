@@ -238,7 +238,7 @@ const Walkthrough = {
         this._tickInjury(events);
         const beat = this.BEATS[G.week];
         if (beat) { try { this[beat](events); } catch (e) { /* a broken beat must not strand the player */ } }
-        return { events, spotlights: [], rolledSeason: false, seasonFinished: false, windowClosed: false, attend: [] };
+        return { events, spotlights: [], rolledSeason: false, seasonFinished: false, windowClosed: null, attend: [] };
     },
     // week the beat fires on (the demo starts on 34, so the first advance lands on 35)
     BEATS: { 36: '_beatSponsor', 37: '_beatScoutReport' },
