@@ -142,6 +142,7 @@ const Dialogue = {
         if (loc === 'fr') return typeof DIALOGUE_FR !== 'undefined' ? DIALOGUE_FR : null;
         if (loc === 'pt') return typeof DIALOGUE_PT !== 'undefined' ? DIALOGUE_PT : null;
         if (loc === 'it') return typeof DIALOGUE_IT !== 'undefined' ? DIALOGUE_IT : null;
+        if (loc === 'nl') return typeof DIALOGUE_NL !== 'undefined' ? DIALOGUE_NL : null;
         return null;
     },
     // The active locale's dialogue pack, or null under English / an untranslated locale.

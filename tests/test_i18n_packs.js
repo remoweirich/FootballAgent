@@ -23,7 +23,7 @@ const langSb = { console: { log() {} }, Math, Date, JSON }; langSb.window = lang
 vm.createContext(langSb);
 vm.runInContext(fs.readFileSync(path.join(root, 'js/i18n.js'), 'utf8'), langSb, { filename: 'i18n.js' });
 const codes = JSON.parse(vm.runInContext('JSON.stringify(I18n.LANGS.map(function(l){return l.code;}))', langSb));
-check('LANGS lists en, de, es, fr, pt and it', ['en', 'de', 'es', 'fr', 'pt', 'it'].every(c => codes.includes(c)));
+check('LANGS lists all six shipped locales', ['en', 'de', 'es', 'fr', 'pt', 'it', 'nl'].every(c => codes.includes(c)));
 
 // Repeated placeholders are equivalent to one, so compare SETS.
 const ph = s => [...new Set(String(s).match(/\{[a-zA-Z0-9_]+\}/g) || [])].sort().join(',');
