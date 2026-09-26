@@ -4,12 +4,8 @@
 // is gated without writing a new test.
 const vm = require('vm'), fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..') + '/';
-const LOCALES = ['de', 'es', 'fr', 'pt', 'it'];
-const engine = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'i18n-pt.js', 'i18n-it.js', 'storage.js', 'rng.js',
-    'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js',
-    'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'simulation.js',
-    'live-sim-data.js', 'live-sim.js', 'attend.js',
-    'dialogue-data.js', 'dialogue-data-de.js', 'dialogue-data-es.js', 'dialogue-data-fr.js', 'dialogue-data-pt.js', 'dialogue-data-it.js', 'dialogue.js'];
+// Locales and the engine file list are both derived from I18n.LANGS plus what is on disk, so the
+// next language is gated without touching this file.
 const errors = [];
 const sb = {
     console: { log() {}, warn() {}, error: (...a) => errors.push(a.map(String).join(' ')) },
@@ -19,7 +15,17 @@ const sb = {
 };
 sb.window = sb;
 vm.createContext(sb);
-for (const f of engine) vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
+const load = f => vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
+load('i18n.js');
+const LANGS = JSON.parse(vm.runInContext('JSON.stringify(I18n.LANGS.map(function(l){return l.code;}))', sb));
+for (const c of LANGS) load('i18n-' + c + '.js');
+for (const f of ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js',
+    'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js',
+    'simulation.js', 'live-sim-data.js', 'live-sim.js', 'attend.js', 'dialogue-data.js']) load(f);
+// Locales shipping a dialogue pack: the file's presence on disk is the source of truth.
+const LOCALES = LANGS.filter(c => c !== 'en' && fs.existsSync(path.join(root, 'js', 'dialogue-data-' + c + '.js')));
+for (const c of LOCALES) load('dialogue-data-' + c + '.js');
+load('dialogue.js');
 const run = c => vm.runInContext('(function(){' + c + '})()', sb);
 let failed = false;
 const check = (l, c) => { console.log((c ? 'PASS' : 'FAIL') + '  ' + l); if (!c) failed = true; };
@@ -63,6 +69,18 @@ for (const loc of LOCALES) {
 
     const sMiss = EN_SAY.filter(k => !(pack.say || {})[k]);
     check(`${loc}: every agent spoken line is translated` + (sMiss.length ? ` — missing ${sMiss.slice(0, 4).join(' | ')}` : ''), sMiss.length === 0);
+
+    // The promise and bonus sub-choices are assembled in the UI, which used to read Dialogue.SAY
+    // directly and so spoke English in every locale. sayFor() is the one localised accessor.
+    check(`${loc}: sayFor() reaches the pack for the UI-built promise and bonus lines`, run(`
+      I18n.locale='${loc}';
+      const keys=['promise:move','promise:newContract','promise:playingTime','promise:renegotiateRep',
+                  'bonus:small','bonus:medium','bonus:large'];
+      const bad=keys.filter(k=>Dialogue.sayFor(k)!==Dialogue._packFor('${loc}').say[k]);
+      I18n.locale='en';
+      const en=keys.filter(k=>Dialogue.sayFor(k)!==Dialogue.SAY[k]);
+      return bad.length===0 && en.length===0;
+    `));
 
     check(`${loc}: ambitions, milestones and the cash gift are all present`,
         !!(pack.amb && pack.amb.types && Object.keys(pack.amb.types).length >= 9
@@ -110,17 +128,24 @@ for (const loc of LOCALES) {
       return mr!=='Mr Mercer' && dear!=='Dear Alex Mercer' && /Mercer/.test(mr) && !/\\{/.test(mr+dear);
     `));
 
-    // discovered vocabulary is stored in English and localised at fill() time
-    check(`${loc}: a discovered hobby is localised when a line is filled`, run(`
-      I18n.locale='${loc}';
+    // Discovered vocabulary is stored in English and localised at fill() time. Every entry must
+    // render as the pack spells it, and at least one must actually differ from its English key —
+    // proving the swap fires. Requiring a SPECIFIC word to differ would fail a correct pack:
+    // Dutch 'golf' is "golf".
+    check(`${loc}: discovered vocabulary is localised when a line is filled`, run(`
       const p={name:'Test',age:24,position:'ST',clubId:null,facts:{home:'England',
         favClub:{clubId:null,discovered:true},family:{status:'single',discovered:true},
         hobby:{name:'golf',discovered:true},ambition:{type:'title',discovered:true}}};
-      const out=Dialogue.fill('... {hobby} ...',p,{hobby:'golf'});
+      const vocab=Dialogue._packFor('${loc}').vocab;
+      let swapped=0;
+      for(const en of Object.keys(vocab)){
+        I18n.locale='${loc}'; const out=Dialogue.fill('... {v} ...',p,{v:en});
+        I18n.locale='en';    const enOut=Dialogue.fill('... {v} ...',p,{v:en});
+        if(out.indexOf(vocab[en])<0 || enOut.indexOf(en)<0){ I18n.locale='en'; return false; }
+        if(out!==enOut) swapped++;
+      }
       I18n.locale='en';
-      const enOut=Dialogue.fill('... {hobby} ...',p,{hobby:'golf'});
-      const want=Dialogue._packFor('${loc}').vocab.golf;
-      return out.indexOf(want)>=0 && enOut.indexOf('golf')>=0 && out!==enOut;
+      return swapped>0;
     `));
 }
 
