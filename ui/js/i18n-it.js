@@ -1036,7 +1036,7 @@ I18n.register('it', {
     'cd.family.single': 'Per ora da solo',
     'cd.family.partner': 'Ha una compagna',
     'cd.family.kids': 'Uomo di famiglia, con figli a casa',
-    'cd.into': 'gli piace {hobby}',
+    'cd.into': 'passione: {hobby}',
     'cd.fromHim': 'Parole sue',
     // support & services
     'cd.done': 'fatto',
