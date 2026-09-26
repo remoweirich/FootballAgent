@@ -8,15 +8,15 @@ const errs = [];
 const sb = { console: { log() {}, warn() {}, error: (...a) => errs.push(a.join(' ')) }, Math, Date, JSON };
 sb.window = sb;
 vm.createContext(sb);
-const ENGINE = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'rng.js',
-    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim.js'];
+const ENGINE = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'rng.js',
+    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim-data-fr.js', 'live-sim.js'];
 for (const f of ENGINE) vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
 const run = c => vm.runInContext('(function(){' + c + '})()', sb);
 let failed = false;
 const check = (l, c) => { console.log((c ? 'PASS' : 'FAIL') + '  ' + l); if (!c) failed = true; };
 
 const locales = run('return JSON.stringify(LiveSim.OVERLAY_LOCALES);');
-check('OVERLAY_LOCALES lists de and es (' + locales + ')', locales === '["de","es"]');
+check('OVERLAY_LOCALES lists de, es and fr (' + locales + ')', locales === '["de","es","fr"]');
 
 for (const loc of JSON.parse(locales)) {
     check(loc + ': the overlay file is loaded and non-empty', run(`
@@ -55,14 +55,19 @@ for (const loc of JSON.parse(locales)) {
       return /García/.test(out) && out!==en;
     `));
 
+    // Compare against what the ENGLISH pack actually returns, not a hardcoded literal, and only
+    // require the lines whose wording cannot legitimately coincide with English. 'ls.cornerAnon' is
+    // excluded on purpose: French says "corner" too, so an identical string there is correct.
     check(loc + ': the engine-built lines are translated, not English', run(`
       I18n.locale='${loc}';
       const plain=LiveSim._plainLine('GOAL',{name:'García'},'Sevilla');
       const goal=I18n.t('ls.goalAnon',{team:'Sevilla'});
-      const corner=I18n.t('ls.cornerAnon',{team:'Sevilla'});
+      const what=I18n.t('ls.what.RC');
       I18n.locale='en';
       const enPlain=LiveSim._plainLine('GOAL',{name:'García'},'Sevilla');
-      return plain!==enPlain && goal!=='GOAL — Sevilla' && corner!=='Corner — Sevilla';
+      const enGoal=I18n.t('ls.goalAnon',{team:'Sevilla'});
+      const enWhat=I18n.t('ls.what.RC');
+      return plain!==enPlain && goal!==enGoal && what!==enWhat;
     `));
 
     // A full timeline exercises the chain builder, the corner/penalty paths and the fallbacks.
