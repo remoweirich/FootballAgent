@@ -8,16 +8,24 @@ const errs = [];
 const sb = { console: { log() {}, warn() {}, error: (...a) => errs.push(a.join(' ')) }, Math, Date, JSON };
 sb.window = sb;
 vm.createContext(sb);
-const ENGINE = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'i18n-pt.js', 'i18n-it.js', 'rng.js',
-    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim-data-fr.js',
-    'live-sim-data-pt.js', 'live-sim-data-it.js', 'live-sim.js'];
-for (const f of ENGINE) vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
+// Derived from I18n.LANGS rather than hardcoded, so a new language is picked up without a test edit.
+const load = f => vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
+load('i18n.js');
+const LANGS = JSON.parse(vm.runInContext('JSON.stringify(I18n.LANGS.map(function(l){return l.code;}))', sb));
+for (const c of LANGS) load('i18n-' + c + '.js');
+load('rng.js');
+load('live-sim-data.js');
+// Locales shipping a commentary overlay: the file's presence on disk is the source of truth.
+const SHIPPED = LANGS.filter(c => c !== 'en' && fs.existsSync(path.join(root, 'js', 'live-sim-data-' + c + '.js')));
+for (const c of SHIPPED) load('live-sim-data-' + c + '.js');
+load('live-sim.js');
 const run = c => vm.runInContext('(function(){' + c + '})()', sb);
 let failed = false;
 const check = (l, c) => { console.log((c ? 'PASS' : 'FAIL') + '  ' + l); if (!c) failed = true; };
 
 const locales = run('return JSON.stringify(LiveSim.OVERLAY_LOCALES);');
-check('OVERLAY_LOCALES lists de, es, fr, pt and it (' + locales + ')', locales === '["de","es","fr","pt","it"]');
+check('OVERLAY_LOCALES lists every locale with an overlay file on disk (' + locales + ')',
+    locales === JSON.stringify(SHIPPED));
 
 for (const loc of JSON.parse(locales)) {
     check(loc + ': the overlay file is loaded and non-empty', run(`
@@ -59,16 +67,16 @@ for (const loc of JSON.parse(locales)) {
     // Compare against what the ENGLISH pack actually returns, not a hardcoded literal, and only
     // require the lines whose wording cannot legitimately coincide with English. 'ls.cornerAnon' is
     // excluded on purpose: French says "corner" too, so an identical string there is correct.
+    // Only the card labels are compared against English: 'GOAL', 'Corner' and 'Assist' are the real
+    // Dutch words and 'Corner' the real French one, so requiring those to differ fails a correct pack.
+    // What matters is that _plainLine renders the LOCALE's label, which the RC/YC pair proves.
     check(loc + ': the engine-built lines are translated, not English', run(`
       I18n.locale='${loc}';
-      const plain=LiveSim._plainLine('GOAL',{name:'García'},'Sevilla');
-      const goal=I18n.t('ls.goalAnon',{team:'Sevilla'});
-      const what=I18n.t('ls.what.RC');
+      const rc=I18n.t('ls.what.RC'), yc=I18n.t('ls.what.YC');
+      const plain=LiveSim._plainLine('RC',{name:'García'},'Sevilla');
       I18n.locale='en';
-      const enPlain=LiveSim._plainLine('GOAL',{name:'García'},'Sevilla');
-      const enGoal=I18n.t('ls.goalAnon',{team:'Sevilla'});
-      const enWhat=I18n.t('ls.what.RC');
-      return plain!==enPlain && goal!==enGoal && what!==enWhat;
+      const enRc=I18n.t('ls.what.RC'), enYc=I18n.t('ls.what.YC');
+      return rc!==enRc && yc!==enYc && plain.indexOf(rc)===0 && plain.indexOf(enRc)!==0;
     `));
 
     // A full timeline exercises the chain builder, the corner/penalty paths and the fallbacks.
