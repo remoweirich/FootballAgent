@@ -37,7 +37,7 @@ const LiveSim = {
     // Locales that ship a commentary overlay. The overlay files declare a top-level const and load
     // BEFORE this file, so they can neither self-register nor be read off globalThis — hence
     // the explicit probes. Adding a language is one line here plus the data file.
-    OVERLAY_LOCALES: ['de', 'es', 'fr'],
+    OVERLAY_LOCALES: ['de', 'es', 'fr', 'pt'],
     _overlayFor(loc) {
         if (loc === 'de') return typeof LIVE_SIM_DE !== 'undefined' ? LIVE_SIM_DE : null;
         if (loc === 'es') return typeof LIVE_SIM_ES !== 'undefined' ? LIVE_SIM_ES : null;

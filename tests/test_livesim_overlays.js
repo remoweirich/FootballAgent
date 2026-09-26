@@ -8,15 +8,16 @@ const errs = [];
 const sb = { console: { log() {}, warn() {}, error: (...a) => errs.push(a.join(' ')) }, Math, Date, JSON };
 sb.window = sb;
 vm.createContext(sb);
-const ENGINE = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'rng.js',
-    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim-data-fr.js', 'live-sim.js'];
+const ENGINE = ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'i18n-pt.js', 'rng.js',
+    'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim-data-fr.js',
+    'live-sim-data-pt.js', 'live-sim.js'];
 for (const f of ENGINE) vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
 const run = c => vm.runInContext('(function(){' + c + '})()', sb);
 let failed = false;
 const check = (l, c) => { console.log((c ? 'PASS' : 'FAIL') + '  ' + l); if (!c) failed = true; };
 
 const locales = run('return JSON.stringify(LiveSim.OVERLAY_LOCALES);');
-check('OVERLAY_LOCALES lists de, es and fr (' + locales + ')', locales === '["de","es","fr"]');
+check('OVERLAY_LOCALES lists de, es, fr and pt (' + locales + ')', locales === '["de","es","fr","pt"]');
 
 for (const loc of JSON.parse(locales)) {
     check(loc + ': the overlay file is loaded and non-empty', run(`
