@@ -31,6 +31,7 @@ I18n.register('fr', {
     'common.hoursAgo': 'il y a {n} h',
 
     // ---- start screen ----
+    'start.supporterPlaques': 'Tes plaques de soutien',
     'start.tagline': 'Monte ton écurie. Prends ta commission.',
     'start.continue': 'Continuer',
     'start.continueEmpty': 'Reprendre où tu t\'es arrêté',

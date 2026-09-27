@@ -39,6 +39,7 @@ I18n.register('es', {
     'common.hoursAgo': 'hace {n} h',
 
     // ---- start screen ----
+    'start.supporterPlaques': 'Tus placas de mecenas',
     'start.tagline': 'Construye tu cartera. Llévate tu parte.',
     'start.continue': 'Continuar',
     'start.continueEmpty': 'Continuar donde lo dejaste',

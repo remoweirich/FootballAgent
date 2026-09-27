@@ -33,6 +33,7 @@ I18n.register('pt', {
     'common.hoursAgo': 'há {n} h',
 
     // ---- start screen ----
+    'start.supporterPlaques': 'As tuas placas de apoiante',
     'start.tagline': 'Constrói a tua escola. Fica com a comissão.',
     'start.continue': 'Continuar',
     'start.continueEmpty': 'Continua de onde ficaste',

@@ -80,22 +80,40 @@ const RevenueCatProvider = {
         const grants = new Set(); let tier = 0;
         const owned = new Set();
         ((ci && ci.allPurchasedProductIdentifiers) || []).forEach(id => id && owned.add(id));
-        ((ci && ci.nonSubscriptionTransactions) || []).forEach(t => t && t.productIdentifier && owned.add(t.productIdentifier));
+        // nonSubscriptionTransactions holds ONE ENTRY PER PURCHASE, where allPurchasedProductIdentifiers
+        // is de-duplicated. Supporter packs are consumable and repeatable, so the count comes from here
+        // — it is the only place the store tells us someone bought Grateful Gamer four times.
+        const tierCounts = {};
+        ((ci && ci.nonSubscriptionTransactions) || []).forEach(t => {
+            const sid = t && t.productIdentifier;
+            if (!sid) return;
+            owned.add(sid);
+            if (typeof Monetization === 'undefined') return;
+            const e = Monetization.productByStoreId(sid);
+            if (e && e.def.tier) tierCounts[e.def.tier] = (tierCounts[e.def.tier] || 0) + 1;
+        });
         if (typeof Monetization !== 'undefined') owned.forEach(sid => {
             const entry = Monetization.productByStoreId(sid);
             if (entry) { (entry.def.grants || []).forEach(g => grants.add(g)); if (entry.def.tier) tier = Math.max(tier, entry.def.tier); }
         });
         const internal = (typeof Monetization !== 'undefined') ? Monetization.ALL_ENTITLEMENTS : [];
         Object.keys((ci && ci.entitlements && ci.entitlements.active) || {}).forEach(e => { if (internal.includes(e)) grants.add(e); });
-        return { grants: Array.from(grants), tier };
+        return { grants: Array.from(grants), tier, tierCounts };
+    },
+    // Apply restored supporter counts without ever REDUCING what the device already recorded: a
+    // consumable that Play has already consumed may no longer appear in the transaction list.
+    _applyTierCounts(tierCounts) {
+        if (typeof Monetization === 'undefined' || !tierCounts) return;
+        Object.keys(tierCounts).forEach(t => Monetization.setSupporterCountAtLeast(parseInt(t, 10), tierCounts[t]));
     },
     async _sync() {
         const P = this._p(); if (!P) return;
         let info; try { info = await P.getCustomerInfo(); } catch (e) { return; }
-        const { grants, tier } = this._grantsFrom(info);
+        const { grants, tier, tierCounts } = this._grantsFrom(info);
         if (typeof Monetization === 'undefined') return;
         if (grants.length) Monetization.grant(grants);
         if (tier) Monetization.grantSupporterTier(tier);
+        this._applyTierCounts(tierCounts);
     },
 
     // Every product this game sells is a ONE-OFF purchase, never a subscription. getProducts()
@@ -141,8 +159,9 @@ const RevenueCatProvider = {
         const P = this._p(); if (!P) return { ok: false, error: 'no-plugin' };
         try {
             const info = await P.restorePurchases();
-            const { grants, tier } = this._grantsFrom(info);
+            const { grants, tier, tierCounts } = this._grantsFrom(info);
             if (typeof Monetization !== 'undefined' && tier) Monetization.grantSupporterTier(tier);
+            this._applyTierCounts(tierCounts);
             return { ok: true, entitlements: grants };
         } catch (e) { return { ok: false, error: 'restore' }; }
     },

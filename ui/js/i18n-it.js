@@ -31,6 +31,7 @@ I18n.register('it', {
     'common.hoursAgo': '{n} h fa',
 
     // ---- start screen ----
+    'start.supporterPlaques': 'Le tue targhe da sostenitore',
     'start.tagline': 'Costruisci la scuderia. Prenditi la commissione.',
     'start.continue': 'Continua',
     'start.continueEmpty': 'Riprendi da dove hai lasciato',

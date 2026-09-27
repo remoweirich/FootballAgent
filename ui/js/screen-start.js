@@ -14,12 +14,66 @@ const StartScreen = {
     WAND: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 5 5L8 21l-5 1 1-5Z"/><path d="m14 5 5 5"/><path d="M19 3v2M21 8h-2"/></svg>`,
     BAG: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
 
+    // ---- supporter plaques -------------------------------------------------------------------
+    // Shown above the logo for anyone who has bought a supporter pack, cheapest tier first, one row
+    // each. Buying the same pack again shows "4x" in front of it rather than repeating the plaque.
+    //
+    // Returns the markup AND the block's height, because the caller has to shrink .ss-brand's top
+    // margin by exactly that much to keep the logo still (see the CSS note).
+    PLAQUE_H: 54,       // rendered plaque height in px; width follows the 3.67:1 artwork
+    PLAQUE_GAP: 6,
+    _plaquesHTML() {
+        const M = (typeof Monetization !== 'undefined') ? Monetization : null;
+        const list = (M && M.supporterPlaques) ? M.supporterPlaques() : [];
+        if (!list.length) return { n: 0, height: 0, html: '' };
+        const rows = list.map(p => {
+            // The count sits OUTSIDE the plaque image so it never covers the artwork, and is sized
+            // from the plaque height so it matches the lettering printed on it.
+            // always emitted, empty for a single purchase, so the gutter reserves the same width on
+            // every row and the plaques stay aligned with one another
+            const times = `<span class="ss-plaque__x">${p.count > 1 ? p.count + 'x' : ''}</span>`;
+            return `<div class="ss-plaque">${times}<img class="ss-plaque__img" src="assets/img/plaques/${p.slug}.webp" alt="${UI.esc(p.name)}" loading="eager"></div>`;
+        }).join('');
+        const height = list.length * this.PLAQUE_H + (list.length - 1) * this.PLAQUE_GAP;
+        return {
+            n: list.length, height, pull: this._plaquesPull(height),
+            html: `<div class="ss-plaques" aria-label="${I18n.t('start.supporterPlaques')}">${rows}</div>`,
+        };
+    },
+    // How far to lift the plaque block so the logo stays where a non-supporter sees it.
+    //
+    // This is only the OPENING BID — lifting by the block's full height is what keeps the logo
+    // still, and _fitPlaques() below trims it afterwards if the screen turns out to be too short.
+    // Estimating the available room from viewport arithmetic was tried first and got it wrong: the
+    // real geometry depends on the rendered height of the menu and footer, which is not knowable
+    // before layout. So: bid high, then measure.
+    _plaquesPull(blockHeight) { return blockHeight + 10; },
+
+    // Called straight after render. If the lift pushed the plaques off the top of the screen, give
+    // back exactly the overshoot — the logo moves down by that much instead, which is the graceful
+    // end of the trade and only happens when the screen genuinely cannot hold both.
+    PLAQUE_MIN_TOP: 10,
+    _fitPlaques() {
+        if (typeof document === 'undefined') return;
+        const el = document.querySelector('.ss-plaques');
+        const inner = el && el.parentElement;
+        if (!el || !inner || !el.getBoundingClientRect) return;
+        const safe = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+        const floor = this.PLAQUE_MIN_TOP + safe;
+        const top = el.getBoundingClientRect().top;
+        if (top >= floor) return;
+        const cur = parseFloat(inner.style.getPropertyValue('--ss-plaquepull')) || 0;
+        inner.style.setProperty('--ss-plaquepull', Math.max(0, Math.round(cur - (floor - top))) + 'px');
+    },
+
     async show() {
         this._auto = (typeof GameState !== 'undefined' && GameState.autosaveMeta) ? await GameState.autosaveMeta() : null;
         this._hasSave = !!this._auto;
         this._injectCSS();
         const saveLabel = this._saveLabel();
-        document.getElementById('app').innerHTML = `<div class="ss-wrap"><div class="ss-inner">
+        const plaques = this._plaquesHTML();
+        document.getElementById('app').innerHTML = `<div class="ss-wrap"><div class="ss-inner${plaques.n ? ' ss-inner--plaques' : ''}" style="${plaques.n ? `--ss-plaquepull:${plaques.pull}px` : ''}">
+            ${plaques.html}
             <div class="ss-brand">${this.CREST}<h1 class="ss-title">${UI.esc(this.TITLE)}</h1><div class="ss-tag">${I18n.t('start.tagline')}</div></div>
             <div class="ss-menu">
                 <button class="ss-btn ss-btn--primary" id="ssContinue" ${this._hasSave ? '' : 'disabled'} onclick="StartScreen.resume()">
@@ -37,6 +91,7 @@ const StartScreen = {
                 <button class="ss-icon" onclick="StartScreen.store()" aria-label="${I18n.t('store.title')}">${this.BAG}<span>${I18n.t('store.title')}</span></button>
             </div>
         </div></div>`;
+        this._fitPlaques();   // trim the plaque lift if this screen is too short for it
         // MUSIC DISABLED for now. Uncomment to bring the background playlist back.
         // if (typeof Sound !== 'undefined') Sound.startPlaylist();
     },
@@ -166,9 +221,25 @@ const StartScreen = {
     _injectCSS() {
         if (document.getElementById('ssCSS')) return;
         const css = `
-        .ss-wrap{position:fixed;inset:0;background:radial-gradient(120% 80% at 50% 0%, rgba(236,232,204,.10), transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;padding:calc(env(safe-area-inset-top,0) + 20px) 22px calc(env(safe-area-inset-bottom,0) + 20px)}
+        .ss-wrap{position:fixed;inset:0;background:radial-gradient(120% 80% at 50% 0%, rgba(236,232,204,.10), transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;padding:calc(env(safe-area-inset-top,0) + 20px) 22px calc(env(safe-area-inset-bottom,0) + 20px);overflow-y:auto}
         .ss-inner{width:100%;max-width:400px;display:flex;flex-direction:column;min-height:min(560px,90vh)}
         .ss-brand{text-align:center;margin-top:8vh}
+        /* Supporter plaques sit above the logo, in the top third. They are pulled UP out of the
+           flow (pulling the brand up instead just makes them collide with the logo), so the logo
+           stays exactly where a non-supporter sees it. How far they can be pulled depends on how
+           much empty space is actually above the logo, which varies with screen height — so the
+           pull is measured in JS (_plaquesPull) rather than guessed at here. When there is not
+           enough room, the remainder pushes the logo down instead of the plaques off the screen. */
+        .ss-plaques{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:10px;
+                    margin-top:calc(-1 * var(--ss-plaquepull, 0px))}
+        /* The count sits in a fixed-width gutter that is ALWAYS present (empty for a single
+           purchase), so every plaque lines up with the others instead of a "4x" shoving its own
+           plaque to the right and making the column jitter. */
+        .ss-plaque{display:flex;align-items:center;justify-content:center;gap:6px;height:54px}
+        .ss-plaque__img{height:100%;width:auto;display:block;flex:none}
+        /* white, and about as tall as the lettering printed on the plaque (~36% of its height) */
+        .ss-plaque__x{flex:none;width:34px;text-align:right;color:#fff;font-weight:var(--weight-bold);
+                      font-size:25px;line-height:1;letter-spacing:-.01em;text-shadow:0 1px 3px rgba(0,0,0,.45)}
         .ss-title{font-size:26px;font-weight:var(--weight-bold);color:var(--text-bright);margin:14px 0 4px;letter-spacing:-.01em}
         .ss-tag{color:var(--text-muted);font-size:var(--fs-sm)}
         .ss-menu{margin-top:auto;display:flex;flex-direction:column;gap:12px}

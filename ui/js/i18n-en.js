@@ -30,6 +30,7 @@ I18n.register('en', {
     'common.hoursAgo': '{n}h ago',
 
     // ---- start screen ----
+    'start.supporterPlaques': 'Your supporter plaques',
     'start.tagline': 'Build the stable. Take the cut.',
     'start.continue': 'Continue',
     'start.continueEmpty': 'Continue where you left off',

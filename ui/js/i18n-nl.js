@@ -31,6 +31,7 @@ I18n.register('nl', {
     'common.hoursAgo': '{n} u geleden',
 
     // ---- start screen ----
+    'start.supporterPlaques': 'Jouw supportersplaquettes',
     'start.tagline': 'Bouw je stal op. Pak je commissie.',
     'start.continue': 'Doorgaan',
     'start.continueEmpty': 'Ga door waar je was gebleven',

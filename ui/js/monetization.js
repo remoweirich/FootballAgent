@@ -36,6 +36,14 @@ const Monetization = {
     ALL_ENTITLEMENTS: ['removeAds', 'insights', 'editor', 'sandbox', 'supporter'],
     KEY: 'entitlements',       // Prefs key: array of owned entitlement ids
     KEY_TIER: 'supporterTier', // Prefs key: highest supporter tier bought (for the badge)
+    KEY_SUP: 'supporterCounts',// Prefs key: { '1': n, '2': n, '3': n } — how many of EACH pack was bought
+    // Supporter plaques, shown on the start screen. Keyed by tier, in the order they are displayed
+    // (cheapest first), with the artwork and the name written on it.
+    PLAQUES: [
+        { tier: 1, slug: 'grateful', name: 'Grateful Gamer' },
+        { tier: 2, slug: 'ecstatic', name: 'Ecstatic Enjoyer' },
+        { tier: 3, slug: 'super', name: 'Super Supporter' },
+    ],
 
     // While true, everything except the "supporter" badge behaves as owned, so the prototype stays
     // fully usable before any store is live. Going to market = flip this false and attach a real
@@ -58,6 +66,51 @@ const Monetization = {
     purchased(ent) { return this._set().has(ent); },
     hasAds() { return !this.owns('removeAds'); },
     supporterTier() { return Prefs.get(this.KEY_TIER, 0) || 0; },
+    // ---- supporter packs: how many of each tier were bought ---------------------------------------
+    // Consumables, so a fan can buy the same one repeatedly and the plaque shows "4x". Counts live in
+    // Prefs beside the entitlements: they belong to the device/account, not to a save.
+    supporterCounts() {
+        let raw = null;
+        try { raw = Prefs.get(this.KEY_SUP, null); } catch (e) { raw = null; }
+        const out = {};
+        if (raw && typeof raw === 'object') for (const k of Object.keys(raw)) {
+            const n = parseInt(raw[k], 10);
+            if (n > 0) out[k] = n;
+        }
+        // Migration: someone who supported before counts existed has a tier but no counts. Credit them
+        // with the one purchase we can prove, so their plaque appears instead of silently vanishing.
+        if (!Object.keys(out).length) {
+            const t = this.supporterTier();
+            if (t > 0) out[String(t)] = 1;
+        }
+        return out;
+    },
+    supporterCountOf(tier) { return this.supporterCounts()[String(tier)] || 0; },
+    // Record one purchase of a tier, and keep the legacy highest-tier key in step.
+    addSupporterPack(tier, n) {
+        if (!tier) return;
+        const counts = this.supporterCounts();
+        counts[String(tier)] = (counts[String(tier)] || 0) + (n || 1);
+        if (typeof Prefs !== 'undefined') Prefs.set(this.KEY_SUP, counts);
+        this.grantSupporterTier(tier);
+    },
+    // Raise a tier's count to at least n — used by restore, where the store tells us the true total
+    // and must never reduce what the device already knows.
+    setSupporterCountAtLeast(tier, n) {
+        if (!tier || !(n > 0)) return;
+        const counts = this.supporterCounts();
+        if ((counts[String(tier)] || 0) >= n) return;
+        counts[String(tier)] = n;
+        if (typeof Prefs !== 'undefined') Prefs.set(this.KEY_SUP, counts);
+        this.grantSupporterTier(tier);
+    },
+    // The plaques to show, cheapest first, with how many of each. [] for a non-supporter.
+    supporterPlaques() {
+        const counts = this.supporterCounts();
+        return this.PLAQUES
+            .map(p => ({ ...p, count: counts[String(p.tier)] || 0 }))
+            .filter(p => p.count > 0);
+    },
     // Enhanced Insights is an owned entitlement the player can additionally toggle on/off (defaults on
     // once bought). insightsOn() is the single question the reveal code asks.
     insightsOn() { return this.owns('insights') && (typeof Prefs === 'undefined' || Prefs.get('insightsOn', true) !== false); },
@@ -80,7 +133,7 @@ const Monetization = {
         this.applyToGame();
     },
     // dev/testing helper: wipe every local entitlement
-    _reset() { this._save(new Set()); Prefs.set(this.KEY_TIER, 0); this.applyToGame(); },
+    _reset() { this._save(new Set()); Prefs.set(this.KEY_TIER, 0); Prefs.set(this.KEY_SUP, {}); this.applyToGame(); },
 
     // ---- purchase / restore : delegate to the active provider ------------------------------------
     async purchase(productId) {
@@ -91,7 +144,7 @@ const Monetization = {
         catch (e) { return { ok: false, error: 'provider', detail: String(e) }; }
         if (!res || !res.ok) return res || { ok: false, error: 'cancelled' };
         this.grant(p.grants || []);
-        if (p.tier) Prefs.set(this.KEY_TIER, Math.max(this.supporterTier(), p.tier));
+        if (p.tier) this.addSupporterPack(p.tier, 1);   // consumable: counts up, so the plaque can show "4x"
         return { ok: true, productId };
     },
     async restore() {

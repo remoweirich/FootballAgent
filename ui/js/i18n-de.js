@@ -29,6 +29,7 @@ I18n.register('de', {
     'common.hoursAgo': 'vor {n} Std.',
 
     // ---- start screen ----
+    'start.supporterPlaques': 'Deine Unterstützer-Plaketten',
     'start.tagline': 'Bau deine Agentur auf. Kassier deinen Anteil.',
     'start.continue': 'Fortsetzen',
     'start.continueEmpty': 'Mach da weiter, wo du aufgehört hast',
