@@ -13,8 +13,11 @@
 //         pro→(removeAds,insights,editor) · sandbox→(removeAds,insights,editor,sandbox)
 //         supporter_2/5/10→supporter
 //   4. Set Monetization.DEV_UNLOCK_ALL = false.
-//   NOTE: confirm the plugin's exact method names/return shapes against the installed version — the
-//   calls below follow the documented @revenuecat/purchases-capacitor API and are wrapped defensively.
+//   Verified against @revenuecat/purchases-capacitor 13.4.2: the native plugin registers as
+//   @CapacitorPlugin(name = "Purchases"), so window.Capacitor.Plugins.Purchases exists without this
+//   no-bundler app importing the ES module. getCustomerInfo()/restorePurchases() resolve to
+//   { customerInfo }, and CustomerInfo really does carry allPurchasedProductIdentifiers and
+//   nonSubscriptionTransactions[].productIdentifier, which _grantsFrom reads.
 // ============================================================
 const REVENUECAT_CONFIG = {
     apiKeyAndroid: 'goog_KjLcaHiBqfZWaxXJIOyMyCoGCwG',   // RevenueCat Android public SDK key (production, Google Play)
@@ -95,20 +98,43 @@ const RevenueCatProvider = {
         if (tier) Monetization.grantSupporterTier(tier);
     },
 
+    // Every product this game sells is a ONE-OFF purchase, never a subscription. getProducts()
+    // defaults to SUBSCRIPTION on Android and would return nothing for them, so the category is
+    // always passed explicitly.
+    PRODUCT_CATEGORY: 'NON_SUBSCRIPTION',
+    // Fetch a real store product by its Play id. Needed because purchaseStoreProduct() is given to
+    // the native side as-is, and PurchasesPlugin reads `productCategory` off that object and rejects
+    // the call without it — a hand-made { identifier } can never work.
+    async _storeProduct(sid) {
+        const P = this._p(); if (!P || !P.getProducts) return null;
+        try {
+            const got = await P.getProducts({ productIdentifiers: [sid], type: this.PRODUCT_CATEGORY });
+            const list = (got && got.products) || [];
+            return list.find(p => p && (p.identifier === sid || p.productIdentifier === sid)) || list[0] || null;
+        } catch (e) { return null; }
+    },
+
     // ---- the interface Monetization.purchase()/restore() call ----
     async purchase(productId) {
         const P = this._p(); if (!P) return { ok: false, error: 'no-plugin' };
-        if (!this._offerings) await this._loadOfferings();
+        // An empty offerings list is worth retrying: it usually means the catalogue was not ready yet.
+        if (!this._offerings || !this._offerings.length) await this._loadOfferings();
         const pkg = this._packageFor(productId);
         const sid = (typeof Monetization !== 'undefined') ? Monetization.storeIdOf(productId) : productId;
         try {
-            if (pkg) await P.purchasePackage({ aPackage: pkg });
-            else await P.purchaseStoreProduct({ product: { identifier: sid } });   // fallback: product not in an offering
+            if (pkg) { await P.purchasePackage({ aPackage: pkg }); return { ok: true }; }
+            // Not in an Offering — buy the product directly, with the object the store itself gave us.
+            const prod = await this._storeProduct(sid);
+            if (!prod) return { ok: false, error: 'not-in-store', detail: sid };
+            if (!prod.productCategory) prod.productCategory = this.PRODUCT_CATEGORY;   // older plugin builds omit it
+            await P.purchaseStoreProduct({ product: prod });
             return { ok: true };
         } catch (e) {
             const msg = String((e && e.message) || e || '');
+            // RevenueCat's PURCHASE_CANCELLED_ERROR is code 1, and `userCancelled` rides along in the
+            // rejection's info payload (PurchasesPlugin.rejectWithErrorContainer).
             if ((e && (e.userCancelled || e.code === '1')) || /cancel/i.test(msg)) return { ok: false, error: 'cancelled' };
-            return { ok: false, error: 'purchase', detail: msg };
+            return { ok: false, error: 'purchase', detail: msg, code: (e && e.code) || null };
         }
     },
     async restore() {
