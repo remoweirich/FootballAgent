@@ -37,6 +37,11 @@ const PH_EXEMPT = new Set(['ach.league', 'setup.genderHint', 'nego.loanRole.fina
 // product name plus a version number: nothing to translate, and duplicating it across packs
 // just means a version bump can go stale in two languages.
 const EN_ONLY = new Set(['settings.version']);
+// Keys PRESENT in every pack but deliberately identical to English: proper names printed on
+// artwork. The supporter packs are named after the plaque they unlock, and that name is part of the
+// picture — translating the store entry would mean buying "Grote steunpilaar" and being handed a
+// plaque reading "Ecstatic Enjoyer". Pinned so a later translation pass cannot drift them apart.
+const UNTRANSLATED = new Set(['store.supporter_2.name', 'store.supporter_5.name', 'store.supporter_10.name']);
 const tags = s => (String(s).match(/<\/?[a-zA-Z][a-zA-Z0-9]*/g) || []).map(t => t.toLowerCase()).sort().join(',');
 const nl = s => (String(s).match(/\n/g) || []).length;
 
@@ -57,15 +62,17 @@ for (const dir of ['js', 'ui/js']) {
     check(`${rel}: no keys that do not exist in English (typos)` +
       (extra.length ? ` — ${extra.slice(0, 6).join(', ')}` : ''), extra.length === 0);
 
-    const phBad = [], tagBad = [], nlBad = [];
+    const phBad = [], tagBad = [], nlBad = [], translated = [];   // translated: UNTRANSLATED keys that drifted
     for (const k of enK) {
       const e = EN[k], s = L[k];
       if (typeof e !== 'string' || typeof s !== 'string') continue;
       if (ph(e) !== ph(s) && !PH_EXEMPT.has(k)) phBad.push(k);
+      if (UNTRANSLATED.has(k) && e !== s) translated.push(k + ' = "' + s + '"');
       if (tags(e) !== tags(s)) tagBad.push(k);
       if (nl(e) !== nl(s)) nlBad.push(k);
     }
     check(`${rel}: same {placeholders} as English` + (phBad.length ? ` — ${phBad.slice(0, 6).join(', ')}` : ''), phBad.length === 0);
+    check(`${rel}: supporter packs keep their plaque names, untranslated` + (translated.length ? ` — ${translated.join(', ')}` : ''), translated.length === 0);
     check(`${rel}: same inline HTML as English` + (tagBad.length ? ` — ${tagBad.slice(0, 6).join(', ')}` : ''), tagBad.length === 0);
     check(`${rel}: same newline count as English` + (nlBad.length ? ` — ${nlBad.slice(0, 6).join(', ')}` : ''), nlBad.length === 0);
   }
