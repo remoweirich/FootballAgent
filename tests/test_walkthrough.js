@@ -86,7 +86,7 @@ check('scout report: attacking midfielder, Superstar ceiling / first-division fl
   // superstar, 84+ a first-division star (the German ladder has no "international regular" rung).
   return r.role === 'attacking_midfielder'
       && Scouting.ceilingFor(p) === 'International Superstar'
-      && Scouting.floorFor(p) === 'German First Division Star';`));
+      && Scouting.floorFor(p) === 'Erste Deutsche Liga · Star';`));
 
 // ---- the career timeline adds up ----
 check('career: Basel U21 -> Basel -> Stuttgart -> München Red, 3rd season now', runv(`
@@ -203,7 +203,7 @@ check('his report reads Superstar ceiling / English First Division floor', runv(
   const w = GameState.players.find(p => p.id === 'wt_wayne');
   return w.report.role === 'complete_forward'
       && Scouting.ceilingFor(w) === 'International Superstar'
-      && Scouting.floorFor(w) === 'English First Division Regular'
+      && Scouting.floorFor(w) === 'English First Division · Regular'
       && w.stats && Object.keys(w.stats).length === 0;`));
 
 check('the three advance steps unlock in order', runv(`
@@ -283,7 +283,7 @@ check('Wayne: report describes a complete forward', runv(`
       && Scouting.descFor(w).length > 20
       && Scouting.descFor(w).indexOf('{name}') === -1
       && Scouting.ceilingFor(w) === 'International Superstar'
-      && Scouting.floorFor(w) === 'English First Division Regular';`));
+      && Scouting.floorFor(w) === 'English First Division · Regular';`));
 
 check("Gemma's card agrees with the narration: three weeks to her report", runv(`
   const g = GameState.agency.scouts.find(s => s.region === 'west-midlands');

@@ -606,9 +606,9 @@ I18n.register('it', {
     'dlg.note.giftSent': 'Il regalo è in arrivo (−€{amt}).',
     // --- scout report: role tags, the written verdict and the tier a potential lands in.
     // {comp} is a competition name, so the rank templates keep it where a proper noun reads.
-    'scout.rank.star': 'Stella di {comp}',
-    'scout.rank.regular': 'Titolare in {comp}',
-    'scout.rank.sub': 'Rincalzo in {comp}',
+    'scout.rank.star': '{comp} · Stella',
+    'scout.rank.regular': '{comp} · Titolare',
+    'scout.rank.sub': '{comp} · Rincalzo',
     'scout.rank.intlSuperstar': 'Superstar internazionale',
     'scout.rank.intlRegular': 'Internazionale di ruolo',
     'scout.rank.amateurStar': 'Stella del calcio dilettantistico',

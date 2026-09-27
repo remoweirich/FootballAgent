@@ -230,7 +230,10 @@ const mkMatch = `
 `;
 check('invite: cup-final letter names the agent, the client, the competition and the opponent', run(mkMatch + `
   const inv = Attend.invitePayload(mkMatch());
-  return /Dear Alex Mercer,/.test(inv.body) && inv.body.includes("Luca Meier") && inv.body.includes("FC Zürich") && /Cup/.test(inv.competition);
+  // competitions are named in their own country's language now (the Swiss cup is "Schweizer
+  // Pokal"), so check the letter carries the competition's actual name rather than an English word
+  return /Dear Alex Mercer,/.test(inv.body) && inv.body.includes("Luca Meier") && inv.body.includes("FC Zürich")
+      && inv.competition.includes(compName('SCHWCUP'));
 `));
 check('invite: a bench-likely client draws the honest "may not play much" caveat', run(mkMatch + `
   const inv = Attend.invitePayload(mkMatch({ clients:[{ playerId:"p1", name:"Young Sub", position:"GK", styleRole:"shot_stopper", squadRole:"fringe", side:"home", played:false, goals:0, assists:0, yellow:0, red:0 }] }));

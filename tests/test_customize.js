@@ -48,7 +48,7 @@ check('moving one club OUT makes ERE the wrong size (17) — validator would blo
 run(`Clubs.applyDatabase({ id:'t3b', overrides:{ 'nac': { division:'ERE' } }});`);
 check('a matching swap IN restores ERE to 18', runv(`return Clubs.getClubsByDivision('ERE').length===18`));
 check('EED also back to its static size after the swap', runv(`return Clubs.getClubsByDivision('EED').length===Clubs.staticDivSize('EED')`));
-check('moved club carries the right tier + divisionName', runv(`var c=Clubs.getClubById('ajax'); return c.division==='EED' && c.tier===Clubs.DIV_TIERS.EED && c.divisionName===Clubs.DIV_NAMES.EED`));
+check('moved club carries the right tier + divisionName', runv(`var c=Clubs.getClubById('ajax'); return c.division==='EED' && c.tier===Clubs.DIV_TIERS.EED && c.divisionName===compName('EED')`));
 
 // ---- 5. B-team cap validation: piling reserves into a capped division is detectable ----
 run(`Clubs.init();`);

@@ -48,6 +48,16 @@ const I18n = {
         this.locale = this.packs[loc] ? loc : 'en';
         if (typeof Prefs !== 'undefined') Prefs.set('lang', this.locale);
         this._applyDocLang();
+        this._applyNativeComps();
+    },
+    // Competitions are named in their own country's language, which does not depend on the player's —
+    // except in Switzerland and Belgium, where it does. So a language change has to re-resolve them,
+    // and then let an imported real-names pack win again.
+    _applyNativeComps() {
+        try {
+            if (typeof applyNativeCompNames === 'function') applyNativeCompNames();
+            if (typeof GameState !== 'undefined' && GameState._applyCompNames) GameState._applyCompNames();
+        } catch (e) { /* engine not loaded (tests, boot order) */ }
     },
     // Keep <html lang> in step, so a screen reader pronounces the page in the language it is in.
     _applyDocLang() {

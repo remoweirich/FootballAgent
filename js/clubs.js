@@ -1447,6 +1447,9 @@ const Clubs = {
         // COMPETITIONS is a shared global mutated by name overlays; reset it to the shipped generic names
         // so a previous save's real-name import never bleeds into this game (mirrors the clean club rebuild)
         if (typeof resetCompetitionNames === 'function') resetCompetitionNames();
+        // ...then give each competition its own country's name. Must follow the reset, which
+        // restores the English generics, and precede any imported real-names pack, which wins.
+        if (typeof applyNativeCompNames === 'function') applyNativeCompNames();
         // drop any created-country injections from a previous game this session, so we rebuild a clean
         // stock world before the current database's overlay (incl. its created countries) is applied
         if (typeof WorldExt !== 'undefined' && WorldExt.reset) WorldExt.reset();
@@ -1544,7 +1547,10 @@ const Clubs = {
     DIV_TIERS: { ERE: 1, EED: 2, TWD: 3, DRD: 4, PREM: 1, CHAMP: 2, LEAGUE1: 3, LEAGUE2: 4, Natleague: 5, BUNDES: 1, '2BUNDES': 2, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 5, REGIONAL3: 6, LaLiga: 1, LaLiga2: 2, PrimeraSup: 3, PrimeraInf: 4, Segunda: 5, SuperLeagueCH: 1, ChallengeLeague: 2, PromotionLeague: 3, '1.LigaCH': 4, '2.LigaCH': 5, SerieA: 1, SerieB: 2, SerieC: 3, SerieD: 4, Ligue1: 1, Ligue2: 2, Ligue3: 3, Ligue4: 4, Ligue5: 5, LigaPortugal: 1, LigaPortugal2: 2, Liga3: 3, Liga4: 4, JupilerProLeague: 1, ChallengerProLeague: 2, BelgianDivision1: 3, BelgianDivision2: 4 },
     setDivision(clubId, divId) {
         const c = this.getClubById(clubId); if (!c) return;
-        c.division = divId; c.tier = this.DIV_TIERS[divId]; c.divisionName = this.DIV_NAMES[divId];
+        c.division = divId; c.tier = this.DIV_TIERS[divId];
+        // compName, not DIV_NAMES: the latter holds the English generic, and a club moved between
+        // divisions should cache the same name every other screen shows.
+        c.divisionName = (typeof compName === 'function') ? compName(divId) : this.DIV_NAMES[divId];
     },
     // Apply a customization-database overlay (built in the Customize screen) on top of the freshly
     // init()'d day-one pyramid. Overlays are id-keyed and sparse — only changed fields are present.

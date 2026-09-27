@@ -82,6 +82,103 @@ const COMPETITIONS = {
 // — otherwise one save's real-name import would bleed into the next game loaded in the same session.
 const COMPETITION_DEFAULT_NAMES = Object.fromEntries(Object.entries(COMPETITIONS).map(([id, c]) => [id, { name: c.name, short: c.short }]));
 function resetCompetitionNames() { for (const id in COMPETITION_DEFAULT_NAMES) { if (COMPETITIONS[id]) { COMPETITIONS[id].name = COMPETITION_DEFAULT_NAMES[id].name; COMPETITIONS[id].short = COMPETITION_DEFAULT_NAMES[id].short; } } }
+// ---- native competition names -----------------------------------------------------------------
+// A competition carries the name its OWN country would give it, in that country's language, in every
+// UI language: a German division reads German whether you play in English, Dutch or Portuguese. That
+// is how football competitions actually read to a fan, and it keeps one name per competition rather
+// than seven translations of a description.
+//
+// Two countries have more than one football language, and there the variant DOES follow the player's
+// language (COMP_NATIVE_LOCALE below):
+//   Switzerland — German for de/en/nl, French for fr/es/pt, Italian for it
+//   Belgium     — Dutch for en/de/nl, French for fr/es/pt/it
+//
+// Every name here is still INVENTED. The generic names exist to avoid real trademarks, so the native
+// forms sidestep the real ones on purpose: 'Erste Deutsche Liga' not Bundesliga, 'Eerste Nederlandse
+// Liga' not Eerste Divisie (a real second tier), 'Prima Lega Italiana' not Serie A, 'Primera Liga
+// Española' not Primera División, 'Coppa Nazionale Italiana' not Coppa Italia. England needs no
+// entry: its generic names are already English. The invented secondary cups (Landespokal, De kleine
+// Beker, Cupa Bass, Coppa Compagno, Segunda Taça, Notre Coupe, Coupe National) were already native
+// and are left alone. European competitions span countries and have no native language, so they keep
+// their generic names and follow nothing.
+const COMP_NATIVE = {
+    // Netherlands
+    ERE: 'Eerste Nederlandse Liga', EED: 'Tweede Nederlandse Liga',
+    TWD: 'Derde Nederlandse Liga', DRD: 'Vierde Nederlandse Liga',
+    BEKER: 'Nederlandse Beker', JCS: 'Nederlandse Supercup',
+    // Germany
+    BUNDES: 'Erste Deutsche Liga', '2BUNDES': 'Zweite Deutsche Liga', '3LIGA': 'Dritte Deutsche Liga',
+    REGIONAL1: 'Vierte Deutsche Liga', REGIONAL2: 'Fünfte Deutsche Liga', REGIONAL3: 'Sechste Deutsche Liga',
+    DFB: 'Deutscher Pokal',
+    // Spain
+    LaLiga: 'Primera Liga Española', LaLiga2: 'Segunda Liga Española', PrimeraSup: 'Tercera Liga Española',
+    PrimeraInf: 'Cuarta Liga Española', Segunda: 'Quinta Liga Española',
+    CDR: 'Copa Española',
+    // Italy
+    SerieA: 'Prima Lega Italiana', SerieB: 'Seconda Lega Italiana',
+    SerieC: 'Terza Lega Italiana', SerieD: 'Quarta Lega Italiana',
+    COPPA: 'Coppa Nazionale Italiana',
+    // Portugal
+    LigaPortugal: 'Primeira Divisão Portuguesa', LigaPortugal2: 'Segunda Divisão Portuguesa',
+    Liga3: 'Terceira Divisão Portuguesa', Liga4: 'Quarta Divisão Portuguesa',
+    TACAPT: 'Taça Portuguesa',
+    // France
+    Ligue1: 'Première Division Française', Ligue2: 'Deuxième Division Française',
+    Ligue3: 'Troisième Division Française', Ligue4: 'Quatrième Division Française',
+    Ligue5: 'Cinquième Division Française',
+    COUPEFR: 'Coupe Française',
+    // Liechtenstein plays in the Swiss pyramid but has one language of its own: German.
+    LICHCUP: 'Liechtensteiner Pokal',
+
+    // ---- Switzerland: de / fr / it ----
+    SuperLeagueCH: { de: 'Erste Schweizer Liga', fr: 'Première Division Suisse', it: 'Prima Lega Svizzera' },
+    ChallengeLeague: { de: 'Zweite Schweizer Liga', fr: 'Deuxième Division Suisse', it: 'Seconda Lega Svizzera' },
+    PromotionLeague: { de: 'Dritte Schweizer Liga', fr: 'Troisième Division Suisse', it: 'Terza Lega Svizzera' },
+    '1.LigaCH': { de: 'Vierte Schweizer Liga', fr: 'Quatrième Division Suisse', it: 'Quarta Lega Svizzera' },
+    '2.LigaCH': { de: 'Fünfte Schweizer Liga', fr: 'Cinquième Division Suisse', it: 'Quinta Lega Svizzera' },
+    SCHWCUP: { de: 'Schweizer Pokal', fr: 'Coupe Suisse', it: 'Coppa Svizzera' },
+    CHBAR: { de: 'Relegationsspiele', fr: 'Barrage', it: 'Spareggio' },
+
+    // ---- Belgium: nl / fr ----
+    JupilerProLeague: { nl: 'Eerste Belgische Liga', fr: 'Première Division Belge' },
+    ChallengerProLeague: { nl: 'Tweede Belgische Liga', fr: 'Deuxième Division Belge' },
+    BelgianDivision1: { nl: 'Derde Belgische Liga', fr: 'Troisième Division Belge' },
+    BelgianDivision2: { nl: 'Vierde Belgische Liga', fr: 'Quatrième Division Belge' },
+    BELCUP: { nl: 'Belgische Beker', fr: 'Coupe Belge' },
+};
+// For a multilingual competition, which variant each UI language sees. Keyed by the variant the
+// entry offers, so a Swiss entry (de/fr/it) and a Belgian one (nl/fr) both read from the same table:
+// a Belgian entry has no 'de', so a German player falls through to 'nl'.
+const COMP_NATIVE_LOCALE = {
+    en: ['de', 'nl', 'fr', 'it'],   // Swiss -> German, Belgian -> Dutch
+    de: ['de', 'nl', 'fr', 'it'],   // Swiss -> German, Belgian -> Dutch
+    nl: ['de', 'nl', 'fr', 'it'],   // Swiss -> German, Belgian -> Dutch
+    fr: ['fr', 'de', 'nl', 'it'],   // both -> French
+    es: ['fr', 'de', 'nl', 'it'],   // both -> French
+    pt: ['fr', 'de', 'nl', 'it'],   // both -> French
+    it: ['it', 'fr', 'nl', 'de'],   // Swiss -> Italian, Belgian -> French
+};
+// Resolve one entry for the current UI language. A plain string has no variants and is returned as is.
+function compNativeName(entry) {
+    if (typeof entry === 'string') return entry;
+    if (!entry) return null;
+    const loc = (typeof I18n !== 'undefined' && I18n.locale) || 'en';
+    const order = COMP_NATIVE_LOCALE[loc] || COMP_NATIVE_LOCALE.en;
+    for (const v of order) if (entry[v]) return entry[v];
+    return entry[Object.keys(entry)[0]] || null;
+}
+// Write the native names into COMPETITIONS. Runs right after resetCompetitionNames() in Clubs.init,
+// and again whenever the player changes language (see I18n.set), because the Swiss and Belgian names
+// depend on it. An imported real-names pack is applied AFTER this and therefore still wins.
+function applyNativeCompNames() {
+    for (const id in COMP_NATIVE) {
+        if (!COMPETITIONS[id]) continue;
+        const nm = compNativeName(COMP_NATIVE[id]);
+        if (nm) COMPETITIONS[id].name = nm;
+    }
+    if (typeof Clubs !== 'undefined' && Clubs.refreshDivisionNames) Clubs.refreshDivisionNames();
+}
+
 function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : (Clubs.DIV_NAMES && Clubs.DIV_NAMES[id]) || id; }
 
 const DIV_ORDER = ['ERE', 'EED', 'TWD', 'DRD'];

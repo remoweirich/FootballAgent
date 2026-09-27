@@ -593,9 +593,9 @@ I18n.register('en', {
     'dlg.note.giftSent': 'The gift is on its way (−€{amt}).',
     // --- scout report: the tier a potential lands in. Composed from the competition's CURRENT
     // name plus a rank, so it follows both the locale and the real-club-names overlay.
-    'scout.rank.star': '{comp} Star',
-    'scout.rank.regular': '{comp} Regular',
-    'scout.rank.sub': '{comp} Squad Player',
+    'scout.rank.star': '{comp} · Star',
+    'scout.rank.regular': '{comp} · Regular',
+    'scout.rank.sub': '{comp} · Squad Player',
     'scout.rank.intlSuperstar': 'International Superstar',
     'scout.rank.intlRegular': 'International Regular',
     'scout.rank.amateurStar': 'Amateur Star',
