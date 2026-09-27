@@ -36,7 +36,7 @@ const at = (loc, id) => { I.locale = loc; I._applyNativeComps(); return run('ret
 
 // ---- 1. single-language countries never vary with the player's language ----
 const FIXED = {
-    ERE: 'Eerste Nederlandse Liga', BEKER: 'Nederlandse Beker',
+    ERE: 'Eerste Nederlandse Divisie', BEKER: 'Nederlandse Beker',
     PREM: 'English First Division', FACUP: 'English Cup',
     BUNDES: 'Erste Deutsche Liga', REGIONAL3: 'Sechste Deutsche Liga', DFB: 'Deutscher Pokal',
     LaLiga: 'Primera Liga Española', CDR: 'Copa Española',
@@ -65,7 +65,7 @@ check('Swiss: Italian for it', CH_IT.every(l => at(l, 'SuperLeagueCH') === 'Prim
     && at(l, 'SCHWCUP') === 'Coppa Svizzera'));
 
 const BE_NL = ['en', 'de', 'nl'], BE_FR = ['fr', 'es', 'pt', 'it'];
-check('Belgian: Dutch for en/de/nl', BE_NL.every(l => at(l, 'JupilerProLeague') === 'Eerste Belgische Liga'
+check('Belgian: Dutch for en/de/nl', BE_NL.every(l => at(l, 'JupilerProLeague') === 'Eerste Belgische Divisie'
     && at(l, 'BELCUP') === 'Belgische Beker'));
 check('Belgian: French for fr/es/pt/it', BE_FR.every(l => at(l, 'JupilerProLeague') === 'Première Division Belge'
     && at(l, 'BELCUP') === 'Coupe Belge'));

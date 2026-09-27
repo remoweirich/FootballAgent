@@ -95,16 +95,17 @@ function resetCompetitionNames() { for (const id in COMPETITION_DEFAULT_NAMES) {
 //
 // Every name here is still INVENTED. The generic names exist to avoid real trademarks, so the native
 // forms sidestep the real ones on purpose: 'Erste Deutsche Liga' not Bundesliga, 'Eerste Nederlandse
-// Liga' not Eerste Divisie (a real second tier), 'Prima Lega Italiana' not Serie A, 'Primera Liga
-// Española' not Primera División, 'Coppa Nazionale Italiana' not Coppa Italia. England needs no
+// Divisie' not Eerste Divisie (a real second tier — the inserted 'Nederlandse' is what separates them),
+// 'Prima Lega Italiana' not Serie A, 'Primera Liga Española' not Primera División, 'Coppa Nazionale
+// Italiana' not Coppa Italia. England needs no
 // entry: its generic names are already English. The invented secondary cups (Landespokal, De kleine
 // Beker, Cupa Bass, Coppa Compagno, Segunda Taça, Notre Coupe, Coupe National) were already native
 // and are left alone. European competitions span countries and have no native language, so they keep
 // their generic names and follow nothing.
 const COMP_NATIVE = {
     // Netherlands
-    ERE: 'Eerste Nederlandse Liga', EED: 'Tweede Nederlandse Liga',
-    TWD: 'Derde Nederlandse Liga', DRD: 'Vierde Nederlandse Liga',
+    ERE: 'Eerste Nederlandse Divisie', EED: 'Tweede Nederlandse Divisie',
+    TWD: 'Derde Nederlandse Divisie', DRD: 'Vierde Nederlandse Divisie',
     BEKER: 'Nederlandse Beker', JCS: 'Nederlandse Supercup',
     // Germany
     BUNDES: 'Erste Deutsche Liga', '2BUNDES': 'Zweite Deutsche Liga', '3LIGA': 'Dritte Deutsche Liga',
@@ -140,10 +141,10 @@ const COMP_NATIVE = {
     CHBAR: { de: 'Relegationsspiele', fr: 'Barrage', it: 'Spareggio' },
 
     // ---- Belgium: nl / fr ----
-    JupilerProLeague: { nl: 'Eerste Belgische Liga', fr: 'Première Division Belge' },
-    ChallengerProLeague: { nl: 'Tweede Belgische Liga', fr: 'Deuxième Division Belge' },
-    BelgianDivision1: { nl: 'Derde Belgische Liga', fr: 'Troisième Division Belge' },
-    BelgianDivision2: { nl: 'Vierde Belgische Liga', fr: 'Quatrième Division Belge' },
+    JupilerProLeague: { nl: 'Eerste Belgische Divisie', fr: 'Première Division Belge' },
+    ChallengerProLeague: { nl: 'Tweede Belgische Divisie', fr: 'Deuxième Division Belge' },
+    BelgianDivision1: { nl: 'Derde Belgische Divisie', fr: 'Troisième Division Belge' },
+    BelgianDivision2: { nl: 'Vierde Belgische Divisie', fr: 'Quatrième Division Belge' },
     BELCUP: { nl: 'Belgische Beker', fr: 'Coupe Belge' },
 };
 // For a multilingual competition, which variant each UI language sees. Keyed by the variant the

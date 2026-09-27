@@ -147,13 +147,42 @@ const Europe = {
     // `forDisplay` (live table highlighting): when the cup is undecided the cup slot is left RESERVED
     // for the eventual winner rather than pre-assigned to a league team. Entrant building (default)
     // always fills every slot so the field stays at 36.
+    // ---- guest clubs ------------------------------------------------------------------------------
+    // A club can play in one association's league while representing another. Liechtenstein has no
+    // league of its own, so Vaduz and Eschen-Mauren play out their season in the Swiss pyramid — but
+    // they are Liechtenstein clubs, and Liechtenstein's single European berth is its cup. A Swiss
+    // league finish must therefore give them nothing: the berth cascades to the next Swiss club.
+    //
+    // Derived rather than hardcoded: a guest is a club listed as REAL in a POOLED association's own
+    // pool. That is exactly Vaduz and Eschen-Mauren today, and covers the next such club for free.
+    // The Swiss cups already substitute them out (see League._swissVirtualSub), so the league was the
+    // only remaining route.
+    _guestIds: null,
+    guestIds() {
+        if (this._guestIds) return this._guestIds;
+        const m = new Map();   // clubId -> the pooled association it represents
+        for (const [assoc, pool] of Object.entries(EUROPE_DATA.pools || {})) {
+            for (const c of pool.clubs || []) if (c.real && c.id) m.set(c.id, assoc);
+        }
+        return (this._guestIds = m);
+    },
+    // True when `id` plays in `country`'s league but represents a different association.
+    isGuestIn(id, country) {
+        const assoc = this.guestIds().get(id);
+        return !!assoc && assoc !== country;
+    },
+
     _tierMap(country, order, cupWinnerId, forDisplay) {
         const cfg = EUROPE_DATA.implemented[country];
         const byTag = {}, byClub = {};
         if (!cfg) return { byTag, byClub };
         const slots = cfg.slots, n = slots.length, cupIdx = slots.indexOf('UELcup');
+        // Guests represent another association and cannot take this country's berths, so they drop out
+        // of the order entirely and every club below them moves up a place.
+        order = (order || []).filter(id => !this.isGuestIn(id, country));
         let cupId = cupWinnerId || null;
         if (cupId && typeof isReserveClub === 'function' && isReserveClub(cupId)) cupId = null; // reserves can't play in Europe
+        if (cupId && this.isGuestIn(cupId, country)) cupId = null;                              // nor can a guest
         const cupRank = cupId ? order.indexOf(cupId) : -1;
         const qualified = cupId != null && cupRank >= 0 && cupRank < n - 1;   // an already-qualified club won the cup
         const put = (tag, id) => { if (!id) return; (byTag[tag] = byTag[tag] || []).push(id); byClub[id] = tag; };
@@ -273,23 +302,53 @@ const Europe = {
         sorted.forEach((id, i) => pots[Math.min(3, Math.floor(i / 9))].push(id));
         return pots;
     },
+    // No pot may hold more than `cap` clubs from one association. A violation is fixed by swapping the
+    // weakest offender out and the strongest legal club back in.
+    //
+    // This used to walk pots top-down and could only push DOWNWARDS, which left the last pot with no
+    // outlet — it warned and gave up. That was not an edge case: pots are formed by reputation rank, so
+    // a weak association arriving through several qualifying paths puts all of its clubs in the bottom
+    // pot at once. Every overflow measured across 240 editions was pot 4, never pots 1-3. The repair now
+    // tries the pot below, then the pot above, then any pot with room.
+    //
+    // It terminates because a swap is only made when NEITHER pot ends up over cap for the two
+    // associations involved, so every successful swap strictly reduces the number of violations and can
+    // never recreate the one it just fixed.
     _repairPots(ed, comp, pots) {
         const cap = EUROPE_DATA.leaguePhase.maxPerAssocPerPot;
-        for (let p = 0; p < pots.length; p++) {
-            let guard = 0;
-            while (guard++ < 300) {
-                const cnt = {}; pots[p].forEach(id => { const a = euAssoc(id); cnt[a] = (cnt[a] || 0) + 1; });
-                const over = Object.entries(cnt).find(([, n]) => n > cap);
-                if (!over) break;
-                const assoc = over[0];
-                if (p === pots.length - 1) { this._warn(ed, comp + ' pot' + (p + 1) + ' relaxed: ' + over[1] + ' from ' + assoc); break; }
-                const out = pots[p].filter(id => euAssoc(id) === assoc).sort((a, b) => euRep(a) - euRep(b))[0];
-                const next = pots[p + 1];
-                const cand = next.filter(id => euAssoc(id) !== assoc).sort((a, b) => euRep(b) - euRep(a))
-                    .find(id => next.filter(x => euAssoc(x) === assoc && x !== id).length + 1 <= cap);
-                if (!cand) { this._warn(ed, comp + ' pot' + (p + 1) + ' no legal swap for ' + assoc); break; }
-                pots[p][pots[p].indexOf(out)] = cand; next[next.indexOf(cand)] = out;
+        const countOf = p => { const c = {}; pots[p].forEach(id => { const a = euAssoc(id); c[a] = (c[a] || 0) + 1; }); return c; };
+        const overIn = p => Object.entries(countOf(p)).find(([, n]) => n > cap) || null;
+        // Move one `assoc` club from pot p to pot q, taking a legal club back. Refuses unless both pots
+        // are still within cap afterwards.
+        const swap = (p, q, assoc) => {
+            if (q < 0 || q >= pots.length || q === p) return false;
+            const cq = countOf(q), cp = countOf(p);
+            if ((cq[assoc] || 0) + 1 > cap) return false;
+            const out = pots[p].filter(id => euAssoc(id) === assoc).sort((a, b) => euRep(a) - euRep(b))[0];
+            if (!out) return false;
+            const cand = pots[q].filter(id => euAssoc(id) !== assoc).sort((a, b) => euRep(b) - euRep(a))
+                .find(id => (cp[euAssoc(id)] || 0) + 1 <= cap);
+            if (!cand) return false;
+            pots[p][pots[p].indexOf(out)] = cand;
+            pots[q][pots[q].indexOf(cand)] = out;
+            return true;
+        };
+        let guard = 0;
+        while (guard++ < 400) {
+            let moved = false, stuck = null;
+            for (let p = 0; p < pots.length; p++) {
+                const o = overIn(p);
+                if (!o) continue;
+                const assoc = o[0];
+                // Down first: it disturbs the reputation ordering least. Then up. Then anywhere.
+                if (swap(p, p + 1, assoc) || swap(p, p - 1, assoc)) { moved = true; break; }
+                for (let q = 0; q < pots.length && !moved; q++) if (swap(p, q, assoc)) moved = true;
+                if (moved) break;
+                // Genuinely infeasible: this association has more clubs than 4 pots x cap can hold.
+                stuck = comp + ' pot' + (p + 1) + ' relaxed: ' + o[1] + ' from ' + assoc;
+                break;
             }
+            if (!moved) { if (stuck) this._warn(ed, stuck); break; }
         }
     },
     // swiss draw: each club plays 2 from every pot (1 home, 1 away) -> 8 games / 4 home / 4 away,
