@@ -14,7 +14,7 @@ const ClubScreen = {
                 const vtitles = {}; vhist.forEach(h => (h.trophies || []).forEach(t => vtitles[t] = (vtitles[t] || 0) + 1));
                 const vhonours = Object.keys(vtitles).length
                     ? `<div class="section-label">${I18n.t('club.euHonours')}</div><div class="chip-row" style="margin:var(--space-2) 0">${Object.entries(vtitles).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`; }).join('')}</div>` : '';
-                el.innerHTML = `<div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest({ name: v.name, colors: { primary: '#5A626D' } }, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${v.name}</span></div>
+                el.innerHTML = `<div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest({ name: v.name, colors: { primary: '#5A626D' } }, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${UI.esc(v.name)}</span></div>
                 <p class="hint" style="margin-top:-8px">${v.country || I18n.t('club.europe')} · ${I18n.t('common.reputation')} ${v.reputation}</p>
                 <p class="muted">${I18n.t('club.euGuestDesc', { country: v.country || I18n.t('club.uefaAssoc') })}</p>${vhonours}${this.europeBestHTML(clubId)}`;
                 return;
@@ -61,12 +61,12 @@ const ClubScreen = {
         const sorters = { apps: (a, b) => b.agg.apps - a.agg.apps, goals: (a, b) => b.agg.goals - a.agg.goals, assists: (a, b) => b.agg.assists - a.agg.assists, avg: (a, b) => b.agg.avg - a.agg.avg };
         rowsData.sort((a, b) => (b.current - a.current) || (sorters[this.state.sort] || sorters.apps)(a, b));
         const clientRows = rowsData.length ? rowsData.map(d => `<a href="${Router.link('client', d.p.id)}" class="frow" style="cursor:pointer;${d.current ? 'background:var(--accent-fill);border-radius:var(--radius-sm)' : ''}">
-            <span class="frow__k">${d.p.name}${d.current ? ` <span class="pill pill--accent" style="padding:1px 6px;font-size:10px">${I18n.t('club.current')}</span>` : ''}${d.p.retired ? ` <span class="pill" style="padding:1px 6px;font-size:10px">${I18n.t('club.retired')}</span>` : ''}${d.youthOnly ? ` <span class="muted">${I18n.t('club.youth')}</span>` : ''}</span>
+            <span class="frow__k">${UI.esc(d.p.name)}${d.current ? ` <span class="pill pill--accent" style="padding:1px 6px;font-size:10px">${I18n.t('club.current')}</span>` : ''}${d.p.retired ? ` <span class="pill" style="padding:1px 6px;font-size:10px">${I18n.t('club.retired')}</span>` : ''}${d.youthOnly ? ` <span class="muted">${I18n.t('club.youth')}</span>` : ''}</span>
             <span class="frow__v">${d.agg.apps} ${I18n.t('common.appsShort')} · ${d.agg.goals}${I18n.t('common.goalsShort')} · ${d.agg.assists || 0}${I18n.t('common.assistsShort')} · ${UI.ratingText(d.agg.avg)}${d.tro ? ' · 🏆' + d.tro : ''}</span></a>`).join('')
             : `<p class="muted">${mode === 'season' ? I18n.t('club.noneSeason') : I18n.t('club.noneAll')}</p>`;
 
         el.innerHTML = `
-        <div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest(c, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${c.name}</span></div>
+        <div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest(c, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${UI.esc(c.name)}</span></div>
         <p class="hint" style="margin-top:-8px"><a href="#leagues" onclick="LeaguesScreen.openFor('${c.division}');return false" style="color:var(--info-text);text-decoration:underline;text-underline-offset:2px">${c.divisionName}</a> · ${I18n.t('common.reputation')} ${c.reputation}</p>
         <div style="margin:var(--space-2) 0 var(--space-4)">${UI.relBadge(c.id)}</div>
         <div class="section-label">${I18n.t('club.honours')}</div>

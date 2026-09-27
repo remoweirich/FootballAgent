@@ -74,9 +74,17 @@
   box-sizing:border-box; min-height:calc(var(--nav-h) + env(safe-area-inset-bottom));
 }
 .nav-item{
-  flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px;
   font-size:var(--fs-xs); color:var(--text-dim);
   background:none; border:0; cursor:pointer;
+}
+/* Five items share the width, so each gets ~70px on a 360px screen and ~62px on a 320px one.
+   "Competitions" already runs close in English; "Competiciones" (es) and "Osservazione" (it) do
+   not fit at all. Keep every label on ONE line and let it shrink a little rather than wrap, which
+   would make the nav taller and leave the icons misaligned against their neighbours. */
+.nav-item > span{
+  max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-size:clamp(9px, 2.6vw, var(--fs-xs)); line-height:1.1;
 }
 .nav-item .ti{ font-size:var(--nav-icon); }
 .nav-item.is-active{ color:var(--accent); }

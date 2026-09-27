@@ -32,7 +32,7 @@ const ScoutingScreen = {
                     <button onclick="event.preventDefault();event.stopPropagation();ScoutingScreen.remove('${p.id}')" style="position:absolute;top:8px;right:8px;background:none;border:0;color:var(--text-dim);font-size:var(--fs-xl);cursor:pointer;z-index:1" aria-label="${I18n.t('common.remove')}"><i class="ti ti-x"></i></button>
                     <div class="flex-row">
                         <div style="flex:1;min-width:0">
-                            <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.flag(p.nationality)} ${p.name}</span><span style="font-size:var(--fs-sm);color:var(--text-faint)">${p.age}y</span>${isNew ? `<span class="pill pill--accent" style="padding:1px 7px;font-size:10px">${I18n.t('scouting.new')}</span>` : ''}</div>
+                            <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.flag(p.nationality)} ${UI.esc(p.name)}</span><span style="font-size:var(--fs-sm);color:var(--text-faint)">${p.age}y</span>${isNew ? `<span class="pill pill--accent" style="padding:1px 7px;font-size:10px">${I18n.t('scouting.new')}</span>` : ''}</div>
                             <div class="cl-sub">${p.position} <span style="color:var(--text-chevron)">·</span> <span class="flex-row" style="gap:5px;display:inline-flex">${UI.crest(club)}${club ? club.name : '—'}</span></div>
                         </div>
                         ${UI.abilityBadge(p.ability)}
@@ -52,7 +52,7 @@ const ScoutingScreen = {
         return `<p class="hint" style="margin-bottom:var(--space-4)">${I18n.t('scouting.scoutsIntro')}</p>` +
             ag.scouts.map(s => {
                 const scope = s.league ? `${(COMPETITIONS[s.league] || {}).name || s.league} · ${s.country}` : s.region ? regionName(s.region) : I18n.t('scouting.unassigned');
-                const regionOpts = homeRegions.map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${r.name} — ${UI.euro(Scouts.regionReportCost(r.id))}${I18n.t('scouting.perReport')}</option>`).join('');
+                const regionOpts = homeRegions.map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${UI.esc(r.name)} — ${UI.euro(Scouts.regionReportCost(r.id))}${I18n.t('scouting.perReport')}</option>`).join('');
                 const intl = hasLic ? (() => {
                     const countries = Scouts.intlCountries();
                     const selC = (s.country && countries.includes(s.country)) ? s.country : countries[0];
@@ -62,7 +62,7 @@ const ScoutingScreen = {
                 })() : `<p class="hint">${I18n.t('scouting.needLicence')}</p>`;
                 return `<div class="card" style="margin-bottom:var(--space-3)">
                     <div class="flex-row" style="justify-content:space-between">
-                        <div><div class="row-title">${s.name}</div><div class="row-sub">${s.title} · ${scope}</div></div>
+                        <div><div class="row-title">${UI.esc(s.name)}</div><div class="row-sub">${s.title} · ${scope}</div></div>
                         ${UI.abilityBadge(s.quality)}
                     </div>
                     <div class="info-grid" style="margin:var(--space-3) 0">
@@ -126,7 +126,7 @@ const ScoutingScreen = {
         const cat = Scouts.market();
         const rows = cat.map(o => `<div class="card" style="margin-bottom:var(--space-3)" data-scout="${o.id}">
             <div class="flex-row" style="justify-content:space-between">
-                <div><div class="row-title">${o.name}</div><div class="row-sub">${o.title}</div></div>
+                <div><div class="row-title">${UI.esc(o.name)}</div><div class="row-sub">${o.title}</div></div>
                 ${UI.abilityBadge(o.quality)}
             </div>
             <div class="info-grid" style="margin:var(--space-3) 0">
@@ -146,7 +146,7 @@ const ScoutingScreen = {
     showRegionClubs(regionId) {
         const clubs = Clubs.getClubsByRegion(regionId).slice().sort((a, b) => b.reputation - a.reputation);
         const rows = clubs.length
-            ? clubs.map(c => `<a href="${Router.link('clubs', c.id)}" class="frow" style="cursor:pointer" onclick="Router.closeSheet()"><span class="frow__k flex-row" style="gap:8px">${UI.crest(c)}${c.name}</span><span class="frow__v muted">${c.divisionName || ''} · ${I18n.t('agency.eff.rep')} ${c.reputation}</span></a>`).join('')
+            ? clubs.map(c => `<a href="${Router.link('clubs', c.id)}" class="frow" style="cursor:pointer" onclick="Router.closeSheet()"><span class="frow__k flex-row" style="gap:8px">${UI.crest(c)}${UI.esc(c.name)}</span><span class="frow__v muted">${c.divisionName || ''} · ${I18n.t('agency.eff.rep')} ${c.reputation}</span></a>`).join('')
             : `<p class="muted">${I18n.t('scouting.noRegionClubs')}</p>`;
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${regionName(regionId)}</div>
             <p class="hint">${I18n.t('scouting.clubsN', { n: clubs.length })} · ${UI.euro(Scouts.regionReportCost(regionId))} ${I18n.t('scouting.perScoutingReport')}</p>

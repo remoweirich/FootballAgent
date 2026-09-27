@@ -18,7 +18,7 @@ Nego.clubPosLine = function (clubId) {
 // The offering/bidding club, as a line you can read AND tap through to: its name links to the club
 // page, and its reputation is spelled out so you can judge whether the move is a step up or down.
 Nego.clubLine = function (club) {
-    return `<a href="${Router.link('clubs', club.id)}" style="color:inherit;text-decoration:underline;text-underline-offset:2px">${club.name}</a>, ${club.divisionName} · ${I18n.t('common.reputation')} ${club.reputation}${this.clubPosLine(club.id)}`;
+    return `<a href="${Router.link('clubs', club.id)}" style="color:inherit;text-decoration:underline;text-underline-offset:2px">${UI.esc(club.name)}</a>, ${club.divisionName} · ${I18n.t('common.reputation')} ${club.reputation}${this.clubPosLine(club.id)}`;
 };
 
 Nego.linkifyPlayers = function (html) {
@@ -111,7 +111,7 @@ Nego.prependPlayerLink = function (el, m) {
     const info = p.clubId ? UI.currentClubInfo(p) : null;
     el.insertAdjacentHTML('afterbegin', `<a class="list-row" href="${Router.link('client', p.id)}" style="cursor:pointer;margin-bottom:var(--space-4)">
         <div style="flex:1;min-width:0">
-            <div class="row-title">${UI.flag(p.nationality)} ${p.name}</div>
+            <div class="row-title">${UI.flag(p.nationality)} ${UI.esc(p.name)}</div>
             <div class="row-sub">${p.position} · ${p.age}y${info ? ' · ' + info.name : ''}</div>
         </div>${UI.abilityBadge(p.ability)}<i class="ti ti-chevron-right row-chev"></i></a>`);
 };
@@ -152,7 +152,7 @@ Nego.transfer = function (el, m) {
     const bonusMax = Math.max(Agency.maxSigningBonus(p, o.proposedWage), Agency.agentFeeCap(o.transferFee));
     const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
     const cut = w => Math.round(w * p.wageCommission / 100);
-    const fromLeague = Agency.isFreeAgent(p) || !from ? I18n.t('nego.freeAgentNoClub') : `${from.name}, ${from.divisionName}`;
+    const fromLeague = Agency.isFreeAgent(p) || !from ? I18n.t('nego.freeAgentNoClub') : `${UI.esc(from.name)}, ${from.divisionName}`;
     const feeLine = Agency.isFreeAgent(p) ? I18n.t('nego.freeTransfer') : I18n.t('nego.agreedFee', { fee: UI.euro(o.transferFee) });
     const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id);
 
@@ -279,7 +279,7 @@ Nego.renewal = function (el, m) {
         <div style="margin:6px 0 var(--space-3)">${UI.relBadge(club.id)}</div>
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
-            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${club.name}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${UI.esc(club.name)}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.roleUntil')}</span><span class="frow__v">${roleName(p)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
         </div>
         <label class="field-label">${I18n.t('nego.wage')} <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">${I18n.t('nego.yourCutPct', { cut: `<span id="negoCutVal">${UI.euro(cut(c.wage))}</span>`, pct: p.wageCommission })}</span></label>

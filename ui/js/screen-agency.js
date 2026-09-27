@@ -41,7 +41,7 @@ const AgencyScreen = {
         if (dir && list) {
             const item = list[Math.min(Math.max(idx, 0), list.length - 1)];
             if (item) {
-                const src = `assets/img/${dir}/${item.id}${owned ? '' : '_buy'}.png`;
+                const src = `assets/img/${dir}/${item.id}${owned ? '' : '_buy'}.webp`;
                 return `<img class="pic-img" src="${src}" alt="" onclick="AgencyScreen.zoomArt(event,'${src}')" onerror="AgencyScreen.artFallback(this,'${this.iconFor(kind, idx)}')">`;
             }
         }
@@ -88,7 +88,7 @@ const AgencyScreen = {
         <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('office')">
             <div class="tier__body tier__body--current">
                 <div class="pic pic--current"><i class="ti ${this.iconFor('office', Upgrades.state().officeIndex)}"></i></div>
-                <div style="flex:1"><div class="tier__name">${off.name}</div><div class="tier__benefit muted">${I18n.t('agency.repShort')} ${off.repLimit} · ${I18n.t('agency.scoutsN', { n: off.maxScouts })} · ${sl} · ${UI.euro(off.weekly)}/wk</div></div>
+                <div style="flex:1"><div class="tier__name">${UI.esc(off.name)}</div><div class="tier__benefit muted">${I18n.t('agency.repShort')} ${off.repLimit} · ${I18n.t('agency.scoutsN', { n: off.maxScouts })} · ${sl} · ${UI.euro(off.weekly)}/wk</div></div>
                 <i class="ti ti-chevron-right row-chev"></i>
             </div>
         </a>
@@ -146,7 +146,7 @@ const AgencyScreen = {
                 <div class="flex-row" style="justify-content:space-between">
                     <div class="flex-row" style="gap:10px">
                         <div class="pic ${owned ? 'pic--owned' : ''}"><i class="ti ${AGENCY_PICS.equipment[e.id] || 'ti-tool'}"></i></div>
-                        <div><div class="row-title">${e.name} ${owned ? `<span class="pill pill--accent">${I18n.t('common.owned')}</span>` : ''}</div><div class="row-sub">${eff}</div></div>
+                        <div><div class="row-title">${UI.esc(e.name)} ${owned ? `<span class="pill pill--accent">${I18n.t('common.owned')}</span>` : ''}</div><div class="row-sub">${eff}</div></div>
                     </div>
                     ${owned ? '' : `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyEquip('${e.id}')">${UI.euro(e.price)}</button>`}
                 </div></div>`;
@@ -160,7 +160,7 @@ const AgencyScreen = {
                 <div class="flex-row" style="justify-content:space-between">
                     <div class="flex-row" style="gap:10px">
                         <div class="pic ${n > 0 ? 'pic--owned' : ''}"><i class="ti ${AGENCY_PICS.staff[s.id] || 'ti-user'}"></i></div>
-                        <div><div class="row-title">${s.name} <span class="pill">${n}/${s.max}</span></div><div class="row-sub">${UI.euro(s.weekly)}/wk · ${eff}</div></div>
+                        <div><div class="row-title">${UI.esc(s.name)} <span class="pill">${n}/${s.max}</span></div><div class="row-sub">${UI.euro(s.weekly)}/wk · ${eff}</div></div>
                     </div>
                     <div class="flex-row" style="gap:6px">
                         <button class="btn btn--accent-outline btn--sm" style="width:auto" ${n >= s.max ? 'disabled' : ''} onclick="AgencyScreen.hireStaff('${s.id}')">${I18n.t('agency.hire')}</button>
@@ -182,7 +182,7 @@ const AgencyScreen = {
             const pic = state === 'owned' ? 'pic--owned' : state === 'current' ? 'pic--current' : state === 'locked' ? 'pic--locked' : '';
             const action = state === 'buyable' ? `<button class="btn btn--primary btn--sm" style="width:auto" onclick="AgencyScreen.buy('${kind}')">${kind === 'office' ? I18n.t('agency.moveIn') : I18n.t('agency.buyPrefix')}${UI.euro(price)}</button>`
                 : state === 'current' ? `<span class="pill pill--accent">${I18n.t('common.current')}</span>` : state === 'owned' ? `<span class="pill">${I18n.t('common.owned')}</span>` : '<i class="ti ti-lock" style="color:var(--text-dim)"></i>';
-            return `<div class="tier" style="margin-bottom:var(--space-3)"><div class="tier__body ${cls}"><div class="pic ${pic}">${this.picInner(kind, i, state === 'owned' || state === 'current')}</div><div style="flex:1"><div class="tier__name">${item.name}</div><div class="tier__benefit muted">${meta}</div></div>${action}</div></div>`;
+            return `<div class="tier" style="margin-bottom:var(--space-3)"><div class="tier__body ${cls}"><div class="pic ${pic}">${this.picInner(kind, i, state === 'owned' || state === 'current')}</div><div style="flex:1"><div class="tier__name">${UI.esc(item.name)}</div><div class="tier__benefit muted">${meta}</div></div>${action}</div></div>`;
         }).join('');
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('agency.ladder' + kind[0].toUpperCase() + kind.slice(1))}</div>
             <div style="max-height:60vh;overflow-y:auto">${rows}</div>

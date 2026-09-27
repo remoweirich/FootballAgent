@@ -78,7 +78,7 @@ Router.register('home', {
             const club = Clubs.getClubById(p.clubId), tot = seasonTotals(p, GameState.seasonStartYear);
             return `<a class="list-row" href="#client/${p.id}" style="cursor:pointer">
                 ${UI.crest(club)}
-                <div style="flex:1;min-width:0"><div class="row-title">${p.name}</div><div class="row-sub">${p.position} · ${club ? club.name : I18n.t('common.freeAgent')}</div></div>
+                <div style="flex:1;min-width:0"><div class="row-title">${UI.esc(p.name)}</div><div class="row-sub">${p.position} · ${club ? club.name : I18n.t('common.freeAgent')}</div></div>
                 <div style="font-size:var(--fs-md);color:var(--text-muted);text-align:right">${tot.apps} ${I18n.t('common.appsShort')} · ${UI.ratingText(tot.avg)}</div>
             </a>`;
         }).join('') : `<div class="empty"><div class="empty__icon"><i class="ti ti-zoom-scan"></i></div><div class="empty__title">${I18n.t('home.noClients')}</div><div class="empty__hint">${I18n.t('home.noClientsSub')}</div><a class="btn btn--accent-outline btn--sm empty__cta" href="#scouting"><i class="ti ti-zoom-scan"></i>${I18n.t('home.openScouting')}</a></div>`}

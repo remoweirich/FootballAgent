@@ -217,8 +217,22 @@ const Router = {
     },
 
     // ---- bottom sheet (quick pickers / confirmations) ----
+    // Nine screens (Settings, Store, Live-sim, Customize, Sandbox, Setup, Start, Achievements,
+    // Dialogue) own #app and replace its whole contents, which deletes the layers renderShell put
+    // there. So find the layer or CREATE it — a missing layer used to make sheet()/modal() return
+    // silently, and a tap that opens nothing at all looks exactly like a dead button.
+    _layer(id) {
+        let layer = document.getElementById(id);
+        if (layer) return layer;
+        const host = document.getElementById('app') || document.body;
+        if (!host || !document.createElement) return null;
+        layer = document.createElement('div');
+        layer.id = id;
+        host.appendChild(layer);
+        return layer;
+    },
     sheet(html) {
-        const layer = document.getElementById('sheetLayer'); if (!layer) return;
+        const layer = this._layer('sheetLayer'); if (!layer) return;
         layer.innerHTML = `<div class="sheet-backdrop" onclick="if(event.target===this)Router.closeSheet()"><div class="sheet">${html}</div></div>`;
     },
     closeSheet() { const layer = document.getElementById('sheetLayer'); if (layer) layer.innerHTML = ''; },
@@ -230,7 +244,7 @@ const Router = {
     // routed through whatever action the card's content already wires up (continue,
     // next spotlight, etc.) rather than a hardcoded close.
     modal(html) {
-        const layer = document.getElementById('modalLayer'); if (!layer) return;
+        const layer = this._layer('modalLayer'); if (!layer) return;
         layer.innerHTML = `<div class="modal-backdrop" onclick="Router._tapModalBackdrop(event)"><div class="modal-card">${html}</div></div>`;
     },
     _tapModalBackdrop(event) {

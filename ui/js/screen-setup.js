@@ -21,7 +21,7 @@ const Setup = {
     idx: 0,
 
     // brand logo (shield badge) — the one expressive mark on this screen
-    CREST: `<img class="setup-crest" src="assets/img/fa-logo.png" alt="">`,
+    CREST: `<img class="setup-crest" src="assets/img/fa-logo.webp" alt="">`,
 
     show() {
         const countries = (typeof REGIONS_BY_COUNTRY !== 'undefined') ? Object.keys(REGIONS_BY_COUNTRY) : ['Netherlands'];

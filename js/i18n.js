@@ -18,13 +18,41 @@ const I18n = {
     available() { return this.LANGS.filter(l => this.packs[l.code]); },
     langName(code) { const l = this.LANGS.find(x => x.code === (code || this.locale)); return l ? l.name : (code || this.locale); },
 
+    // First run has no stored choice, so match the DEVICE. Without this every player started in
+    // English however their phone was set, and the six translations only reached the few who went
+    // looking in Settings. An explicit choice is stored and always wins from then on.
     init() {
-        const want = (typeof Prefs !== 'undefined') ? Prefs.get('lang', 'en') : 'en';
+        const saved = (typeof Prefs !== 'undefined') ? Prefs.get('lang', null) : null;
+        const want = (saved && this.packs[saved]) ? saved : this.deviceLang();
         this.locale = this.packs[want] ? want : 'en';
+        this._applyDocLang();
+    },
+    // navigator.language(s) are full tags ('de-AT', 'pt-BR', 'en-GB'), so match on the base tag:
+    // pt-BR lands on the pt-PT pack, which is far closer for that reader than English. Ordered by
+    // the user's own preference list, so a German phone set to prefer Dutch gets Dutch.
+    deviceLang() {
+        let tags = [];
+        try {
+            if (typeof navigator !== 'undefined' && navigator) {
+                tags = navigator.languages && navigator.languages.length ? navigator.languages
+                    : (navigator.language ? [navigator.language] : []);
+            }
+        } catch (e) { /* no navigator (tests, headless) */ }
+        for (const tag of tags) {
+            const base = String(tag || '').toLowerCase().split('-')[0];
+            if (base && this.packs[base]) return base;
+        }
+        return 'en';
     },
     set(loc) {
         this.locale = this.packs[loc] ? loc : 'en';
         if (typeof Prefs !== 'undefined') Prefs.set('lang', this.locale);
+        this._applyDocLang();
+    },
+    // Keep <html lang> in step, so a screen reader pronounces the page in the language it is in.
+    _applyDocLang() {
+        try { if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = this.locale; }
+        catch (e) { /* no DOM */ }
     },
 
     // t('some.key', { n: 3 }) → looks up current locale, then English, then returns the key itself
