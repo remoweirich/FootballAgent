@@ -43,6 +43,12 @@ const SCOUT_NAMES = {
 };
 
 const Scouts = {
+    // I18n when it is loaded, the English text otherwise, so the headless engine tests still read.
+    _t(key, vars, en) {
+        if (typeof I18n !== 'undefined' && I18n.t) return I18n.t(key, vars);
+        return String(en).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+    },
+
     scoutName() {
         const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
         const set = SCOUT_NAMES[hc] || SCOUT_NAMES.Netherlands;
@@ -182,9 +188,9 @@ const Scouts = {
     },
     hire(offer) {
         const ag = GameState.agency;
-        if (ag.scouts.find(s => s.id === offer.id)) return { ok: false, message: 'That scout is already on your books.' };
+        if (ag.scouts.find(s => s.id === offer.id)) return { ok: false, message: this._t('scouts.err.alreadyHired', null, 'That scout is already on your books.') };
         const max = Upgrades.maxScouts();
-        if (ag.scouts.length >= max) return { ok: false, message: `Your ${Upgrades.office().name} only has room for ${max} scout(s). Upgrade your office to hire more.` };
+        if (ag.scouts.length >= max) return { ok: false, message: this._t('scouts.err.officeFull', { office: Upgrades.office().name, max }, 'Your {office} only has room for {max} scout(s). Upgrade your office to hire more.') };
         ag.scouts.push({
             id: offer.id, name: offer.name, title: offer.title,
             quality: offer.quality, weeklyCost: offer.weeklyCost,
@@ -193,37 +199,37 @@ const Scouts = {
         // remove him from the market; the freed slot refills at the next 2-week refresh
         if (ag.scoutMarket) ag.scoutMarket = ag.scoutMarket.filter(o => o.id !== offer.id);
         GameState.addLog(`Hired ${offer.name} (${offer.title}, quality ${offer.quality}) for €${offer.weeklyCost}/wk.`, 'scout');
-        return { ok: true, message: `${offer.name} hired. Assign him to a region so he can start scouting.` };
+        return { ok: true, message: this._t('scouts.ok.hired', { name: offer.name }, '{name} hired. Assign him to a region so he can start scouting.') };
     },
 
     assignRegion(scoutId, regionId) {
         const ag = GameState.agency;
         const s = ag.scouts.find(x => x.id === scoutId);
-        if (!s) return { ok: false, message: 'Unknown scout.' };
-        if (s.region === regionId && !s.league) return { ok: false, message: `${s.name} already covers ${regionName(regionId)}.` };
+        if (!s) return { ok: false, message: this._t('scouts.err.unknown', null, 'Unknown scout.') };
+        if (s.region === regionId && !s.league) return { ok: false, message: this._t('scouts.err.alreadyCovers', { name: s.name, region: regionName(regionId) }, '{name} already covers {region}.') };
         s.region = regionId; s.league = null; s.country = null;
         s.weeksUntilFind = this.nextFindDelay(s.quality);
         GameState.addLog(`${s.name} assigned to ${regionName(regionId)} (€${this.regionReportCost(regionId)}/report).`, 'scout');
-        return { ok: true, message: `${s.name} now scouts ${regionName(regionId)} (€${this.regionReportCost(regionId)} per report). First report in ~${s.weeksUntilFind} weeks.` };
+        return { ok: true, message: this._t('scouts.ok.assignedRegion', { name: s.name, region: regionName(regionId), cost: this.regionReportCost(regionId), weeks: s.weeksUntilFind }, '{name} now scouts {region} (€{cost} per report). First report in ~{weeks} weeks.') };
     },
     assignLeague(scoutId, country, division) {
         const ag = GameState.agency;
         const s = ag.scouts.find(x => x.id === scoutId);
-        if (!s) return { ok: false, message: 'Unknown scout.' };
-        if (typeof Agency !== 'undefined' && Agency.intlSuspended && Agency.intlSuspended()) return { ok: false, message: `International scouting is suspended for ${Agency.intlSuspendWeeksLeft()} more week(s) after an unpaid licence.` };
-        if (typeof Agency !== 'undefined' && !Agency.hasIntlLicence()) return { ok: false, message: 'You need a valid International Scouting Licence (buy it in the Agency tab).' };
-        if (!this.intlCountries().includes(country)) return { ok: false, message: 'You can only scout abroad.' };
-        if (!(COUNTRY_DIVS[country] || []).includes(division)) return { ok: false, message: 'That league is not in the chosen country.' };
+        if (!s) return { ok: false, message: this._t('scouts.err.unknown', null, 'Unknown scout.') };
+        if (typeof Agency !== 'undefined' && Agency.intlSuspended && Agency.intlSuspended()) return { ok: false, message: this._t('scouts.err.intlSuspended', { weeks: Agency.intlSuspendWeeksLeft() }, 'International scouting is suspended for {weeks} more week(s) after an unpaid licence.') };
+        if (typeof Agency !== 'undefined' && !Agency.hasIntlLicence()) return { ok: false, message: this._t('scouts.err.needLicence', null, 'You need a valid International Scouting Licence (buy it in the Agency tab).') };
+        if (!this.intlCountries().includes(country)) return { ok: false, message: this._t('scouts.err.abroadOnly', null, 'You can only scout abroad.') };
+        if (!(COUNTRY_DIVS[country] || []).includes(division)) return { ok: false, message: this._t('scouts.err.leagueNotInCountry', null, 'That league is not in the chosen country.') };
         const minQ = this.minScoutQualityFor(division);
         if (s.quality < minQ) {
             const nm0 = (COMPETITIONS[division] || {}).name || division;
-            return { ok: false, message: `${s.name} (quality ${s.quality}) isn't good enough to scout ${nm0} — that league needs a scout of at least ${minQ}.` };
+            return { ok: false, message: this._t('scouts.err.qualityTooLow', { name: s.name, quality: s.quality, league: nm0, min: minQ }, "{name} (quality {quality}) isn't good enough to scout {league} — that league needs a scout of at least {min}.") };
         }
         s.league = division; s.country = country; s.region = null;
         s.weeksUntilFind = this.nextFindDelay(s.quality);
         const nm = (COMPETITIONS[division] || {}).name || division;
         GameState.addLog(`${s.name} sent abroad to scout ${nm} (${country}) — €${this.intlLeagueCost(division)}/report.`, 'scout');
-        return { ok: true, message: `${s.name} now scouts ${nm} in ${country} (€${this.intlLeagueCost(division)} per report). First report in ~${s.weeksUntilFind} weeks.` };
+        return { ok: true, message: this._t('scouts.ok.assignedLeague', { name: s.name, league: nm, country, cost: this.intlLeagueCost(division), weeks: s.weeksUntilFind }, '{name} now scouts {league} in {country} (€{cost} per report). First report in ~{weeks} weeks.') };
     },
 
     release(scoutId) {
@@ -237,11 +243,11 @@ const Scouts = {
     setIdle(scoutId) {
         const ag = GameState.agency;
         const s = ag.scouts.find(x => x.id === scoutId);
-        if (!s) return { ok: false, message: 'Unknown scout.' };
-        if (!s.region && !s.league) return { ok: false, message: `${s.name} is already idle.` };
+        if (!s) return { ok: false, message: this._t('scouts.err.unknown', null, 'Unknown scout.') };
+        if (!s.region && !s.league) return { ok: false, message: this._t('scouts.err.alreadyIdle', { name: s.name }, '{name} is already idle.') };
         s.region = null; s.league = null; s.country = null;
         GameState.addLog(`${s.name} set to idle.`, 'scout');
-        return { ok: true, message: `${s.name} is idle — no more report fees until you reassign him, though he'll still turn up the occasional find on his own.` };
+        return { ok: true, message: this._t('scouts.ok.idle', { name: s.name }, "{name} is idle — no more report fees until you reassign him, though he'll still turn up the occasional find on his own.") };
     },
 
     // reports arrive every 6-7 weeks

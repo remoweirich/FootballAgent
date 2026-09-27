@@ -6,6 +6,12 @@
 const START_SEASON_YEAR = 2025;
 
 const GameState = {
+    // I18n when it is loaded, the English text otherwise, so the headless engine tests still read.
+    _t(key, vars, en) {
+        if (typeof I18n !== 'undefined' && I18n.t) return I18n.t(key, vars);
+        return String(en).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+    },
+
     week: 1,
     seasonStartYear: START_SEASON_YEAR,
     players: [],
@@ -309,18 +315,18 @@ const GameState = {
     // is required (max 5). Returns { ok, message, id, overwritten }.
     async createNamedSave(name) {
         const nm = (name || '').trim();
-        if (!nm) return { ok: false, message: 'Give the save a name.' };
-        if (!Storage.putSlot) return { ok: false, message: 'Saving is unavailable here.' };
+        if (!nm) return { ok: false, message: this._t('save.err.needName', null, 'Give the save a name.') };
+        if (!Storage.putSlot) return { ok: false, message: this._t('save.err.unavailable', null, 'Saving is unavailable here.') };
         const slots = await Storage.listSlots();
         const existing = slots.find(s => (s.name || '').toLowerCase() === nm.toLowerCase());
         if (!existing && slots.length >= Storage.MAX_SLOTS)
-            return { ok: false, message: `You already have ${Storage.MAX_SLOTS} saves. Reuse a name to overwrite, or delete one first.`, full: true };
+            return { ok: false, message: this._t('save.err.slotsFull', { max: Storage.MAX_SLOTS }, 'You already have {max} saves. Reuse a name to overwrite, or delete one first.'), full: true };
         const id = existing ? existing.id : 's' + Date.now().toString(36) + '-' + (++this._slotSeq);
         this.saveName = nm;    // the live game adopts the name too, so the autosave/Continue shows it
         this.namedClean = true;   // this exact state is now backed up to a slot
         const state = this._snapshot();
         const ok = await Storage.putSlot(id, state, this._metaOf(state, nm));
-        if (!ok) { this.namedClean = false; return { ok: false, message: 'Save failed.' }; }
+        if (!ok) { this.namedClean = false; return { ok: false, message: this._t('save.err.failed', null, 'Save failed.') }; }
         Storage.saveGame(state);   // refresh the autosave so Continue/Load sees it as clean too
         return { ok: true, id, overwritten: !!existing, message: existing ? `Overwrote “${nm}”.` : `Saved as “${nm}”.` };
     },
