@@ -79,158 +79,158 @@ const LEAGUE_TIERS = {
     Netherlands: {
         elo: 1000,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 85, label: 'International Regular' },
-            { min: 78, label: 'Eredivisie Star' },
-            { min: 70, label: 'Eredivisie Regular' },
-            { min: 65, label: 'Eerste Divisie Star' },
-            { min: 58, label: 'Eerste Divisie Regular' },
-            { min: 52, label: 'Tweede Divisie Star' },
-            { min: 45, label: 'Tweede Divisie Regular' },
-            { min: 40, label: 'Derde Divisie Star' },
-            { min: 33, label: 'Derde Divisie Regular' },
-            { min: 25, label: 'Derde Divisie Sub' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 85, rank: 'intlRegular' },
+            { min: 78, comp: 'ERE', rank: 'star' },
+            { min: 70, comp: 'ERE', rank: 'regular' },
+            { min: 65, comp: 'EED', rank: 'star' },
+            { min: 58, comp: 'EED', rank: 'regular' },
+            { min: 52, comp: 'TWD', rank: 'star' },
+            { min: 45, comp: 'TWD', rank: 'regular' },
+            { min: 40, comp: 'DRD', rank: 'star' },
+            { min: 33, comp: 'DRD', rank: 'regular' },
+            { min: 25, comp: 'DRD', rank: 'sub' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     England: {
         elo: 1090,   // stronger pyramid: the 4th tier edges the Dutch 4th, the top flight beats the Eredivisie
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 85, label: 'Premier League Star' },
-            { min: 77, label: 'Premier League Regular' },
-            { min: 72, label: 'Championship Star' },
-            { min: 67, label: 'Championship Regular' },
-            { min: 62, label: 'League One Star' },
-            { min: 57, label: 'League One Regular' },
-            { min: 52, label: 'League Two Star' },
-            { min: 47, label: 'League Two Regular' },
-            { min: 42, label: 'National League Star' },
-            { min: 37, label: 'National League Regular' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 85, comp: 'PREM', rank: 'star' },
+            { min: 77, comp: 'PREM', rank: 'regular' },
+            { min: 72, comp: 'CHAMP', rank: 'star' },
+            { min: 67, comp: 'CHAMP', rank: 'regular' },
+            { min: 62, comp: 'LEAGUE1', rank: 'star' },
+            { min: 57, comp: 'LEAGUE1', rank: 'regular' },
+            { min: 52, comp: 'LEAGUE2', rank: 'star' },
+            { min: 47, comp: 'LEAGUE2', rank: 'regular' },
+            { min: 42, comp: 'Natleague', rank: 'star' },
+            { min: 37, comp: 'Natleague', rank: 'regular' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     Germany: {
         elo: 1080,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 84, label: 'Bundesliga Star' },
-            { min: 76, label: 'Bundesliga Regular' },
-            { min: 70, label: '2. Bundesliga Star' },
-            { min: 65, label: '2. Bundesliga Regular' },
-            { min: 59, label: '3. Liga Star' },
-            { min: 54, label: '3. Liga Regular' },
-            { min: 49, label: '1. Regionalliga Star' },
-            { min: 44, label: '1. Regionalliga Regular' },
-            { min: 39, label: '2. Regionalliga Star' },
-            { min: 34, label: '2. Regionalliga Regular' },
-            { min: 30, label: '3. Regionalliga Star' },
-            { min: 24, label: '3. Regionalliga Regular' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 84, comp: 'BUNDES', rank: 'star' },
+            { min: 76, comp: 'BUNDES', rank: 'regular' },
+            { min: 70, comp: '2BUNDES', rank: 'star' },
+            { min: 65, comp: '2BUNDES', rank: 'regular' },
+            { min: 59, comp: '3LIGA', rank: 'star' },
+            { min: 54, comp: '3LIGA', rank: 'regular' },
+            { min: 49, comp: 'REGIONAL1', rank: 'star' },
+            { min: 44, comp: 'REGIONAL1', rank: 'regular' },
+            { min: 39, comp: 'REGIONAL2', rank: 'star' },
+            { min: 34, comp: 'REGIONAL2', rank: 'regular' },
+            { min: 30, comp: 'REGIONAL3', rank: 'star' },
+            { min: 24, comp: 'REGIONAL3', rank: 'regular' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     Spain: {
         elo: 1080,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 84, label: 'La Liga Star' },
-            { min: 76, label: 'La Liga Regular' },
-            { min: 70, label: 'La Liga 2 Star' },
-            { min: 65, label: 'La Liga 2 Regular' },
-            { min: 59, label: 'Primera Superior Star' },
-            { min: 54, label: 'Primera Superior Regular' },
-            { min: 49, label: 'Primera Inferior Star' },
-            { min: 43, label: 'Primera Inferior Regular' },
-            { min: 38, label: 'Segunda Federación Star' },
-            { min: 31, label: 'Segunda Federación Regular' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 84, comp: 'LaLiga', rank: 'star' },
+            { min: 76, comp: 'LaLiga', rank: 'regular' },
+            { min: 70, comp: 'LaLiga2', rank: 'star' },
+            { min: 65, comp: 'LaLiga2', rank: 'regular' },
+            { min: 59, comp: 'PrimeraSup', rank: 'star' },
+            { min: 54, comp: 'PrimeraSup', rank: 'regular' },
+            { min: 49, comp: 'PrimeraInf', rank: 'star' },
+            { min: 43, comp: 'PrimeraInf', rank: 'regular' },
+            { min: 38, comp: 'Segunda', rank: 'star' },
+            { min: 31, comp: 'Segunda', rank: 'regular' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     France: {
         elo: 1070,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 85, label: 'International Regular' },
-            { min: 81, label: 'Ligue 1 Star' },
-            { min: 75, label: 'Ligue 1 Regular' },
-            { min: 69, label: 'Ligue 2 Star' },
-            { min: 63, label: 'Ligue 2 Regular' },
-            { min: 58, label: 'National Star' },
-            { min: 52, label: 'National Regular' },
-            { min: 47, label: 'National 2 Star' },
-            { min: 42, label: 'National 2 Regular' },
-            { min: 37, label: 'National 3 Star' },
-            { min: 32, label: 'National 3 Regular' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 85, rank: 'intlRegular' },
+            { min: 81, comp: 'Ligue1', rank: 'star' },
+            { min: 75, comp: 'Ligue1', rank: 'regular' },
+            { min: 69, comp: 'Ligue2', rank: 'star' },
+            { min: 63, comp: 'Ligue2', rank: 'regular' },
+            { min: 58, comp: 'Ligue3', rank: 'star' },
+            { min: 52, comp: 'Ligue3', rank: 'regular' },
+            { min: 47, comp: 'Ligue4', rank: 'star' },
+            { min: 42, comp: 'Ligue4', rank: 'regular' },
+            { min: 37, comp: 'Ligue5', rank: 'star' },
+            { min: 32, comp: 'Ligue5', rank: 'regular' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     Italy: {
         elo: 1080,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 84, label: 'Serie A Star' },
-            { min: 76, label: 'Serie A Regular' },
-            { min: 70, label: 'Serie B Star' },
-            { min: 65, label: 'Serie B Regular' },
-            { min: 59, label: 'Serie C Star' },
-            { min: 54, label: 'Serie C Regular' },
-            { min: 49, label: 'Serie D Star' },
-            { min: 44, label: 'Serie D Regular' },
-            { min: 39, label: 'Eccellenza Star' },
-            { min: 34, label: 'Eccellenza Regular' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 84, comp: 'SerieA', rank: 'star' },
+            { min: 76, comp: 'SerieA', rank: 'regular' },
+            { min: 70, comp: 'SerieB', rank: 'star' },
+            { min: 65, comp: 'SerieB', rank: 'regular' },
+            { min: 59, comp: 'SerieC', rank: 'star' },
+            { min: 54, comp: 'SerieC', rank: 'regular' },
+            { min: 49, comp: 'SerieD', rank: 'star' },
+            { min: 44, comp: 'SerieD', rank: 'regular' },
+            { min: 39, rank: 'regionalStar' },
+            { min: 34, rank: 'regionalRegular' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     Switzerland: {
         elo: 1000,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 85, label: 'International Regular' },
-            { min: 75, label: 'Super League Star' },
-            { min: 70, label: 'Super League Regular' },
-            { min: 60, label: 'Challenge League Star' },
-            { min: 54, label: 'Challenge League Regular' },
-            { min: 45, label: 'Promotion League Star' },
-            { min: 38, label: 'Promotion League Regular' },
-            { min: 30, label: '1. Liga Star' },
-            { min: 25, label: '1. Liga Regular' },
-            { min: 21, label: '2. Liga Regular' },
-            { min: 15, label: '2. Liga Sub'},
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 85, rank: 'intlRegular' },
+            { min: 75, comp: 'SuperLeagueCH', rank: 'star' },
+            { min: 70, comp: 'SuperLeagueCH', rank: 'regular' },
+            { min: 60, comp: 'ChallengeLeague', rank: 'star' },
+            { min: 54, comp: 'ChallengeLeague', rank: 'regular' },
+            { min: 45, comp: 'PromotionLeague', rank: 'star' },
+            { min: 38, comp: 'PromotionLeague', rank: 'regular' },
+            { min: 30, comp: '1.LigaCH', rank: 'star' },
+            { min: 25, comp: '1.LigaCH', rank: 'regular' },
+            { min: 21, comp: '2.LigaCH', rank: 'regular' },
+            { min: 15, comp: '2.LigaCH', rank: 'sub' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     Portugal: {
         elo: 1000,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 85, label: 'International Regular' },
-            { min: 78, label: 'Primeira Liga Star' },
-            { min: 70, label: 'Primeira Liga Regular' },
-            { min: 65, label: 'Liga Portugal 2 Star' },
-            { min: 58, label: 'Liga Portugal 2 Regular' },
-            { min: 50, label: 'Liga 3 Star' },
-            { min: 43, label: 'Liga 3 Regular' },
-            { min: 35, label: 'Liga 4 Star' },
-            { min: 28, label: 'Liga 4 Regular' },
-            { min: 21, label: 'Liga 4 Sub' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 85, rank: 'intlRegular' },
+            { min: 78, comp: 'LigaPortugal', rank: 'star' },
+            { min: 70, comp: 'LigaPortugal', rank: 'regular' },
+            { min: 65, comp: 'LigaPortugal2', rank: 'star' },
+            { min: 58, comp: 'LigaPortugal2', rank: 'regular' },
+            { min: 50, comp: 'Liga3', rank: 'star' },
+            { min: 43, comp: 'Liga3', rank: 'regular' },
+            { min: 35, comp: 'Liga4', rank: 'star' },
+            { min: 28, comp: 'Liga4', rank: 'regular' },
+            { min: 21, comp: 'Liga4', rank: 'sub' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
     Belgium: {
         elo: 1000,
         tiers: [
-            { min: 90, label: 'International Superstar' },
-            { min: 85, label: 'International Regular' },
-            { min: 76, label: 'Pro League Star' },
-            { min: 70, label: 'Pro League Regular' },
-            { min: 64, label: 'Challenger Pro League Star' },
-            { min: 57, label: 'Challenger Pro League Regular' },
-            { min: 49, label: 'Belgian Division 1 Star' },
-            { min: 43, label: 'Belgian Division 1 Regular' },
-            { min: 35, label: 'Belgian Division 2 Star' },
-            { min: 28, label: 'Belgian Division 2 Regular' },
-            { min: 21, label: 'Belgian Division 2 Sub' },
-            { min: 0, label: 'Amateur Star' },
+            { min: 90, rank: 'intlSuperstar' },
+            { min: 85, rank: 'intlRegular' },
+            { min: 76, comp: 'JupilerProLeague', rank: 'star' },
+            { min: 70, comp: 'JupilerProLeague', rank: 'regular' },
+            { min: 64, comp: 'ChallengerProLeague', rank: 'star' },
+            { min: 57, comp: 'ChallengerProLeague', rank: 'regular' },
+            { min: 49, comp: 'BelgianDivision1', rank: 'star' },
+            { min: 43, comp: 'BelgianDivision1', rank: 'regular' },
+            { min: 35, comp: 'BelgianDivision2', rank: 'star' },
+            { min: 28, comp: 'BelgianDivision2', rank: 'regular' },
+            { min: 21, comp: 'BelgianDivision2', rank: 'sub' },
+            { min: 0, rank: 'amateurStar' },
         ],
     },
 };
@@ -247,25 +247,88 @@ const Scouting = {
         return { goal: r.goalBias != null ? r.goalBias : 1, assist: r.assistBias != null ? r.assistBias : 1, card: r.cardBias != null ? r.cardBias : 1 };
     },
 
+    // A tier's display text, composed from the competition's CURRENT name plus a localised rank.
+    // It used to be a hardcoded English string per entry ('Eredivisie Star'), which was both
+    // untranslatable and a hole in the un-copyrighting work: competitions ship generic
+    // ('Dutch First Division') with real names restored only by the optional real-club-names pack,
+    // and the scout report was quietly bypassing all of it.
+    rankText(t) {
+        if (!t) return '';
+        const comp = t.comp && typeof compName === 'function' ? compName(t.comp) : null;
+        return comp
+            ? this._t('scout.rank.' + t.rank, { comp }, '{comp} ' + t.rank)
+            : this._t('scout.rank.' + t.rank, null, t.rank);
+    },
+    // I18n when it is loaded, the English text otherwise, so the headless engine tests still read.
+    _t(key, vars, en) {
+        if (typeof I18n !== 'undefined' && I18n.t) return I18n.t(key, vars);
+        return String(en).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+    },
     // tier label for a potential value, in a given country's pyramid
     tierLabel(pot, country = 'Netherlands') {
         const c = LEAGUE_TIERS[country];
-        if (c && c.tiers) { for (const t of c.tiers) if (pot >= t.min) return t.label; return c.tiers[c.tiers.length - 1].label; }
+        if (c && c.tiers) {
+            for (const t of c.tiers) if (pot >= t.min) return this.rankText(t);
+            return this.rankText(c.tiers[c.tiers.length - 1]);
+        }
         // unknown country: shift the Dutch ladder by the Elo gap (≈ 1 ability point per 10 Elo)
         const elo = (c && c.elo) || 1000;
         const shift = (elo - 1000) / 10;
-        for (const t of LEAGUE_TIERS.Netherlands.tiers) if (pot - shift >= t.min) return t.label;
-        return 'Amateur Star';
+        const nl = LEAGUE_TIERS.Netherlands.tiers;
+        for (const t of nl) if (pot - shift >= t.min) return this.rankText(t);
+        return this.rankText(nl[nl.length - 1]);
     },
 
     // scout accuracy: quality 5 -> up to ±30%, ~80 -> ~±10%, ~95 -> ~7%
     errorMargin(quality) { return Math.max(0.07, Math.min(0.30, 0.30 - (quality - 5) * 0.00256)); },
 
+    // ---- reading a report -------------------------------------------------------------------
+    // Everything below resolves at READ time rather than being frozen at scout time. The report
+    // used to store the finished English sentence and tier strings, so a player who scouted in
+    // English and then switched to German kept English reports for the life of the save.
+    //
+    // Reports written by an older build carry those resolved strings instead of the index fields.
+    // ceilingFor/floorFor fall back to them, because the potentials they were derived from were
+    // never stored. descFor does NOT: it prefers the role's own (translatable) sentence, since
+    // that is equivalent flavour text for the same role and the stored copy is English-only.
+    roleFor(p) {
+        const r = p.report;
+        return this.roleById(p.position, (r && r.role) || p.styleRole);
+    },
+    // One id ('dribbler') reads differently per position, so its key carries the position and the
+    // generic key is the fallback. Takes the role object so the Sandbox can label a whole list.
+    roleLabelOf(role, position) {
+        if (!role) return '';
+        const byPos = 'scout.role.' + role.id + '.' + position;
+        const viaPos = this._t(byPos, null, null);
+        if (viaPos && viaPos !== byPos) return viaPos;
+        return this._t('scout.role.' + role.id, null, role.label);
+    },
+    roleLabelFor(p) { return this.roleLabelOf(this.roleFor(p), p.position); },
+    descFor(p) {
+        const r = p.report, role = this.roleFor(p);
+        if (!role) return (r && r.desc) || '';
+        const i = (r && typeof r.descIdx === 'number') ? r.descIdx : 0;
+        const en = role.desc[Math.min(i, role.desc.length - 1)] || (r && r.desc) || '';
+        const key = 'scout.desc.' + role.id + '.d' + (i + 1);
+        const out = this._t(key, null, null);
+        const text = (out && out !== key) ? out : en;
+        return String(text).replace(/\{name\}/g, p.name);
+    },
+    ceilingFor(p) {
+        const r = p.report; if (!r) return '';
+        return typeof r.estPotential === 'number' ? this.tierLabel(r.estPotential, r.country) : (r.ceiling || '');
+    },
+    floorFor(p) {
+        const r = p.report; if (!r) return '';
+        return typeof r.floorPotential === 'number' ? this.tierLabel(r.floorPotential, r.country) : (r.floor || '');
+    },
+
     // build a stable scouting report for a player (stored on p.report)
     generateReport(p, scoutQuality = 45) {
         if (!p.styleRole) p.styleRole = this.assignRole(p);
         const role = this.roleById(p.position, p.styleRole);
-        const desc = role.desc[Math.floor(Rng.next() * role.desc.length)].replace(/\{name\}/g, p.name);
+        const descIdx = Math.floor(Rng.next() * role.desc.length);
 
         const margin = this.errorMargin(scoutQuality);
         // slightly more likely to over- than under-rate; magnitude uniform within the margin
@@ -282,9 +345,10 @@ const Scouting = {
         const country = (typeof getRegionForClub === 'function' && Clubs.getClubById(p.clubId))
             ? (Clubs.getClubById(p.clubId).country || 'Netherlands') : 'Netherlands';
 
+        // Indices and numbers only — no resolved prose. See the accessors above.
         p.report = {
-            scoutQuality, role: p.styleRole, roleLabel: role.label, desc,
-            estPotential: est, ceiling: this.tierLabel(est, country), floor: this.tierLabel(floorEst, country),
+            scoutQuality, role: p.styleRole, descIdx,
+            estPotential: est, floorPotential: floorEst,
             country
         };
         return p.report;

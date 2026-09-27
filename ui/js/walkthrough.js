@@ -159,7 +159,7 @@ const Walkthrough = {
         // the Potential tab prints, then pin the verdict to what the script quotes.
         p.styleRole = 'attacking_midfielder';
         p.scoutQuality = 78;
-        this._report(p, 78, 'International Superstar', 'International Regular');
+        this._report(p, 78, 92, 86);        // Germany: 90+ international superstar, 84+ first-division star
         p.stats = this._demoStats();
         p.trophies = [];
         return p;
@@ -189,11 +189,17 @@ const Walkthrough = {
     },
 
     // A real scouting report (role label + written description), with the verdict pinned.
-    _report(p, quality, ceiling, floor) {
+    // The verdict is pinned as POTENTIALS, not as finished strings: the report resolves its
+    // ceiling/floor text through Scouting.tierLabel at read time now, so that it follows the
+    // player's language and the current competition names. The tutorial narration describes the
+    // verdict ("a floor of a solid English first-division regular") rather than quoting it, and is
+    // itself translated, so nothing depends on the exact words.
+    _report(p, quality, ceilingPot, floorPot) {
         if (typeof Scouting !== 'undefined' && Scouting.generateReport) Scouting.generateReport(p, quality);
         if (!p.report) p.report = { role: p.styleRole, scoutQuality: quality };
-        p.report.ceiling = ceiling;
-        p.report.floor = floor;
+        p.report.estPotential = ceilingPot;
+        p.report.floorPotential = floorPot;
+        delete p.report.ceiling; delete p.report.floor;   // no stale resolved strings
     },
 
     // Career: Basel U21 23/24 · Basel (U21 + first team) 24/25 · Basel 25/26 · Stuttgart 26/27-27/28
@@ -324,7 +330,7 @@ const Walkthrough = {
         p.dismissedTalent = false; p.archived = false;
         p.styleRole = 'complete_forward';
         p.scoutQuality = 75;
-        this._report(p, 75, 'International Superstar', 'English First Division regular');
+        this._report(p, 75, 92, 79);        // England: 90+ international superstar, 77+ first-division regular
         p.stats = {};
         p.trophies = [];
         return p;

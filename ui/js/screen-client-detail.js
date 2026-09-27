@@ -291,8 +291,8 @@ const ClientDetail = {
             </div>` : '';
         return `<h3 style="margin-top:0">${I18n.t('cd.scoutingReport')}</h3>
             ${insights}
-            <p style="color:var(--text-secondary);line-height:1.5">${r.desc}</p>
-            <div class="fcard"><div class="frow"><span class="frow__k">${I18n.t('cd.ceiling')}</span><span class="frow__v" style="color:var(--state-good)">${r.ceiling}</span></div><div class="frow"><span class="frow__k">${I18n.t('cd.floor')}</span><span class="frow__v" style="color:var(--danger)">${r.floor}</span></div></div>
+            <p style="color:var(--text-secondary);line-height:1.5">${UI.esc(Scouting.descFor(p))}</p>
+            <div class="fcard"><div class="frow"><span class="frow__k">${I18n.t('cd.ceiling')}</span><span class="frow__v" style="color:var(--state-good)">${UI.esc(Scouting.ceilingFor(p))}</span></div><div class="frow"><span class="frow__k">${I18n.t('cd.floor')}</span><span class="frow__v" style="color:var(--danger)">${UI.esc(Scouting.floorFor(p))}</span></div></div>
             <p class="hint">${I18n.t('cd.estimatesHint', { country: r.country })}</p>`;
     },
 

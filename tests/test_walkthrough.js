@@ -79,9 +79,14 @@ check('current season: 32 apps, 14 goals, 12 assists, 2 yellow, 0 red, 8.38 avg'
   return c.apps === 32 && c.goals === 14 && c.assists === 12 && c.yellow === 2 && c.red === 0
       && Math.abs((c.ratingSum / c.apps) - 8.38) < 0.005;`));
 
-check('scout report: attacking midfielder, Superstar ceiling / Regular floor', runv(`
-  const r = GameState.players[0].report;
-  return r.role === 'attacking_midfielder' && r.ceiling === 'International Superstar' && r.floor === 'International Regular';`));
+check('scout report: attacking midfielder, Superstar ceiling / first-division floor', runv(`
+  const p = GameState.players[0], r = p.report;
+  // The verdict is pinned as POTENTIALS now and resolved through Scouting, so it follows the
+  // locale and the current competition names. He plays in Germany: 90+ is an international
+  // superstar, 84+ a first-division star (the German ladder has no "international regular" rung).
+  return r.role === 'attacking_midfielder'
+      && Scouting.ceilingFor(p) === 'International Superstar'
+      && Scouting.floorFor(p) === 'German First Division Star';`));
 
 // ---- the career timeline adds up ----
 check('career: Basel U21 -> Basel -> Stuttgart -> München Red, 3rd season now', runv(`
@@ -197,8 +202,8 @@ check('Wayne shows up in the Scouting finds list, unsigned', runv(`
 check('his report reads Superstar ceiling / English First Division floor', runv(`
   const w = GameState.players.find(p => p.id === 'wt_wayne');
   return w.report.role === 'complete_forward'
-      && w.report.ceiling === 'International Superstar'
-      && w.report.floor === 'English First Division regular'
+      && Scouting.ceilingFor(w) === 'International Superstar'
+      && Scouting.floorFor(w) === 'English First Division Regular'
       && w.stats && Object.keys(w.stats).length === 0;`));
 
 check('the three advance steps unlock in order', runv(`
@@ -246,9 +251,11 @@ check('narration can interpolate the agency name', runv(`
 
 // ---- content the playtest found empty or wrong ----
 check('Johan: scouting report carries a written description + role label', runv(`
-  const r = GameState.players.find(p => p.id === 'wt_johan').report;
-  return r.role === 'attacking_midfielder' && !!r.roleLabel
-      && typeof r.desc === 'string' && r.desc.length > 20;`));
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  return j.report.role === 'attacking_midfielder'
+      && !!Scouting.roleLabelFor(j)
+      && Scouting.descFor(j).length > 20
+      && Scouting.descFor(j).indexOf('{name}') === -1;`));
 
 check('Johan: boyhood club reads Basel Red and is discovered', runv(`
   const j = GameState.players.find(p => p.id === 'wt_johan');
@@ -271,11 +278,12 @@ check('Johan: has one live sponsorship deal', runv(`
       && j.sponsorIncome === j.sponsorDeals[0].weekly;`));
 
 check('Wayne: report describes a complete forward', runv(`
-  const r = GameState.players.find(p => p.id === 'wt_wayne').report;
-  return r.role === 'complete_forward' && !!r.roleLabel
-      && typeof r.desc === 'string' && r.desc.length > 20
-      && r.ceiling === 'International Superstar'
-      && r.floor === 'English First Division regular';`));
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  return w.report.role === 'complete_forward' && !!Scouting.roleLabelFor(w)
+      && Scouting.descFor(w).length > 20
+      && Scouting.descFor(w).indexOf('{name}') === -1
+      && Scouting.ceilingFor(w) === 'International Superstar'
+      && Scouting.floorFor(w) === 'English First Division Regular';`));
 
 check("Gemma's card agrees with the narration: three weeks to her report", runv(`
   const g = GameState.agency.scouts.find(s => s.region === 'west-midlands');

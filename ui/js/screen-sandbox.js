@@ -53,7 +53,7 @@ const Sandbox = {
     editClient(id) {
         const p = GameState.getPlayer(id); if (!p) return;
         const roles = (typeof Scouting !== 'undefined' && Scouting.rolesFor) ? Scouting.rolesFor(p.position) : [];
-        const styleOpts = roles.map(r => `<option value="${r.id}" ${p.styleRole === r.id ? 'selected' : ''}>${UI.esc(r.label)}</option>`).join('');
+        const styleOpts = roles.map(r => `<option value="${r.id}" ${p.styleRole === r.id ? 'selected' : ''}>${UI.esc(Scouting.roleLabelOf(r, p.position))}</option>`).join('');
         const m = p.morale || { club: 70, time: 70, wage: 70, agent: 70 };
         const mInput = (k) => `<div class="sbx-mcell"><span class="sbx-msub">${I18n.t('cd.dim.' + k)}</span><input id="sbxMor_${k}" class="text-input" type="number" min="0" max="100" value="${Math.round(m[k])}"></div>`;
         this._overlay(`
