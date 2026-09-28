@@ -1,7 +1,10 @@
 # How offers are generated — current rules
 
-Written up so the rules can be argued with. This describes the code **as it stands today**
-(pre-change), not a proposal. Companion to `reputation-design.md`.
+Written up so the rules can be argued with. This describes the code **as it stands today**.
+Companion to `reputation-design.md`.
+
+> **§4 (form, trophies, relegation) is the 2026-09-28 revision.** Everything in it is new; the rest
+> of the document is the behaviour that was already there. `tests/test_offer_interest.js` pins it.
 
 Everything here lives in two places:
 
@@ -52,22 +55,18 @@ Three caps come first. No roll happens if:
 Then:
 
 ```
-attract  = (10
-            + min(20, league apps this season) × 0.5     →  0 … +10
-            + (transfer-listed ? 22 : 0)
-            + morale case bonus                          →  see below
-           ) × perfValueMult
-chance   = min(0.26, 0.02 + attract / 320) × scarcity
+attract  = 10
+           + min(20, league apps this season) × 0.5     →  0 … +10
+           + (transfer-listed ? 22 : 0)
+           + morale case bonus                          →  see below
+
+chance   = min(0.26, 0.02 + attract / 320)
+           × scarcity                                    ability tiers, below
+           × relegation boost                            §4.3
+           × mean buyer weight                           §4.1 — form and honours act HERE
 ```
 
-**`perfValueMult`** — recent season rating (this season if ≥10 apps, else last season):
-
-| rating | multiplier |
-|---|---|
-| > 8.00 | ×1.25 |
-| > 7.50 | ×1.15 |
-| > 7.24 | ×1.08 |
-| else | ×1.00 |
+Form is not a term in `attract`. It acts through the buyer pool instead — see §4.
 
 **Morale case bonus** — a stage-2 escalation is public knowledge:
 
@@ -90,15 +89,17 @@ go there at all:
 
 ### What that works out to, per rollable week
 
-| ability | 0 apps | 10 apps | 20 apps | 20 apps, hot (7.5+) | 20 apps, hot, listed |
-|---|---|---|---|---|---|
-| 55 | 5.1% | 6.7% | 8.3% | 9.2% | 17.1% |
-| 65 | 5.1% | 6.7% | 8.3% | 9.2% | 17.1% |
-| 70 | 4.6% | 6.0% | 7.4% | 8.3% | 15.4% |
-| 75 | 3.5% | 4.5% | 5.6% | 6.2% | 11.6% |
-| 82 | 2.5% | 3.2% | 4.0% | 4.4% | 8.2% |
-| 86 | 1.5% | 2.0% | 2.5% | 2.8% | 5.1% |
-| 92 | 1.5% | 2.0% | 2.5% | 2.8% | 5.1% |
+At a steady 6.51–7.00 season, so the form multiplier is 1.
+
+| ability | 0 apps | 10 apps | 20 apps | 20 apps, listed |
+|---|---|---|---|---|
+| 55 | 5.1% | 6.7% | 8.3% | 14.9% |
+| 65 | 5.1% | 6.7% | 8.3% | 14.9% |
+| 70 | 4.6% | 6.0% | 7.4% | 13.4% |
+| 75 | 3.5% | 4.5% | 5.6% | 10.1% |
+| 82 | 2.5% | 3.2% | 4.0% | 7.1% |
+| 86 | 1.5% | 2.0% | 2.5% | 4.5% |
+| 92 | 1.5% | 2.0% | 2.5% | 4.5% |
 
 ### And what actually lands
 
@@ -116,7 +117,8 @@ Measured by driving the real engine: 8 clients per band, each at a club matching
 
 So **roughly one bid per client per season**, tapering to about one every two seasons for the
 elite. Note how flat that is across the whole mid-range: a 55 and a 78 are approached at nearly
-the same rate.
+the same rate. (Those figures predate §4 and are for an average-form client; form now swings the
+total from 0.7 to 3.0 a season, §4.4.)
 
 ---
 
@@ -126,7 +128,8 @@ Candidate clubs must clear every one of these:
 
 1. not his current club
 2. `club.reputation` within **[ability − 6, ability + 16]**
-   — widened to **[ability − 14, ability + 16]** if he is transfer-listed
+   — the bottom drops to **ability − 14** if he is transfer-listed, and the top rises to
+   **ability + 26** on a season over 8.00 (§4.1)
 3. `buyerMaxFee(club) >= playerValue(p) × 0.55` — can afford him
 4. not already holding another of **your** clients at the same position
 5. no existing offer from that club for that player already in the inbox
@@ -165,12 +168,121 @@ crossProb = clamp(0.02 … 0.35, (ability − 45) / 120)
 | 85 | 33% |
 | ≥ 87 | 35% |
 
-Then a **uniform** pick inside the chosen pool. Nothing weights a bigger or better-matched club
-above a worse one — among the 298 clubs eligible for a 55, every one is equally likely.
+Then a pick inside the chosen pool, **weighted by club quality** — see §4. (The free-agent and
+loan paths still pass no weights and stay uniform.)
 
 ---
 
-## 4. How many clubs bid at once
+## 4. Form, trophies and relegation
+
+All three work the same way: they change **which kind of club** is looking, and the chance of
+anyone looking at all follows from that. Three tiers, relative to the player:
+
+| tier | club reputation | what he would be there |
+|---|---|---|
+| **step up** | ability **+5 or more** | a squad or rotation player |
+| **at level** | within **4** either way | walks into the side |
+| **step down** | ability **−5 or less** | their star |
+
+Each tier carries a weight. The roll's chance is scaled by the **mean** weight across the eligible
+pool, and the buyer is then drawn **in proportion to its own** weight. Those two steps together
+make each tier's rate of approaches proportional to *its own* weight and nothing else:
+
+```
+rate to tier t  =  base × n_t × w_t / N
+```
+
+So `step down: 1.15` really does mean smaller clubs circle 15% more often than normal — not
+"relatively more once the others drop away". `tests/test_offer_interest.js` measures all fifteen
+combinations against the table and they match to two decimals.
+
+### 4.1 The form table
+
+Rating is the current season once he has 10 games in it, otherwise last season.
+
+| season rating | step up | at level | step down | fee | wage | window | quiet period |
+|---|---|---|---|---|---|---|---|
+| **over 8.00** | ×3.20 | ×1.70 | ×0.80 | ×1.30 | ×1.60 | **+10** | ×0.45 |
+| 7.51 – 8.00 | ×2.20 | ×1.40 | ×0.90 | ×1.18 | ×1.30 | — | ×0.60 |
+| 7.01 – 7.50 | ×1.35 | ×1.15 | ×1.00 | ×1.08 | ×1.10 | — | ×0.80 |
+| 6.51 – 7.00 | ×1.00 | ×1.00 | ×1.00 | ×1.00 | ×1.00 | — | ×1.00 |
+| 6.01 – 6.50 | ×0.55 | ×0.80 | ×1.00 | ×0.92 | ×0.95 | — | ×1.00 |
+| **under 6.00** | ×0.10 | ×0.35 | ×1.15 | ×0.80 | ×0.88 | — | ×1.00 |
+
+A rating sitting exactly on a boundary belongs to the band below it: 8.00 is "7.51–8.00".
+
+- **window** stretches the top of the eligible-buyer range (normally ability+16). Only the best
+  band opens it, so clubs plainly too good for him will take him as a squad player — `maxRoleAt`
+  works out that he would be fringe there, which is exactly how it should read.
+- **quiet period** scales the 7–15 week gap after a bidding round (§6). It only ever *shortens*.
+  Letting a bad season lengthen it was tried and reverted: the gap applies to every tier at once,
+  so slowing the clock dragged the smaller clubs down with the big ones — measured at ×1.30, a bad
+  season cut interest from lesser clubs by 36% when the table promises a 15% rise.
+- **fee and wage** now cut both ways. A bad season costs him 20% of his value and 12% of his wage;
+  before this revision form could only ever help.
+- A player with **no real sample** — a youth prospect, a signing who has not featured, fewer than
+  5 appearances — reads as **steady**, never as bad. He has not played badly; he has not played.
+
+### 4.2 Trophies
+
+A medal counts for **52 weeks from the day it was won** (`aw` on the trophy entry), and only if he
+made **20 or more senior league appearances** that season. Reserve football never records a trophy
+at all. Honours only move the **step-up** weight — they make bigger clubs look, and leave clubs at
+his level or below indifferent.
+
+| won in the last 52 weeks | step up |
+|---|---|
+| league title | ×1.15 |
+| domestic cup | ×1.10 |
+| European trophy | ×1.15 **on top of either** |
+
+League and cup do **not** stack with each other — the bigger one wins. Two league titles inside
+one window do not double up. A league-and-Europe double is ×1.32.
+
+### 4.3 Relegation
+
+Triggers when, in the last 52 weeks, he **was relegated**, played **20+ senior league games**, and
+is rated **at least as high as the club that went down with him**. Then:
+
+- every club in the division he just left is weighted **×5.0 / (1 + 0.12 × how far above him it
+  is)** — hard, and tilted toward that division's *modest* clubs rather than its title contenders
+- interest overall rises **×1.45**
+
+The second part is not decoration. `pickBuyer` already favours his own country, so most of his
+suitors were in that division anyway — measured, the pool weight alone moved his total by about 5%
+and merely reshuffled who bid. The ×1.45 is what makes it mean *more* offers, which is the point: a
+player too good for the tier he has dropped into is suddenly a wanted man.
+
+### 4.4 What it does, measured
+
+Real engine, ability 70, 20 clients per band, 6 seasons, form held fixed:
+
+| form | bids per season | vs steady | from a better club | at level | from a lesser club |
+|---|---|---|---|---|---|
+| bad 5.5 | 0.87 | −42% | 18% | 49% | 33% |
+| poor 6.3 | 1.47 | −2% | 27% | 52% | 21% |
+| steady 6.8 | 1.49 | — | 28% | 55% | 17% |
+| good 7.3 | 1.91 | +28% | 34% | 49% | 16% |
+| great 7.8 | 2.30 | +54% | 32% | 51% | 17% |
+| superb 8.4 | 2.86 | +92% | 48% | 41% | 11% |
+
+**The middle of the table is compressed, and that is worth knowing.** The quiet period after a
+bidding round is 7–15 weeks against 17 rollable weeks in a season, so a mid-table client is
+*cooldown-limited*, not chance-limited: he is already getting a bid as fast as the gap allows.
+Raising his chance from 5.7% to 7.4% therefore changes almost nothing, which is why 6.01–6.50
+measures −2% instead of the −20% its weights imply. The effect only bites where the gap stops
+being the binding constraint — at the bottom, where the chance is genuinely tiny, and at the top,
+where the quiet period is itself shortened.
+
+Which clubs come for him is **not** compressed: that is set purely by the weighted draw and
+follows the table exactly at every band.
+
+If the mid-range should separate more, the knob is the base quiet period in
+`Sim._generateOffers` (7–15 weeks, 18–35 for the elite), not the form weights.
+
+---
+
+## 5. How many clubs bid at once
 
 A bidding war is assembled from flat +1s:
 
@@ -187,7 +299,7 @@ there. Each suitor is drawn with its own `pickBuyer` call, so a three-way race c
 
 ---
 
-## 5. Then he goes quiet
+## 6. Then he goes quiet
 
 After any bidding round:
 
@@ -200,7 +312,7 @@ star who draws one bid can be untouchable for most of two windows.
 
 ---
 
-## 6. What the offer says
+## 7. What the offer says
 
 Three numbers, all computed at the moment the mail is created.
 
@@ -211,7 +323,7 @@ value = 380 × 1.15^ability                       steep in current ability
       → soft-capped:  300m × v / (v + 317m)      asymptote ~€300m
       × (1 + potGap × 0.045 × potWeight × potentialConfidence)
       × ageMult
-      × perfValueMult                            up to ×1.25
+      × form value multiplier                    x0.80 … x1.30  (§4.1)
       × (0.78 + min(4, contract years left) × 0.11)
 
 fee   = value
@@ -269,7 +381,7 @@ fee is **0**.
 wage = PlayerGen.wageFor(ability, buyer.reputation)
      × wagePotentialFactor(p)                wonderkid premium
      × countryWageMult(buyer) × jitter        league tendency × (0.90 … 1.18)
-     × perfWageMult                           >8.00 → 1.60, >7.50 → 1.25, >7.24 → 1.10
+     × form wage multiplier                   x0.88 … x1.60  (§4.1)
      → capYouthWage(age, rep, potential)
      floor €30, rounded to €10
 ```
@@ -299,7 +411,7 @@ By `ability − buyer.reputation`:
 
 ---
 
-## 7. Free agents
+## 8. Free agents
 
 A separate, much simpler path. Caps: fewer than **2** pending offers, then a flat **50%** per
 rollable week — no form, no apps, no scarcity, no cooldown.
@@ -312,7 +424,7 @@ ability — 50% a week against ~5–8%.
 
 ---
 
-## 8. Loan offers
+## 9. Loan offers
 
 Only for clients who are `loanListed`, not already out, and past `_loanOffersFrom`. One loan
 offer may exist at a time.
@@ -334,7 +446,7 @@ On a miss: a **6–15 week** dry spell. Missing is the common case, and it is me
 
 ---
 
-## 9. Touting him yourself — `shopPlayer`
+## 10. Touting him yourself — `shopPlayer`
 
 Not a roll, a button, and the rules are different again:
 
@@ -354,7 +466,7 @@ walking away.
 
 ---
 
-## 10. Things worth questioning
+## 11. Things worth questioning
 
 Not recommendations, just the places where the current rules do something that may not be
 intended.
@@ -368,22 +480,32 @@ intended.
    `signConcession` (who will agree to sign with you), `maxTransferCommission` (your cut of a
    transfer) and `maxCommissions` (your representation cut, desktop UI only). Given the
    reputation revamp, this is the obvious gap.
-2. **The mid-range is flat.** 55 through 72 all sit at ~1 bid per season. Ability barely changes
-   how sought-after a client is until the scarcity tiers kick in at 68+.
+2. **The mid-range is flat.** 55 through 72 all sit at ~1 bid per season at average form. Ability
+   barely changes how sought-after a client is until the scarcity tiers kick in at 68+.
 3. **The affordability filter never fires** (§3). It reads as a safeguard and is actually inert.
 4. **Appearances are capped at 20** and worth at most +10 on a base of 10 — a full season of
-   football and a half-season are nearly the same signal.
-5. **Buyers are picked uniformly.** A 55-rated journeyman is as likely to be approached by the
-   best of his 298 eligible clubs as the worst. There is no "clubs that need your position" or
-   "clubs chasing promotion" pull.
-6. **Free agents get ~10× the interest** of a contracted player of the same ability (§7), and the
-   free-agent path ignores form, age and appearances entirely.
-7. **Elite clients go very quiet.** `scarcity` ×0.30 and an 18–35 week cooldown compound; 0.53
-   bids per season for a 90 may be too few for the client you worked hardest to get.
-8. **Nothing models squad need.** A club with four keepers bids for a keeper as readily as a club
+   football and a half-season are nearly the same signal. Note this is the same number as
+   `REGULAR_APPS`, the bar for a trophy or relegation to count, but the two are unrelated.
+5. **Free agents ignore form entirely** (§8) and are approached far more often than a contracted
+   player of the same ability — a flat 50% a week against 5–8%. §4 does not touch that path.
+6. **Elite clients go very quiet.** `scarcity` ×0.30 and an 18–35 week cooldown compound; 0.53
+   bids per season for a 90 at average form. A great season now lifts that (the quiet period
+   scales too), but it may still be too few for the client you worked hardest to get.
+7. **Nothing models squad need.** A club with four keepers bids for a keeper as readily as a club
    with none.
-9. **No European-competition pull.** Qualifying for the Champions League does not make a club
-   more active in the market.
-10. **Potential is invisible to the bid roll.** `bigUpside` adds a *suitor* once a bid is already
-    happening, but a 19-year-old with 95 potential is no likelier to be approached than a 19-year-old
-    with 60.
+8. **No European-competition pull.** Qualifying for the Champions League does not make a club
+   more active in the market — though *winning* one now makes its players more wanted (§4.2).
+9. **Potential is invisible to the bid roll.** `bigUpside` adds a *suitor* once a bid is already
+   happening, but a 19-year-old with 95 potential is no likelier to be approached than a
+   19-year-old with 60.
+10. **The quiet period caps the mid-range** (§4.4). Because it binds before the chance does, form
+    changes in the middle bands barely move the number of offers. Shortening the base 7–15 weeks
+    would let §4's weights show through on the total as well as on the mix.
+
+### Resolved by the 2026-09-28 revision
+
+- ~~Buyers are picked uniformly~~ — now weighted by club quality (§4).
+- ~~Form is a single +25% on value and nothing else~~ — now a six-band table driving interest,
+  fee, wage, the eligible-buyer window and the quiet period, with a downside as well as an upside.
+- ~~Winning things does nothing~~ — league, cup and European trophies make bigger clubs look (§4.2).
+- ~~Relegation does nothing~~ — the division he left comes back for him (§4.3).

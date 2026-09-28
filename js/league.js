@@ -2655,7 +2655,9 @@ const League = {
         });
         const clientWinners = [];
         winners.forEach(p => {
-            p.trophies.push({ year, compId, clubId });
+            // `aw` stamps WHEN he won it: the interest boost it carries runs 52 weeks from that
+            // moment, not to the end of the next season (see Agency._boostFresh)
+            p.trophies.push({ year, compId, clubId, aw: GameState.absWeek() });
             if (p.agentId === 'me') {
                 clientWinners.push(p.id);
                 if (p.morale) { p.morale.club = Math.min(100, p.morale.club + MORALE.TROPHY_CLUB); p.morale.agent = Math.min(100, p.morale.agent + MORALE.TROPHY_AGENT); }

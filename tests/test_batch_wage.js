@@ -38,12 +38,25 @@ check('youth cap: pot>90 uncapped', runv(`return PlayerGen.capYouthWage(18000,15
 check('youth cap: 18yo untouched (no cap key)', runv(`return PlayerGen.capYouthWage(18000,18,60,85)===18000;`));
 
 // ---- item 1: loyalty / perf multipliers ----
-check('perfWageMult tiers: >8=1.6, >7.5=1.25, >7.24=1.1, else 1', runv(`
-  const A=Agency; A.recentSeasonRating=()=>8.1; const a=A.perfWageMult({});
-  A.recentSeasonRating=()=>7.6; const b=A.perfWageMult({});
-  A.recentSeasonRating=()=>7.3; const c=A.perfWageMult({});
-  A.recentSeasonRating=()=>6.8; const d=A.perfWageMult({});
-  return a===1.6 && b===1.25 && c===1.1 && d===1;`));
+// Form now runs off one six-band table (Agency.FORM_BANDS) that drives wage, fee AND interest, and
+// it PENALISES a bad season as well as rewarding a good one.
+check('perfWageMult bands: 8.1=1.6, 7.6=1.3, 7.3=1.1, 6.8=1.0, 6.3=0.95, 5.5=0.88', runv(`
+  const A=Agency, r=v=>{A.recentSeason=()=>({avg:v,apps:30}); return A.perfWageMult({});};
+  return r(8.1)===1.6 && r(7.6)===1.3 && r(7.3)===1.1 && r(6.8)===1 && r(6.3)===0.95 && r(5.5)===0.88;`));
+check('perfValueMult bands: 8.1=1.30, 7.6=1.18, 6.8=1.00, 5.5=0.80', runv(`
+  const A=Agency, r=v=>{A.recentSeason=()=>({avg:v,apps:30}); return A.perfValueMult({});};
+  return r(8.1)===1.30 && r(7.6)===1.18 && r(6.8)===1 && r(5.5)===0.80;`));
+// A player with no games played has NOT played badly — he must read as steady, or every youth
+// prospect and every unused signing would silently lose value and wage.
+check('no real sample -> steady band, never the bad one', runv(`
+  const A=Agency;
+  A.recentSeason=()=>({avg:0,apps:0});
+  const noGames = A.perfValueMult({}) === 1 && A.perfWageMult({}) === 1;
+  A.recentSeason=()=>({avg:4.5,apps:2});
+  const cameo = A.perfValueMult({}) === 1 && A.perfWageMult({}) === 1;
+  A.recentSeason=()=>({avg:4.5,apps:20});
+  const realBadSeason = A.perfValueMult({}) === 0.80;
+  return noGames && cameo && realBadSeason;`));
 check('loyaltyMult: 10y at 28yo ~ +50%', runv(`
   const orig=Sim._seasonsAtClub;
   Sim._seasonsAtClub=()=>10; const m=Agency.loyaltyMult({age:28}); Sim._seasonsAtClub=orig;
@@ -69,7 +82,7 @@ check('country: England outpays Portugal for the same player', runv(`
 // ---- item 2: age depreciation ratios vs a 26yo ----
 check('value: 31yo ~35% less than 26yo (same ability)', runv(`
   const mk=age=>({ability:80,age,potential:80,contractUntilSeason:GameState.seasonStartYear+3});
-  Agency.recentSeasonRating=()=>6.8; // neutralise form
+  Agency.recentSeason=()=>({avg:6.8,apps:30}); // neutralise form
   const base=Agency.playerValue(mk(26)), v31=Agency.playerValue(mk(31));
   return Math.abs(v31/base - 0.65) < 0.02;`));
 check('value: 35yo ~80% less', runv(`

@@ -774,24 +774,69 @@ const Agency = {
     // ---------- wage market factors (loyalty · form · country · youth caps) ----------
     // The most recent MEANINGFUL season average — the current one once it has real minutes, else the
     // last completed campaign. Drives both the performance wage bonus and the higher-value transfer pull.
-    recentSeasonRating(p) {
+    // The season his form is judged on: this one once he has 10 games in it, otherwise last one.
+    recentSeason(p) {
         const y = GameState.seasonStartYear;
         const cur = seasonTotals(p, y);
-        if (cur.apps >= 10) return cur.avg;
+        if (cur.apps >= 10) return { avg: cur.avg, apps: cur.apps };
         const prev = seasonTotals(p, y - 1);
-        if (prev.apps >= 10) return prev.avg;
-        return cur.apps > 0 ? cur.avg : (prev.avg || 0);
+        if (prev.apps >= 10) return { avg: prev.avg, apps: prev.apps };
+        return cur.apps > 0 ? { avg: cur.avg, apps: cur.apps } : { avg: prev.avg || 0, apps: prev.apps || 0 };
     },
-    // A season of >8.00 is worth +60% wage, >7.50 +25%, >7.24 +10% (each tier, nothing below).
-    perfWageMult(p) {
-        const r = this.recentSeasonRating(p);
-        return r > 8.00 ? 1.60 : r > 7.50 ? 1.25 : r > 7.24 ? 1.10 : 1;
+    recentSeasonRating(p) { return this.recentSeason(p).avg; },
+    // ---------- form ----------
+    // One table drives everything form touches: how many clubs come calling, WHICH clubs they are,
+    // what they pay, and what wage they put on the table.
+    //
+    // `up` / `level` / `down` are weights on the three kinds of buyer, relative to the player:
+    //   up    = club rated FORM_TIER_GAP or more ABOVE his ability (he'd be a squad/rotation man)
+    //   level = within FORM_TIER_GAP either way (he'd walk into the side)
+    //   down  = FORM_TIER_GAP or more BELOW him (he'd be their star)
+    //
+    // The weights are not just a preference ordering — because the roll's chance is scaled by the
+    // MEAN weight across the candidate pool and the buyer is then drawn in proportion to its own
+    // weight, each tier's absolute rate of approaches ends up directly proportional to its weight.
+    // So `down: 1.15` on a bad season really does mean smaller clubs circle 15% MORE than normal
+    // while the clubs above him (`up: 0.10`) all but vanish. See Sim._generateOffers.
+    //
+    // `widen` stretches the top of the eligible-buyer window (normally ability+16). Only the very
+    // best season opens it: clubs plainly too good for him will take him as a squad player.
+    // `cool` shortens the quiet period after a bidding round. Without it the form weights barely
+    // changed how MANY offers arrive: a client is untouchable for 7-15 weeks afterwards, and with
+    // only 17 rollable weeks in a season that ceiling swallowed the whole effect — a hotter player
+    // just reached the same cap sooner. Measured before adding it, a 7.3 season drew FEWER bids
+    // than a 6.8 one. Clubs come back around faster for a man in form.
+    //
+    // It only ever shortens, never lengthens: it applies to EVERY tier at once, so a bad season
+    // slowing the clock down would have dragged the smaller clubs down with the big ones. Measured
+    // at cool 1.30, a bad season cut interest from lesser clubs by 36% when the table promises a
+    // 15% RISE. Below steady the clock is left alone and the weights do the work on their own.
+    FORM_TIER_GAP: 5,
+    FORM_BANDS: [
+        //  rating over      up   level  down  value  wage  widen  cool
+        { min: 8.00, key: 'outstanding', up: 3.20, level: 1.70, down: 0.80, value: 1.30, wage: 1.60, widen: 10, cool: 0.45 },
+        { min: 7.50, key: 'excellent', up: 2.20, level: 1.40, down: 0.90, value: 1.18, wage: 1.30, widen: 0, cool: 0.60 },
+        { min: 7.00, key: 'good', up: 1.35, level: 1.15, down: 1.00, value: 1.08, wage: 1.10, widen: 0, cool: 0.80 },
+        { min: 6.50, key: 'steady', up: 1.00, level: 1.00, down: 1.00, value: 1.00, wage: 1.00, widen: 0, cool: 1.00 },
+        { min: 6.00, key: 'poor', up: 0.55, level: 0.80, down: 1.00, value: 0.92, wage: 0.95, widen: 0, cool: 1.00 },
+        { min: -Infinity, key: 'bad', up: 0.10, level: 0.35, down: 1.15, value: 0.80, wage: 0.88, widen: 0, cool: 1.00 },
+    ],
+    FORM_MIN_APPS: 5,
+    NEUTRAL_BAND: null,      // resolved lazily below
+    // No real sample yet — a new youth player, a signing who has not featured, a season not under
+    // way — reads as STEADY, never as bad. The bands now carry a penalty as well as a bonus, so a
+    // rating of 0 or a single-game cameo must not drag his value, wage and suitors down with it.
+    formBand(p) {
+        const s = this.recentSeason(p);
+        if (!this.NEUTRAL_BAND) this.NEUTRAL_BAND = this.FORM_BANDS.filter(b => b.key === 'steady')[0];
+        if (!s.avg || s.apps < this.FORM_MIN_APPS) return this.NEUTRAL_BAND;
+        for (const b of this.FORM_BANDS) if (s.avg > b.min) return b;
+        return this.FORM_BANDS[this.FORM_BANDS.length - 1];
     },
-    // In form also lifts a player's market value and the bids he draws — up to +25%.
-    perfValueMult(p) {
-        const r = this.recentSeasonRating(p);
-        return r > 8.00 ? 1.25 : r > 7.50 ? 1.15 : r > 7.24 ? 1.08 : 1;
-    },
+    // A season of >8.00 is worth +60% wage, >7.50 +30%, >7.00 +10% — and a bad one now COSTS him.
+    perfWageMult(p) { return this.formBand(p).wage; },
+    // In form also lifts a player's market value; out of form it drags it down.
+    perfValueMult(p) { return this.formBand(p).value; },
     // Loyalty: +5% per season at the club, growing until 32; from 33 on it sheds 15 points a year down
     // to a 5%-above-normal floor. Only meaningful when re-signing at the SAME club.
     loyaltyMult(p) {
@@ -859,19 +904,117 @@ const Agency = {
         return !!p && !this.isFreeAgent(p) && p.contractUntilSeason != null
             && p.contractUntilSeason <= GameState.seasonStartYear && GameState.week > 33;
     },
+    // ---------- what a client has just done, and who it impresses ----------
+    // A medal or a relegation counts for 52 WEEKS from the day it happened, then stops mattering.
+    // Entries written before this feature carry no `aw`, so fall back to the end of that season.
+    BOOST_WEEKS: 52,
+    REGULAR_APPS: 20,        // senior league games in the season -> he was genuinely part of it
+    HON_LEAGUE: 1.15,        // a league title makes bigger clubs look
+    HON_CUP: 1.10,           // a domestic cup, a little less
+    HON_EURO: 1.15,          // a European trophy, on TOP of either (a double is ~1.32)
+    RELEG_POOL: 5.0,         // clubs in the division he just dropped out of, if he's their level
+    // ...and more approaches overall. The pool weight alone barely moves the total: pickBuyer already
+    // favours his own country, so most of his suitors were in that division anyway. Without this the
+    // rule only RESHUFFLES who bids, when what it should mean is that a player too good for the tier
+    // he has just dropped into is suddenly a wanted man.
+    RELEG_INTEREST: 1.45,
+    _boostFresh(entry) {
+        if (!entry) return false;
+        const aw = entry.aw != null ? entry.aw : (entry.year + 1) * 52;
+        return GameState.absWeek() - aw < this.BOOST_WEEKS;
+    },
+    _seniorLeagueApps(p, year) {
+        if (typeof Sim !== 'undefined' && Sim._seasonLeagueApps) return Sim._seasonLeagueApps(p, year);
+        return seasonTotals(p, year).apps || 0;   // no Sim (tests): senior totals already exclude youth
+    },
+    // Was he a regular that season? Reserve football never counts — and neither does a season spent
+    // on the bench of a winning side, which is the whole point of the threshold.
+    playedRegularly(p, year) { return this._seniorLeagueApps(p, year) >= this.REGULAR_APPS; },
+    // Trophies won in the last 52 weeks, as a single multiplier on how interesting he is to a
+    // BIGGER club. League and cup do not stack with each other (the bigger one wins); Europe does.
+    honoursMult(p) {
+        let best = 1, euro = 1;
+        (p.trophies || []).forEach(t => {
+            if (!this._boostFresh(t)) return;
+            if (!this.playedRegularly(p, t.year)) return;
+            const comp = (typeof COMPETITIONS !== 'undefined') ? COMPETITIONS[t.compId] : null;
+            const type = comp ? comp.type : null;
+            if (type === 'cont') euro = this.HON_EURO;
+            else if (type === 'league') best = Math.max(best, this.HON_LEAGUE);
+            else if (type === 'cup') best = Math.max(best, this.HON_CUP);
+        });
+        return best * euro;
+    },
+    // Relegated in the last 52 weeks, as a regular, and at least as good as the club he went down
+    // with -> the division he just left comes looking, because that is demonstrably his level.
+    // Returns that division's id, or null.
+    relegatedFrom(p) {
+        const club = Clubs.getClubById(p.clubId);
+        if (!club || p.ability < club.reputation) return null;
+        const hit = (p.movements || []).filter(m => m.type === 'releg' && this._boostFresh(m) && this.playedRegularly(p, m.year));
+        return hit.length ? hit[hit.length - 1].division : null;
+    },
+    // Everything that shapes WHICH club bids, resolved once per roll.
+    interestWeights(p) {
+        const band = this.formBand(p);
+        const hon = this.honoursMult(p);
+        const relegDiv = this.relegatedFrom(p);
+        return {
+            up: band.up * hon,          // honours only impress clubs above him
+            level: band.level,
+            down: band.down,
+            widen: band.widen,
+            relegDiv,
+            boost: relegDiv ? this.RELEG_INTEREST : 1,   // straight onto the chance of any bid
+            cool: band.cool,
+        };
+    },
+    buyerTier(p, club) {
+        const d = (club ? club.reputation : 45) - p.ability;
+        return d >= this.FORM_TIER_GAP ? 'up' : d <= -this.FORM_TIER_GAP ? 'down' : 'level';
+    },
+    // How likely this particular club is to be the one that bids.
+    buyerWeight(p, club, w) {
+        let weight = w[this.buyerTier(p, club)];
+        // his old division: weighted hard, and tilted toward its MODEST clubs — the ones who need a
+        // ready-made player at that level and can realistically get him, not its title contenders
+        if (w.relegDiv && club.division === w.relegDiv) {
+            const over = Math.max(0, club.reputation - p.ability);
+            weight *= this.RELEG_POOL / (1 + over * 0.12);
+        }
+        return Math.max(0.001, weight);
+    },
     // pick a bidding club, strongly preferring the player's own country; cross-border bids are
-    // rare and rarer the lower the player's level (Urk bids for a TEC player far sooner than Carlisle)
-    pickBuyer(cands, p) {
+    // rare and rarer the lower the player's level (Urk bids for a TEC player far sooner than Carlisle).
+    // `w` (optional) weights the pick by club quality — see interestWeights/buyerWeight. Without it
+    // the pick is uniform, which is what the free-agent and loan paths still do.
+    pickBuyer(cands, p, w) {
         if (!cands || !cands.length) return null;
+        const draw = pool => {
+            if (!w) return pool[Math.floor(Rng.next() * pool.length)];
+            const ws = pool.map(c => this.buyerWeight(p, c, w));
+            let r = Rng.next() * ws.reduce((s, x) => s + x, 0);
+            for (let i = 0; i < pool.length; i++) { r -= ws[i]; if (r <= 0) return pool[i]; }
+            return pool[pool.length - 1];
+        };
         const home = (Clubs.getClubById(p.clubId) || {}).country || p._lastCountry || null;
-        if (!home) return cands[Math.floor(Rng.next() * cands.length)];
+        if (!home) return draw(cands);
         const same = cands.filter(c => c.country === home);
         const cross = cands.filter(c => c.country !== home);
         const crossProb = Math.max(0.02, Math.min(0.35, ((p.ability || 50) - 45) / 120));
         let pool;
         if (same.length && cross.length) pool = (Rng.next() < crossProb) ? cross : same;
         else pool = same.length ? same : cross;
-        return pool[Math.floor(Rng.next() * pool.length)];
+        return draw(pool);
+    },
+    // The mean buyer weight across the pool. Scaling the roll's chance by this is what turns the
+    // per-tier weights into per-tier RATES: chance × (share of picks going to tier t) works out to
+    // base × n_t × w_t / N, i.e. proportional to that tier's own weight and nothing else.
+    meanBuyerWeight(p, cands, w) {
+        if (!cands || !cands.length) return 1;
+        let s = 0;
+        for (const c of cands) s += this.buyerWeight(p, c, w);
+        return s / cands.length;
     },
 
     // greeting reflects how the club feels about you

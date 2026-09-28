@@ -699,21 +699,27 @@ const Sim = {
                 // stage-2 escalation is public knowledge: an agitating player or a formal transfer
                 // request both draw noticeably more interest than usual
                 const caseAttract = (mc && mc.stage >= 2) ? (mc.dim === 'time' ? MORALE.STAGE2_TIME_ATTRACT : mc.dim === 'club' ? MORALE.STAGE2_CLUB_ATTRACT : 0) : 0;
-                // a red-hot recent season pulls MORE suitors too (up to +25%), on top of higher bids (see perfValueMult)
-                const attract = (10 + Math.min(20, tot.apps) * 0.5 + (p.transferListed ? 22 : 0) + caseAttract) * Agency.perfValueMult(p);
+                const attract = 10 + Math.min(20, tot.apps) * 0.5 + (p.transferListed ? 22 : 0) + caseAttract;
                 // elite players attract bids far less often — only a handful of clubs can afford them, and
                 // they don't get fresh approaches every window
                 const scarcity = p.ability >= 84 ? 0.30 : p.ability >= 80 ? 0.48 : p.ability >= 74 ? 0.68 : p.ability >= 68 ? 0.90 : 1.0;
-                const chance = Math.min(0.26, 0.02 + attract / 320) * scarcity;
-                if (Rng.next() < chance) {
-                    const lo = p.transferListed ? p.ability - 14 : p.ability - 6;
-                    const val = Agency.playerValue(p);
-                    const cands = Clubs.allClubs.filter(c =>
-                        c.id !== p.clubId && c.reputation >= lo && c.reputation <= p.ability + 16 &&
-                        Agency.buyerMaxFee(c) >= val * 0.55 &&
-                        !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
-                        !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
-                    if (cands.length) {
+                // Form, medals and a relegation all act through the buyer pool rather than as a flat
+                // bonus: they decide which KIND of club is looking, and the mean of those weights is
+                // what raises or lowers the chance of anyone looking at all. So the candidate list has
+                // to be built BEFORE the roll (it also sets how far above him clubs may be — a player
+                // in the form of his life is looked at by clubs plainly too good for him).
+                const w = Agency.interestWeights(p);
+                const lo = p.transferListed ? p.ability - 14 : p.ability - 6;
+                const hi = p.ability + 16 + w.widen;
+                const val = Agency.playerValue(p);
+                const cands = Clubs.allClubs.filter(c =>
+                    c.id !== p.clubId && c.reputation >= lo && c.reputation <= hi &&
+                    Agency.buyerMaxFee(c) >= val * 0.55 &&
+                    !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
+                    !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
+                const chance = Math.min(0.26, 0.02 + attract / 320) * scarcity * w.boost * Agency.meanBuyerWeight(p, cands, w);
+                if (cands.length && Rng.next() < chance) {
+                    {
                         // a player clearly outgrowing his club, in hot form, or a big-potential prospect
                         // draws interest from more than one suitor at once — a real bidding situation
                         const abilityGap = p.ability - (homeClub ? homeClub.reputation : 45);
@@ -727,7 +733,7 @@ const Sim = {
                         const pool = cands.slice();
                         const buyers = [];
                         for (let i = 0; i < suitors; i++) {
-                            const buyer = Agency.pickBuyer(pool, p);
+                            const buyer = Agency.pickBuyer(pool, p, w);
                             if (!buyer) break;
                             buyers.push(buyer);
                             pool.splice(pool.indexOf(buyer), 1);
@@ -749,8 +755,10 @@ const Sim = {
                             events.push({ type: 'offer', text: I18n.t('sim.ev.bidMany', { n: buyers.length, name: p.name, names: names.join(', ') }) });
                         }
                         if (buyers.length) {
-                            // after a bidding round, this player isn't approached again for a while — longer for the elite
-                            p._txOffersFrom = GameState.absWeek() + (p.ability >= 80 ? 18 + Math.floor(Rng.next() * 18) : 7 + Math.floor(Rng.next() * 9));
+                            // after a bidding round, this player isn't approached again for a while — longer
+                            // for the elite, and shorter the better he is playing (w.cool)
+                            const quiet = (p.ability >= 80 ? 18 + Math.floor(Rng.next() * 18) : 7 + Math.floor(Rng.next() * 9)) * w.cool;
+                            p._txOffersFrom = GameState.absWeek() + Math.max(2, Math.round(quiet));
                         }
                     }
                 }
@@ -1159,10 +1167,12 @@ const Sim = {
             const wonTitle = (p.trophies || []).some(t => t.year === year && t.compId === divId);
             if (!p.movements) p.movements = [];
             if (newTier < oldTier && !wonTitle) {
-                p.movements.push({ year, type: 'promo', division: divId });   // moved up a tier
+                p.movements.push({ year, type: 'promo', division: divId, aw: GameState.absWeek() });   // moved up a tier
                 if (p.agentId === 'me' && p.morale) p.morale.club = Math.min(100, p.morale.club + MORALE.PROMOTION_CLUB);
             } else if (newTier > oldTier) {
-                p.movements.push({ year, type: 'releg', division: divId });   // dropped a tier
+                // `division` is the one he DROPPED OUT OF, and `aw` when — that division's clubs come
+                // looking for him for the next 52 weeks (see Agency.relegatedFrom)
+                p.movements.push({ year, type: 'releg', division: divId, aw: GameState.absWeek() });
                 if (p.agentId === 'me' && p.morale) p.morale.club = Math.max(0, p.morale.club + MORALE.RELEGATION_CLUB);
             }
         });
