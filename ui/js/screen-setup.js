@@ -26,7 +26,7 @@ const Setup = {
     show() {
         const countries = (typeof REGIONS_BY_COUNTRY !== 'undefined') ? Object.keys(REGIONS_BY_COUNTRY) : ['Netherlands'];
         const opts = countries.map(c => `<option value="${c}">${c}</option>`).join('');
-        document.getElementById('app').innerHTML = `<div class="setup-wrap">
+        document.getElementById('app').innerHTML = `<div class="setup-wrap" data-screen="setup">
             <button onclick="StartScreen.show()" aria-label="${I18n.t('setup.backToMenu')}" style="position:absolute;top:calc(env(safe-area-inset-top,0) + 12px);left:14px;background:none;border:none;color:var(--text-secondary);font:inherit;font-size:var(--fs-sm);cursor:pointer;display:flex;align-items:center;gap:2px;z-index:2"><i class="ti ti-chevron-left"></i>${I18n.t('setup.menu')}</button>
             <div class="setup-card">
             <div class="setup-brand">

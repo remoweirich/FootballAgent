@@ -44,7 +44,7 @@ const StoreScreen = {
             <div class="st-head">${I18n.t(g.head)}</div>
             ${g.head === 'store.support' ? thanks : ''}
             <div class="st-group">${g.ids.map(id => this._card(id)).join('')}</div>`).join('');
-        document.getElementById('app').innerHTML = `<div class="st-wrap">
+        document.getElementById('app').innerHTML = `<div class="st-wrap" data-screen="store">
             <div class="st-bar">
                 <button class="st-back" onclick="StoreScreen.back()" aria-label="${I18n.t('common.back')}"><i class="ti ti-chevron-left" style="font-size:24px"></i></button>
                 <span class="st-title">${I18n.t('store.title')}</span>

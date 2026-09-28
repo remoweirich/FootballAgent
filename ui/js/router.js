@@ -91,18 +91,105 @@ const Router = {
             return p || null;
         } catch (e) { return null; }
     },
-    // Android hardware back button: mirrors the in-app back arrow's hierarchy rather
-    // than the WebView's own history.back() (which has the same ping-pong problem —
-    // see navStack above). Falls through to Home, then exits, matching how Android
-    // users expect the back button to behave.
+    // ---- Android hardware back --------------------------------------------------------------
+    // Always goes UP one level, and never leaves the game without asking. The ladder:
+    //   artwork lightbox -> sheet -> modal -> full-screen overlay -> nav stack -> Home ->
+    //   Start screen -> confirm, then quit.
+    //
+    // The overlays are the part that used to be missing. Nine screens take over #app and run
+    // outside the Router shell, so `this.current` still names whatever route is hidden underneath
+    // them; back from Settings therefore navigated an invisible screen, or quit outright when that
+    // screen happened to be Home. Each overlay now tags its wrapper with data-screen and is closed
+    // by its own handler.
+    //
+    // Each handler does exactly what that screen's own exit control does — never more. Where a
+    // screen offers no way out yet (a match still running), the press is swallowed: abandoning it
+    // would skip an outcome the player has not seen, and there is still a Skip-to-result button.
+    OVERLAY_BACK: {
+        settings: () => typeof SettingsScreen !== 'undefined' && SettingsScreen.close(),
+        achievements: () => typeof AchievementsScreen !== 'undefined' && AchievementsScreen.back(),
+        store: () => typeof StoreScreen !== 'undefined' && StoreScreen.back(),
+        customize: () => typeof CustomizeScreen !== 'undefined' && CustomizeScreen.exit(),
+        sandbox: () => typeof Sandbox !== 'undefined' && Sandbox.back(),
+        setup: () => typeof StartScreen !== 'undefined' && StartScreen.show(),
+        // the chat's own X button: every choice is already banked, so leaving is safe
+        dialogue: () => typeof DialogueView !== 'undefined' && DialogueView.leave(),
+        // only once the whistle has gone, mirroring the full-time "Leave" button. Mid-match the
+        // press does nothing — dropping out there would skip the post-match scene and any bonus
+        // that settles in it.
+        livesim: () => {
+            if (typeof LiveView !== 'undefined' && LiveView.s && LiveView.s.done) LiveView._done();
+        },
+        start: 'confirmExit',
+    },
+    // Which full-screen overlay is currently showing, if any.
+    overlayName() {
+        if (typeof document === 'undefined' || !document.querySelector) return null;
+        const el = document.querySelector('#app > [data-screen]');
+        return el ? el.getAttribute('data-screen') : null;
+    },
+    // Dismissable overlays that a few screens append straight to the DOM instead of going through
+    // sheet()/modal(). Each is created on open and removed on close, so simply being in the
+    // document means it is showing. They sit on top of everything, so back must reach them first.
+    TOP_OVERLAYS: ['artLightbox', 'ssOverlay', 'helpOverlay', 'setOverlay', 'cxOverlay'],
     hardwareBack() {
-        // A full-screen overlay (e.g. the vehicle-artwork lightbox) swallows the first back press,
-        // closing itself rather than navigating underneath — matching tap-anywhere-to-dismiss.
-        const lightbox = document.getElementById('artLightbox');
-        if (lightbox) { lightbox.remove(); return; }
+        // 1. topmost loose overlay (artwork lightbox, how-to-play, a Customize dialog) dismisses
+        // itself rather than navigating underneath — matching its own tap-outside-to-close.
+        for (const id of this.TOP_OVERLAYS) {
+            const el = document.getElementById(id);
+            if (el) { el.remove(); return; }
+        }
+
+        // 2. an open sheet is a picker — closing it is exactly what a backdrop tap does
+        const sheet = document.getElementById('sheetLayer');
+        if (sheet && sheet.innerHTML) { this.closeSheet(); return; }
+
+        // 3. an open modal: do what tapping its backdrop does rather than just clearing the layer.
+        // Several modals drive a flow onward when clicked (the week summary hands off to the
+        // spotlight chain), and wiping the layer would strand it half-finished. A modal that asks
+        // a question opts out with data-back="close", so back cancels it instead of answering it.
+        const inner = document.querySelector && document.querySelector('#modalLayer .modal-card > *');
+        if (inner) {
+            if (inner.getAttribute && inner.getAttribute('data-back') === 'close') this.closeModal();
+            else inner.click();
+            return;
+        }
+        const layer = document.getElementById('modalLayer');
+        if (layer && layer.innerHTML) { this.closeModal(); return; }
+
+        // 4. a full-screen overlay closes itself, back to whatever opened it
+        const ov = this.overlayName();
+        if (ov) {
+            const h = this.OVERLAY_BACK[ov];
+            if (h === 'confirmExit') { this.confirmExit(); return; }
+            if (typeof h === 'function') h();
+            return;                      // null or unknown -> swallow, never fall through and quit
+        }
+
+        // 5. inside the Router shell: walk the hierarchy, then the main tabs
         const def = this.screens[this.current];
         if (this.navStack.length || (def && !def.isMain)) { this.back(); return; }
         if (this.current !== 'home') { this.go('home'); return; }
+
+        // 6. Home is the top of the in-game hierarchy: go out to the Start screen, do NOT quit.
+        // Routed through toStart() rather than StartScreen.show() so the save is flushed first,
+        // exactly as Settings' own "back to menu" does.
+        if (typeof SettingsScreen !== 'undefined' && SettingsScreen.toStart) { SettingsScreen.toStart(); return; }
+        if (typeof StartScreen !== 'undefined') { StartScreen.show(); return; }
+        this.confirmExit();
+    },
+    // Only ever reached from the Start screen — the one place with nothing above it to go to.
+    confirmExit() {
+        this.modal(`<div style="text-align:center" data-back="close">
+            <h2 style="margin:0 0 var(--space-3)">${I18n.t('quit.title')}</h2>
+            <p style="color:var(--text-secondary);line-height:1.5;margin:0 0 var(--space-5)">${I18n.t('quit.body')}</p>
+            <div style="display:flex;gap:var(--space-3)">
+                <button class="btn btn--ghost" style="flex:1" onclick="Router.closeModal()">${I18n.t('quit.stay')}</button>
+                <button class="btn btn--primary" style="flex:1" onclick="Router.exitApp()">${I18n.t('quit.leave')}</button>
+            </div></div>`);
+    },
+    exitApp() {
+        this.closeModal();
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) window.Capacitor.Plugins.App.exitApp();
     },
     refresh() { this.route(false); },

@@ -38,7 +38,7 @@ const AchievementsScreen = {
             return `<div class="set-heading">${I18n.t('ach.grp.' + g)}</div><div class="set-group">${rows}</div>`;
         }).join('');
 
-        document.getElementById('app').innerHTML = `<div class="set-wrap">
+        document.getElementById('app').innerHTML = `<div class="set-wrap" data-screen="achievements">
             <div class="set-bar">
                 <button class="set-close" onclick="AchievementsScreen.back()" aria-label="Back"><i class="ti ti-chevron-left" style="font-size:24px"></i></button>
                 <span class="set-title">${I18n.t('settings.achievements')}</span>

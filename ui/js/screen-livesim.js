@@ -281,7 +281,7 @@ const LiveView = {
 
     _renderShell() {
         const m = this.match, C = LiveView;
-        document.getElementById('app').innerHTML = `<div class="lv-wrap">
+        document.getElementById('app').innerHTML = `<div class="lv-wrap" data-screen="livesim">
             <div class="lv-board" id="lvBoard"></div>
             <div class="lv-tabs">
                 <button class="lv-tab" data-t="feed" onclick="LiveView._setTab('feed')">${I18n.t('livesim.tab.feed')}</button>

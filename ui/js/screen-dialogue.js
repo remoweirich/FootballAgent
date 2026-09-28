@@ -146,7 +146,7 @@ const DialogueView = {
     _renderShell() {
         const p = this.p;
         const club = Clubs.getClubById(effectiveClubId(p));
-        document.getElementById('app').innerHTML = `<div class="dlg-wrap">
+        document.getElementById('app').innerHTML = `<div class="dlg-wrap" data-screen="dialogue">
             <div class="dlg-head">
                 <button class="icon-btn" onclick="DialogueView.leave()" aria-label="${I18n.t('common.close')}"><i class="ti ti-x" style="font-size:20px"></i></button>
                 <div class="dlg-who" onclick="DialogueView.viewPlayer()" role="button" title="${I18n.t('dialogue.viewProfile')}">

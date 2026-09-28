@@ -21,6 +21,12 @@ I18n.register('pt', {
     'common.back': 'Voltar',
     'common.finances': 'Finanças',
 
+    // ---- sair do jogo (botão voltar no ecrã inicial) ----
+    'quit.title': 'Sair do jogo?',
+    'quit.body': 'O teu progresso já está guardado.',
+    'quit.stay': 'Ficar',
+    'quit.leave': 'Sair',
+
     // ---- bottom navigation ----
     'nav.leagues': 'Competições',
     'nav.clients': 'Clientes',

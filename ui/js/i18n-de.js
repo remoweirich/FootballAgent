@@ -17,6 +17,12 @@ I18n.register('de', {
     'common.back': 'Zurück',
     'common.finances': 'Finanzen',
 
+    // ---- Spiel verlassen (Zurück-Taste auf dem Startbildschirm) ----
+    'quit.title': 'Spiel verlassen?',
+    'quit.body': 'Dein Fortschritt ist schon gespeichert.',
+    'quit.stay': 'Bleiben',
+    'quit.leave': 'Verlassen',
+
     // ---- bottom navigation ----
     'nav.leagues': 'Wettbewerbe',
     'nav.clients': 'Klienten',

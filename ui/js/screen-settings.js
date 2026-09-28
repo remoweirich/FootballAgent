@@ -87,7 +87,7 @@ const SettingsScreen = {
             : '';
         // Full Sandbox editor: in-game only, once owned
         const sandboxRow = (inGame && M && M.owns('sandbox')) ? row(ic('ti-tools'), I18n.t('settings.sandbox'), '', 'SettingsScreen.openSandbox()') : '';
-        document.getElementById('app').innerHTML = `<div class="set-wrap">
+        document.getElementById('app').innerHTML = `<div class="set-wrap" data-screen="settings">
             <div class="set-bar">
                 <button class="set-close" onclick="SettingsScreen.close()" aria-label="Close"><i class="ti ti-chevron-left" style="font-size:24px"></i></button>
                 <span class="set-title">${I18n.t('common.settings')}</span>

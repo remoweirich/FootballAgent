@@ -18,6 +18,12 @@ I18n.register('en', {
     'common.back': 'Back',
     'common.finances': 'Finances',
 
+    // ---- leaving the game (hardware back on the start screen) ----
+    'quit.title': 'Leave the game?',
+    'quit.body': 'Your progress is already saved.',
+    'quit.stay': 'Stay',
+    'quit.leave': 'Leave',
+
     // ---- bottom navigation ----
     'nav.leagues': 'Competitions',
     'nav.clients': 'Clients',

@@ -19,6 +19,12 @@ I18n.register('nl', {
     'common.back': 'Terug',
     'common.finances': 'Financiën',
 
+    // ---- het spel verlaten (terugtoets op het startscherm) ----
+    'quit.title': 'Spel verlaten?',
+    'quit.body': 'Je voortgang is al opgeslagen.',
+    'quit.stay': 'Blijven',
+    'quit.leave': 'Verlaten',
+
     // ---- bottom navigation ----
     'nav.leagues': 'Competities',
     'nav.clients': 'Cliënten',

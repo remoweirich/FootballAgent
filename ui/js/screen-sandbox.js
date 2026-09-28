@@ -16,7 +16,7 @@ const Sandbox = {
                 <span class="sbx-sub">${I18n.t('sandbox.ageAbil', { age: p.age, abil: p.ability, pot: p.potential })}</span></span>
                 <i class="ti ti-chevron-right" style="color:var(--text-dim)"></i>
             </button>`).join('') : `<p class="sbx-empty">${I18n.t('sandbox.noClients')}</p>`;
-        document.getElementById('app').innerHTML = `<div class="sbx-wrap">
+        document.getElementById('app').innerHTML = `<div class="sbx-wrap" data-screen="sandbox">
             <div class="sbx-bar">
                 <button class="sbx-back" onclick="Sandbox.back()" aria-label="${I18n.t('common.back')}"><i class="ti ti-chevron-left" style="font-size:24px"></i></button>
                 <span class="sbx-title">${I18n.t('sandbox.title')}</span>

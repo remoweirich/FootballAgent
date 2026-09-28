@@ -1163,7 +1163,7 @@ const CustomizeScreen = {
     // ---------- chrome ----------
     _root() { return document.getElementById('cxRoot'); },
     _screen(title, bodyHTML, onBack) {
-        document.getElementById('app').innerHTML = `<div class="cx-wrap" id="cxRoot">
+        document.getElementById('app').innerHTML = `<div class="cx-wrap" id="cxRoot" data-screen="customize">
             <div class="cx-head">
                 <button class="cx-back" id="cxBack" aria-label="${I18n.t('common.back')}"><i class="ti ti-chevron-left"></i></button>
                 <div class="cx-htitle">${UI.esc(title)}</div>
