@@ -565,7 +565,7 @@ I18n.register('de', {
     'dlg.favclub.none': 'ein Klub aus meiner Heimat',
     'dlg.note.tab': 'Der Abend geht auf Sie (−€{amt}).',
     'dlg.note.boyhood': 'Er hat seinen Wunsch bekommen: Sein letztes Spiel bestritt er in dem Trikot, das er als Kind verehrte.',
-    'dlg.note.farewellRep': 'Es spricht sich herum: Sie halten bis zum Schluss zu Ihren Leuten. (+2 Ansehen)',
+    'dlg.note.farewellRep': 'Es spricht sich herum: Sie halten bis zum Schluss zu Ihren Leuten. (+3 Ansehen)',
     'dlg.note.fam.single': 'Notiert: Im Moment ist er allein.',
     'dlg.note.fam.partner': 'Notiert: Er hat eine Partnerin.',
     'dlg.note.fam.kids': 'Notiert: Er hat Kinder.',

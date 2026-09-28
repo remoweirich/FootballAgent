@@ -580,7 +580,7 @@ I18n.register('en', {
     'dlg.favclub.none': 'a club back home',
     'dlg.note.tab': 'The night is on you (−€{amt}).',
     'dlg.note.boyhood': 'He got his wish: his last match came in the shirt he grew up worshipping.',
-    'dlg.note.farewellRep': 'Word gets around: you look after your people to the very end. (+2 reputation)',
+    'dlg.note.farewellRep': 'Word gets around: you look after your people to the very end. (+3 reputation)',
     'dlg.note.fam.single': 'Noted: it\'s just him right now.',
     'dlg.note.fam.partner': 'Noted: he has a partner.',
     'dlg.note.fam.kids': 'Noted: he has kids.',

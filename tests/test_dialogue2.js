@@ -175,7 +175,7 @@ check('farewell: Confidant+ farewell bumps agency reputation once', runv(`
   const r1 = Dialogue.resolveFarewell(P, 'personal');
   const mid = GameState.agency.reputation;
   const r2 = Dialogue.resolveFarewell(P, 'career');
-  return r1.ok && r1.note && mid === before + 2 && GameState.agency.reputation === mid;
+  return r1.ok && r1.note && mid === before + 3 && GameState.agency.reputation === mid;   // +3 since the rep revamp
 `));
 check('farewell: low bond farewell gives no rep bump', runv(`
   P.bond = 10; delete P._farewellDone;

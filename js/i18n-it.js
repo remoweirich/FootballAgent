@@ -593,7 +593,7 @@ I18n.register('it', {
     'dlg.favclub.none': 'un club di casa mia',
     'dlg.note.tab': 'La serata è a Suo carico (−€{amt}).',
     'dlg.note.boyhood': 'Ha avuto quello che voleva: l\'ultima partita l\'ha giocata con la maglia che adorava da bambino.',
-    'dlg.note.farewellRep': 'La voce gira: Lei resta accanto ai Suoi fino alla fine. (+2 di reputazione)',
+    'dlg.note.farewellRep': 'La voce gira: Lei resta accanto ai Suoi fino alla fine. (+3 di reputazione)',
     'dlg.note.fam.single': 'Annotato: per ora è solo.',
     'dlg.note.fam.partner': 'Annotato: ha una compagna.',
     'dlg.note.fam.kids': 'Annotato: ha figli.',

@@ -594,7 +594,7 @@ I18n.register('nl', {
     'dlg.favclub.none': 'een club uit mijn eigen streek',
     'dlg.note.tab': 'De avond is voor uw rekening (−€{amt}).',
     'dlg.note.boyhood': 'Hij kreeg zijn wens: zijn laatste wedstrijd speelde hij in het shirt dat hij als kind vereerde.',
-    'dlg.note.farewellRep': 'Het gaat rond: u staat tot het einde achter uw mensen. (+2 aanzien)',
+    'dlg.note.farewellRep': 'Het gaat rond: u staat tot het einde achter uw mensen. (+3 aanzien)',
     'dlg.note.fam.single': 'Genoteerd: hij is er op dit moment alleen.',
     'dlg.note.fam.partner': 'Genoteerd: hij heeft een partner.',
     'dlg.note.fam.kids': 'Genoteerd: hij heeft kinderen.',

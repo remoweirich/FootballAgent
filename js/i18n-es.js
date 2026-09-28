@@ -587,7 +587,7 @@ I18n.register('es', {
     'dlg.favclub.none': 'un club de mi tierra',
     'dlg.note.tab': 'La noche corre por su cuenta (−€{amt}).',
     'dlg.note.boyhood': 'Consiguió su deseo: su último partido lo jugó con la camiseta que adoraba de niño.',
-    'dlg.note.farewellRep': 'Se corre la voz: usted cuida de los suyos hasta el final. (+2 de reputación)',
+    'dlg.note.farewellRep': 'Se corre la voz: usted cuida de los suyos hasta el final. (+3 de reputación)',
     'dlg.note.fam.single': 'Anotado: ahora mismo está solo.',
     'dlg.note.fam.partner': 'Anotado: tiene pareja.',
     'dlg.note.fam.kids': 'Anotado: tiene hijos.',

@@ -58,13 +58,14 @@ const MORALE = {
     TALK_AGENT_BONUS: 6, TALK_COOLDOWN_WEEKS: 4,
     PROMISE_EXTRA_WEEKS: 8,      // deadline for newContract/renegotiateRep (move/playingTime use next transfer window)
     PROMISE_KEPT_DIM: 20, PROMISE_KEPT_AGENT: 10,
-    PROMISE_BROKEN_AGENT: -20, PROMISE_BROKEN_REP: -0.5,
+    PROMISE_BROKEN_AGENT: -20, PROMISE_BROKEN_REP: -1,      // docs/reputation-design.md
     STAGE2_UNRESOLVED_WEEKS: 6, STAGE3_UNRESOLVED_WEEKS: 6,
     STAGE2_TIME_ATTRACT: 25, STAGE2_CLUB_ATTRACT: 35,
     STAGE2_WAGE_CLUB_PENALTY: -20,
     STAGE2_CLUB_FEE_MULT: 0.85, STAGE2_CLUB_ASK_MULT: 0.9,
     STAGE3_AGENT_LEAVE_WEEKS: 8,   // grace between the breaking-point warning and actually walking out
-    DEPARTURE_AGENCY_REP: -1,
+    DEPARTURE_AGENCY_REP: -5,      // a walkout follows ~half a season of warnings — see the spec
+    CONTRACT_LAPSED_REP: -0.5,     // a contract allowed to run out with no new club lined up
 
     // ---- Phase 4: gifts + market coupling ----
     GIFT_BOOST: { small: 10, medium: 30, large: 60 },
@@ -1128,6 +1129,8 @@ const Sim = {
         // capture the finished season's final tables + cup winners now — next season's European
         // entrants are read from them, before promotion/relegation & setupSeason wipe the tables.
         const euSnap = (typeof Europe !== 'undefined') ? Europe.captureStandings() : null;
+        // the sponsorship reputation allowance is per season (docs/reputation-design.md)
+        GameState.agency.repFromSponsors = 0;
         // archive this season's finance ledger and start a fresh one
         GameState.agency.ledgerLast = GameState.agency.ledger || {};
         GameState.agency.ledger = {};
@@ -1224,7 +1227,11 @@ const Sim = {
         GameState.players.forEach(p => {
             if (p.agentId === 'me' && !p.freeAgent && p.clubId && p.contractUntilSeason != null && p.contractUntilSeason < GameState.seasonStartYear) {
                 const old = Clubs.getClubById(p.clubId);
+                // remembered so a later free-agent placement can still judge the border and
+                // top-five questions against where he came from (docs/reputation-design.md §4)
+                p.lastClubId = p.clubId;
                 p.freeAgent = true; p.clubId = null; p.onLoanAt = null; p.loanRole = null; p.squadRole = 'fringe';
+                Agency.bumpRep(MORALE.CONTRACT_LAPSED_REP);
                 p.morale.club = Math.max(0, p.morale.club - 25);
                 GameState.addMail({ kind: 'news', subject: I18n.t('sim.freeAgentSubj', { name: p.name }), body: I18n.t('sim.freeAgentBody', { name: p.name, club: old ? old.name : I18n.t('co.hisClubLc') }), ttl: 6 });
                 GameState.addLog(I18n.t('sim.freeAgentLog', { name: p.name }), 'contract');

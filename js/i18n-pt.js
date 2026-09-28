@@ -597,7 +597,7 @@ I18n.register('pt', {
     'dlg.favclub.none': 'um clube da minha terra',
     'dlg.note.tab': 'A noite fica por sua conta (−€{amt}).',
     'dlg.note.boyhood': 'Teve o que queria: o último jogo dele foi com a camisola que adorava em criança.',
-    'dlg.note.farewellRep': 'A notícia corre: cuida dos seus até ao fim. (+2 de reputação)',
+    'dlg.note.farewellRep': 'A notícia corre: cuida dos seus até ao fim. (+3 de reputação)',
     'dlg.note.fam.single': 'Registado: por agora está sozinho.',
     'dlg.note.fam.partner': 'Registado: tem companheira.',
     'dlg.note.fam.kids': 'Registado: tem filhos.',

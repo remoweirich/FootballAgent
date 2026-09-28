@@ -74,6 +74,97 @@ const Agency = {
     isClient(p) { return p && p.agentId === 'me'; },
     capacity() { return 5 + Upgrades.playerBonus(); },
     repLimit() { return Upgrades.repLimit(); },
+    // ================================================================= agency reputation: transfers
+    // Full rules and reasoning: docs/reputation-design.md. Summary: the reward scales with the size
+    // of the step, and every repeatable move that is not progress pays ~0 so nothing can be farmed.
+    //
+    // Bands are open-ended at both ends and tested with >= so there is never a gap between them.
+    REP_BANDS: [
+        { min: 31, gain: 6 },
+        { min: 26, gain: 5 },
+        { min: 21, gain: 4 },
+        { min: 11, gain: 3 },
+        { min: 4, gain: 1 },
+        { min: -3, gain: 0.5 },      // sideways
+        { min: -10, gain: 0.15 },
+        { min: -Infinity, gain: 0.05 },
+    ],
+    REP_FREE_AGENT: 0.2,             // placing a client who had no club at all
+    REP_DEST_86: 2, REP_DEST_76: 1,  // how big the new club is — only on a real step up
+    REP_DEST_MIN_DELTA: 4,
+    REP_FOREIGN: 0.1,                // crossing a border, away from home
+    REP_FOREIGN_HOME: 0.05,          // ...and back to it, which is easier
+    REP_TOPFIVE: 0.5,
+    TOPFIVE_ELO: 1070,               // England 1090, DE/ES/IT 1080, FR 1070; everyone else 1000
+
+    // Is this club in a top-five league — the FIRST division of a country strong enough to qualify?
+    // Derived from LEAGUE_TIERS elo rather than a list of league names, so it survives rebalancing
+    // and a country added through Customize qualifies on its own merit.
+    isTopFiveClub(club) {
+        if (!club || club.tier !== 1) return false;
+        const t = (typeof LEAGUE_TIERS !== 'undefined') && LEAGUE_TIERS[club.country];
+        return !!t && (t.elo || 0) >= this.TOPFIVE_ELO;
+    },
+    _homeCountry() {
+        return (GameState.agency && GameState.agency.homeCountry) || GameState.homeCountry || null;
+    },
+
+    // What a completed move is worth, as a breakdown so it can be tested and explained.
+    // `from` may be null (a free agent with no club); `lastFrom` is his remembered previous club,
+    // used only to judge the border and top-five questions for such a placement.
+    transferRepGain(from, to, player, lastFrom) {
+        const parts = [];
+        if (!to) return { total: 0, parts };
+        const origin = from || lastFrom || null;   // for border / top-five purposes only
+
+        if (from) {
+            const d = (to.reputation || 0) - (from.reputation || 0);
+            const band = this.REP_BANDS.find(b => d >= b.min);
+            parts.push({ why: 'delta', d, gain: band.gain });
+            // How big the new club is only counts on a genuine step up: without this, shuffling a
+            // client between two elite clubs would pay +2.5 one way and +1.5 back, forever.
+            if (d >= this.REP_DEST_MIN_DELTA) {
+                if ((to.reputation || 0) >= 86) parts.push({ why: 'dest86', gain: this.REP_DEST_86 });
+                else if ((to.reputation || 0) >= 76) parts.push({ why: 'dest76', gain: this.REP_DEST_76 });
+            }
+        } else {
+            // no club at all: a flat fee, no band and no size bonus, but the border and top-five
+            // questions still apply against the club he left
+            parts.push({ why: 'freeAgent', gain: this.REP_FREE_AGENT });
+        }
+
+        // crossing a border. Coming home is easier, so it pays half.
+        if (origin && origin.country && to.country && origin.country !== to.country) {
+            const home = this._homeCountry();
+            parts.push(to.country === home
+                ? { why: 'foreignHome', gain: this.REP_FOREIGN_HOME }
+                : { why: 'foreign', gain: this.REP_FOREIGN });
+        }
+
+        // first time this client is transferred INTO a top-five league. Needs both conditions:
+        // the once-ever flag alone would wrongly pay a client signed while already at such a club,
+        // and the origin check alone would pay every re-entry.
+        if (this.isTopFiveClub(to) && !this.isTopFiveClub(origin) && !(player && player.topFiveBonusPaid)) {
+            parts.push({ why: 'topFive', gain: this.REP_TOPFIVE });
+        }
+
+        const total = parts.reduce((a, p) => a + p.gain, 0);
+        return { total: Math.round(total * 100) / 100, parts };
+    },
+
+    // Landing a sponsorship is worth a little reputation, but it is repeatable and largely a
+    // function of having good clients, so it is capped per season rather than left to accumulate.
+    REP_SPONSOR: 0.1, REP_SPONSOR_SEASON_CAP: 2,
+    creditSponsorRep() {
+        const a = GameState.agency; if (!a) return 0;
+        const used = a.repFromSponsors || 0;
+        const give = Math.min(this.REP_SPONSOR, Math.max(0, this.REP_SPONSOR_SEASON_CAP - used));
+        if (give <= 0) return 0;
+        a.repFromSponsors = Math.round((used + give) * 100) / 100;
+        this.bumpRep(give);
+        return give;
+    },
+
     bumpRep(d) { const a = GameState.agency; a.reputation = Math.max(0, Math.min(this.repLimit(), a.reputation + d)); return a.reputation; },
     atCapacity() { return this.clients().length >= this.capacity(); },
 
@@ -1091,7 +1182,6 @@ const Agency = {
     _finalizeTransfer(p, pkg) {
         const toClub = Clubs.getClubById(pkg.toClubId), fromClub = pkg.fromClubId ? Clubs.getClubById(pkg.fromClubId) : null;
         if (!toClub) { delete p.pendingTransfer; delete p.joiningClubId; return { ok: false, message: I18n.t('ag.clubGone') }; }
-        const movingUp = !!(fromClub && toClub.reputation > fromClub.reputation);
         if (!p.history) p.history = { ability: [], wage: [], fees: [] };
         p.history.fees.push({ t: GameState.absWeek(), age: careerAge(p), value: pkg.fee, fromId: pkg.fromClubId, toId: pkg.toClubId });
 
@@ -1109,7 +1199,13 @@ const Agency = {
         // agent-negotiated deals already booked their conclusion goodwill in acceptTransfer (profile-based);
         // forced moves never passed through it, so they keep the old flat handshake bump here
         if (pkg.forced) this.changeRelationship(toClub.id, +4);
-        Agency.bumpRep(movingUp ? 3 + Rng.next() * 3 : 1);
+        // reputation for the move — see Agency.transferRepGain / docs/reputation-design.md
+        {
+            const rep = Agency.transferRepGain(fromClub, toClub, p, fromClub ? null : Clubs.getClubById(p.lastClubId));
+            Agency.bumpRep(rep.total);
+            if (rep.parts.some(x => x.why === 'topFive')) p.topFiveBonusPaid = true;
+        }
+        p.lastClubId = toClub.id;   // remembered so a later free-agent spell can still judge the move
         // his call after signing — and if this is the club he supported as a boy, THE call (js/dialogue.js)
         if (typeof Dialogue !== 'undefined') Dialogue.onTransferCompleted(p, toClub.id);
         // the club's reputation promptly rises to what its roster of agent clients justifies:
@@ -1246,6 +1342,7 @@ const Agency = {
         const annualCut = Math.round((opt.annual || 0) * p.sponsorCommission / 100);
         if (annualCut) { GameState.agency.balance += annualCut; GameState.addFinance('Sponsoring', annualCut); }
         this._creditAgentAction(p, 6);   // unchanged +6 bump, now also resets the neglect clock (Phase 2)
+        this.creditSponsorRep();         // a little reputation, capped per season (docs/reputation-design.md)
         GameState.removeMail(mail.id);
         const weeklyCut = Math.round(opt.weekly * p.sponsorCommission / 100);
         GameState.addLog(I18n.t('ag.log.sponsorSigned', { name: p.name, company: opt.company, weekly: UI.money(opt.weekly), annual: opt.annual ? I18n.t('ag.log.plusAnnual', { amt: UI.money(opt.annual) }) : '', terms: opt.termSeasons }), 'sign');

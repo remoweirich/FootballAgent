@@ -492,7 +492,7 @@ const Dialogue = {
         // a star seen out properly reflects on the agency: word gets around you stay to the end
         let note = null;
         if (this.bondOf(p) >= 50 && !p._farewellDone) {
-            Agency.bumpRep(2);
+            Agency.bumpRep(3);
             note = this._t('dlg.note.farewellRep', null, 'Word gets around: you look after your people to the very end. (+2 reputation)');
         }
         p._farewellDone = true;

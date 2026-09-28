@@ -34,7 +34,7 @@ Three principles the revamp is built on:
 | A client gains ability in a week | +0.05 × points | `simulation.js` weekly tick |
 | A client's ambition fulfilled | +1 | `dialogue.js` |
 | See a client into retirement, bond ≥ 50, once per player | **+3** | `dialogue.js` `resolveFarewell` |
-| Sponsorship deal signed | **+0.2**, max **+3 per season** | `agency.js` `acceptSponsor` |
+| Sponsorship deal signed | **+0.1**, max **+2 per season** | `agency.js` `acceptSponsor` |
 | A client quits over morale | **−5** | `simulation.js` `MORALE.DEPARTURE_AGENCY_REP` |
 | A promise deadline passes unfulfilled | **−1** | `simulation.js` `MORALE.PROMISE_BROKEN_REP` |
 | A contract expires with no new club found | **−0.5** | `simulation.js` season rollover |
@@ -127,13 +127,15 @@ Rotterdam Blue (62) -> a 78-rep club, same country
   ---
   +4.0
 
-A 50-rep domestic club -> a 90-rep foreign top-flight club, client's first time in a big five league
+A 50-rep domestic SECOND-division club -> a 90-rep foreign top flight, his first big-five league
   +6     d = +40
   +2     destination >= 86
   +0.1   crosses a border, destination is not home
   +0.5   first entry into a top-five division
   ---
   +8.6      the ceiling. Unreachable early: no 90-rep club wants a client you can sign at rep 12.
+            The origin being a second division is what keeps the top-five bonus live; from a
+            top-flight English club it would not fire, and the total would be +8.1.
 
 Ajax (85) -> a 70-rep English top-flight club
   +0.05  d = -15
@@ -174,7 +176,7 @@ somewhere genuinely better than where he was.
 |---|---|---|
 | `p.lastClubId` | player | the club he left, so a free-agent placement can still judge §3.3/§3.4 |
 | `p.topFiveBonusPaid` | player | the once-per-client flag for §3.4 |
-| `agency.repFromSponsors` | agency | running total for the +3/season sponsorship cap; reset at rollover |
+| `agency.repFromSponsors` | agency | running total for the +2/season sponsorship cap; reset at rollover |
 
 Players and the agency are persisted wholesale, so no save-schema change is needed — each field
 just needs a sane default when absent, so existing saves keep working.

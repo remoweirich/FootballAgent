@@ -590,7 +590,7 @@ I18n.register('fr', {
     'dlg.favclub.none': 'un club de chez moi',
     'dlg.note.tab': 'La soirée est à votre charge (−€{amt}).',
     'dlg.note.boyhood': 'Il a eu ce qu\'il voulait : son dernier match, il l\'a joué sous le maillot qu\'il vénérait enfant.',
-    'dlg.note.farewellRep': 'Ça se sait : vous accompagnez les vôtres jusqu\'au bout. (+2 de réputation)',
+    'dlg.note.farewellRep': 'Ça se sait : vous accompagnez les vôtres jusqu\'au bout. (+3 de réputation)',
     'dlg.note.fam.single': 'Noté : pour l\'instant, il est seul.',
     'dlg.note.fam.partner': 'Noté : il a une compagne.',
     'dlg.note.fam.kids': 'Noté : il a des enfants.',
