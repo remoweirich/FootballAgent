@@ -91,10 +91,27 @@ check('a short screen gives the lift back rather than clipping (the fitter exist
     typeof S._fitPlaques === 'function' && /getBoundingClientRect/.test(cssSrc + S._fitPlaques.toString()));
 check('the start screen can scroll if a full set ever overflows a small phone',
     /\.ss-wrap\{[^}]*overflow-y:auto/.test(cssSrc));
-check('the count is white and roughly the plaque lettering height',
-    /\.ss-plaque__x\{[^}]*color:#fff/.test(cssSrc) && /\.ss-plaque__x\{[^}]*font-size:25px/.test(cssSrc));
-check('the count sits in a fixed gutter so the plaques line up',
-    /\.ss-plaque__x\{[^}]*width:34px/.test(cssSrc));
+// The count must stay white and about as tall as the lettering printed on the plaque art, so it
+// reads as part of it. Checked as a RATIO of the plaque height rather than a fixed px, so resizing
+// the plaques (PLAQUE_H) does not silently leave the count out of proportion.
+const xSize = (/\.ss-plaque__x\{[^}]*font-size:(\d+)px/.exec(cssSrc) || [])[1];
+check(`the count is white and roughly the plaque lettering height (${xSize}px on ${h1}px)`,
+    /\.ss-plaque__x\{[^}]*color:#fff/.test(cssSrc) && xSize >= h1 * 0.38 && xSize <= h1 * 0.55);
+// The PLAQUE is what gets centred; the count is pulled out of the flow and hung to its left. A
+// fixed-width gutter inside the row was tried first and kept the plaques aligned WITH EACH OTHER
+// while centring the [count + plaque] pair, so every plaque sat right of centre.
+check('the plaque itself is centred',
+    /\.ss-plaque\{[^}]*justify-content:center/.test(cssSrc));
+check('the count is out of the flow, hung to the plaque\'s left, so it cannot shift it',
+    /\.ss-plaque__x\{[^}]*position:absolute/.test(cssSrc) && /\.ss-plaque__x\{[^}]*right:100%/.test(cssSrc));
+// The device bug this pins: _fitPlaques read a --sat custom property that nothing ever defined, so
+// the floor was 0 and the top plaque sat behind the status bar. The wrap's COMPUTED padding-top
+// already resolves env(safe-area-inset-top); a custom property holding env() would not.
+// Comments are stripped first: this function's own comment NAMES the --sat mistake it explains,
+// which would otherwise fail the check that the code no longer reads it.
+const fitSrc = S._fitPlaques.toString().replace(/\/\/[^\n]*/g, '');
+check('the safe-area floor comes from the wrap\'s computed padding, not an undefined variable',
+    /getComputedStyle/.test(fitSrc) && /paddingTop/.test(fitSrc) && !/--sat/.test(fitSrc));
 
 // ---- 6. restore must never reduce a count the device already knows ----
 ({ M, S } = load());

@@ -20,7 +20,7 @@ const StartScreen = {
     //
     // Returns the markup AND the block's height, because the caller has to shrink .ss-brand's top
     // margin by exactly that much to keep the logo still (see the CSS note).
-    PLAQUE_H: 54,       // rendered plaque height in px; width follows the 3.67:1 artwork
+    PLAQUE_H: 43,       // rendered plaque height in px; width follows the 3.67:1 artwork
     PLAQUE_GAP: 6,
     _plaquesHTML() {
         const M = (typeof Monetization !== 'undefined') ? Monetization : null;
@@ -52,14 +52,19 @@ const StartScreen = {
     // Called straight after render. If the lift pushed the plaques off the top of the screen, give
     // back exactly the overshoot — the logo moves down by that much instead, which is the graceful
     // end of the trade and only happens when the screen genuinely cannot hold both.
-    PLAQUE_MIN_TOP: 10,
     _fitPlaques() {
         if (typeof document === 'undefined') return;
         const el = document.querySelector('.ss-plaques');
         const inner = el && el.parentElement;
-        if (!el || !inner || !el.getBoundingClientRect) return;
-        const safe = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
-        const floor = this.PLAQUE_MIN_TOP + safe;
+        const wrap = inner && inner.parentElement;
+        if (!el || !wrap || !el.getBoundingClientRect) return;
+        // .ss-wrap's top padding is calc(env(safe-area-inset-top) + 20px) — exactly the line content
+        // must not cross. Read it COMPUTED: that resolves to real pixels, where reading a custom
+        // property holding env() would hand back the unresolved token. The first attempt at this
+        // read a --sat variable nothing defined, so the floor was 0 and the top plaque sat behind
+        // the status bar on a real phone.
+        const pad = parseFloat(getComputedStyle(wrap).paddingTop) || 0;
+        const floor = wrap.getBoundingClientRect().top + pad;
         const top = el.getBoundingClientRect().top;
         if (top >= floor) return;
         const cur = parseFloat(inner.style.getPropertyValue('--ss-plaquepull')) || 0;
@@ -72,7 +77,7 @@ const StartScreen = {
         this._injectCSS();
         const saveLabel = this._saveLabel();
         const plaques = this._plaquesHTML();
-        document.getElementById('app').innerHTML = `<div class="ss-wrap"><div class="ss-inner${plaques.n ? ' ss-inner--plaques' : ''}" style="${plaques.n ? `--ss-plaquepull:${plaques.pull}px` : ''}">
+        document.getElementById('app').innerHTML = `<div class="ss-wrap" data-screen="start"><div class="ss-inner${plaques.n ? ' ss-inner--plaques' : ''}" style="${plaques.n ? `--ss-plaquepull:${plaques.pull}px` : ''}">
             ${plaques.html}
             <div class="ss-brand">${this.CREST}<h1 class="ss-title">${UI.esc(this.TITLE)}</h1><div class="ss-tag">${I18n.t('start.tagline')}</div></div>
             <div class="ss-menu">
@@ -232,14 +237,18 @@ const StartScreen = {
            enough room, the remainder pushes the logo down instead of the plaques off the screen. */
         .ss-plaques{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:10px;
                     margin-top:calc(-1 * var(--ss-plaquepull, 0px))}
-        /* The count sits in a fixed-width gutter that is ALWAYS present (empty for a single
-           purchase), so every plaque lines up with the others instead of a "4x" shoving its own
-           plaque to the right and making the column jitter. */
-        .ss-plaque{display:flex;align-items:center;justify-content:center;gap:6px;height:54px}
-        .ss-plaque__img{height:100%;width:auto;display:block;flex:none}
-        /* white, and about as tall as the lettering printed on the plaque (~36% of its height) */
-        .ss-plaque__x{flex:none;width:34px;text-align:right;color:#fff;font-weight:var(--weight-bold);
-                      font-size:25px;line-height:1;letter-spacing:-.01em;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+        /* The PLAQUE is what gets centred. The count is taken out of the flow and hung to its
+           left, so a "3x" never shifts its own plaque off-centre or out of line with the others.
+           (A fixed-width gutter inside the row was tried first: it kept the plaques aligned with
+           each other but centred the [count + plaque] pair, leaving every plaque sitting right of
+           centre — visible on a device, invisible in the arithmetic.) */
+        .ss-plaque{position:relative;display:flex;align-items:center;justify-content:center;height:43px}
+        .ss-plaque__img{height:100%;width:auto;display:block}
+        /* white, and about as tall as the lettering printed on the plaque art (~46% of its height,
+           which test_supporter_plaques pins as a ratio so a resize cannot leave it out of scale) */
+        .ss-plaque__x{position:absolute;right:100%;margin-right:8px;top:50%;transform:translateY(-50%);
+                      color:#fff;font-weight:var(--weight-bold);font-size:20px;line-height:1;
+                      white-space:nowrap;letter-spacing:-.01em;text-shadow:0 1px 3px rgba(0,0,0,.45)}
         .ss-title{font-size:26px;font-weight:var(--weight-bold);color:var(--text-bright);margin:14px 0 4px;letter-spacing:-.01em}
         .ss-tag{color:var(--text-muted);font-size:var(--fs-sm)}
         .ss-menu{margin-top:auto;display:flex;flex-direction:column;gap:12px}
