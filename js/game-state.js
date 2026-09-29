@@ -1,9 +1,21 @@
 // ============================================================
 //  Central Game State
 // ============================================================
-// Every game starts in this season; a full season played to its end rolls seasonStartYear on by one,
-// so seasonsCompleted() = seasonStartYear - START_SEASON_YEAR (needs no extra saved counter).
-const START_SEASON_YEAR = 2025;
+// The season the shipped squads represent. A full season played to its end rolls seasonStartYear on
+// by one, so seasonsCompleted() = seasonStartYear - the year THIS game began in.
+//
+// That last part used to be this constant, which made the constant unbumpable: a save already at
+// 2025 would have reported -1 seasons the moment the default moved to 2026, quietly suppressing
+// ads and re-locking the five-season gate on the home screen. Each game now records its own
+// starting year, which is also what lets a customization database start in 2005 for a historical
+// save without the rest of the engine noticing.
+const START_SEASON_YEAR = 2026;
+// What a save that predates GameState.startYear must have begun in. Do not follow the constant
+// above: every one of those saves really did start in 2025.
+const LEGACY_START_YEAR = 2025;
+// A custom database may start anywhere in here. Nothing in the engine reads the absolute year
+// except absWeek(), so the bounds are about staying plausible rather than about safety.
+const MIN_START_YEAR = 1950, MAX_START_YEAR = 2100;
 
 const GameState = {
     // I18n when it is loaded, the English text otherwise, so the headless engine tests still read.
@@ -14,6 +26,7 @@ const GameState = {
 
     week: 1,
     seasonStartYear: START_SEASON_YEAR,
+    startYear: START_SEASON_YEAR,   // the season THIS game began in; a database may move it
     players: [],
     inbox: [],           // email messages (offers, news, summaries)
     log: [],             // short activity log
@@ -61,7 +74,10 @@ const GameState = {
     },
     seasonLabel() { return this.seasonLabelFor(this.seasonStartYear); },
     // full seasons the agent has played to the end (i.e. rolled over into the next one)
-    seasonsCompleted() { return this.seasonStartYear - START_SEASON_YEAR; },
+    // Measured against the year this particular game began in, not the shipped default, so a
+    // historical save started in 2005 counts its own seasons and an old save keeps its progress.
+    seasonsCompleted() { return this.seasonStartYear - this.gameStartYear(); },
+    gameStartYear() { return this.startYear != null ? this.startYear : LEGACY_START_YEAR; },
 
     // ---- init ----
     // async now (IndexedDB has no synchronous read) — the only call sites are the two
@@ -74,8 +90,17 @@ const GameState = {
             this.startNewGame(this.homeCountry || 'Netherlands', (this.agency && this.agency.name) || 'Your Agency');
         }
     },
+    // A database may carry its own startYear — the point of a historical save. Clamped and
+    // integer-checked here rather than trusted, because it comes off disk and a bad value would
+    // poison absWeek() for the whole game.
+    startYearFor(database) {
+        const y = database && database.startYear;
+        if (typeof y !== 'number' || !isFinite(y)) return START_SEASON_YEAR;
+        return Math.max(MIN_START_YEAR, Math.min(MAX_START_YEAR, Math.round(y)));
+    },
     startNewGame(country, name, agentName, database, agentGender) {
-        this.week = 1; this.seasonStartYear = START_SEASON_YEAR;
+        this.startYear = this.startYearFor(database);
+        this.week = 1; this.seasonStartYear = this.startYear;
         // Fix this game's RNG seed up front so the very first pool is drawn from the seeded stream;
         // it rides along in every save (see save/load) and also anchors background-squad regen.
         this.rngSeed = (Date.now() >>> 0) || 1;
@@ -168,7 +193,7 @@ const GameState = {
             };
         });
         return {
-            week: this.week, seasonStartYear: this.seasonStartYear, homeCountry: this.homeCountry,
+            week: this.week, seasonStartYear: this.seasonStartYear, startYear: this.startYear, homeCountry: this.homeCountry,
             // only the players the user can ever see are saved; the anonymous background squads
             // (~95% of the old save) are regenerated on load (see isPersistedPlayer / regenerateBackgroundSquads)
             players: this.players.filter(isPersistedPlayer), inbox: this.inbox, log: this.log,
@@ -266,6 +291,9 @@ const GameState = {
     _applySaved(d) {
         try {
             this.week = d.week; this.seasonStartYear = d.seasonStartYear;
+            // Saves written before startYear existed all began in 2025 — never inherit today's
+            // default here, or a veteran save would report negative seasons played.
+            this.startYear = d.startYear != null ? d.startYear : LEGACY_START_YEAR;
             this.homeCountry = d.homeCountry || (d.agency && d.agency.homeCountry) || 'Netherlands';
             this.players = d.players || []; this.inbox = d.inbox || [];
             this.log = d.log || []; this.agency = d.agency; this.league = d.league;

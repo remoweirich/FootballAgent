@@ -75,7 +75,10 @@ const Walkthrough = {
     // ---- demo save -------------------------------------------------------------------------
     // Replace only the fields the tutorial shows. league/clubHistory and the rest stay as they are,
     // so screens that read them keep working; restoring puts the original references straight back.
-    FIELDS: ['players', 'inbox', 'log', 'week', 'seasonStartYear', 'agency', 'homeCountry',
+    // `startYear` travels with seasonStartYear: seasonsCompleted() is the difference between them,
+    // so swapping one without the other makes the demo (or the real save it hands back) report a
+    // nonsense season count.
+    FIELDS: ['players', 'inbox', 'log', 'week', 'seasonStartYear', 'startYear', 'agency', 'homeCountry',
         'clubHistory', 'clubEuropeBest'],
 
     _installDemo() {
@@ -84,8 +87,11 @@ const Walkthrough = {
         this.FIELDS.forEach(f => { this._saved[f] = G[f]; });
         G.demoMode = true;                     // blocks every save() while the tutorial runs
 
-        // Season 30/31, late in the campaign: Johan has 32 appearances behind him.
+        // Season 30/31, late in the campaign: Johan has 32 appearances behind him. startYear is
+        // pinned five seasons back so the demo agent reads as five seasons in, whatever the
+        // shipped default start season happens to be.
         G.seasonStartYear = 2030;
+        G.startYear = 2025;
         G.week = 34;
         G.log = [];
         // Part 2 is set in England: West Midlands scouting, Birmingham Claret, the Third Division.

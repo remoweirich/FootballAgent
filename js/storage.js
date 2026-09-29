@@ -28,7 +28,7 @@ const Storage = {
     MAX_SLOTS: 5,                  // how many manual named saves you may keep
     DB_INDEX: 'dbIndex',           // lightweight list of the customization databases
     DB_PREFIX: 'db:',              // per-database overlays live at 'db:<id>'
-    MAX_DBS: 3,                    // how many customization databases you may keep
+    MAX_DBS: 5,                    // how many customization databases you may keep
     LEGACY_KEY: 'fam_proto_v4',
     FLUSH_DELAY_MS: 1500,
 

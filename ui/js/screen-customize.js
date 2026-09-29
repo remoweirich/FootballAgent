@@ -37,26 +37,37 @@ const CustomizeScreen = {
     async _chooser() {
         let dbs = [];
         try { dbs = await Storage.listDatabases(); } catch (e) { dbs = []; }
-        const rows = dbs.length ? dbs.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(d =>
-            `<div class="cx-item" data-act="loaddb" data-id="${UI.esc(d.id)}">
+        // Count the edits from the stored database itself rather than trusting the index. Indexes
+        // written by earlier builds carry a count that only ever included club overrides, so every
+        // database built by renaming competitions or adding a country reads "0 edits" forever
+        // otherwise — which is exactly what was reported.
+        await Promise.all(dbs.map(async d => {
+            try { const blob = await Storage.getDatabase(d.id); if (blob) d.edits = this.editCount(blob); }
+            catch (e) { /* unreadable: fall back to whatever the index says */ }
+            if (d.edits == null) d.edits = d.clubs || 0;
+        }));
+        const rows = dbs.length ? dbs.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(d => {
+            const yr = d.startYear ? ' · ' + GameState.seasonLabelFor(d.startYear) : '';
+            return `<div class="cx-item" data-act="loaddb" data-id="${UI.esc(d.id)}">
                 <div class="cx-item__main"><span class="cx-item__name">${UI.esc(d.name)}</span>
-                <span class="cx-item__sub">${I18n.t('customize.dbClubs', { n: (d.clubs || 0) })}${d.updatedAt ? ' · ' + this._when(d.updatedAt) : ''}</span></div>
+                <span class="cx-item__sub">${I18n.t('customize.dbClubs', { n: d.edits })}${yr}${d.updatedAt ? ' · ' + this._when(d.updatedAt) : ''}</span></div>
                 <button class="cx-del" data-act="deldb" data-id="${UI.esc(d.id)}" aria-label="${I18n.t('common.delete')}">✕</button>
-            </div>`).join('') : `<p class="cx-empty">${I18n.t('customize.noDbs')}</p>`;
-        const full = dbs.length >= (Storage.MAX_DBS || 3);
+            </div>`;
+        }).join('') : `<p class="cx-empty">${I18n.t('customize.noDbs')}</p>`;
+        const full = dbs.length >= CustomizeScreen.maxDbs();
         const body = `
-            <p class="cx-note">${I18n.t('customize.chooserNote', { max: (Storage.MAX_DBS || 3) })}</p>
+            <p class="cx-note">${I18n.t('customize.chooserNote', { max: CustomizeScreen.maxDbs() })}</p>
             <button class="btn btn--primary cx-wide" data-act="newdb">${I18n.t('customize.createNew')}</button>
             <div class="cx-listhead">${I18n.t('customize.yourDbs')}</div>
             <div class="cx-list">${rows}</div>
-            ${full ? `<p class="cx-note cx-note--warn">${I18n.t('customize.dbsFull', { max: (Storage.MAX_DBS || 3) })}</p>` : ''}`;
+            ${full ? `<p class="cx-note cx-note--warn">${I18n.t('customize.dbsFull', { max: CustomizeScreen.maxDbs() })}</p>` : ''}`;
         this._screen(I18n.t('common.customize'), body, () => this.exit());
         this._delegate();
     },
     _newDb(overwriteId) {
         // if at the cap and not overwriting, force the player to pick one to replace
         Storage.listDatabases().then(dbs => {
-            const atCap = dbs.length >= (Storage.MAX_DBS || 3);
+            const atCap = dbs.length >= CustomizeScreen.maxDbs();
             const overwriteRows = (atCap && !overwriteId)
                 ? `<p class="cx-note">${I18n.t('customize.overwritePick')}</p>` +
                   dbs.map(d => `<button class="cx-btn cx-btn--pick" data-act="pickoverwrite" data-id="${UI.esc(d.id)}">${UI.esc(d.name)}</button>`).join('')
@@ -76,7 +87,7 @@ const CustomizeScreen = {
         const err = document.getElementById('cxDbErr');
         if (!nm) { if (err) err.innerHTML = `<p class="cx-err">${I18n.t('customize.nameRequired')}</p>`; return; }
         const dbs = await Storage.listDatabases();
-        if (!overwriteId && dbs.length >= (Storage.MAX_DBS || 3)) { if (err) err.innerHTML = `<p class="cx-err">${I18n.t('customize.dbsFull', { max: (Storage.MAX_DBS || 3) })}</p>`; return; }
+        if (!overwriteId && dbs.length >= CustomizeScreen.maxDbs()) { if (err) err.innerHTML = `<p class="cx-err">${I18n.t('customize.dbsFull', { max: CustomizeScreen.maxDbs() })}</p>`; return; }
         const id = overwriteId || ('db' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36));
         const now = Date.now();
         const created = overwriteId ? (dbs.find(d => d.id === overwriteId) || {}).createdAt || now : now;
@@ -103,15 +114,51 @@ const CustomizeScreen = {
     // ---------- entry menu (after a db is active) ----------
     menu() {
         this._live = false;   // leaving any mid-save logo-import flow behind
+        const y = this.db.startYear || START_SEASON_YEAR;
         const body = `
             <div class="cx-dbtag">${I18n.t('customize.editing', { name: UI.esc(this.db.name) })}</div>
             <button class="btn btn--primary cx-wide cx-menu" data-act="countries">
                 <i class="ti ti-adjustments"></i><span>${I18n.t('customize.editCountries')}</span></button>
             <button class="btn btn--ghost cx-wide cx-menu" data-act="addcountry">
                 <i class="ti ti-plus"></i><span>${I18n.t('customize.addCountry')}</span></button>
+            <button class="btn btn--ghost cx-wide cx-menu" data-act="startyear">
+                <i class="ti ti-calendar"></i><span>${I18n.t('customize.startSeason')}</span>
+                <span class="cx-menu__val">${GameState.seasonLabelFor(y)}</span></button>
             <button class="btn btn--ghost cx-wide" style="margin-top:18px" data-act="savedb">${I18n.t('customize.saveDb', { name: UI.esc(this.db.name) })}</button>`;
         this._screen(this.db.name, body, () => this._chooser());
         this._delegate();
+    },
+
+    // ---------- start season ----------
+    // The season a game started on this database begins in, so a 2005/06 database can be played
+    // as a historical save. Nothing in the engine reads the absolute year except absWeek(), so the
+    // only real constraint is staying plausible — GameState clamps it again on new-game anyway.
+    startYearPrompt() {
+        const y = this.db.startYear || START_SEASON_YEAR;
+        this._overlay(I18n.t('customize.startSeason'), `
+            <p class="cx-note">${I18n.t('customize.startSeasonNote')}</p>
+            <label class="field-label">${I18n.t('customize.startSeasonLabel')}</label>
+            <input id="cxStartYear" class="text-input" type="number" inputmode="numeric"
+                   min="${MIN_START_YEAR}" max="${MAX_START_YEAR}" step="1" value="${y}">
+            <div id="cxYearErr"></div>
+            <div class="cx-ovrow">
+                <button class="btn btn--ghost" data-act="ovcancel">${I18n.t('common.cancel')}</button>
+                <button class="btn btn--primary" data-act="startyearsave">${I18n.t('common.save')}</button>
+            </div>`);
+        this._delegate(this._ov());
+    },
+    startYearSave() {
+        const el = document.getElementById('cxStartYear');
+        const err = document.getElementById('cxYearErr');
+        const n = el ? Math.round(Number(el.value)) : NaN;
+        if (!isFinite(n) || n < MIN_START_YEAR || n > MAX_START_YEAR) {
+            if (err) err.innerHTML = `<p class="cx-err">${I18n.t('customize.startSeasonBad', { min: MIN_START_YEAR, max: MAX_START_YEAR })}</p>`;
+            return;
+        }
+        this.db.startYear = n;
+        this._closeOverlay();
+        this.menu();
+        this._toast(I18n.t('customize.startSeasonSet', { season: GameState.seasonLabelFor(n) }));
     },
 
     // ---------- country list ----------
@@ -784,7 +831,37 @@ const CustomizeScreen = {
         const ids = new Set(Clubs.getClubsByCountry(country).map(c => c.id));
         return Object.keys(this.db.overrides).filter(id => ids.has(id)).length;
     },
-    _meta() { return { name: this.db.name, createdAt: this.db.createdAt, updatedAt: this.db.updatedAt, clubs: Object.keys(this.db.overrides).length }; },
+    // Everything in a database that counts as an edit. The chooser used to show only
+    // Object.keys(overrides).length, so a database where you had renamed competitions or built a
+    // whole new country read "0 edits" — and any database saved before a given edit type existed
+    // kept whatever stale number was in the index. The chooser now recomputes this from the stored
+    // blob, so the number cannot drift from the content again.
+    // One source of truth for the cap. There were six copies of `Storage.MAX_DBS || 3`, so raising
+    // the cap in storage.js would have left the screen silently enforcing the old number anywhere
+    // that fallback ever fired.
+    maxDbs() { return (typeof Storage !== 'undefined' && Storage.MAX_DBS) || 5; },
+    editCount(db) {
+        if (!db) return 0;
+        let n = 0;
+        const ovs = db.overrides || {};
+        // one per CLUB however many of its fields changed; an empty object left behind by an
+        // editor that was opened and cancelled is not an edit
+        Object.keys(ovs).forEach(id => {
+            const ov = ovs[id];
+            if (ov && typeof ov === 'object' && Object.keys(ov).length) n++;
+        });
+        n += Object.keys(db.competitions || {}).length;   // renamed competitions
+        n += Object.keys(db.countries || {}).length;      // countries built from scratch
+        return n;
+    },
+    _meta() {
+        return {
+            name: this.db.name, createdAt: this.db.createdAt, updatedAt: this.db.updatedAt,
+            startYear: this.db.startYear || null,
+            clubs: Object.keys(this.db.overrides || {}).length,   // kept: older builds read this
+            edits: this.editCount(this.db),
+        };
+    },
 
     // ---------- click delegation + long-press ----------
     // One delegated handler per rendered root; data-act names the action, data-cid/-id/-which the target.
@@ -808,6 +885,8 @@ const CustomizeScreen = {
             case 'countries': this.countryList(); break;
             case 'addcountry': this.addCountryHome(); break;
             case 'savedb': this.saveDatabase(); break;
+            case 'startyear': this.startYearPrompt(); break;
+            case 'startyearsave': this.startYearSave(); break;
             case 'opencountry': this.openCountry(id); break;
             case 'name': this.editName(id); break;
             case 'namesave': this._saveName(id); break;
@@ -1264,7 +1343,13 @@ const CustomizeScreen = {
         .cx-del{background:none;border:none;color:var(--text-dim);font-size:15px;cursor:pointer;padding:4px 6px}
         .cx-empty,.cx-note--muted{color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:14px}
         .cx-dbtag{color:var(--text-secondary);font-size:var(--fs-sm);margin-bottom:16px}
-        .cx-menu{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;padding:16px}
+        .cx-menu{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;padding:16px}
+        /* The current value on a menu row that opens a picker (start season). Taken OUT of the flow
+           rather than pushed right with margin-left:auto — an auto margin absorbs the free space in
+           a justify-content:center row, which would left-align this row's icon and label and break
+           its alignment with the plain rows above it. */
+        .cx-menu__val{position:absolute;right:16px;top:50%;transform:translateY(-50%);
+                      color:var(--text-dim);font-variant-numeric:tabular-nums}
         .cx-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;position:sticky;top:0;background:var(--bg);padding:2px 0;z-index:2}
         .cx-selwrap{flex:1}
         .cx-tbbtn{background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text-secondary);width:40px;height:40px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}

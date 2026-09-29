@@ -433,7 +433,7 @@ check('leaving explore mode hands the real save back', runv(`
   Walkthrough._active = true;          // explore() left it active on purpose
   Walkthrough.finish(false);
   return Walkthrough.isExploring() === false && GameState.demoMode === false
-      && GameState.seasonStartYear === 2025 && Agency.clients().length === 0;`));
+      && GameState.seasonStartYear === START_SEASON_YEAR && Agency.clients().length === 0;`));
 
 check('the leave-tutorial strings exist in both languages', runv(`
   return ['wt.leave', 'wt.leaveSub', 'wt.outro']
@@ -517,9 +517,11 @@ check('save() is a no-op in demo mode', runv(`
   return blocked && allowed;`));
 
 // ---- restoring puts the player's own game back untouched ----
+// Asserted against the constant, not a literal year: the shipped start season moves when the
+// squads are refreshed for a new real-world season, and that must not look like a demo-mode leak.
 check('restore returns the real players/inbox/week/season', runv(`
   Walkthrough._restore();
-  return GameState.seasonStartYear === 2025 && GameState.week === 1
+  return GameState.seasonStartYear === START_SEASON_YEAR && GameState.week === 1
       && GameState.inbox.length === 2 && Agency.clients().length === 0
       && GameState.demoMode === false;`));
 
