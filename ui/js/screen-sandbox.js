@@ -140,7 +140,7 @@ const Sandbox = {
         .sbx-name{font-size:var(--fs-md);font-weight:var(--weight-medium)}
         .sbx-sub{font-size:var(--fs-xs);color:var(--text-dim)}
         .sbx-empty{color:var(--text-dim);padding:14px;text-align:center}
-        .sbx-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:80;padding:22px}
+        .sbx-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:120;padding:22px}
         .sbx-ovcard{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:18px;max-width:400px;width:100%;max-height:88vh;overflow-y:auto}
         .sbx-ovtitle{font-weight:var(--weight-semibold);font-size:var(--fs-lg);margin-bottom:12px}
         .sbx-morgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -150,7 +150,7 @@ const Sandbox = {
         .sbx-check input{width:17px;height:17px}
         .sbx-ovrow{display:flex;gap:10px;margin-top:16px}
         .sbx-ovrow .btn{flex:1}
-        .sbx-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:95;opacity:0;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+        .sbx-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:130;opacity:0;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px rgba(0,0,0,.3)}
         .sbx-toast--in{opacity:1;transform:translate(-50%,0)}`;
         const s = document.createElement('style'); s.id = 'sbxCSS'; s.textContent = css; document.head.appendChild(s);
     },

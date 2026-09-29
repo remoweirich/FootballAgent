@@ -121,13 +121,26 @@ button { font-family: inherit; }
 .letter__fee-value { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text); }
 
 /* ---------- Bottom sheet (quick confirmations / pickers) ---------- */
-.sheet-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
+/* ---- the layer ladder ----------------------------------------------------------------
+   Nine screens take over #app as full-screen overlays (.set-wrap, .st-wrap, .lv-wrap, …) and
+   those sit at z-index 50-60. The router's sheet and modal must therefore sit ABOVE 60, or they
+   render into the DOM, populated and correct, and are simply painted over by an opaque screen
+   background — which is exactly what happened to the language picker: .sheet-backdrop at 50 lost
+   to .set-wrap at 55, so the tap landed on .set-body and the button looked dead.
+   The order here matches Router.hardwareBack's ladder: loose overlays > modal > sheet > screen.
+     50-60  full-screen screen wrappers (mutually exclusive)
+      100   sheet          <- this
+      110   modal
+     118-124 loose overlays appended straight to the DOM (ss/cx/set/sbx/help, artwork lightbox)
+      130   toasts, on top of everything
+   tests/test_z_layers.js pins these relationships. */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
 .sheet { width: 100%; max-width: 480px; background: var(--surface); color: var(--text); border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); padding: var(--space-6) var(--screen-pad) calc(var(--space-6) + env(safe-area-inset-bottom)); max-height: 82vh; max-height: 82dvh; overflow-y: auto; }
 .sheet__handle { width: 36px; height: 4px; border-radius: var(--radius-round); background: var(--line-strong); margin: 0 auto var(--space-5); }
 .sheet__title { font-size: var(--fs-xl); font-weight: var(--weight-semibold); margin-bottom: var(--space-4); }
 
 /* ---------- Modal (used sparingly, for full result confirmations) ---------- */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: center; justify-content: center; z-index: 60; padding: var(--space-6); }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(4,7,11,.6); display: flex; align-items: center; justify-content: center; z-index: 110; padding: var(--space-6); }
 .modal-card { position: relative; width: 100%; max-width: 380px; background: var(--surface); color: var(--text); border: .5px solid var(--line-strong); border-radius: var(--radius-lg); padding: var(--space-6); }
 /* dismiss "x" in a modal card's top-right corner (e.g. the rate-the-app prompt) */
 .modal-x { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 8px; display: flex; }

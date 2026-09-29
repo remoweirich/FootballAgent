@@ -193,7 +193,7 @@ const Sound = {
     _injectCSS() {
         if (this._css) return; this._css = true;
         const css = `
-        .np-toast{position:fixed;top:calc(env(safe-area-inset-top,0) + 8px);left:50%;transform:translate(-50%,-140%);z-index:62;
+        .np-toast{position:fixed;top:calc(env(safe-area-inset-top,0) + 8px);left:50%;transform:translate(-50%,-140%);z-index:130;
             display:flex;align-items:center;gap:10px;max-width:min(400px,calc(100vw - 24px));
             background:var(--surface-raised);border:1px solid var(--line-strong);border-radius:999px;
             padding:7px 8px 7px 14px;box-shadow:0 6px 20px rgba(0,0,0,.28);opacity:0;transition:transform .28s ease,opacity .28s ease;pointer-events:none}

@@ -157,7 +157,7 @@ const Setup = {
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
         if (!document.getElementById('helpOvCSS')) {
             const st = document.createElement('style'); st.id = 'helpOvCSS';
-            st.textContent = `.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:90;padding:22px}
+            st.textContent = `.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:122;padding:22px}
             .help-overlay__card{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:86vh;overflow-y:auto}
             .help-overlay__title{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);margin-bottom:10px;text-align:center}`;
             document.head.appendChild(st);

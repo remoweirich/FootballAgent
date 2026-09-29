@@ -104,7 +104,7 @@ const StoreScreen = {
         .st-thanks{display:flex;align-items:center;gap:7px;color:var(--accent);font-size:var(--fs-sm);font-weight:var(--weight-medium);margin:0 2px 8px}
         .st-restore{width:100%;margin-top:20px}
         .st-note{color:var(--text-dim);font-size:var(--fs-xs);line-height:1.45;text-align:center;margin:12px 6px 0}
-        .st-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:95;opacity:0;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center}
+        .st-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:130;opacity:0;transition:opacity .2s,transform .2s;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center}
         .st-toast--in{opacity:1;transform:translate(-50%,0)}`;
         const s = document.createElement('style'); s.id = 'stCSS'; s.textContent = css; document.head.appendChild(s);
     },

@@ -1284,7 +1284,7 @@ const CustomizeScreen = {
         .cx-locked{color:var(--text-secondary)}
         .cx-editfoot{display:flex;gap:10px;margin-top:16px}
         .cx-editfoot .btn{flex:1}
-        .cx-overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:80;padding:22px}
+        .cx-overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:120;padding:22px}
         .cx-ovcard{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:18px;max-width:400px;width:100%;max-height:88vh;overflow-y:auto}
         .cx-ovtitle{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);margin-bottom:12px}
         .cx-ovrow{display:flex;gap:10px;margin-top:14px}
@@ -1303,7 +1303,7 @@ const CustomizeScreen = {
         .cx-btn{display:block;width:100%;text-align:left;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line);border-radius:10px;color:var(--text-bright);padding:11px 13px;margin-bottom:8px;cursor:pointer;font:inherit}
         .cx-btn--pick{margin-bottom:6px}
         .cx-errlist{margin:6px 0 0;padding-left:18px;color:var(--text-secondary);font-size:var(--fs-sm);line-height:1.6}
-        .cx-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:95;opacity:0;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+        .cx-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 26px);transform:translate(-50%,14px);background:var(--text-bright);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:var(--fs-sm);font-weight:var(--weight-medium);z-index:130;opacity:0;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
         .cx-toast--in{opacity:1;transform:translate(-50%,0)}
         .cx-bbtn{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2,rgba(255,255,255,.05));color:var(--text-secondary);font-size:var(--fs-xs);font-weight:var(--weight-semibold);cursor:pointer;flex:none}
         .cx-bbtn--on{background:var(--accent);color:var(--accent-ink);border-color:transparent}

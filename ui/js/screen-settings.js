@@ -277,7 +277,7 @@ const SettingsScreen = {
         .set-val{color:var(--text-muted);font-size:var(--fs-sm);margin-right:8px}
         .set-soon{color:var(--accent-text,var(--accent));background:var(--accent-tint,rgba(52,211,153,.12));font-size:10px;font-weight:var(--weight-semibold);padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:var(--tracking-caps)}
         .set-ver{color:var(--text-faint);font-size:var(--fs-xs);text-align:center;margin-top:22px}
-        .set-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:80;padding:22px}
+        .set-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:120;padding:22px}
         .set-ovcard{background:var(--surface);border:1px solid var(--line-strong);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}
         .set-ovtitle{font-weight:var(--weight-semibold);font-size:var(--fs-lg);color:var(--text-bright);margin-bottom:10px}
         .set-note{color:var(--text-muted);font-size:var(--fs-sm);line-height:1.55}
