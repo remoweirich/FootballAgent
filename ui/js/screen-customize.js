@@ -1009,7 +1009,7 @@ const CustomizeScreen = {
         const hasRegions = (cc.regions || []).length === 6 && cc.regions.every(r => (r.clubIds || []).length >= 2);
         const body = `
             <div class="cx-dbtag">${I18n.t('customize.building', { name: UI.esc(country) })}${cc.european ? '' : ' · ' + I18n.t('customize.noEurope')}</div>
-            <button class="btn btn--primary cx-wide cx-menu" data-act="buildleague" data-id="${UI.esc(country)}"><i class="ti ti-table"></i><span>${I18n.t('customize.buildLeague')}</span></button>
+            <button class="btn btn--primary cx-wide cx-menu" data-act="buildleague" data-id="${UI.esc(country)}"><i class="ti ti-sitemap"></i><span>${I18n.t('customize.buildLeague')}</span></button>
             <button class="btn btn--ghost cx-wide cx-menu" data-act="editnames" data-id="${UI.esc(country)}"><i class="ti ti-abc"></i><span>${I18n.t('customize.addNames')}</span></button>
             <button class="btn btn--ghost cx-wide cx-menu" data-act="regions" data-id="${UI.esc(country)}"><i class="ti ti-map-2"></i><span>${I18n.t('customize.scoutingRegions')}${hasRegions ? ' ✓' : ''}</span></button>
             <button class="btn btn--ghost cx-wide" style="margin-top:12px" data-act="exportcountry" data-id="${UI.esc(country)}"><i class="ti ti-download"></i> ${I18n.t('customize.exportCountry')}</button>`;

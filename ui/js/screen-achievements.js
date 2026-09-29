@@ -29,8 +29,8 @@ const AchievementsScreen = {
         const tallyCard = `<div class="set-heading">${I18n.t('ach.tally.title')}</div>
             <div class="ach-tallies">
                 ${this._tally('ti-trophy', 'var(--gold)', tal.trophies, I18n.t('ach.tally.trophies'))}
-                ${this._tally('ti-arrow-up-circle', 'var(--state-good)', tal.promotions, I18n.t('ach.tally.promotions'))}
-                ${this._tally('ti-arrow-down-circle', 'var(--state-bad)', tal.relegations, I18n.t('ach.tally.relegations'))}
+                ${this._tally('ti-circle-arrow-up', 'var(--state-good)', tal.promotions, I18n.t('ach.tally.promotions'))}
+                ${this._tally('ti-circle-arrow-down', 'var(--state-bad)', tal.relegations, I18n.t('ach.tally.relegations'))}
             </div>`;
 
         const sections = groups.map(g => {
