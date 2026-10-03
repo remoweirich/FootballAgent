@@ -30,6 +30,11 @@ const MORALE = {
 
     TROPHY_CLUB: 12, TROPHY_AGENT: 8,
     PROMOTION_CLUB: 10, RELEGATION_CLUB: -12,
+    // The season-end "what a year he's had" bonus: +15 time, +30 club, +20 agent, -10 wage. It is a
+    // large injection, so what matters is how OFTEN it fires, and that depends on the SPREAD of
+    // season ratings. Measured: narrowing the form swing dropped the share of seasons clearing 7.50
+    // from 29.5% to 22.5%, and end-of-career morale fell nearly five points with it. Anything that
+    // changes the rating distribution has to be checked against this number.
     HOT_FORM_AVG_RATING: 7.5, HOT_FORM_MIN_APPS: 10, HOT_FORM_MSG_MIN_APPS: 30,
     HOT_FORM_TIME: 15, HOT_FORM_WAGE: -10, HOT_FORM_CLUB: 30, HOT_FORM_AGENT: 20,
 

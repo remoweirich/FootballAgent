@@ -611,6 +611,8 @@ I18n.register('pt', {
 I18n.register('pt', {
     'ls.goalAnon': 'GOLO — {team}',
     'ls.goalAnonVsKeeper': 'GOLO — {team}. {keeper} ainda lhe toca, mas não consegue evitar o golo.',
+    'ls.goalNamed': 'GOLO — {scorer} marca para {team}.',
+    'ls.goalNamedVsKeeper': '{scorer} marca para {team} — {keeper} ainda lhe toca, mas não consegue evitar o golo.',
     'ls.cornerAnon': 'Canto — {team}',
     'ls.cornerFollow1': 'O cruzamento encontra uma cabeça no primeiro poste — passa muito perto!',
     'ls.cornerFollow2': 'Remate firme à entrada da pequena área, mas direto ao guarda-redes.',

@@ -320,6 +320,9 @@ const Attend = {
     timelineSpec(m) {
         return {
             homeName: m.homeName, awayName: m.awayName,
+            // the country each side plays in, so an invented scorer gets a plausible name
+            homeCountry: ((typeof Clubs !== 'undefined' && Clubs.getClubById(m.homeId)) || {}).country || null,
+            awayCountry: ((typeof Clubs !== 'undefined' && Clubs.getClubById(m.awayId)) || {}).country || null,
             hg: m.hg, ag: m.ag, minutes: m.minutes,
             // regulation events all sit inside 90'; the clock then runs on (empty for a shootout, or
             // carrying the extra-time goals) toward `minutes`. See buildTimeline's stampWindow split.

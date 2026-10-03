@@ -176,6 +176,9 @@ const LiveView = {
         st.clock += (this.TICK_MS * st.speed) / this.BASE_MS_PER_MIN;
         if (st.revealed < evs.length && evs[st.revealed].minute <= Math.floor(st.clock)) {
             const e = evs[st.revealed]; st.revealed++;
+            // a silent event (most corners) still LANDS — its tick and any stat credit count — but
+            // never reaches the ticker, which otherwise reads as a list of corners
+            if (e.silent) { this._land(e); this._paint(); return; }
             this.feed.unshift(e); e._shown = 1;
             if ((e.lines || []).length > 1) st.reveal = { e, nextAt: now + this.LINE_MS };   // narrate it out
             else this._land(e);                                                              // a one-liner lands at once
@@ -284,6 +287,7 @@ const LiveView = {
         if (this.s.reveal) { const e = this.s.reveal.e; e._shown = (e.lines || []).length; this._land(e); this.s.reveal = null; }
         while (this.s.revealed < evs.length) {
             const e = evs[this.s.revealed]; this.s.revealed++;
+            if (e.silent) { this._land(e); continue; }
             this.feed.unshift(e); e._shown = (e.lines || []).length; this._land(e);
         }
         this._skipping = false; this.s.hold = null;

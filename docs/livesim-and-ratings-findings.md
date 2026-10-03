@@ -130,24 +130,37 @@ exactly what the formula produces for his profile. The problem is the formula.
 
 ## The four causes, in order of size
 
-### A. The season-long form draw is enormous — **the biggest single cause**
+### A. ~~The season-long form draw is enormous~~ — **WRONG, corrected 2026-10-03**
+
+**This was my error and it is worth recording.** I reported that `_formVal = gauss(0, 0.9)` gave a
+season swing with 10th/90th percentiles of −1.14/+1.12, and that 15% of players were handed ≥ +0.90
+for a whole year. I measured that with a Box–Muller normal in my own probe.
+
+`PlayerGen.gauss(mean, sd)` is **not** a normal distribution:
 
 ```js
-_formVal = gauss(0, formTrait > 0.2 ? 0.30 : 0.9)   // ONE draw, used in every match
+gauss(mean, sd) { const r = (Rng.next() + Rng.next() + Rng.next()) / 3; return mean + (r - 0.5) * 2 * sd; }
 ```
 
-It is drawn once per season and added to *every* match, so it never averages out. Measured across
-40,000 players: 10th percentile **−1.14**, 90th **+1.12**. **15% of players are handed ≥ +0.90 for
-an entire season; 4% get ≥ +1.50** — on a coin flip that has nothing to do with the player.
+It is a bounded triangular draw whose true standard deviation is **sd/3**, and which can never
+leave ±sd. Measured over 400k draws, `gauss(0, 0.9)` has SD **0.30**, deciles −0.39/+0.39, and
+**0.00%** of draws reach +0.90. The season-long form swing was about a third of what I claimed and
+was never the dominant term.
 
-It also explains the *consistency* in your screenshot. `formTraitRoll` gives a 1-in-30 player a
-permanent `formTrait ≈ +0.34` **and** cuts his season variance to 0.30. Hans Peter looks exactly
-like that player: seven seasons between 7.56 and 8.00, never wobbling.
+The implementation confirmed it. Narrowing the swing and re-rolling it four times a season moved
+the share of seasons ≥ 8.00 from 4.9% to 4.2% — inside the seed-to-seed noise band of 2.7 — while
+measured season-to-season variation fell from 0.345 to 0.242. In other words it changed the thing
+that was already small and left the complaint untouched. It also broke a property the suite
+rightly pins (`test_batch5`): a player at his own level must still be able to have a career year,
+and the best of 150 such seasons fell to 7.40.
 
-**Proposal.** Cut σ from 0.9 to ~0.30, and re-roll it 3–4 times a season instead of once. Two
-gains: season averages stop being decided by one invisible dice roll, and clients get real
-in-season form swings — which would feed straight into the form bands the offer system now reads
-(`docs/offers-design.md` §4).
+**Reverted in full.** `formBiasOf` is back to its original behaviour, now carrying a comment about
+the gauss trap so the next person does not repeat this.
+
+The in-season re-roll is still a good idea — runs of form inside a season are exactly what the
+offer bands want to read — but keyed off **appearances**, not the calendar. Keyed off
+`GameState.week` it degenerates whenever a caller does not advance the clock, which is how
+`test_batch5` ended up drawing one oversized bias instead of four small ones.
 
 ### B. The baseline is ~7.5, not the 6.6 the code intends
 
@@ -186,6 +199,27 @@ player and a Bundesliga one. If you would rather a 37-ability player *could not*
 that is a different change from A–D: it needs an absolute ceiling that scales with ability, e.g.
 cap the season average near `6.0 + ability/25`.
 
-**My recommendation:** do **A** first and alone. It is one constant plus a re-roll, it removes the
-largest distortion, and it adds in-season form the rest of the game can use. Then measure again
-before touching B–D, because A will move every number in the table above.
+**Revised recommendation (2026-10-03).** A is dead — see the correction above. The ratings are
+high because of the **mean**, not the spread, so the fix is **B**, and B is the one change I was
+most cautious about because it moves everything downstream.
+
+Costed, for when you want it:
+
+* base 6.55 → ~6.10, which puts the plain midfielder near 6.4 and Hans Peter near 7.1
+* `levelGapRating` and the goal weight are what carry the rest; C can follow if B is not enough
+* **growth must be recentred with it.** The development multiplier is
+  `1 + (seasonAvg − 6.9) × 0.45`. Drop the mean by 0.45 and leave the 6.9 pivot alone and
+  development slows by roughly 18% across the board — exactly the collateral damage to avoid. The
+  pivot moves to ~6.45 with the base.
+* `MORALE.HOT_FORM_AVG_RATING` (7.50) gates a +15/+30/+20 morale injection. Measured: when the
+  share of seasons clearing 7.50 fell from 29.5% to 22.5%, end-of-career morale fell 4.8 points.
+  It has to move with the distribution, and there is a feedback loop — morale feeds
+  `moraleRatingMod`, which feeds the rating — so it needs re-measuring, not just arithmetic.
+* `HOT_RATING` (7.60, js/league.js) gates squad-role promotion, and through it playing time.
+* **Not** `Agency.FORM_BANDS`, and **not** the extra-suitor rule: those are written in terms of the
+  rating you see on screen, and fewer players reaching 7.50 is the point.
+
+The harness for all of this is in the scratchpad (`rating-impact.js`): three seeds × five seasons ×
+forty clients, reporting the rating distribution next to growth, appearances and morale, with a
+seed-noise band so a real change can be told from luck. Anything that touches ratings should be run
+through it before and after.

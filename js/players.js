@@ -117,6 +117,7 @@ const PlayerGen = {
 
     // Temperament: roughly one player in thirty is a reliable performer wherever he goes, and
     // barely has a bad season. Everyone else carries a small permanent lean either way.
+    // ~1 in 30 is a model professional: a permanent lift, and (see formBiasOf) barely any swing.
     formTraitRoll() { return Rng.next() < 1 / 30 ? this.gauss(0.34, 0.06) : this.gauss(0, 0.09); },
 
     makePlayer(club, { ability, age, position }) {
@@ -341,6 +342,20 @@ function declineAgeOf(p) {
 // THIRD of the argument and it can never exceed it. 0.9 here means a typical season lands within
 // ~0.3 of par and the ~5% tails are the genuinely great and genuinely wretched campaigns — which
 // is what lets a player at his own club's level occasionally average 7.5 without it being routine.
+// Form: a lasting temperament (formTrait) plus a swing drawn once per season.
+//
+// NOTE for anyone tempted to retune this: PlayerGen.gauss(mean, sd) is NOT a normal distribution.
+// It is a bounded triangular draw (the mean of three uniforms), so its true standard deviation is
+// sd/3 and it can never exceed +/-sd. gauss(0, 0.9) is therefore a season swing of SD 0.30, not
+// 0.90 — about a third of what the name suggests. Read as a normal it looks like the dominant term
+// in a season average; it is not, and narrowing it does very little to the big averages while
+// quickly making a career year impossible (test_batch5 pins that one must stay possible).
+//
+// Re-rolling it a few times a season was tried, to give in-season runs of form. It needs a larger
+// per-draw spread to keep the season-level spread intact, and that is fragile: any caller that
+// does not advance GameState.week gets one oversized draw instead of several small ones, which is
+// exactly what happened. Worth doing properly one day, with the draw keyed off appearances rather
+// than the calendar.
 function formBiasOf(p) {
     if (p.formTrait == null) p.formTrait = PlayerGen.formTraitRoll();
     const year = GameState.seasonStartYear;

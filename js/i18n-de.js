@@ -579,6 +579,8 @@ I18n.register('de', {
 I18n.register('de', {
     'ls.goalAnon': 'Tor für {team}.',
     'ls.goalAnonVsKeeper': 'Tor für {team}. {keeper} ist noch dran, kann den Ball aber nicht halten.',
+    'ls.goalNamed': 'Tor — {scorer} trifft für {team}.',
+    'ls.goalNamedVsKeeper': '{scorer} trifft für {team} — {keeper} ist noch dran, kann den Ball aber nicht halten.',
     'ls.cornerAnon': 'Ecke für {team}.',
     'ls.cornerFollow1': 'Die Hereingabe findet einen Kopf am ersten Pfosten, knapp vorbei!',
     'ls.cornerFollow2': 'Aus sechs Metern wuchtig getroffen, aber genau auf den Torwart.',

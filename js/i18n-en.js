@@ -594,6 +594,8 @@ I18n.register('en', {
 I18n.register('en', {
     'ls.goalAnon': 'GOAL — {team}',
     'ls.goalAnonVsKeeper': 'GOAL — {team}. {keeper} got a hand to it but could not keep it out.',
+    'ls.goalNamed': 'GOAL — {scorer} finds the net for {team}.',
+    'ls.goalNamedVsKeeper': '{scorer} scores for {team} — {keeper} got a hand to it but could not keep it out.',
     'ls.cornerAnon': 'Corner — {team}',
     'ls.cornerFollow1': 'The delivery picks out a head at the near post — flashed just wide!',
     'ls.cornerFollow2': "Met firmly six yards out, but it's straight at the keeper.",

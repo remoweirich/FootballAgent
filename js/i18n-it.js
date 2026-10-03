@@ -607,6 +607,8 @@ I18n.register('it', {
 I18n.register('it', {
     'ls.goalAnon': 'GOL — {team}',
     'ls.goalAnonVsKeeper': 'GOL — {team}. {keeper} ci arriva con la mano, ma non basta.',
+    'ls.goalNamed': 'GOL — {scorer} segna per {team}.',
+    'ls.goalNamedVsKeeper': '{scorer} segna per {team} — {keeper} ci arriva con la mano, ma non basta.',
     'ls.cornerAnon': 'Calcio d\'angolo — {team}',
     'ls.cornerFollow1': 'Il cross trova una testa sul primo palo — fuori di un soffio!',
     'ls.cornerFollow2': 'Colpita con forza da pochi metri, ma addosso al portiere.',

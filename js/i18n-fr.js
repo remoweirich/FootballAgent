@@ -604,6 +604,8 @@ I18n.register('fr', {
 I18n.register('fr', {
     'ls.goalAnon': 'BUT — {team}',
     'ls.goalAnonVsKeeper': 'BUT — {team}. {keeper} effleure le ballon mais ne peut pas l’arrêter.',
+    'ls.goalNamed': 'BUT — {scorer} trouve la faille pour {team}.',
+    'ls.goalNamedVsKeeper': '{scorer} marque pour {team} — {keeper} effleure le ballon mais ne peut pas l’arrêter.',
     'ls.cornerAnon': 'Corner — {team}',
     'ls.cornerFollow1': 'Le centre trouve une tête au premier poteau, ça passe juste à côté !',
     'ls.cornerFollow2': 'Reprise ferme à six mètres, mais droit dans les gants du gardien.',

@@ -22,6 +22,8 @@ const LIVE_SIM = {
     CORNER_BASE: 2, CORNER_SPREAD: 6,   // corners per side: 2..7
     CORNER_EVENT_CHANCE: 0.22,      // chance a corner is narrated as a client event, not just a tick
     CORNER_EVENT_MAX: 2,            // at most this many narrated corner events per match
+    CORNER_LINES_MAX: 1,            // ...plus at most this many PLAIN corner lines per side. The
+                                    // rest still count toward the stat, they just aren't written.
     CORNER_FOLLOW_CHANCE: 0.25,     // chance a plain corner chains into a follow-up beat (header/shot, no goal)
     // ---- the countable side of a performance -------------------------------------------------
     // Goals, assists and cards belong to the engine and may never be invented here. Shots, saves
@@ -645,22 +647,45 @@ const LiveSim = {
         fillTo(target);
         // whatever the scoreline still owes after the chains — a chain may already have spent an
         // anonymous goal (GOAL:T, "an unnamed team-mate finishes"), so read the ledger, not anonGoals
-        // A conceded goal must never happen behind an attending keeper's back. "GOAL — Team" with
-        // no further detail reads as though his own client was not on the pitch; if the agent is
-        // watching his goalkeeper, every goal past him says so.
+        // A goal by someone the agent does not represent. The engine never named a scorer, so the
+        // line used to be a bare "GOAL — Team": nobody scored it, and if you were watching your own
+        // goalkeeper it read as though he were not even on the pitch.
+        //
+        // Both are fixed here. A scorer is invented — it changes no stored data, the goal already
+        // exists and simply gets a name — and the squad is kept small per side so the same striker
+        // can get two, which reads like a real match. If the agent is watching the keeper who was
+        // beaten, the line says so instead.
         const keeperOf = side => clients.find(c => c.side === side && c.player.position === 'GK'
             && !sentOff.has(c.player)) || null;
+        const scorerPool = { home: [], away: [] };
+        const scorerFor = side => {
+            const pool = scorerPool[side];
+            // a third of the time after the first, a man already on the scoresheet gets another
+            if (pool.length && rnd() < 0.33) return pool[Math.floor(rnd() * pool.length)];
+            // every lookup guarded: the live-sim test harnesses load this file without the engine
+            // around it, and an invented name is a nicety, never a reason to fail a match
+            let nm = null;
+            try {
+                const country = (side === 'home' ? spec.homeCountry : spec.awayCountry)
+                    || (typeof GameState !== 'undefined' ? GameState.homeCountry : null);
+                if (country && typeof generateName === 'function' && typeof getRegionBasedNationality === 'function')
+                    nm = generateName(getRegionBasedNationality(country));
+            } catch (e) { nm = null; }
+            if (!nm) return pool[0] || null;        // no name generator (headless tests): stay anonymous
+            pool.push(nm);
+            return nm;
+        };
         for (const side of ['home', 'away'])
             for (let i = 0; i < ledger.anon[side]; i++) {
                 const gk = keeperOf(side === 'home' ? 'away' : 'home');
-                units.push([gk
-                    ? { kind: 'goal', side, client: null, beatenKeeper: gk.player,
-                        lines: [this._t('ls.goalAnonVsKeeper', { team: nameOf(side), keeper: gk.player.name },
-                            'GOAL — {team}. {keeper} got a hand to it but could not keep it out.')],
-                        events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }
-                    : { kind: 'goal', side, client: null,
-                        lines: [this._t('ls.goalAnon', { team: nameOf(side) }, 'GOAL — {team}')],
-                        events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
+                const scorer = scorerFor(side);
+                const ev = [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }];
+                let line;
+                if (gk && scorer) line = this._t('ls.goalNamedVsKeeper', { team: nameOf(side), scorer, keeper: gk.player.name }, '{scorer} scores for {team} — {keeper} got a hand to it but could not keep it out.');
+                else if (gk) line = this._t('ls.goalAnonVsKeeper', { team: nameOf(side), keeper: gk.player.name }, 'GOAL — {team}. {keeper} got a hand to it but could not keep it out.');
+                else if (scorer) line = this._t('ls.goalNamed', { team: nameOf(side), scorer }, 'GOAL — {scorer} finds the net for {team}.');
+                else line = this._t('ls.goalAnon', { team: nameOf(side) }, 'GOAL — {team}');
+                units.push([{ kind: 'goal', side, client: null, beatenKeeper: gk ? gk.player : null, scorerName: scorer, lines: [line], events: ev }]);
             }
 
         // ---- corners: a live stat that ticks up, and now and then the cue for a corner event.
@@ -680,6 +705,7 @@ const LiveSim = {
         // score; a header that actually goes in came through the goal path above.
         let cornerEvents = units.reduce((n, u) => n + u.filter(e => e.corner && e.kind === 'chain').length, 0);
         const flagged = { home: 0, away: 0 };
+        const plainWritten = { home: 0, away: 0 };   // how many plain corners have been given a line
         for (const u of units) for (const e of u) if (e.corner) flagged[e.corner]++;
         for (const side of ['home', 'away']) {
             const target = LIVE_SIM.CORNER_BASE + Math.floor(rnd() * LIVE_SIM.CORNER_SPREAD);
@@ -688,10 +714,24 @@ const LiveSim = {
                 if (cornerEvents < LIVE_SIM.CORNER_EVENT_MAX && rnd() < LIVE_SIM.CORNER_EVENT_CHANCE)
                     ev = this._cornerEvent(side, live(), rnd, ctxFor, used, usedPieces);
                 if (ev) cornerEvents += 1;
-                const unit = [ev || { kind: 'corner', side, client: null, corner: side, events: [], lines: [this._t('ls.cornerAnon', { team: nameOf(side) }, 'Corner — {team}')] }];
-                // a plain corner sometimes leads to something the moment after — a header or shot that
-                // doesn't go in (goals are the engine's to award, so this is pure flavour, no score)
-                if (!ev && rnd() < LIVE_SIM.CORNER_FOLLOW_CHANCE) unit.push(this._cornerFollow(side, rnd));
+                // Most corners are a COUNTER, not a story. There are 4-14 a match against an event
+                // budget of 3-9, so printing every one made them roughly half of everything the
+                // player read — seven of eleven lines in one reported feed. They still all count
+                // (the Statistik tab must agree with the ticker), but only a couple are written:
+                // `silent` keeps the tick and drops the line.
+                const written = !ev && plainWritten[side] < LIVE_SIM.CORNER_LINES_MAX;
+                if (written) plainWritten[side]++;
+                const unit = [ev || { kind: 'corner', side, client: null, corner: side, events: [],
+                    silent: !written,
+                    lines: written ? [this._t('ls.cornerAnon', { team: nameOf(side) }, 'Corner — {team}')] : [] }];
+                // a written corner sometimes leads to something the moment after — a header or shot
+                // that doesn't go in (goals are the engine's to award, so this is flavour, no score).
+                // Folded into the SAME entry rather than a separate line: on its own it read as an
+                // orphan fragment with no team and no player attached.
+                if (written && rnd() < LIVE_SIM.CORNER_FOLLOW_CHANCE) {
+                    const f = this._cornerFollow(side, rnd);
+                    unit[0].lines = unit[0].lines.concat(f.lines || []);
+                }
                 units.push(unit);
             }
         }

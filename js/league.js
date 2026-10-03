@@ -204,6 +204,11 @@ function divCountry(div) { for (const [c, ds] of Object.entries(COUNTRY_DIVS)) i
 // ---- weekly squad index (world model) ----
 // How many recent appearances count as "current form" when the manager decides who plays.
 const RECENT_FORM_WINDOW = 12;
+// The rolling-average rating that reads as "he's been playing well" and lifts a player's squad role.
+// Named rather than inline because it is calibrated against the SPREAD of ratings: narrow that and
+// this has to move with it, or role promotions — and the playing time and morale that follow from
+// them — quietly dry up.
+const HOT_RATING = 7.6;
 
 // Squad lists are only needed for clubs employing a sim-relevant player (the agent's clients,
 // ex-clients, scouted prospects — ~dozens of people, a handful of clubs). Built lazily once per
@@ -2482,7 +2487,7 @@ const League = {
             if (!rec || rec.length < 5) return r;
             const perGame = rec.reduce((s, x) => s + x.g + x.a * 0.6, 0) / rec.length;
             // a scoring run speaks for itself quickly; "he's been playing well" needs a real sample
-            const hot = perGame >= 0.75 || (rec.length >= 10 && rec.reduce((s, x) => s + x.r, 0) / rec.length >= 7.6);
+            const hot = perGame >= 0.75 || (rec.length >= 10 && rec.reduce((s, x) => s + x.r, 0) / rec.length >= HOT_RATING);
             return hot ? (HOT_STEP[r] || r) : r;
         };
 

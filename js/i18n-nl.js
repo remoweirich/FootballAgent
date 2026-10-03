@@ -608,6 +608,8 @@ I18n.register('nl', {
 I18n.register('nl', {
     'ls.goalAnon': 'GOAL — {team}',
     'ls.goalAnonVsKeeper': 'GOAL — {team}. {keeper} krijgt er nog een hand tegen, maar kan hem er niet uit houden.',
+    'ls.goalNamed': 'GOAL — {scorer} scoort voor {team}.',
+    'ls.goalNamedVsKeeper': '{scorer} scoort voor {team} — {keeper} krijgt er nog een hand tegen, maar kan hem er niet uit houden.',
     'ls.cornerAnon': 'Corner — {team}',
     'ls.cornerFollow1': 'De voorzet vindt een hoofd bij de eerste paal — er net naast!',
     'ls.cornerFollow2': 'Hard geraakt van dichtbij, maar recht in de handen van de keeper.',

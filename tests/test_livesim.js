@@ -329,9 +329,38 @@ check('timeline: a required outcome always carries commentary — no silent even
   for(const [cl,hg,ag] of cases) for(let i=0;i<150;i++){
     const t=LiveSim.buildTimeline(spec({ hg, ag, clients:[cl] }));
     for(const e of t.events){
+      // A counter-only corner is silent BY DESIGN: there are 4-14 corners a match against an
+      // event budget of 3-9, so printing them all buried the feed. It still ticks the stat, it
+      // just has no line. Nothing else may ever be silent — that is the next check.
+      if(e.silent) continue;
       if(!e.lines || !e.lines.length) return false;
       if(e.lines.some(l=>!l || !l.trim())) return false;
     }
+  }
+  return true;
+`));
+check('timeline: only a plain corner may be silent — never a goal, card or chain', run(TL + `
+  const G=mk("g","Marc Suter","GK","shot_stopper");
+  for(const cl of [{player:A,side:"home",goals:1,assists:0},{player:C,side:"home",goals:0,assists:0,yellow:1},{player:G,side:"home",goals:0,assists:0}])
+    for(let i=0;i<200;i++){
+      const t=LiveSim.buildTimeline(spec({ hg:2, ag:1, clients:[cl] }));
+      for(const e of t.events){
+        if(!e.silent) continue;
+        if(e.kind!=="corner") return false;          // only the plain corner tick
+        if((e.events||[]).length) return false;      // and it carries no outcome of any kind
+        if(e.client) return false;                   // and features nobody
+      }
+    }
+  return true;
+`));
+check('timeline: the corner COUNT still matches what the stats tab will show', run(TL + `
+  // silencing the lines must not silence the counter — the Statistik tab reads timeline.corners
+  for(let i=0;i<200;i++){
+    const t=LiveSim.buildTimeline(spec({ hg:1, ag:1, clients:[{player:A,side:"home",goals:1,assists:0}] }));
+    const flagged={home:0,away:0};
+    for(const e of t.events) if(e.corner) flagged[e.corner]++;
+    if(flagged.home!==t.corners.home || flagged.away!==t.corners.away) return false;
+    if(t.corners.home<2 || t.corners.away<2) return false;
   }
   return true;
 `));

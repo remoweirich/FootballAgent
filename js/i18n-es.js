@@ -601,6 +601,8 @@ I18n.register('es', {
 I18n.register('es', {
     'ls.goalAnon': 'GOL — {team}',
     'ls.goalAnonVsKeeper': 'GOL — {team}. {keeper} llega a tocarla, pero no puede evitar el gol.',
+    'ls.goalNamed': 'GOL — {scorer} marca para {team}.',
+    'ls.goalNamedVsKeeper': '{scorer} marca para {team} — {keeper} llega a tocarla, pero no puede evitar el gol.',
     'ls.cornerAnon': 'Saque de esquina — {team}',
     'ls.cornerFollow1': 'El centro encuentra un remate de cabeza en el primer palo, ¡fuera por muy poco!',
     'ls.cornerFollow2': 'Golpeado con fuerza desde seis metros, pero directo a las manos del portero.',
