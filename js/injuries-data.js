@@ -282,4 +282,31 @@ const INJURIES = [
   "category": "Bone"
  }
 ];
-if (typeof module !== 'undefined' && module.exports) module.exports = { INJURIES };
+
+// Injury names are translated at DISPLAY time, never at creation. `p.injury.type` holds the
+// English name and is written into the save (and into injuryHistory, which is kept for the life
+// of a career), so translating on the way in would bake one language into the save and leave a
+// player who switches language with a mixed-language history.
+//
+// New injuries also carry `id`; anything from an older save has only the English name, so that is
+// mapped back to an id here. Two entries share the name "Hamstring strain", which is harmless:
+// they translate to the same words.
+const _INJ_BY_NAME = {};
+const _INJ_BY_ID = {};
+for (const i of INJURIES) {
+    _INJ_BY_ID[i.id] = i;
+    if (!(i.name.toLowerCase() in _INJ_BY_NAME)) _INJ_BY_NAME[i.name.toLowerCase()] = i;
+}
+// Accepts an injury object ({id, type}), an id, or the raw English name an old save stored.
+function injuryName(x) {
+    if (x == null) return '';
+    const id = (typeof x === 'object') ? (x.id || null) : null;
+    const raw = (typeof x === 'object') ? (x.type || x.name || '') : String(x);
+    const inj = (id && _INJ_BY_ID[id]) || _INJ_BY_NAME[String(raw).toLowerCase()] || null;
+    if (!inj) return raw;                       // an injury from a future/edited data file
+    if (typeof I18n === 'undefined' || !I18n.t) return inj.name;
+    const key = 'inj.' + inj.id;
+    const out = I18n.t(key);
+    return (out && out !== key) ? out : inj.name;   // untranslated -> the English name, never the key
+}
+if (typeof module !== 'undefined' && module.exports) module.exports = { INJURIES, injuryName };

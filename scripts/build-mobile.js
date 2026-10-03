@@ -69,9 +69,27 @@ function genMusicManifest() {
     return tracks.length;
 }
 
+// The version shown at the bottom of Settings. android/app/build.gradle is the single source of
+// truth; this used to be a hand-maintained string in the English pack and had drifted three
+// releases behind (shipped v1.0.24 still reading v1.0.21), because nothing tied the two together.
+// Rewritten into the source pack on every build, and tests/test_version.js fails if they disagree.
+function syncVersion() {
+    const gradle = fs.readFileSync(path.join(ROOT, 'android', 'app', 'build.gradle'), 'utf8');
+    const m = /versionName\s+"([^"]+)"/.exec(gradle);
+    if (!m) throw new Error('no versionName in android/app/build.gradle');
+    const p = path.join(ROOT, 'ui', 'js', 'i18n-en.js');
+    const src = fs.readFileSync(p, 'utf8');
+    const line = /('settings\.version':\s*'[^']*·\s*v)([0-9][^']*)(')/;
+    if (!line.test(src)) throw new Error("no 'settings.version' line in ui/js/i18n-en.js");
+    const out = src.replace(line, (s, a, cur, c) => a + m[1] + c);
+    if (out !== src) fs.writeFileSync(p, out);
+    return m[1];
+}
+
 function build() {
     rmrf(OUT);
     mkdirp(OUT);
+    const version = syncVersion();
     const nTracks = genMusicManifest();
 
     for (const f of ENGINE_FILES) copy(path.join(ROOT, 'js', f), path.join(OUT, 'engine', f));
@@ -90,7 +108,7 @@ function build() {
     for (const f of ENGINE_FILES) html = html.split(`../js/${f}`).join(`engine/${f}`);
     fs.writeFileSync(path.join(OUT, 'index.html'), html);
 
-    console.log('dist/mobile/ built:', fs.readdirSync(OUT).join(', '), '· music tracks:', nTracks);
+    console.log('dist/mobile/ built:', fs.readdirSync(OUT).join(', '), '· music tracks:', nTracks, '· version: v' + version);
 }
 
 build();

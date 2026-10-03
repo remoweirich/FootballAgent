@@ -860,21 +860,23 @@ const Dialogue = {
     // move to the club he supported as a boy (THE call of his career). A move that fulfils a stated
     // ambition already gets its own scene (see _checkAmbition); an ordinary transfer gets no chat, so
     // you aren't buried under ten identical "thanks for the move" screens every window.
-    onTransferCompleted(p, toClubId) {
+    onTransferCompleted(p, toClubId, fromCountry) {
         if (p.agentId !== 'me') return;
         const f = this.ensureFacts(p);
         if (f.favClub.clubId === toClubId && !f.favClub.fulfilled) {
             f.favClub.discovered = true; f.favClub.fulfilled = true; f.favClub.year = GameState.seasonStartYear;
             this.queueMoment({ type: 'dreammove', playerId: p.id, clubId: toClubId });
         }
-        this._startSettling(p, Clubs.getClubById(toClubId));   // a language barrier means an adjustment period
+        this._startSettling(p, Clubs.getClubById(toClubId), { from: fromCountry });   // a language barrier means an adjustment period
     },
     // called when a loan is agreed (see Agency.acceptLoanOffer): a shorter settling-in at the loan
     // club, and any settling at the club he just joined is cancelled — he's only passing through
     onLoanStarted(p, borrowerId) {
         if (p.agentId !== 'me') return;
         delete p.settling;
-        this._startSettling(p, Clubs.getClubById(borrowerId), { loan: true });
+        // he is still the parent club's player, so that is the country he is leaving
+        const from = (Clubs.getClubById(p.clubId) || {}).country || null;
+        this._startSettling(p, Clubs.getClubById(borrowerId), { loan: true, from });
     },
     // called when a long injury lands (see Sim._injuries)
     onInjury(p, weeks) {
@@ -1084,6 +1086,10 @@ const Dialogue = {
         if (!club || !this.LANGS[club.country]) return;
         const home = (p.facts && p.facts.home) || this._homeCountryOf(p);
         if (club.country === home) return;                                // moving (back) home — no adjustment
+        // Settling in is about changing COUNTRY, not clubs. A Spaniard going Stuttgart -> Dortmund
+        // has already found a flat, a school and the language; he does not start again from zero
+        // just because he changed employer. Only a move across a border restarts it.
+        if (opts.from && opts.from === club.country) return;
         const speaks = this._langsOf(p);
         const knowsLang = this.LANGS[club.country].some(l => speaks.includes(l));
         let weeks = 12 + Math.floor(Rng.next() * 7);                       // 12–18 weeks base

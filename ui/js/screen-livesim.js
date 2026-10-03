@@ -48,9 +48,21 @@ const LiveView = {
     // the rest are generated once and revealed in proportion to the clock so nothing jumps at the end.
     buildStats(match, timeline, rnd = Math.random) {
         const shots = { home: match.hg * 3 + 5 + Math.floor(rnd() * 7), away: match.ag * 3 + 5 + Math.floor(rnd() * 7) };
+        // A team can never have taken fewer shots than the clients in it. The team figure is
+        // invented from the scoreline while the client figures come from the timeline, so without
+        // this floor a match with three attending forwards could show "Shots 6" above a client
+        // list adding up to eight.
+        const cs = timeline.clientStats || {};
+        const byClient = { home: 0, away: 0 };
+        for (const c of (match.clients || [])) {
+            const s = cs[c.playerId];
+            if (s && c.side) byClient[c.side] += s.shots || 0;
+        }
+        shots.home = Math.max(shots.home, byClient.home);
+        shots.away = Math.max(shots.away, byClient.away);
         const sot = {
-            home: Math.min(shots.home, match.hg + 2 + Math.floor(rnd() * 4)),
-            away: Math.min(shots.away, match.ag + 2 + Math.floor(rnd() * 4)),
+            home: Math.min(shots.home, Math.max(match.hg, match.hg + 2 + Math.floor(rnd() * 4))),
+            away: Math.min(shots.away, Math.max(match.ag, match.ag + 2 + Math.floor(rnd() * 4))),
         };
         const fouls = { home: 7 + Math.floor(rnd() * 8), away: 7 + Math.floor(rnd() * 8) };
         let pHome = 50 + (match.hg - match.ag) * 3 + Math.floor(rnd() * 11) - 5;
@@ -83,7 +95,7 @@ const LiveView = {
         this.feed = [];
         // running per-client tallies for the panel, keyed by playerId
         this.tally = {};
-        for (const c of match.clients) if (c.played) this.tally[c.playerId] = { g: 0, a: 0, y: 0, r: 0, shots: 0 };
+        for (const c of match.clients) if (c.played) this.tally[c.playerId] = { g: 0, a: 0, y: 0, r: 0, shots: 0, saves: 0, tackles: 0 };
         this._renderShell();
         if (typeof Sound !== 'undefined') Sound.play('whistle1');   // kick-off
         this._timer = setInterval(() => this._tick(), this.TICK_MS);
@@ -94,6 +106,17 @@ const LiveView = {
         this.s.done = true;
         clearInterval(this._timer);
         this.s.clock = this.timeline.minutes;
+        // Settle each client's line against the authoritative totals. Most of it has already ticked
+        // up event by event; this adds what has no single moment to hang on — a keeper's save count,
+        // and the guarantee that nobody who played finishes on a blank line. Skipping to the result
+        // comes through here too, so a skipped match reads the same as a watched one.
+        const cs = (this.timeline && this.timeline.clientStats) || {};
+        for (const id of Object.keys(cs)) {
+            const t = this.tally[id]; if (!t) continue;
+            t.shots = Math.max(t.shots, cs[id].shots || 0);
+            t.saves = Math.max(t.saves, cs[id].saves || 0);
+            t.tackles = Math.max(t.tackles, cs[id].tackles || 0);
+        }
         // bank any converted-penalty goal the live sim moved to a client
         if (applyAdjust && typeof Attend !== 'undefined') Attend.applyStatAdjust(this.match, this.timeline.statAdjust);
         // stay on the tabbed view so the stats and the full event feed can still be browsed —
@@ -234,6 +257,8 @@ const LiveView = {
             this._goalFlash();
             if (typeof Sound !== 'undefined') Sound.play('goal');
         }
+        // a narrated beat that produced no goal still counted for something (LiveSim._creditStats)
+        if (e.statCredit) { const t = this.tally[e.statCredit.id]; if (t) t[e.statCredit.stat]++; }
         for (const ev of e.events || []) {
             if (!ev.player) continue;
             const t = this.tally[ev.player.id]; if (!t) continue;
@@ -412,11 +437,15 @@ const LiveView = {
         const played = this.match.clients.filter(c => c.played);
         const benched = this.match.clients.filter(c => !c.played);
         const card = c => {
-            const t = this.tally[c.playerId] || { g: 0, a: 0, y: 0, r: 0, shots: 0 };
+            const t = this.tally[c.playerId] || { g: 0, a: 0, y: 0, r: 0, shots: 0, saves: 0, tackles: 0 };
             const r = this.ratingAt(c.rating, p);
             const rc = r >= 7 ? 'var(--state-good)' : r < 6.5 ? 'var(--state-bad)' : 'var(--text-secondary)';
             const badge = c.side === 'home' ? this.match.homeName : this.match.awayName;
-            const line = [t.g ? `${t.g} ⚽` : '', t.a ? `${t.a} A` : '', t.shots ? `${t.shots} ${I18n.t('livesim.shotsShort')}` : '', t.y ? `🟨` : '', t.r ? `🟥` : ''].filter(Boolean).join(' · ') || I18n.t('livesim.noStatsYet');
+            const line = [t.g ? `${t.g} ⚽` : '', t.a ? `${t.a} A` : '',
+                t.shots ? `${t.shots} ${I18n.t('livesim.shotsShort')}` : '',
+                t.saves ? `${t.saves} ${I18n.t('livesim.savesShort')}` : '',
+                t.tackles ? `${t.tackles} ${I18n.t('livesim.tacklesShort')}` : '',
+                t.y ? `🟨` : '', t.r ? `🟥` : ''].filter(Boolean).join(' · ') || I18n.t('livesim.noStatsYet');
             return `<div class="lv-cl"><div class="lv-clhead"><span class="lv-clname">${UI.esc(c.name)}</span><span class="lv-clrate" style="color:${rc}">${r.toFixed(1)}</span></div>
                 <div class="lv-clsub">${UI.esc(c.position)} · ${UI.esc(badge)}</div>
                 <div class="lv-clstat">${line}</div></div>`;

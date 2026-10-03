@@ -494,7 +494,7 @@ const ClientDetail = {
             const aw = GameState.absWeek();
             const canPhysio = p.injury.treatedWeek !== aw;
             const canSpec = !p.injury.specialistUsed && p.injury.treatedWeek !== aw;
-            cur = `<div class="fcard"><div class="frow"><span class="frow__k">${I18n.t('cd.injury')}</span><span class="frow__v">${p.injury.type}</span></div><div class="frow"><span class="frow__k">${I18n.t('cd.outFor')}</span><span class="frow__v">${I18n.t('cd.outForWeeks', { w: Math.round(p.injury.weeksOut * 2) / 2 })}</span></div></div>
+            cur = `<div class="fcard"><div class="frow"><span class="frow__k">${I18n.t('cd.injury')}</span><span class="frow__v">${injuryName(p.injury)}</span></div><div class="frow"><span class="frow__k">${I18n.t('cd.outFor')}</span><span class="frow__v">${I18n.t('cd.outForWeeks', { w: Math.round(p.injury.weeksOut * 2) / 2 })}</span></div></div>
                 <div class="flex-row">
                     <button class="btn btn--accent-outline" ${canPhysio ? '' : 'disabled'} onclick="ClientDetail.physio('${p.id}')"><i class="ti ti-first-aid-kit"></i>${I18n.t('cd.physioBtn', { cost: UI.money(1000) })}</button>
                     <button class="btn btn--ghost" ${canSpec ? '' : 'disabled'} onclick="ClientDetail.specialist('${p.id}')"><i class="ti ti-stethoscope"></i>${I18n.t('cd.specialistBtn', { cost: UI.money(15000) })}</button>
@@ -502,7 +502,7 @@ const ClientDetail = {
         }
         const hist = (p.injuryHistory || []).slice().reverse();
         return `${cur}<div class="section-label" style="margin-top:var(--space-5)">${I18n.t('cd.tab.history')}</div>
-            ${hist.length ? hist.map(h => `<div class="frow"><span class="frow__k">${h.season}</span><span class="frow__v">${h.type} · ${h.weeks}w</span></div>`).join('') : `<p class="muted">${I18n.t('cd.noInjuries')}</p>`}`;
+            ${hist.length ? hist.map(h => `<div class="frow"><span class="frow__k">${h.season}</span><span class="frow__v">${injuryName(h)} · ${h.weeks}w</span></div>`).join('') : `<p class="muted">${I18n.t('cd.noInjuries')}</p>`}`;
     },
     physio(id) { const r = Agency.treatPhysio(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     specialist(id) { const r = Agency.treatSpecialist(GameState.getPlayer(id)); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },

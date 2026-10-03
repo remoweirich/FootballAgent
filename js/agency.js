@@ -1348,9 +1348,13 @@ const Agency = {
             Agency.bumpRep(rep.total);
             if (rep.parts.some(x => x.why === 'topFive')) p.topFiveBonusPaid = true;
         }
+        // Where he is moving FROM, captured before lastClubId is overwritten below. Settling in is
+        // about changing COUNTRY, so a move inside one country must not restart it.
+        const fromCountry = (fromClub && fromClub.country)
+            || (Clubs.getClubById(p.lastClubId) || {}).country || p._lastCountry || null;
         p.lastClubId = toClub.id;   // remembered so a later free-agent spell can still judge the move
         // his call after signing — and if this is the club he supported as a boy, THE call (js/dialogue.js)
-        if (typeof Dialogue !== 'undefined') Dialogue.onTransferCompleted(p, toClub.id);
+        if (typeof Dialogue !== 'undefined') Dialogue.onTransferCompleted(p, toClub.id, fromCountry);
         // the club's reputation promptly rises to what its roster of agent clients justifies:
         // anchor + Σ max(0, ability − anchor)/11 (uncapped). It never snaps DOWN here — once
         // players leave, League.normalizeReputations fades it by 1–5 per season instead.
@@ -1497,8 +1501,8 @@ const Agency = {
     // ---- injury treatments ----
     recoverInjury(p) {
         if (!p.injury) return;
-        p.injuryHistory.push({ type: p.injury.type, weeks: p.injury.total, season: GameState.seasonLabel() });
-        const t = I18n.t('ag.log.recovered', { name: p.name, type: p.injury.type });
+        p.injuryHistory.push({ id: p.injury.id, type: p.injury.type, weeks: p.injury.total, season: GameState.seasonLabel() });
+        const t = I18n.t('ag.log.recovered', { name: p.name, type: (typeof injuryName === 'function' ? injuryName(p.injury) : (p.injury).type) });
         GameState.addLog(t, 'info'); GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 });
         p.injury = null;
     },

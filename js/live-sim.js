@@ -23,6 +23,17 @@ const LIVE_SIM = {
     CORNER_EVENT_CHANCE: 0.22,      // chance a corner is narrated as a client event, not just a tick
     CORNER_EVENT_MAX: 2,            // at most this many narrated corner events per match
     CORNER_FOLLOW_CHANCE: 0.25,     // chance a plain corner chains into a follow-up beat (header/shot, no goal)
+    // ---- the countable side of a performance -------------------------------------------------
+    // Goals, assists and cards belong to the engine and may never be invented here. Shots, saves
+    // and tackles are NOT stored by the engine, so the live view is free to award them — and must,
+    // or a client who was narrated four times finishes the match reading "no stats yet", which is
+    // what players were seeing. These are credited to events that already feature him, so the feed
+    // and the stat line always tell the same story.
+    STAT_FROM_EVENT: 0.55,          // chance a narrated beat with no countable outcome credits one
+    MIN_SHOTS_ATT: 1,               // a forward/winger who played finishes with at least this many
+    MIN_TOUCHES_OTHER: 1,           // everyone else gets at least one shot, tackle or save
+    SAVES_PER_GOAL_FACED: 1.6,      // a keeper's save count scales with how busy his goal was
+    SAVES_BASE: 2, SAVES_SPREAD: 4, // ...on top of a plain 2-5
     PLACEHOLDER_CLIENT: 'XY',
     PLACEHOLDER_TEAM: 'xy (player\'s team)',
     PLACEHOLDER_OPP: 'yx (opposition team)',
@@ -634,9 +645,23 @@ const LiveSim = {
         fillTo(target);
         // whatever the scoreline still owes after the chains — a chain may already have spent an
         // anonymous goal (GOAL:T, "an unnamed team-mate finishes"), so read the ledger, not anonGoals
+        // A conceded goal must never happen behind an attending keeper's back. "GOAL — Team" with
+        // no further detail reads as though his own client was not on the pitch; if the agent is
+        // watching his goalkeeper, every goal past him says so.
+        const keeperOf = side => clients.find(c => c.side === side && c.player.position === 'GK'
+            && !sentOff.has(c.player)) || null;
         for (const side of ['home', 'away'])
-            for (let i = 0; i < ledger.anon[side]; i++)
-                units.push([{ kind: 'goal', side, client: null, lines: [this._t('ls.goalAnon', { team: nameOf(side) }, 'GOAL — {team}')], events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
+            for (let i = 0; i < ledger.anon[side]; i++) {
+                const gk = keeperOf(side === 'home' ? 'away' : 'home');
+                units.push([gk
+                    ? { kind: 'goal', side, client: null, beatenKeeper: gk.player,
+                        lines: [this._t('ls.goalAnonVsKeeper', { team: nameOf(side), keeper: gk.player.name },
+                            'GOAL — {team}. {keeper} got a hand to it but could not keep it out.')],
+                        events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }
+                    : { kind: 'goal', side, client: null,
+                        lines: [this._t('ls.goalAnon', { team: nameOf(side) }, 'GOAL — {team}')],
+                        events: [{ tag: 'GOAL', player: null, anonymous: true, side: 'own' }] }]);
+            }
 
         // ---- corners: a live stat that ticks up, and now and then the cue for a corner event.
         // The count must match what the feed shows, so first flag every chain already built that is
@@ -744,7 +769,83 @@ const LiveSim = {
             }
         }
         out.sort((a, b) => a.minute - b.minute);
-        return { events: out, minutes, regulation: regMinutes, statAdjust, corners };
+        const clientStats = this._creditStats(out, clients, spec, rnd);
+        return { events: out, minutes, regulation: regMinutes, statAdjust, corners, clientStats };
+    },
+
+    // ---- the countable side of a performance -------------------------------------------------
+    // Goals, assists and cards are the engine's and are already narrated. Shots, saves and tackles
+    // are not stored anywhere, so they are decided HERE, on the finished timeline, and handed to the
+    // view as the authoritative totals.
+    //
+    // Two problems this solves. A client could be narrated four times — a lovely passage of play
+    // each time — and still finish on "no stats yet", because none of those beats was a goal or an
+    // assist. And a keeper could concede three without ever appearing in his own match: an
+    // anonymous goal said only "GOAL — Team".
+    //
+    // Credits ride on events that already feature the player, so the feed and the stat line can
+    // never tell different stories, and every total is computed here so the Statistik tab can floor
+    // the team's shot count at the sum of its clients' (see buildStats).
+    _creditStats(out, clients, spec, rnd) {
+        const stats = {};
+        const byPlayer = new Map();
+        // `clients` here is already filtered to those who played, and each entry is
+        // { player: {id, name, position, styleRole}, side, goals, ... } — events carry the player
+        // OBJECT, so the map is keyed on it.
+        for (const c of clients) {
+            byPlayer.set(c.player, c);
+            stats[c.player.id] = { shots: 0, saves: 0, tackles: 0 };
+        }
+        if (!byPlayer.size) return stats;
+        const isGK = c => c.player.position === 'GK';
+        const isAtt = c => ['ST', 'LW', 'RW', 'AM'].includes(c.player.position);
+        const bump = (c, k, n = 1) => { const s = stats[c.player.id]; if (s) s[k] += n; };
+        const countable = ev => ['GOAL', 'ASSIST', 'YC', 'RC', 'Y2C', 'OG'].includes(ev.tag);
+
+        // 1. what the feed already showed
+        for (const e of out) {
+            for (const ev of (e.events || [])) {
+                const c = ev.player && byPlayer.get(ev.player);
+                if (!c) continue;
+                if (ev.tag === 'GOAL' || ev.tag === 'PENMISS') bump(c, 'shots');
+            }
+            // 2. a narrated beat that produced nothing countable still happened to him: it was a
+            // shot, a tackle or a save depending on where he plays
+            const feat = e.client && byPlayer.get(e.client);
+            if (!feat) continue;
+            if ((e.events || []).some(countable)) continue;
+            if (rnd() >= LIVE_SIM.STAT_FROM_EVENT) continue;
+            const stat = isGK(feat) ? 'saves' : isAtt(feat) ? 'shots' : (rnd() < 0.5 ? 'shots' : 'tackles');
+            bump(feat, stat);
+            // stamped on the event so the view's counter ticks at the minute it is narrated,
+            // rather than everything appearing at once on the full-time whistle
+            e.statCredit = { id: feat.player.id, stat };
+        }
+
+        // 3. a keeper's afternoon is measured in saves, and he faced whatever the other side scored
+        for (const c of byPlayer.values()) {
+            if (!isGK(c)) continue;
+            const conceded = c.side === 'home' ? (spec.ag || 0) : (spec.hg || 0);
+            const want = LIVE_SIM.SAVES_BASE + Math.floor(rnd() * LIVE_SIM.SAVES_SPREAD)
+                + Math.round(conceded * LIVE_SIM.SAVES_PER_GOAL_FACED);
+            stats[c.player.id].saves = Math.max(stats[c.player.id].saves, want);
+        }
+
+        // 4. nobody who played finishes with a blank line
+        for (const c of byPlayer.values()) {
+            const s = stats[c.player.id];
+            const any = s.shots + s.saves + s.tackles;
+            const scored = (c.goals || 0) + (c.assists || 0);
+            if (any > 0 || scored > 0) {
+                if (isAtt(c) && s.shots < LIVE_SIM.MIN_SHOTS_ATT) s.shots = LIVE_SIM.MIN_SHOTS_ATT;
+                continue;
+            }
+            if (isGK(c)) s.saves = Math.max(1, s.saves);
+            else if (isAtt(c)) s.shots = LIVE_SIM.MIN_SHOTS_ATT;
+            else if (rnd() < 0.5) s.tackles = LIVE_SIM.MIN_TOUCHES_OTHER;
+            else s.shots = LIVE_SIM.MIN_TOUCHES_OTHER;
+        }
+        return stats;
     },
 
     // A short follow-up beat after a corner: a header/shot that comes to nothing (no result tags, so

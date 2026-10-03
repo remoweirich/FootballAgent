@@ -35,7 +35,7 @@ const sb = {
 };
 sb.UI = { money: n => String(n), esc: s => (s == null ? '' : String(s)), crest: () => '<crest>', cur: () => '€' };
 vm.createContext(sb);
-for (const f of ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'simulation.js'])
+for (const f of ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'injuries-data.js', 'simulation.js'])
     vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
 const CX = vm.runInContext(fs.readFileSync(path.join(root, 'ui', 'js', 'screen-customize.js'), 'utf8') + ';CustomizeScreen', sb, { filename: 'screen-customize.js' });
 const runv = c => vm.runInContext('(function(){' + c + '})()', sb);

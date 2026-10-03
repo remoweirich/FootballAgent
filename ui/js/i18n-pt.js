@@ -892,6 +892,8 @@ I18n.register('pt', {
     'livesim.stat.fouls': 'Faltas',
     'livesim.noStatsYet': 'ainda sem estatísticas',
     'livesim.shotsShort': 'rem',
+    'livesim.savesShort': 'def',
+    'livesim.tacklesShort': 'des',
     'livesim.didNotFeature': '{names} não jogou/jogaram.',
     'livesim.noClientsPitch': 'Nenhum dos teus clientes no relvado.',
     'livesim.noFinalsNow': 'Nenhuma final a que assistir neste momento.',

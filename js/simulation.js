@@ -337,7 +337,7 @@ const Sim = {
             let r = Rng.next() * total;
             for (const inj of INJURIES) {
                 r -= (inj.weight || 0);
-                if (r <= 0) { const span = Math.max(0, inj.maxWeeks - inj.minWeeks); return { type: inj.name, weeks: inj.minWeeks + Math.floor(Rng.next() * (span + 1)) }; }
+                if (r <= 0) { const span = Math.max(0, inj.maxWeeks - inj.minWeeks); return { id: inj.id, type: inj.name, weeks: inj.minWeeks + Math.floor(Rng.next() * (span + 1)) }; }
             }
         }
         return { type: INJURY_TYPES[Math.floor(Rng.next() * INJURY_TYPES.length)], weeks: 1 + Math.floor(Rng.next() * 11) };
@@ -348,8 +348,8 @@ const Sim = {
             if (p.injury) {
                 p.injury.weeksOut -= 1;
                 if (p.injury.weeksOut <= 0) {
-                    p.injuryHistory.push({ type: p.injury.type, weeks: p.injury.total, season: GameState.seasonLabel() });
-                    if (p.agentId === 'me') { const t = I18n.t('ag.log.recovered', { name: p.name, type: p.injury.type }); GameState.addLog(t, 'info'); GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 }); }
+                    p.injuryHistory.push({ id: p.injury.id, type: p.injury.type, weeks: p.injury.total, season: GameState.seasonLabel() });
+                    if (p.agentId === 'me') { const t = I18n.t('ag.log.recovered', { name: p.name, type: (typeof injuryName === 'function' ? injuryName(p.injury) : (p.injury).type) }); GameState.addLog(t, 'info'); GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 }); }
                     p.injury = null;
                 }
                 return;
@@ -362,7 +362,7 @@ const Sim = {
                 // no weekly tick runs during injury (see _morale). Being injured therefore neither decays
                 // his playing-time morale nor erases the run he was on; he picks it back up on his return.
                 if (p.agentId === 'me') {
-                    const t = I18n.t('sim.injuredLog', { name: p.name, type: p.injury.type, weeks: inj.weeks });
+                    const t = I18n.t('sim.injuredLog', { name: p.name, type: (typeof injuryName === 'function' ? injuryName(p.injury) : (p.injury).type), weeks: inj.weeks });
                     GameState.addLog(t, 'warn'); events.push({ type: 'warn', text: t });
                     GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('sim.injurySubj', { name: p.name }), body: t, ttl: 4 });
                     if (typeof Dialogue !== 'undefined') Dialogue.onInjury(p, inj.weeks);   // a long layoff earns a visit

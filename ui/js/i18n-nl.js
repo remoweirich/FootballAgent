@@ -890,6 +890,8 @@ I18n.register('nl', {
     'livesim.stat.fouls': 'Overtredingen',
     'livesim.noStatsYet': 'nog geen statistieken',
     'livesim.shotsShort': 'sch',
+    'livesim.savesShort': 'red',
+    'livesim.tacklesShort': 'duel',
     'livesim.didNotFeature': '{names} kwam/kwamen niet in actie.',
     'livesim.noClientsPitch': 'Geen cliënten van je op het veld.',
     'livesim.noFinalsNow': 'Op dit moment geen finales om bij te zijn.',

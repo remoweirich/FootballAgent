@@ -116,7 +116,7 @@ const installGameState = () => { sb.GameState = gs; };
     vm.createContext(esb);
     for (const f of ['i18n.js', 'i18n-en.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js',
         'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js',
-        'agency.js', 'simulation.js', 'live-sim-data.js', 'live-sim.js', 'attend.js'])
+        'agency.js', 'injuries-data.js', 'simulation.js', 'live-sim-data.js', 'live-sim.js', 'attend.js'])
         vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), esb, { filename: f });
     vm.runInContext(fs.readFileSync(path.join(root, 'ui', 'js', 'i18n-en.js'), 'utf8'), esb, { filename: 'ui-i18n-en.js' });
     const erun = c => vm.runInContext('(function(){' + c + '})()', esb);

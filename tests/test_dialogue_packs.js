@@ -21,7 +21,7 @@ const LANGS = JSON.parse(vm.runInContext('JSON.stringify(I18n.LANGS.map(function
 for (const c of LANGS) load('i18n-' + c + '.js');
 for (const f of ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js',
     'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js',
-    'simulation.js', 'live-sim-data.js', 'live-sim.js', 'attend.js', 'dialogue-data.js']) load(f);
+    'injuries-data.js', 'simulation.js', 'live-sim-data.js', 'live-sim.js', 'attend.js', 'dialogue-data.js']) load(f);
 // Locales shipping a dialogue pack: the file's presence on disk is the source of truth.
 const LOCALES = LANGS.filter(c => c !== 'en' && fs.existsSync(path.join(root, 'js', 'dialogue-data-' + c + '.js')));
 for (const c of LOCALES) load('dialogue-data-' + c + '.js');

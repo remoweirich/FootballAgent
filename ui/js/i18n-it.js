@@ -890,6 +890,8 @@ I18n.register('it', {
     'livesim.stat.fouls': 'Falli',
     'livesim.noStatsYet': 'ancora nessuna statistica',
     'livesim.shotsShort': 'tiri',
+    'livesim.savesShort': 'par',
+    'livesim.tacklesShort': 'con',
     'livesim.didNotFeature': '{names} non ha/hanno giocato.',
     'livesim.noClientsPitch': 'Nessuno dei tuoi clienti in campo.',
     'livesim.noFinalsNow': 'Nessuna finale da seguire in questo momento.',
