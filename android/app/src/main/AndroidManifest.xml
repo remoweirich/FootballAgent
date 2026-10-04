@@ -22,10 +22,12 @@
         </activity>
 
         <!-- AdMob App ID (ch.jens.footballagent, AdMob console > App settings). Required, or the app
-             crashes on launch. Google's public test app id is ca-app-pub-3940256099942544~3347511713. -->
+             crashes on launch. Supplied by build.gradle: the live id for every normal build, and
+             Google's public test id for the -PdevId side-by-side build, so a sideloaded test
+             install never generates invalid traffic against the real account. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-9156400497236757~5984605757"
+            android:value="${admobAppId}"
         />
 
         <provider

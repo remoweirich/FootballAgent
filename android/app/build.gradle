@@ -7,6 +7,17 @@ def hasReleaseKeystore = keystorePropsFile.exists()
 def keystoreProps = new Properties()
 if (hasReleaseKeystore) { keystoreProps.load(new FileInputStream(keystorePropsFile)) }
 
+// Side-by-side test install:  gradlew assembleDebug -PdevId
+// Builds under applicationId ch.jens.footballagent.dev, so it installs ALONGSIDE the Play
+// version instead of replacing it. Android scopes WebView storage per applicationId, so the
+// test build gets its own IndexedDB and cannot touch the real save. Without the flag every
+// build behaves exactly as before.
+def devId = project.hasProperty('devId')
+// Google's public test app id. A sideloaded build must never request LIVE ads: impressions you
+// generate on your own test device count as invalid traffic against the real AdMob account.
+def TEST_ADMOB_APP_ID = 'ca-app-pub-3940256099942544~3347511713'
+def LIVE_ADMOB_APP_ID = 'ca-app-pub-9156400497236757~5984605757'
+
 android {
     namespace = "ch.jens.footballagent"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -17,6 +28,7 @@ android {
         versionCode 28
         versionName "1.0.26"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders = [admobAppId: LIVE_ADMOB_APP_ID]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -38,6 +50,13 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (hasReleaseKeystore) { signingConfig signingConfigs.release }
+        }
+        debug {
+            if (devId) {
+                applicationIdSuffix ".dev"
+                versionNameSuffix "-dev"
+                manifestPlaceholders = [admobAppId: TEST_ADMOB_APP_ID]
+            }
         }
     }
 }
@@ -62,11 +81,20 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
+// google-services.json registers exactly one package (ch.jens.footballagent), and the plugin
+// hard-fails on any variant whose applicationId is not in it — which the .dev suffix is not. The
+// app uses no Firebase SDK today (no push plugin), so skipping it for the side-by-side build
+// costs nothing. Register ch.jens.footballagent.dev in the Firebase console and re-download the
+// file if push is ever added and you want it in the test build too.
+if (devId) {
+    logger.lifecycle("devId: building as ch.jens.footballagent.dev with TEST AdMob ids; google-services skipped")
+} else {
+    try {
+        def servicesJSON = file('google-services.json')
+        if (servicesJSON.text) {
+            apply plugin: 'com.google.gms.google-services'
+        }
+    } catch(Exception e) {
+        logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
     }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }

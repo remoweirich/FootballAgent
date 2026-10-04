@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Debug builds carry a distinct launcher name so a side-by-side test install
+         (gradlew assembleDebug -PdevId) is tellable from the real app on the home screen. -->
+    <string name="app_name">FA Manager DEV</string>
+    <string name="title_activity_main">FA Manager DEV</string>
+</resources>
