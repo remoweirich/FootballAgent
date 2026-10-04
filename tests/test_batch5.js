@@ -132,7 +132,10 @@ const stats = run(`
   const rep = club.reputation;
   const trial = (pos, style, gap, seasons) => {
     const avgs = [];
-    for (let s=0; s<(seasons||30); s++) {
+    // 120 seasons by default, not 30. A season average carries about 0.5 of spread, so a 30-season
+    // mean has a standard error near 0.09 — wide enough that the bands below were being judged on
+    // sampling luck rather than on behaviour (a +5 player read 6.91 one run and 7.28 the next).
+    for (let s=0; s<(seasons||120); s++) {
       GameState.players = GameState.players.filter(p=>p.clubId!==club.id);
       GameState.seasonStartYear = 2100 + s;
       const squad=[];

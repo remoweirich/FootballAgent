@@ -235,15 +235,18 @@ seed-noise band so a real change can be told from luck.
 
 | | before | after | noise band |
 |---|---|---|---|
-| mean season average | 7.23 | **7.04** | 0.08 |
-| % of seasons >= 7.50 (the hot-form gate) | 31.6% | **16.3%** | 8.4 |
-| ability gained per season | 1.93 | 1.94 | within noise |
-| appearances per season | 31.2 | 30.2 | within noise |
-| morale at the end | 47.2 | 46.8 | within noise |
+| mean season average | 7.23 | **6.96** | 0.08 |
+| a 14-18 goal season | 7.32 | **7.24** | n=26 |
+| % of seasons >= 7.50 (the hot-form gate) | 31.6% | **13.3%** | 5.2 |
+| ability gained per season | 1.93 | 1.92 | within noise |
+| appearances per season | 31.2 | 30.6 | within noise |
+| morale at the end | 47.2 | 46.0 | within noise |
 
 **What changed**
 
-* `RATING_BASE` 6.55 -> 6.35 and `RATING_PER_GOAL` 1.35 -> 1.00, both named constants now. They
+* `RATING_BASE` 6.55 -> 6.35, `RATING_PER_GOAL` 1.35 -> 0.75 and `RATING_PER_ASSIST` 0.65 -> 0.50,
+  all named constants now. Assists move with goals or an assist ends up worth nearly as much as
+  scoring. They
   move together: cutting the base alone leaves a scorer's season inflated, because outclassing
   your league is already paid once through `levelGapRating` and then again through the goals that
   outclassing produces.
@@ -270,11 +273,11 @@ The lifts look large against a 7.00 average because the bar is "every season", n
 a season average still carries ~0.29 of spread from results, goals and the form draw, so clearing
 7.50 nineteen years in twenty needs a mean nearer 8.0.
 
-**One thing that could not be satisfied as stated.** "An average season should be 7.0" and "a
-striker with 16 goals in 34 games would be about right" cannot both hold: with the mean at 7.0, a
-16-goal striker lands at ~7.45, and the only way to bring him to 7.0 is to make goals worth
-roughly nothing. The population mean was taken as the target, since it is the directly measurable
-one; a 16-goal season now reads as clearly good rather than elite (it was ~7.81).
+**Measure a scorer inside real fixtures, not in a harness.** Three different numbers came out for
+"what is a 16-goal season worth": 7.45 from arithmetic on the formula, 7.63 from a harness that
+generated its own scorelines, and 7.32 from real league fixtures. The harness was wrong because
+its invented results gave the striker's side a far higher win rate than a real season does, and
+the win bonus is 0.55. Only the third number is the one a player sees.
 
 **Still open:** `levelGapRating` and the win bonus (C and D above) are untouched. If a 7.45 for 16
 goals still reads high, the next lever is the goal weight again, or tapering the level-gap reward
