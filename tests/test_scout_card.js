@@ -257,6 +257,33 @@ check('its text is translated in every language', (() => {
         /["']wt\.scout\.contract["']\s*:/.test(fsx.readFileSync(root + 'ui/js/i18n-' + l + '.js', 'utf8')));
 })());
 
+// Orders live on the card now, so the tour must open it before it can ask for an assignment —
+// and the card hides the bottom nav, so it must come back before "tap Home" has a target.
+const iOpen = stepKeys.indexOf('wt.scout.openCard');
+const iAssign = stepKeys.indexOf('wt.scout.assign');
+const iBack = stepKeys.indexOf('wt.scout.back');
+const iAdv = stepKeys.indexOf('wt.scout.advance');
+check('the tour opens the scout card before asking for an assignment',
+    iOpen > iYours && iAssign > iOpen);
+check('...by tapping the row, which carries the id the tour looks for',
+    /a\[data-scout-row="wt_harris"\]/.test(wtSrc));
+check('the list actually renders that hook', /data-scout-row="sc_on"/.test(list));
+check('it leaves the card before telling the player to tap Home', iBack > iAssign && iAdv > iBack);
+check('...via the back control the card really has', /'wt\.scout\.back', target: '\.push-bar__back'/.test(wtSrc));
+check('both new steps are translated everywhere', (() => {
+    const fsx = require('fs');
+    return ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl'].every(l => {
+        const src = fsx.readFileSync(root + 'ui/js/i18n-' + l + '.js', 'utf8');
+        return /["']wt\.scout\.openCard["']\s*:/.test(src) && /["']wt\.scout\.back["']\s*:/.test(src);
+    });
+})());
+// the mobile UI is informal throughout; only mails and engine messages use the formal register
+check('the German scouting UI stays informal (du, not Sie)', (() => {
+    const src = require('fs').readFileSync(root + 'ui/js/i18n-de.js', 'utf8');
+    const mine = [...src.matchAll(/^\s*['"](sc\.[^'"]+|scouting\.(?:contractExplainer|scoutsIntro)|wt\.scout\.[^'"]+)['"]\s*:\s*(['"])(.*?)\2,\s*$/gm)];
+    return mine.length > 20 && !mine.some(m => /\b(Sie|Ihre[nmrs]?|Ihnen)\b/.test(m[3]));
+})());
+
 // ---------------- i18n ----------------
 console.log('\n-- every string resolves --');
 // an unresolved key renders as the key itself, e.g. "sc.roaming"

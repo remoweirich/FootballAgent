@@ -423,11 +423,16 @@ const Walkthrough = {
         // next target would be unreachable underneath it.
         { key: 'wt.scout.contract', target: '.sheet .btn--primary', tap: true },
         { key: 'wt.scout.toYours', target: 'button.tab[onclick*="\'scouts\'"]', tap: true },
+        // Orders live on the scout card now, not inline on the list, so the tour has to open it.
+        { key: 'wt.scout.openCard', target: 'a[data-scout-row="wt_harris"]', tap: true, scrollTo: true },
         {
             key: 'wt.scout.assign',
             until: () => (GameState.agency.scouts || []).some(s => s.region === 'west-midlands')
         },
         { key: 'wt.scout.brief', before: () => Walkthrough._briefGemma() },
+        // The card is a detail screen and hides the bottom nav, so "tap Home" has nothing to
+        // point at until the player is back on the scouting list.
+        { key: 'wt.scout.back', target: '.push-bar__back', tap: true },
         { key: 'wt.scout.advance', target: 'a.nav-item[href="#home"]', tap: true },
 
         // ---------------- three weeks pass ----------------
