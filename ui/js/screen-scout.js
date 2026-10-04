@@ -38,16 +38,11 @@ const ScoutCard = {
     },
     assigned(s) { return !!(s.region || s.league); },
 
-    // Contract remaining: years once there is more than a season to run, weeks inside the last
-    // one. Only meaningful once contracts exist (step 2) — until then a scout has no contractUntil
-    // and the box is left out entirely rather than printing a hollow zero.
-    contractWeeksLeft(s) {
-        if (s.contractUntil == null) return null;
-        return Math.max(0, s.contractUntil - GameState.absWeek());
-    },
+    // Contract remaining: years once there is more than a season to run, weeks inside the last one.
+    // An expired contract does not end the job — he keeps working, he is just free to let go.
+    contractWeeksLeft(s) { return Scouts.contractWeeksLeft(s); },
     contractText(s) {
         const w = this.contractWeeksLeft(s);
-        if (w == null) return null;
         if (w <= 0) return I18n.t('sc.contractExpired');
         if (w > 52) return I18n.t('sc.contractYears', { n: (w / 52).toFixed(1).replace(/\.0$/, '') });
         return I18n.t('sc.contractWeeks', { n: w });
@@ -220,23 +215,35 @@ const ScoutCard = {
             <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
     },
 
-    // data-back="close" so the hardware back button cancels the release instead of confirming it
+    // data-back="close" so the hardware back button cancels the release instead of confirming it.
+    // The pay-off is always stated here: on a long deal for a good scout it runs into seven
+    // figures, and that is not a number to discover after the fact.
     confirmRelease(id) {
         const s = this.get(id); if (!s) return;
-        Router.modal(`<div data-back="close">
+        const fee = Scouts.terminationFee(s);
+        const weeks = Scouts.contractWeeksLeft(s);
+        const afford = fee <= 0 || GameState.agency.balance >= fee;
+        const body = fee > 0
+            ? I18n.t('sc.releaseBodyFee', { amt: UI.euro(fee), n: weeks })
+            : I18n.t('sc.releaseBody');
+        return Router.modal(`<div data-back="close">
             <h2 style="margin:0 0 var(--space-3);font-size:var(--fs-xl)">${I18n.t('sc.releaseTitle', { name: UI.esc(s.name) })}</h2>
-            <p style="color:var(--text-secondary);line-height:1.5;margin:0 0 var(--space-5)">${I18n.t('sc.releaseBody')}</p>
+            <p style="color:var(--text-secondary);line-height:1.5;margin:0 0 var(--space-4)">${body}</p>
+            ${afford ? '' : `<div class="result bad" style="margin-bottom:var(--space-4)">${I18n.t('sc.releaseCannotAfford')}</div>`}
             <div style="display:flex;gap:var(--space-3)">
                 <button class="btn btn--ghost" style="flex:1" onclick="Router.closeModal()">${I18n.t('common.cancel')}</button>
-                <button class="btn btn--danger" style="flex:1" onclick="ScoutCard.doRelease('${id}')">${I18n.t('agency.release')}</button>
+                <button class="btn btn--danger" style="flex:1" ${afford ? '' : 'disabled'} onclick="ScoutCard.doRelease('${id}')">${I18n.t('agency.release')}</button>
             </div></div>`);
     },
     doRelease(id) {
         Router.closeModal();
-        Scouts.release(id); GameState.save();
+        const r = Scouts.release(id);
+        GameState.save();
+        if (!r || !r.ok) { Router.refresh(); Router.result(r ? r.message : '', 'bad'); return; }
         delete this.state[id];
         // the scout is gone, so this card would 404 on a back press — replace the entry
         Router.replace('scouting');
+        Router.result(r.message, 'ok');
     }
 };
 

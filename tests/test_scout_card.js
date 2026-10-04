@@ -67,9 +67,11 @@ vm.runInContext("Clubs.init(); GameState.startNewGame('Switzerland','T','A');", 
 run(`
     GameState.agency.scouts = [
         { id: 'sc_on', name: 'Lukas Ferrari', title: 'Senior scout', quality: 52, weeklyCost: 960,
-          region: 'ostschweiz', league: null, country: null, weeksUntilFind: 1, maxTalentAge: 19 },
+          region: 'ostschweiz', league: null, country: null, weeksUntilFind: 1, maxTalentAge: 19,
+          contractWeeks: 104, contractUntil: GameState.absWeek() + 78 },
         { id: 'sc_off', name: 'Beat Wyss', title: 'Lead scout', quality: 41, weeklyCost: 420,
-          region: null, league: null, country: null, weeksUntilFind: 7, maxTalentAge: 22 }
+          region: null, league: null, country: null, weeksUntilFind: 7, maxTalentAge: 22,
+          contractWeeks: 52, contractUntil: GameState.absWeek() }
     ];
 `);
 
@@ -95,6 +97,8 @@ check('ability badge is present', /data-q="52"/.test(appHTML));
 check('both tabs render, Overview active', /ScoutCard\.setTab\('sc_on','assignment'\)/.test(appHTML)
     && /class="tab is-active"[^>]*>Overview/.test(appHTML));
 check('Overview shows wage, role and region', /Wage/.test(appHTML) && /Role/.test(appHTML) && /Region/.test(appHTML));
+// 78 weeks to run reads in years; inside the last season it switches to weeks
+check('contract remaining reads in years past a season', /Contract/.test(appHTML) && /1\.5 years/.test(appHTML));
 check('an assigned scout offers Recall, not Create assignment',
     /ScoutCard\.recall\('sc_on'\)/.test(appHTML) && !/Create assignment/.test(appHTML));
 check('Release is offered', /ScoutCard\.confirmRelease\('sc_on'\)/.test(appHTML));
@@ -147,8 +151,69 @@ run("ScoutCard.confirmRelease('sc_off');");
 check('release asks first, naming the scout', /Beat Wyss/.test(modalHTML) && /Cancel/.test(modalHTML));
 // hardware back must cancel the modal rather than fall through to confirming it
 check('hardware back cancels the confirm (data-back="close")', /data-back="close"/.test(modalHTML));
+// sc_off is out of contract, so there is nothing to pay and nothing to warn about
+check('an out-of-contract scout shows no fee', !/costs/.test(modalHTML) && !/disabled/.test(modalHTML));
 run("ScoutCard.doRelease('sc_off');");
 check('confirming removes him', run("return GameState.agency.scouts.length;") === 1);
+
+// sc_on still has 78 weeks to run: the modal must state the bill before you commit
+run("GameState.agency.balance = 50000000; ScoutCard.confirmRelease('sc_on');");
+const feeDue = run("return Scouts.terminationFee(GameState.agency.scouts[0]);");
+check('a scout under contract shows the pay-off and the weeks left (' + feeDue + ')',
+    feeDue > 0 && /78 week/.test(modalHTML) && modalHTML.includes(String(feeDue)));
+// and when you cannot cover it the button is dead rather than the action silently failing
+run("GameState.agency.balance = 10; ScoutCard.confirmRelease('sc_on');");
+check('an unaffordable pay-off disables the confirm', /cannot cover that pay-off/i.test(modalHTML)
+    && /<button[^>]*disabled[^>]*>[^<]*Release/.test(modalHTML));
+run("ScoutCard.doRelease('sc_on');");
+check('...and forcing it through still does not remove him', run("return GameState.agency.scouts.length;") === 1);
+
+// ---------------- the hire negotiation ----------------
+console.log('\n-- hiring opens a negotiation, not an instant signing --');
+run("GameState.agency.scouts = []; GameState.agency.balance = 5000000; Upgrades.ownedOffice = 'iconic3';");
+run("GameState.agency.scoutMarket = [Scouts.makeOffer('Chief scout', 70)]; GameState.agency.scoutMarketWeek = GameState.absWeek();");
+const offerId = run("return GameState.agency.scoutMarket[0].id;");
+const marketHTML = run("return ScoutingScreen.market();");
+check('the Hire button opens the negotiation rather than hiring',
+    marketHTML.includes("ScoutingScreen.openHire('" + offerId + "')"));
+check('the walkthrough can still find the hire button', /data-scout="/.test(marketHTML));
+check('nobody was hired by rendering the market', run("return GameState.agency.scouts.length;") === 0);
+
+run("ScoutingScreen.openHire('" + offerId + "');");
+check('all six terms are offered', (sheetHTML.match(/ScoutingScreen\.pickTerm\(/g) || []).length === 6);
+check('one year is preselected', /pickTerm\('[^']+',52\)/.test(sheetHTML) && /accent-tint/.test(sheetHTML));
+check('the commitment is explained', /minimum contract is what you owe him/.test(sheetHTML));
+// the point of the screen: longer is cheaper per week
+const quotes = JSON.parse(run("return JSON.stringify(GameState.agency.scoutMarket[0].quotes);"));
+check('the sheet prints the per-week price for each term',
+    sheetHTML.includes(String(quotes['13'])) && sheetHTML.includes(String(quotes['156'])));
+check('...and the total it commits you to', sheetHTML.includes(String(quotes['156'] * 156)));
+check('3 months is dearer per week than 3 years', quotes['13'] > quotes['156']);
+
+run("ScoutingScreen.pickTerm('" + offerId + "', 156);");
+run("ScoutingScreen.confirmHire('" + offerId + "');");
+const signed = JSON.parse(run("var s = GameState.agency.scouts[0]; return JSON.stringify({ n: GameState.agency.scouts.length, wage: s && s.weeklyCost, term: s && s.contractWeeks });"));
+check('confirming hires him on the chosen term', signed.n === 1 && signed.term === 156 && signed.wage === quotes['156']);
+check('he leaves the market', run("return (GameState.agency.scoutMarket || []).length;") === 0);
+
+// ---------------- the tutorial must not be fenced behind the sheet ----------------
+// #wtLayer sits at z-index 150, above .sheet-backdrop at 100, so once the tour's Hire tap opens
+// the negotiation the walkthrough fences everything except its next target — which would be
+// underneath the sheet. Hiring therefore HAS to be followed by a step aimed inside the sheet.
+console.log('\n-- the walkthrough survives the negotiation --');
+const wtSrc = require('fs').readFileSync(root + 'ui/js/walkthrough.js', 'utf8');
+const stepKeys = [...wtSrc.matchAll(/key:\s*'([^']+)'/g)].map(m => m[1]);
+const iHire = stepKeys.indexOf('wt.scout.hireGemma');
+const iYours = stepKeys.indexOf('wt.scout.toYours');
+check('the tour still hires Gemma and still reaches "Your scouts"', iHire >= 0 && iYours > iHire);
+check('a step sits between them, so the player is not stuck behind the sheet', iYours === iHire + 2);
+const between = wtSrc.slice(wtSrc.indexOf("'wt.scout.hireGemma'"), wtSrc.indexOf("'wt.scout.toYours'"));
+check('...and it targets the sheet, not the screen underneath', /\.sheet /.test(between));
+check('its text is translated in every language', (() => {
+    const fsx = require('fs');
+    return ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl'].every(l =>
+        /["']wt\.scout\.contract["']\s*:/.test(fsx.readFileSync(root + 'ui/js/i18n-' + l + '.js', 'utf8')));
+})());
 
 // ---------------- i18n ----------------
 console.log('\n-- every string resolves --');

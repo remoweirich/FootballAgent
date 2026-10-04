@@ -418,6 +418,10 @@ const Walkthrough = {
         { key: 'wt.scout.list' },
         { key: 'wt.scout.regions', target: '[data-wt="scout-regions"]' },
         { key: 'wt.scout.hireGemma', target: '[data-scout="wt_harris"] button', tap: true, scrollTo: true },
+        // Hiring opens the contract negotiation. Without a step here the tour fences the player
+        // behind the sheet: #wtLayer sits at z-index 150, above .sheet-backdrop at 100, so the
+        // next target would be unreachable underneath it.
+        { key: 'wt.scout.contract', target: '.sheet .btn--primary', tap: true },
         { key: 'wt.scout.toYours', target: 'button.tab[onclick*="\'scouts\'"]', tap: true },
         {
             key: 'wt.scout.assign',

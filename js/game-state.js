@@ -383,10 +383,11 @@ const GameState = {
     // run() upgrades a save from the previous version to its own `to`; the pipeline runs every entry
     // newer than the loaded save, in order. A legacy save with no schemaVersion is inferred from the
     // old `worldV` marker (v2) or treated as v1 otherwise, so the very first saves still upgrade cleanly.
-    SCHEMA_VERSION: 3,
+    SCHEMA_VERSION: 4,
     MIGRATIONS: [
         { to: 2, run(gs, d) { gs._migrateWorldV2(d); } },     // frozen-NPC world model + anchor/reputation split
-        { to: 3, run(gs) { gs._migrateScoutRegions(); } }     // reshaped Portugal/Belgium scouting regions
+        { to: 3, run(gs) { gs._migrateScoutRegions(); } },    // reshaped Portugal/Belgium scouting regions
+        { to: 4, run(gs) { gs._migrateScoutContracts(); } }   // scouts gained a negotiated minimum contract
     ],
     _runMigrations(d) {
         // Structural defaults, not versioned steps: they must apply on EVERY load, because a save at
@@ -482,6 +483,17 @@ const GameState = {
     _migrateScoutRegions() {
         const remap = { 'Alejento': 'Sul', 'Algarve': 'Sul', 'E-Belgique': 'S-E Belgique', 'Sud Belgique': 'S-E Belgique' };
         ((this.agency && this.agency.scouts) || []).forEach(s => { if (s && s.region && remap[s.region]) s.region = remap[s.region]; });
+    },
+    // Scouts gained a negotiated minimum contract. Everyone already on the books is marked
+    // ALREADY EXPIRED rather than being handed a term retroactively: the player never agreed to
+    // one, and inventing a year's deal would charge a pay-off for a decision they did not make.
+    // They keep working at their current wage and are free to release.
+    _migrateScoutContracts() {
+        const now = this.absWeek();
+        ((this.agency && this.agency.scouts) || []).forEach(s => {
+            if (!s) return;
+            if (s.contractUntil == null) { s.contractUntil = now; s.contractWeeks = 0; }
+        });
     },
     _migrateMoraleFields() {
         const aw = this.absWeek();

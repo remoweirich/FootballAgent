@@ -56,6 +56,10 @@ const Scouts = {
             set.last[Math.floor(Rng.next() * set.last.length)];
     },
     _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); },
+    // UI.euro is currency-aware (UI.cur() + the converted amount), so the symbol must come from
+    // it rather than being baked into the string. UI is a mobile-layer global and the headless
+    // engine harnesses do not all define it, hence the fallback.
+    _money(n) { return (typeof UI !== 'undefined' && UI.euro) ? UI.euro(n) : '€' + n; },
 
     // weekly salary grows steeply with quality (~€3.3k at 70, €6.2k at 80, €10.7k at 90, €16.6k at 99)
     salaryFor(q) { return Math.round(17400 * Math.pow(Math.max(0, q) / 100, 4.63) / 10) * 10; },
@@ -77,14 +81,74 @@ const Scouts = {
             : this._clampQ(PlayerGen.gauss(base * 0.92, 4));
         return [q1, q2, q3].map(q => this.makeOffer(this.titleFor(q), q));
     },
+    // ---- contract terms ----
+    // A longer minimum contract buys a lower weekly wage. The 1-year deal is the baseline — it is
+    // the wage the hiring market advertises — and every other term bends off it.
+    CONTRACT_TERMS: [
+        { weeks: 13, key: '3m', mult: 1.30 },
+        { weeks: 26, key: '6m', mult: 1.15 },
+        { weeks: 52, key: '1y', mult: 1.00 },   // the advertised price
+        { weeks: 78, key: '18m', mult: 0.95 },
+        { weeks: 104, key: '2y', mult: 0.88 },
+        { weeks: 156, key: '3y', mult: 0.80 },
+    ],
+    DEFAULT_TERM: 52,
+    termFor(weeks) { return this.CONTRACT_TERMS.find(t => t.weeks === weeks) || null; },
+
+    // Each offer gets ONE negotiating stance, which bends the whole ladder, plus a little per-term
+    // jitter. Bending a single monotone ladder keeps the order intact — a harder bargainer discounts
+    // less at every length rather than randomly inverting two of them — so a longer deal is never
+    // dearer per week. The clamp at the end is a belt-and-braces guard on the jitter.
+    //
+    // Rolled ONCE here and stored on the offer. Rolling at render time would reshuffle every price
+    // each time the sheet repainted.
+    _quoteLadder(weeklyCost, stance, jitter) {
+        const out = {};
+        let prev = Infinity;
+        for (const t of this.CONTRACT_TERMS) {
+            let mult = t.mult;
+            if (t.weeks !== this.DEFAULT_TERM) {        // the 1-year quote IS the advertised wage
+                mult += (t.mult - 1) * 0.25 * stance;   // stance -1..1: how steeply he discounts
+                mult += jitter ? (Rng.next() - 0.5) * 0.02 : 0;
+            }
+            let w = Math.round(weeklyCost * mult / 10) * 10;
+            if (t.weeks !== this.DEFAULT_TERM) w = Math.min(w, prev);   // never dearer than a shorter deal
+            out[t.weeks] = Math.max(0, w);
+            prev = out[t.weeks];
+        }
+        return out;
+    },
+    // An offer restored from a save (ag.scoutMarket is persisted) or hardcoded by the walkthrough
+    // has no quotes. Filled deterministically — drawing from Rng at render time would desync the
+    // seeded world from one repaint to the next.
+    _ensureOffer(o) {
+        if (o && !o.quotes) o.quotes = this._quoteLadder(o.weeklyCost, 0, false);
+        return o;
+    },
+    quoteFor(offer, weeks) {
+        this._ensureOffer(offer);
+        return offer.quotes[weeks] != null ? offer.quotes[weeks] : offer.weeklyCost;
+    },
+
     makeOffer(title, quality) {
         const weeklyCost = Math.round(this.salaryFor(quality) * (0.85 + Rng.next() * 0.30) / 10) * 10;
+        const stance = (Rng.next() - 0.5) * 2;
         return {
             id: 's_' + Rng.next().toString(36).slice(2, 8),
             name: this.scoutName(), title,
-            quality, weeklyCost, region: null, maxTalentAge: 22
+            quality, weeklyCost, region: null, maxTalentAge: 22,
+            quotes: this._quoteLadder(weeklyCost, stance, true)
         };
     },
+
+    // ---- a signed scout's remaining minimum term ----
+    // Expiry does NOT end the job: he keeps working at the same wage, he just no longer costs
+    // anything to let go. A scout with no contractUntil at all (an old save) counts as expired.
+    contractWeeksLeft(s) {
+        if (!s || s.contractUntil == null) return 0;
+        return Math.max(0, s.contractUntil - GameState.absWeek());
+    },
+    terminationFee(s) { return this.contractWeeksLeft(s) * ((s && s.weeklyCost) || 0); },
     setMaxAge(scoutId, age) {
         const s = GameState.agency.scouts.find(x => x.id === scoutId);
         if (s) s.maxTalentAge = Math.max(15, Math.min(22, Math.round(age)));
@@ -184,21 +248,29 @@ const Scouts = {
             ag.scoutMarket = this.catalogue();
             ag.scoutMarketWeek = now;
         }
+        // offers restored from a save, or planted by the walkthrough, predate the quote ladder
+        (ag.scoutMarket || []).forEach(o => this._ensureOffer(o));
         return ag.scoutMarket;
     },
-    hire(offer) {
+    // termWeeks is the negotiated MINIMUM contract: it sets the wage (a longer deal is cheaper per
+    // week) and what you owe if you let him go early. Defaults to a year so older callers that
+    // never negotiated still work.
+    hire(offer, termWeeks) {
         const ag = GameState.agency;
         if (ag.scouts.find(s => s.id === offer.id)) return { ok: false, message: this._t('scouts.err.alreadyHired', null, 'That scout is already on your books.') };
         const max = Upgrades.maxScouts();
         if (ag.scouts.length >= max) return { ok: false, message: this._t('scouts.err.officeFull', { office: Upgrades.office().name, max }, 'Your {office} only has room for {max} scout(s). Upgrade your office to hire more.') };
+        const term = this.termFor(termWeeks) ? termWeeks : this.DEFAULT_TERM;
+        const wage = this.quoteFor(offer, term);
         ag.scouts.push({
             id: offer.id, name: offer.name, title: offer.title,
-            quality: offer.quality, weeklyCost: offer.weeklyCost,
+            quality: offer.quality, weeklyCost: wage,
+            contractWeeks: term, contractUntil: GameState.absWeek() + term,
             region: null, weeksUntilFind: this.nextFindDelay(offer.quality)
         });
         // remove him from the market; the freed slot refills at the next 2-week refresh
         if (ag.scoutMarket) ag.scoutMarket = ag.scoutMarket.filter(o => o.id !== offer.id);
-        GameState.addLog(`Hired ${offer.name} (${offer.title}, quality ${offer.quality}) for €${offer.weeklyCost}/wk.`, 'scout');
+        GameState.addLog(`Hired ${offer.name} (${offer.title}, quality ${offer.quality}) for €${wage}/wk on a ${term}-week minimum deal.`, 'scout');
         return { ok: true, message: this._t('scouts.ok.hired', { name: offer.name }, '{name} hired. Assign him to a region so he can start scouting.') };
     },
 
@@ -232,10 +304,23 @@ const Scouts = {
         return { ok: true, message: this._t('scouts.ok.assignedLeague', { name: s.name, league: nm, country, cost: this.intlLeagueCost(division), weeks: s.weeksUntilFind }, '{name} now scouts {league} in {country} (€{cost} per report). First report in ~{weeks} weeks.') };
     },
 
+    // Letting him go inside his minimum term costs the rest of the deal. Past it he is free to
+    // release — he keeps working until you do. Refused rather than overdrawn when you cannot
+    // cover it, matching how releasing a client already behaves (Agency.releasePlayer).
     release(scoutId) {
         const ag = GameState.agency;
         const idx = ag.scouts.findIndex(s => s.id === scoutId);
-        if (idx >= 0) { const s = ag.scouts[idx]; ag.scouts.splice(idx, 1); GameState.addLog(`Released scout ${s.name}.`, 'scout'); }
+        if (idx < 0) return { ok: false, message: this._t('scouts.err.unknown', null, 'Unknown scout.') };
+        const s = ag.scouts[idx];
+        const fee = this.terminationFee(s);
+        if (fee > 0 && ag.balance < fee)
+            return { ok: false, message: this._t('scouts.err.cannotAffordPayoff', { name: s.name, amt: this._money(fee) }, "You cannot cover {name}'s {amt} pay-off.") };
+        if (fee > 0) { ag.balance -= fee; GameState.addFinance('Release pay-outs', -fee); }
+        ag.scouts.splice(idx, 1);
+        GameState.addLog(fee > 0 ? `Released scout ${s.name} — €${fee} pay-off.` : `Released scout ${s.name}.`, 'scout');
+        return fee > 0
+            ? { ok: true, message: this._t('scouts.ok.releasedPaid', { name: s.name, amt: this._money(fee) }, '{name} released. You paid off {amt}.') }
+            : { ok: true, message: this._t('scouts.ok.released', { name: s.name }, '{name} released.') };
     },
     // pull a scout off his region/league without releasing him — still on the payroll,
     // still worth the occasional stray domestic find (see tick()'s idle branch), just

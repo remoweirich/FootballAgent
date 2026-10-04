@@ -91,7 +91,7 @@ const ScoutingScreen = {
                 <div class="info"><span>${I18n.t('scouting.wage')}</span><b>${UI.euro(o.weeklyCost)}/wk</b></div>
                 <div class="info"><span>${I18n.t('scouting.findQuality')}</span><b>${o.quality < 18 ? I18n.t('scouting.q.veryLow') : o.quality < 35 ? I18n.t('scouting.q.low') : o.quality < 55 ? I18n.t('scouting.q.decent') : I18n.t('scouting.q.high')}</b></div>
             </div>
-            <button class="btn btn--primary" onclick='ScoutingScreen.hire(${JSON.stringify(o).replace(/'/g, "&#39;")})'>${I18n.t('agency.hire')}</button>
+            <button class="btn btn--primary" onclick="ScoutingScreen.openHire('${o.id}')">${I18n.t('agency.hire')}</button>
         </div>`).join('');
         const hc = GameState.homeCountry || 'Netherlands';
         const regTable = regionsForCountry(hc).map(r => `<button class="frow" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ScoutingScreen.showRegionClubs('${UI.esc(r.id)}')"><span class="frow__k">${regionName(r.id)} <span class="muted">${r.blurb || ''}</span></span><span class="frow__v flex-row" style="gap:5px">${UI.euro(Scouts.regionReportCost(r.id))} <i class="ti ti-chevron-right" style="color:var(--text-faint);font-size:13px"></i></span></button>`).join('');
@@ -111,6 +111,56 @@ const ScoutingScreen = {
             <div style="max-height:60vh;overflow-y:auto">${rows}</div>
             <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
     },
-    hire(o) { const r = Scouts.hire(o); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }
+    // ---------------- hire: negotiate a minimum contract ----------------
+    // Hiring no longer happens on the tap. You pick how long you are committing to, which sets the
+    // wage: a longer deal is cheaper per week but more money owed if you change your mind.
+    _hireTerm: null,
+    offerById(id) { return (Scouts.market() || []).find(o => o.id === id) || null; },
+
+    openHire(id) {
+        const o = this.offerById(id); if (!o) return;
+        this._hireTerm = Scouts.DEFAULT_TERM;      // a year is the default, and the advertised price
+        Router.sheet(this.hireSheet(id));
+    },
+    pickTerm(id, weeks) {
+        this._hireTerm = +weeks;
+        // repaint the sheet in place; re-opening it would animate the backdrop again
+        const host = document.getElementById('hireSheet');
+        if (host) host.innerHTML = this.hireSheetBody(id); else Router.sheet(this.hireSheet(id));
+    },
+    hireSheet(id) {
+        const o = this.offerById(id); if (!o) return '';
+        return `<div class="sheet__handle"></div>
+            <div class="sheet__title">${I18n.t('scouting.negotiateWith', { name: UI.esc(o.name) })}</div>
+            <p class="hint">${UI.esc(ScoutCard.title(o))} · ${I18n.t('scouting.ratedQ', { q: o.quality })}</p>
+            <div id="hireSheet">${this.hireSheetBody(id)}</div>`;
+    },
+    hireSheetBody(id) {
+        const o = this.offerById(id); if (!o) return '';
+        const sel = this._hireTerm;
+        const rows = Scouts.CONTRACT_TERMS.map(t => {
+            const wage = Scouts.quoteFor(o, t.weeks);
+            const on = sel === t.weeks;
+            // .frow has no side padding, so the selected row's border would sit on the text —
+            // padded here for every row, not just the selected one, or the text shifts on tap
+            return `<button class="frow" style="width:100%;text-align:left;cursor:pointer;padding:9px 10px;border:1px solid ${on ? 'var(--accent-border)' : 'transparent'};background:${on ? 'var(--accent-tint)' : 'none'};border-radius:var(--radius-md)" onclick="ScoutingScreen.pickTerm('${id}',${t.weeks})">
+                <span class="frow__k" style="${on ? 'color:var(--accent-text)' : ''}">${I18n.t('scouting.term.' + t.key)}</span>
+                <span class="frow__v" style="${on ? 'color:var(--accent-text)' : ''}">${UI.euro(wage)}/wk <span class="muted" style="font-weight:400">· ${UI.euro(wage * t.weeks)}</span></span>
+            </button>`;
+        }).join('');
+        return `<div class="fcard" style="margin-bottom:var(--space-3)">${rows}</div>
+            <p class="hint">${I18n.t('scouting.contractExplainer')}</p>
+            <div style="display:flex;gap:var(--space-3);margin-top:var(--space-3)">
+                <button class="btn btn--ghost" style="flex:1" onclick="Router.closeSheet()">${I18n.t('common.cancel')}</button>
+                <button class="btn btn--primary" style="flex:1" onclick="ScoutingScreen.confirmHire('${id}')">${I18n.t('agency.hire')}</button>
+            </div>`;
+    },
+    confirmHire(id) {
+        const o = this.offerById(id); if (!o) return;
+        const r = Scouts.hire(o, this._hireTerm);
+        Router.closeSheet();
+        GameState.save(); Router.refresh();
+        Router.result(r.message, r.ok ? 'ok' : 'bad');
+    }
 };
 Router.register('scouting', { isMain: true, title: () => I18n.t('nav.scouting'), render(el) { ScoutingScreen.render(el); } });
