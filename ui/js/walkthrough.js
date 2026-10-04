@@ -530,8 +530,11 @@ const Walkthrough = {
         const sc = (GameState.agency.scouts || []).find(s => s.region === 'west-midlands');
         if (!sc) return;
         sc.maxTalentAge = 19;
-        sc.position = null;
-        sc.tier = 'top';
+        // targetPos / targetTier are what the engine reads (Scouts.rolledTalentFiltered); this
+        // used to set `position` and `tier`, so only the age ever applied and the card contradicted
+        // the narration beside it
+        sc.targetPos = null;
+        sc.targetTier = 'top';
         sc.weeksUntilFind = 3;   // the card must agree with the narration: three weeks, not a roll
         if (typeof Router !== 'undefined') Router.refresh();
     },

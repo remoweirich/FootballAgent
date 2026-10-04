@@ -157,10 +157,23 @@ check('posting her to the West Midlands satisfies the assign step', runv(`
   const step = Walkthrough.SCRIPT.find(s => s.key === 'wt.scout.assign');
   return step.until();`));
 
+// This used to assert g.position / g.tier, which is what _briefGemma wrote — but the engine
+// reads targetPos / targetTier, so the brief never actually applied and the test pinned the bug.
 check('the brief narrows her to under-20s, any position, top division', runv(`
   Walkthrough._briefGemma();
   const g = GameState.agency.scouts.find(s => s.region === 'west-midlands');
-  return g.maxTalentAge === 19 && g.position === null && g.tier === 'top';`));
+  return g.maxTalentAge === 19 && g.targetPos === null && g.targetTier === 'top';`));
+
+// and it has to be a brief the ENGINE honours, not just fields with the right spelling
+check('...and the scouting engine honours it', runv(`
+  const g = GameState.agency.scouts.find(s => s.region === 'west-midlands');
+  const band = Scouts.TIERS[g.targetTier].pot;
+  for (let i = 0; i < 300; i++) {
+    const t = Scouts.rolledTalentFiltered(g.quality, 18, g);
+    if (t.potential == null) continue;                 // a report that turned nobody up
+    if (t.potential < band[0] || t.potential > band[1]) return false;
+  }
+  return true;`));
 
 // ---- part 2 stage B: the three frozen advances play the same way every time ----
 check('advancing in demo mode never runs the real simulation', runv(`

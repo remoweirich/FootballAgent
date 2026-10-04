@@ -277,6 +277,21 @@ check('both new steps are translated everywhere', (() => {
         return /["']wt\.scout\.openCard["']\s*:/.test(src) && /["']wt\.scout\.back["']\s*:/.test(src);
     });
 })());
+// The tour narrates a brief ("any position, top-division, nobody over 19") and the card beside it
+// shows the brief. They have to agree, which means writing the fields the ENGINE reads.
+check('the scripted brief sets the fields the engine actually reads', (() => {
+    // the DEFINITION, not the call site in the step list above it
+    const at = wtSrc.indexOf('_briefGemma() {');
+    const body = at < 0 ? '' : wtSrc.slice(at, at + 700);
+    return /sc\.targetTier\s*=/.test(body) && /sc\.targetPos\s*=/.test(body)
+        && !/sc\.tier\s*=/.test(body) && !/sc\.position\s*=/.test(body);
+})());
+// and the names must match what Scouts reads, not just look plausible
+check('...which are the names Scouts.rolledTalentFiltered uses', (() => {
+    const eng = require('fs').readFileSync(root + 'js/scouts.js', 'utf8');
+    return /s\.targetTier/.test(eng) && /s\.targetPos/.test(eng);
+})());
+
 // the mobile UI is informal throughout; only mails and engine messages use the formal register
 check('the German scouting UI stays informal (du, not Sie)', (() => {
     const src = require('fs').readFileSync(root + 'ui/js/i18n-de.js', 'utf8');
