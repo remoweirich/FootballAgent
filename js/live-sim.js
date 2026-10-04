@@ -409,9 +409,15 @@ const LiveSim = {
         return a;
     },
 
-    // 3-9 client puzzle events, scaling with how many clients are on the pitch.
+    // Client puzzle events, scaling with how many clients are on the pitch.
+    //
+    // Raised from 3-9 to 6-12. Corners used to pad the feed to a reasonable length — 4-14 of them,
+    // every one printed — and once they became a silent counter (CORNER_LINES_MAX) a match with one
+    // client dropped to about five entries across ninety minutes, which reads as nothing happening.
+    // The length was never the problem; what filled it was. This buys the same feed back in beats
+    // that are actually about the player.
     eventBudget(nClients, rnd = Rng.next) {
-        return Math.min(9, Math.max(3, 1 + nClients * 2 + Math.floor(rnd() * 3)));
+        return Math.min(12, Math.max(6, 4 + nClients * 2 + Math.floor(rnd() * 3)));
     },
 
     // Distinct minutes, spread rather than clustered: the match is cut into n slots and one minute
@@ -685,7 +691,15 @@ const LiveSim = {
                 else if (gk) line = this._t('ls.goalAnonVsKeeper', { team: nameOf(side), keeper: gk.player.name }, 'GOAL — {team}. {keeper} got a hand to it but could not keep it out.');
                 else if (scorer) line = this._t('ls.goalNamed', { team: nameOf(side), scorer }, 'GOAL — {scorer} finds the net for {team}.');
                 else line = this._t('ls.goalAnon', { team: nameOf(side) }, 'GOAL — {team}');
-                units.push([{ kind: 'goal', side, client: null, beatenKeeper: gk ? gk.player : null, scorerName: scorer, lines: [line], events: ev }]);
+                // No goal arrives out of nowhere. A bare one-line "GOAL — Team" was the thing that
+                // read as the match happening somewhere else; every goal now opens with how it came
+                // about. When the agent is watching the KEEPER who is about to be beaten, the
+                // build-up is mandatory and it is about him — that was the explicit request.
+                const build = gk
+                    ? this._keeperBuildUp(gk.player.name, nameOf(side), rnd)
+                    : this._goalBuildUp(nameOf(side), rnd);
+                units.push([{ kind: 'goal', side, client: null, beatenKeeper: gk ? gk.player : null,
+                    scorerName: scorer, lines: [build, line], events: ev }]);
             }
 
         // ---- corners: a live stat that ticks up, and now and then the cue for a corner event.
@@ -849,6 +863,8 @@ const LiveSim = {
                 if (!c) continue;
                 if (ev.tag === 'GOAL' || ev.tag === 'PENMISS') bump(c, 'shots');
             }
+            // a penalty save is the single biggest thing a keeper can do in a match
+            if (e.keeperSave && byPlayer.get(e.keeperSave)) bump(byPlayer.get(e.keeperSave), 'saves');
             // 2. a narrated beat that produced nothing countable still happened to him: it was a
             // shot, a tackle or a save depending on where he plays
             const feat = e.client && byPlayer.get(e.client);
@@ -886,6 +902,37 @@ const LiveSim = {
             else s.shots = LIVE_SIM.MIN_TOUCHES_OTHER;
         }
         return stats;
+    },
+
+    // ---- how a goal came about -------------------------------------------------------------
+    // One line of build-up in front of every goal the engine did not attribute to a client. These
+    // carry no tags and touch no score; they exist because a goal that arrives as a single line
+    // reads as though the match were happening somewhere the agent cannot see.
+    GOAL_BUILDUP_LINES: [
+        'Worked patiently across the face of the box, and the gap finally opens…',
+        'A ball in behind the full-back, and the cross is already on its way…',
+        'Turnover in midfield, three men breaking at a backpedalling defence…',
+        'Short corner, worked back to the top of the area…',
+        'A one-two on the edge of the box takes two defenders out of it…',
+        'The ball is hung up to the back post, and nobody has tracked the run…',
+    ],
+    // The same beat when the agent is watching the goalkeeper who is about to pick it out of the
+    // net. He is the one person on that pitch the player cares about, so he is in the build-up.
+    KEEPER_BUILDUP_LINES: [
+        '{keeper} is out quickly to narrow the angle, but the ball is squared away from him…',
+        'A shot through a crowd — {keeper} is unsighted until the last moment…',
+        '{keeper} comes for the cross and cannot get there…',
+        'It breaks to the penalty spot with {keeper} still on his line…',
+        '{keeper} pushes the first effort out, but only as far as the edge of the six-yard box…',
+        'A deflection wrong-foots {keeper} completely…',
+    ],
+    _goalBuildUp(team, rnd) {
+        const i = Math.floor(rnd() * this.GOAL_BUILDUP_LINES.length);
+        return this._t('ls.goalBuild' + (i + 1), { team }, this.GOAL_BUILDUP_LINES[i]);
+    },
+    _keeperBuildUp(keeper, team, rnd) {
+        const i = Math.floor(rnd() * this.KEEPER_BUILDUP_LINES.length);
+        return this._t('ls.keeperBuild' + (i + 1), { keeper, team }, this.KEEPER_BUILDUP_LINES[i].replace('{keeper}', keeper));
     },
 
     // A short follow-up beat after a corner: a header/shot that comes to nothing (no result tags, so
@@ -1008,7 +1055,27 @@ const LiveSim = {
     // The transfer is reported in the timeline's `statAdjust` so the caller can bank it, and it is
     // the only place the live sim adds to a client's tally — the "finals can generate a tad more"
     // allowance. If the team scored nothing at all there is no goal to take over, and he misses.
+    // A penalty at the other end is still the client keeper's moment: he either picks it out of
+    // the net or he saves it. Wrapped around the builder so EVERY branch gets it — the chain path,
+    // the plain named path and the anonymous one — rather than three copies that drift apart.
     _penaltyEvent(forSide, ledger, clients, rnd, ctx, statAdjust) {
+        const ev = this._penaltyEventRaw(forSide, ledger, clients, rnd, ctx, statAdjust);
+        const gk = clients.find(c => c.side !== forSide && c.player.position === 'GK');
+        if (!ev || !gk) return ev;
+        const scored = (ev.events || []).some(e => e.tag === 'GOAL');
+        const saved = (ev.events || []).some(e => e.tag === 'PENSAVE');
+        if (scored) ev.lines = (ev.lines || []).concat(
+            this._t('ls.penPastKeeper', { keeper: gk.player.name }, '{keeper} guessed right and still could not reach it.'));
+        else if (saved) {
+            // it was HIS save: say so, and let the stat line show it
+            ev.lines = (ev.lines || []).concat(
+                this._t('ls.penKeeperSaved', { keeper: gk.player.name }, '{keeper} goes the right way and keeps it out — an enormous save.'));
+            ev.keeperSave = gk.player;
+        }
+        ev.beatenKeeper = scored ? gk.player : null;
+        return ev;
+    },
+    _penaltyEventRaw(forSide, ledger, clients, rnd, ctx, statAdjust) {
         const takers = this.penaltyTakers(clients, forSide);
         const taker = takers.find(c => (ledger.byClient.get(c.player) || {}).GOAL > 0) || takers[0];
         const mates = clients.filter(x => x.side === forSide).map(x => x.player);
@@ -1042,7 +1109,37 @@ const LiveSim = {
             }
             if (borrowed) { bal.GOAL -= 1; ledger.anon[forSide] += 1; }
         }
-        // nobody nameable to take it: a short anonymous line, but it still resolves
+        // A penalty is the biggest single moment in a match, so it is never allowed to pass to an
+        // unnamed player while a client is standing there. penaltyTakers only returns clients the
+        // WORKBOOK can narrate (it needs an N-family start piece matching his role code), and for
+        // most roles there is none — so the kick went anonymous even with your own striker on the
+        // pitch. Fall back to a plain named line: worse prose than a chain, far better than
+        // watching someone you do not represent take it.
+        // Whoever would really step up: a striker ahead of a winger ahead of a midfielder, and the
+        // keeper only if he is somehow the last man standing.
+        const PEN_ORDER = { ST: 0, CAM: 1, LW: 2, RW: 2, CM: 3, CDM: 4, LB: 5, RB: 5, CB: 6, GK: 9 };
+        const anyClient = clients.filter(c => c.side === forSide)
+            .slice().sort((a, b) => (PEN_ORDER[a.player.position] ?? 7) - (PEN_ORDER[b.player.position] ?? 7))[0];
+        if (anyClient) {
+            const name = anyClient.player.name;
+            const bal2 = ledger.byClient.get(anyClient.player) || {};
+            const canScore = (bal2.GOAL || 0) > 0 || ledger.anon[forSide] > 0;
+            if (canScore && rnd() < this.PEN_CONVERSION) {
+                const own = (bal2.GOAL || 0) > 0;
+                if (own) bal2.GOAL -= 1; else ledger.anon[forSide] -= 1;
+                if (!own) statAdjust.push({ player: anyClient.player, goals: 1 });
+                return { kind: 'penalty', side: forSide, client: anyClient.player, chain: null,
+                    lines: [this._t('ls.penClientScored', { name, team }, '{name} steps up from the spot… and buries it. GOAL — {team}!')],
+                    events: [{ tag: 'GOAL', ref: 'S', player: anyClient.player, side: 'own' }] };
+            }
+            const savedC = rnd() < 0.5;
+            return { kind: 'penalty', side: forSide, client: anyClient.player, chain: null,
+                lines: [savedC
+                    ? this._t('ls.penClientSaved', { name }, '{name} steps up from the spot… and the keeper gets down to save it!')
+                    : this._t('ls.penClientMissed', { name }, '{name} steps up from the spot… and drags it wide. A huge chance gone.')],
+                events: [{ tag: savedC ? 'PENSAVE' : 'PENMISS', ref: 'S', player: anyClient.player, side: 'own' }] };
+        }
+        // nobody of yours on that side at all: a short anonymous line, but it still resolves
         if (rnd() < this.PEN_CONVERSION && ledger.anon[forSide] > 0) {
             ledger.anon[forSide] -= 1;
             return { kind: 'penalty', side: forSide, client: null, chain: null,

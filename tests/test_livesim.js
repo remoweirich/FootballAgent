@@ -243,13 +243,34 @@ const TL = `
   const A=mk("a","Luca Meier","LW","winger"), B=mk("b","Ben Riva","ST","poacher"), C=mk("c","Jonas Frei","CB","aerial_dominator");
   const spec=(o)=>Object.assign({ homeName:"FC Basel", awayName:"FC Zurich", hg:0, ag:0, minutes:90, clients:[] }, o);
 `;
-check('timeline: a client goal budget of 0 NEVER produces a client goal (defenders stay defenders)', run(TL + `
+// The invariant is that the live view never shows a client goal the save does not also record —
+// not that a 0-budget client can never score at all. There is exactly one sanctioned exception: a
+// penalty converted by a client borrows one of his team's ANONYMOUS goals (the team scored it
+// either way, it just gets his name) and records that in statAdjust, which Attend.applyStatAdjust
+// banks. Stated this way the check is stronger than the old absolute one, which only passed
+// because penaltyTakers happened to exclude the role being tested.
+check('timeline: a 0-budget client only ever scores via a penalty recorded in statAdjust', run(TL + `
   for(let i=0;i<300;i++){
     const t=LiveSim.buildTimeline(spec({ hg:2, ag:1, clients:[{player:C,side:"home",goals:0,assists:0}] }));
+    let shown=0;
     for(const e of t.events) for(const ev of e.events||[])
-      if(ev.tag==="GOAL" && ev.player) return false;
+      if(ev.tag==="GOAL" && ev.player===C) shown++;
+    const banked=(t.statAdjust||[]).filter(x=>x.player===C).reduce((s,x)=>s+(x.goals||0),0);
+    if(shown!==banked) return false;                     // never more on screen than in the save
+    for(const e of t.events) for(const ev of e.events||[])
+      if(ev.tag==="GOAL" && ev.player && ev.player!==C) return false;   // and never a stranger
   }
   return true;
+`));
+check('timeline: a 0-budget client scoring is RARE and only from the spot', run(TL + `
+  let scored=0, fromSpot=0, n=600;
+  for(let i=0;i<n;i++){
+    const t=LiveSim.buildTimeline(spec({ hg:2, ag:1, clients:[{player:C,side:"home",goals:0,assists:0}] }));
+    for(const e of t.events) for(const ev of e.events||[])
+      if(ev.tag==="GOAL" && ev.player===C){ scored++; if(e.kind==="penalty") fromSpot++; }
+  }
+  // every one of them a penalty, and well under the share of matches that have a penalty at all
+  return scored===fromSpot && scored/n < LIVE_SIM.PENALTY_MATCH_RATE;
 `));
 check('timeline: client goals in the feed exactly equal the budget assignStats handed over', run(TL + `
   for(let i=0;i<300;i++){
@@ -276,7 +297,11 @@ check('timeline: an assist budget is honoured exactly', run(TL + `
   }
   return true;
 `));
-check('timeline: 3-9 core puzzle events (corners excluded), scaling with the number of clients', run(TL + `
+// Raised from 3-9 to 6-12 when corners stopped being printed. Corners had been padding the feed to
+// a readable length — 4-14 a match, every one a line — so silencing them left about five entries
+// across ninety minutes. The feed is the same length as before; what fills it is now about the
+// player rather than about set pieces.
+check('timeline: 6-12 core puzzle events (corners excluded), scaling with the number of clients', run(TL + `
   const counts=[];
   for(let n=1;n<=3;n++){
     const cl=[A,B,C].slice(0,n).map(p=>({player:p,side:"home",goals:0,assists:0}));
@@ -285,7 +310,7 @@ check('timeline: 3-9 core puzzle events (corners excluded), scaling with the num
       // pure corner FLAVOUR (a corner chain with no result) is extra, not a core puzzle event;
       // a goal straight from a corner still counts (it carries a result)
       const k=t.events.filter(e=>e.kind==="chain" && !(e.corner && (e.events||[]).length===0)).length;
-      if(k<3||k>9) return false;
+      if(k<6||k>12) return false;
       counts.push([n,k]);
     }
   }

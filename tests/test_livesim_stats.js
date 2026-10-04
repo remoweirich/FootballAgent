@@ -162,5 +162,94 @@ for (const loc of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
     check(`  ${loc}${miss.length ? ' — missing ' + miss.join(', ') : ''}`, miss.length === 0);
 }
 
+// ---- 6. every goal is explained, and the keeper is never bypassed -----------------------------
+console.log('\n-- no goal arrives out of nowhere --');
+{
+    let bare = 0, goals = 0;
+    for (let i = 0; i < 300; i++) {
+        const tl = LiveSim.buildTimeline(Object.assign(spec([client('ST', 'home')], 2, 2), { rnd: seeded(4000 + i) }));
+        for (const e of tl.events) {
+            if (!(e.events || []).some(ev => ev.tag === 'GOAL')) continue;
+            goals++;
+            if (e.kind === 'goal' && (e.lines || []).length < 2) bare++;
+        }
+    }
+    check(`every unattributed goal opens with how it came about (${goals} goals, ${bare} bare)`, goals > 0 && bare === 0);
+}
+{
+    // the explicit request: a goal past a client KEEPER always involves him, no exceptions
+    let miss = 0, goals = 0;
+    for (let i = 0; i < 300; i++) {
+        const gk = client('GK', 'home');
+        const tl = LiveSim.buildTimeline(Object.assign(spec([gk], 0, 3), { rnd: seeded(5000 + i) }));
+        for (const e of tl.events) {
+            if (!(e.events || []).some(ev => ev.tag === 'GOAL')) continue;
+            goals++;
+            if (!(e.lines || []).join(' ').includes(gk.player.name)) miss++;
+        }
+    }
+    check(`every goal conceded names the client keeper (${goals} goals, ${miss} without him)`, goals > 0 && miss === 0);
+}
+
+// ---- 7. penalties ------------------------------------------------------------------------------
+console.log('\n-- a penalty is always taken, and by your man when it is his side --');
+{
+    let kicks = 0, onHisSide = 0, byHim = 0;
+    for (let i = 0; i < 1200; i++) {
+        const st = client('ST', 'home');
+        const tl = LiveSim.buildTimeline(Object.assign(spec([st], 1, 1), { rnd: seeded(6000 + i) }));
+        for (const e of tl.events) {
+            if (e.kind !== 'penalty') continue;
+            kicks++;
+            if (e.side === 'home') { onHisSide++; if (e.client === st.player) byHim++; }
+        }
+    }
+    check(`penalties are occurring in the sample (${kicks})`, kicks > 50);
+    check(`every penalty to his side is taken by him (${byHim}/${onHisSide})`, onHisSide > 0 && byHim === onHisSide);
+}
+{
+    // a penalty is never awarded and then quietly dropped
+    let awards = 0, kicks = 0;
+    for (let i = 0; i < 1200; i++) {
+        const tl = LiveSim.buildTimeline(Object.assign(spec([client('CB', 'home')], 1, 1), { rnd: seeded(6500 + i) }));
+        for (const e of tl.events) {
+            if (e.kind === 'penalty-award') awards++;
+            else if ((e.events || []).some(ev => ev.tag === 'PENWON' || ev.tag === 'PENCONC')) awards++;
+            if (e.kind === 'penalty') kicks++;
+        }
+    }
+    check(`a penalty awarded is always taken (${awards} awarded, ${kicks} taken)`, awards > 0 && kicks >= awards);
+}
+{
+    // And at the other end it is his keeper facing it — when there is something for him to face.
+    // A penalty SCORED or SAVED is his moment and must name him; one dragged wide of the post is
+    // not, and inventing a keeper line for it would be worse than leaving him out.
+    let decided = 0, named = 0, missed = 0;
+    for (let i = 0; i < 1200; i++) {
+        const gk = client('GK', 'home');
+        const tl = LiveSim.buildTimeline(Object.assign(spec([gk], 1, 1), { rnd: seeded(7000 + i) }));
+        for (const e of tl.events) {
+            if (e.kind !== 'penalty' || e.side !== 'away') continue;
+            const tags = (e.events || []).map(x => x.tag);
+            if (tags.includes('PENMISS')) { missed++; continue; }
+            decided++;
+            if ((e.lines || []).join(' ').includes(gk.player.name)) named++;
+        }
+    }
+    check(`a penalty scored or saved at his end always names him (${named}/${decided}; ${missed} missed the target)`,
+        decided > 0 && named === decided);
+}
+
+// ---- 8. the corner counter ----------------------------------------------------------------------
+// Silent corners never enter the feed, so counting by scanning it undercounted them against the
+// timeline. They are counted as each one LANDS instead, which is also what "+1 in that moment" means.
+console.log('\n-- the corner count ticks as it happens, silent ones included --');
+{
+    const ui = fs.readFileSync(path.join(__dirname, '..', 'ui', 'js', 'screen-livesim.js'), 'utf8');
+    check('counted in _land', /_land\(e\)\s*\{[\s\S]{0,500}e\.corner[\s\S]{0,80}this\.corners/.test(ui));
+    check('...and that is what the stats tab reads', /const cor = this\.corners;/.test(ui));
+    check('the counter resets per match', /this\.corners = \{ home: 0, away: 0 \}/.test(ui));
+}
+
 console.log(failed ? '\n*** FAIL ***' : '\nAll live-sim stat checks passed.');
 process.exitCode = failed ? 1 : 0;

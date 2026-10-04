@@ -95,6 +95,7 @@ const LiveView = {
         this.feed = [];
         // running per-client tallies for the panel, keyed by playerId
         this.tally = {};
+        this.corners = { home: 0, away: 0 };   // ticked by _land as each corner lands
         for (const c of match.clients) if (c.played) this.tally[c.playerId] = { g: 0, a: 0, y: 0, r: 0, shots: 0, saves: 0, tackles: 0 };
         this._renderShell();
         if (typeof Sound !== 'undefined') Sound.play('whistle1');   // kick-off
@@ -251,6 +252,11 @@ const LiveView = {
 
     // apply an event's effects to the scoreboard, stats and client tallies (the moment it "happens")
     _land(e) {
+        // Counters tick the instant the beat lands, which is what a viewer expects: the line says
+        // "corner" and the corner count goes up in the same moment. Counted HERE rather than by
+        // scanning the feed, because most corners are silent (see LIVE_SIM.CORNER_LINES_MAX) and
+        // never enter the feed at all — scanning it undercounted them against the timeline.
+        if (e.corner) this.corners[e.corner] = (this.corners[e.corner] || 0) + 1;
         const d = this.scoreDelta(e);
         this.score.home += d.home; this.score.away += d.away;
         // a goal freezes the clock for a beat and flashes the board — the celebration. Skipped while
@@ -418,8 +424,7 @@ const LiveView = {
     _statsHTML() {
         const p = this.s.clock / this.timeline.minutes, F = this.finalStats;
         // corners are the real revealed count; cards come from the landed client tallies
-        const cor = { home: 0, away: 0 };
-        for (const e of this.feed) if (e.corner && (e._shown == null || e._shown >= (e.lines || []).length)) cor[e.corner]++;
+        const cor = this.corners;
         const yr = { home: { y: 0, r: 0 }, away: { y: 0, r: 0 } };
         for (const c of this.match.clients) { const t = this.tally[c.playerId]; if (t) { yr[c.side].y += t.y; yr[c.side].r += t.r; } }
         const possH = this.possAt(F.possession.home, p);
