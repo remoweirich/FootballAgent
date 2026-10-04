@@ -44,6 +44,7 @@ vm.runInContext(`
         euro: n => '\\u20ac' + n, money: n => '\\u20ac' + n, eabbr: n => '\\u20ac' + n,
         abilityBadge: (q, big) => '<span class="badge" data-q="' + q + '">' + q + '</span>',
         crest: c => '<span class="crest"></span>', flag: () => '', clubName: id => String(id),
+        xyChart: (pts, col, o) => '<svg class="xychart" data-n="' + pts.length + '"></svg>',
     };
     var Router = {
         isFreshNav: true, screens: {},
@@ -68,10 +69,15 @@ run(`
     GameState.agency.scouts = [
         { id: 'sc_on', name: 'Lukas Ferrari', title: 'Senior scout', quality: 52, weeklyCost: 960,
           region: 'ostschweiz', league: null, country: null, weeksUntilFind: 1, maxTalentAge: 19,
-          contractWeeks: 104, contractUntil: GameState.absWeek() + 78 },
+          contractWeeks: 104, contractUntil: GameState.absWeek() + 78,
+          age: 43, birthWeek: 12, hireQuality: 44,
+          history: { ability: [{ t: GameState.absWeek() - 208, value: 44 },
+                               { t: GameState.absWeek() - 104, value: 48 },
+                               { t: GameState.absWeek(), value: 52 }] } },
         { id: 'sc_off', name: 'Beat Wyss', title: 'Lead scout', quality: 41, weeklyCost: 420,
           region: null, league: null, country: null, weeksUntilFind: 7, maxTalentAge: 22,
-          contractWeeks: 52, contractUntil: GameState.absWeek() }
+          contractWeeks: 52, contractUntil: GameState.absWeek(),
+          age: 31, birthWeek: 30, hireQuality: 41, history: { ability: [] } }
     ];
 `);
 
@@ -79,6 +85,7 @@ run(`
 console.log('\n-- "Your scouts" is now rows, not forms --');
 const list = run("ScoutingScreen.tab='scouts'; return ScoutingScreen.yourScouts();");
 check('a row per scout, each linking to its card', /#scout\/sc_on/.test(list) && /#scout\/sc_off/.test(list));
+check('age is on the row now that scouts have one', /43y/.test(list) && /31y/.test(list));
 check('the glanceable facts are on the row', /Lukas Ferrari/.test(list) && /Senior scout/.test(list)
     && /Scouting Ostschweiz/.test(list) && /960/.test(list) && /next report in 1w/.test(list));
 check('a roaming scout says so rather than "idle"', /Roaming/.test(list) && !/\bidle\b/.test(list));
@@ -94,8 +101,10 @@ run("Router.isFreshNav = true; ScoutCard.render(document.getElementById('app'), 
 check('header carries name, derived title and status', /Lukas Ferrari/.test(appHTML)
     && /Senior scout/.test(appHTML) && /Scouting/.test(appHTML) && /Ostschweiz/.test(appHTML));
 check('ability badge is present', /data-q="52"/.test(appHTML));
-check('both tabs render, Overview active', /ScoutCard\.setTab\('sc_on','assignment'\)/.test(appHTML)
+check('all three tabs render, Overview active', /ScoutCard\.setTab\('sc_on','assignment'\)/.test(appHTML)
+    && /ScoutCard\.setTab\('sc_on','history'\)/.test(appHTML)
     && /class="tab is-active"[^>]*>Overview/.test(appHTML));
+check('the header carries his age', /43y/.test(appHTML));
 check('Overview shows wage, role and region', /Wage/.test(appHTML) && /Role/.test(appHTML) && /Region/.test(appHTML));
 // 78 weeks to run reads in years; inside the last season it switches to weeks
 check('contract remaining reads in years past a season', /Contract/.test(appHTML) && /1\.5 years/.test(appHTML));
@@ -195,6 +204,39 @@ run("ScoutingScreen.confirmHire('" + offerId + "');");
 const signed = JSON.parse(run("var s = GameState.agency.scouts[0]; return JSON.stringify({ n: GameState.agency.scouts.length, wage: s && s.weeklyCost, term: s && s.contractWeeks });"));
 check('confirming hires him on the chosen term', signed.n === 1 && signed.term === 156 && signed.wage === quotes['156']);
 check('he leaves the market', run("return (GameState.agency.scoutMarket || []).length;") === 0);
+
+// ---------------- History ----------------
+console.log('\n-- the History tab --');
+run("GameState.agency.scouts = [{ id: 'sc_h', name: 'Chart Man', title: 'Senior scout', quality: 52,"
+    + " weeklyCost: 900, age: 43, birthWeek: 12, hireQuality: 44, region: null, league: null, weeksUntilFind: 6,"
+    + " contractUntil: GameState.absWeek(), history: { ability: ["
+    + "   { t: GameState.absWeek() - 208, value: 44 }, { t: GameState.absWeek() - 104, value: 48 },"
+    + "   { t: GameState.absWeek(), value: 52 } ] } }];");
+run("Router.isFreshNav = false; ScoutCard.setTab('sc_h','history'); ScoutCard.render(document.getElementById('app'), 'sc_h');");
+check('it draws a chart of every recorded point', /<svg class="xychart" data-n="3"/.test(appHTML));
+check('it shows where he started and his peak', /Hired at/.test(appHTML) && />44</.test(appHTML)
+    && /Peak/.test(appHTML) && />52</.test(appHTML));
+
+// a scout whose rating has never moved has nothing to plot — one point is not a line
+run("GameState.agency.scouts[0].history = { ability: [{ t: GameState.absWeek(), value: 52 }] };");
+run("ScoutCard.render(document.getElementById('app'), 'sc_h');");
+check('a flat career says so instead of drawing an empty chart',
+    /Nothing to chart yet/.test(appHTML) && !/<svg class="xychart"/.test(appHTML));
+// an old save's scout has no history at all until the migration seeds one
+run("delete GameState.agency.scouts[0].history; ScoutCard.render(document.getElementById('app'), 'sc_h');");
+check('a scout with no history at all does not crash the tab', /Nothing to chart yet/.test(appHTML));
+
+// ---------------- the below-standard note ----------------
+console.log('\n-- a scout who has slipped below his league --');
+run("GameState.agency.scouts = [{ id: 'sc_lo', name: 'Faded', title: 'Lead scout', quality: 40,"
+    + " weeklyCost: 500, age: 72, birthWeek: 3, hireQuality: 60, region: null, league: 'BUNDES',"
+    + " country: 'Germany', weeksUntilFind: 4, contractUntil: GameState.absWeek(), history: { ability: [] } }];");
+run("Router.isFreshNav = true; ScoutCard.render(document.getElementById('app'), 'sc_lo');");
+check('the Overview warns he is below the league standard', /slipped below the \d+ this league expects/.test(appHTML));
+check('...but he is NOT recalled — the decision stays the player\'s',
+    /ScoutCard\.recall\('sc_lo'\)/.test(appHTML) && run("return GameState.agency.scouts[0].league;") === 'BUNDES');
+run("GameState.agency.scouts[0].quality = 90; ScoutCard.render(document.getElementById('app'), 'sc_lo');");
+check('a scout who meets the bar gets no warning', !/slipped below/.test(appHTML));
 
 // ---------------- the tutorial must not be fenced behind the sheet ----------------
 // #wtLayer sits at z-index 150, above .sheet-backdrop at 100, so once the tour's Hire tap opens

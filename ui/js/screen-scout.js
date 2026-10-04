@@ -57,11 +57,13 @@ const ScoutCard = {
         // not a re-entry and leaves the open tab alone. Same rule as the client card.
         if (Router.isFreshNav) { ctx.tab = 'overview'; ctx.scope = null; }
         if (ctx.scope == null) ctx.scope = s.league ? 'international' : 'domestic';
-        const tabs = ['overview', 'assignment'];
+        const tabs = ['overview', 'assignment', 'history'];
         if (!tabs.includes(ctx.tab)) ctx.tab = 'overview';
-        const labels = { overview: I18n.t('sc.tab.overview'), assignment: I18n.t('sc.tab.assignment') };
+        const labels = { overview: I18n.t('sc.tab.overview'), assignment: I18n.t('sc.tab.assignment'), history: I18n.t('sc.tab.history') };
 
-        const body = ctx.tab === 'overview' ? this.tabOverview(s) : this.tabAssignment(s);
+        const body = ctx.tab === 'overview' ? this.tabOverview(s)
+            : ctx.tab === 'assignment' ? this.tabAssignment(s)
+                : this.tabHistory(s);
         const sep = `<span style="color:var(--text-chevron)">·</span>`;
 
         el.innerHTML = `
@@ -92,16 +94,64 @@ const ScoutCard = {
             `<div class="info"><span>${I18n.t('sc.region')}</span><b>${UI.esc(this.placeText(s))}</b></div>`,
         ].filter(Boolean).join('');
 
+        // He is not recalled when age drops him below the league's bar — his finds just get worse.
+        // Said quietly here so the player can notice and move him, rather than being told nothing.
+        const short = Scouts.leagueShortfallPenalty(s);
+        const shortNote = short > 0
+            ? `<p class="hint" style="margin-top:var(--space-2);color:var(--state-bad)">${I18n.t('sc.belowStandard', { min: Scouts.minScoutQualityFor(s.league) })}</p>`
+            : '';
+
         const nextReport = on
             ? `<div class="info"><span>${I18n.t('scouting.nextReport')}</span><b>${I18n.t('sc.inWeeks', { n: s.weeksUntilFind })}</b></div>`
             : '';
 
-        return `<div class="info-grid">${boxes}${nextReport}</div>
+        return `<div class="info-grid">${boxes}${nextReport}</div>${shortNote}
             <div class="gap-2" style="display:flex;flex-direction:column;margin-top:var(--space-4)">
                 ${on
                 ? `<button class="btn btn--accent-outline" onclick="ScoutCard.recall('${s.id}')"><i class="ti ti-x"></i>${I18n.t('sc.recall')}</button>`
                 : `<button class="btn btn--accent-outline" onclick="ScoutCard.setTab('${s.id}','assignment')"><i class="ti ti-map-2"></i>${I18n.t('sc.createAssignment')}</button>`}
                 <button class="btn btn--danger" onclick="ScoutCard.confirmRelease('${s.id}')"><i class="ti ti-user-x"></i>${I18n.t('sc.release')}</button>
+            </div>`;
+    },
+
+    // ---------------- History ----------------
+    // His rating over his career, drawn the way a client's development is drawn (UI.xyChart, age
+    // along the bottom). A scout hired on an existing save has only the anchor point the migration
+    // seeded, so the line starts the moment he first has a birthday under this build.
+    tabHistory(s) {
+        const pts = ((s.history || {}).ability || []).slice();
+        const now = GameState.absWeek();
+        if (!pts.length || pts[pts.length - 1].value !== s.quality) pts.push({ t: now, value: s.quality });
+        if (pts.length < 2) return `<p class="muted">${I18n.t('sc.noHistory')}</p>`;
+
+        const ageAt = t => s.age - (now - t) / 52;
+        const xs = pts.map(h => ({ x: h.t, y: h.value }));
+        const xMin = xs[0].x, xMax = now + 4;
+        const yearTicks = [];
+        for (let a = Math.floor(ageAt(xMin)); a <= Math.ceil(ageAt(xMax)); a++) {
+            const t = now - (s.age - a) * 52;
+            if (t >= xMin - 1 && t <= xMax + 1) yearTicks.push({ v: t, label: a + 'y' });
+        }
+        // every year keeps its gridline, only every Nth is labelled — a 40-year career would
+        // otherwise print its ages on top of each other (same rule as the client chart)
+        const stride = Math.max(1, Math.ceil(yearTicks.length / 7));
+        yearTicks.forEach((tk, i) => { if ((yearTicks.length - 1 - i) % stride !== 0) tk.label = ''; });
+
+        const vals = xs.map(d => d.y);
+        let yLo = Math.max(1, Math.floor((Math.min(...vals) - 2) / 5) * 5);
+        let yHi = Math.min(99, Math.ceil((Math.max(...vals) + 2) / 5) * 5);
+        if (yHi - yLo < 20) yHi = Math.min(99, yLo + 20);
+        if (yHi - yLo < 20) yLo = Math.max(1, yHi - 20);
+
+        const chart = UI.xyChart(xs, 'var(--info)', {
+            xMin, xMax, xTicks: yearTicks, yMin: yLo, yMax: yHi, yStep: 5, fmtY: v => Math.round(v)
+        });
+        const peak = Math.max(...vals);
+        const hired = s.hireQuality != null ? s.hireQuality : vals[0];
+        return `<div class="chart-card"><div class="chart-head"><span class="chart-title">${I18n.t('sc.chartAbility')}</span><span class="chart-value" style="color:var(--info)">${s.quality} <span class="chart-unit">${I18n.t('sc.now')}</span></span></div>${chart}</div>
+            <div class="info-grid" style="margin-top:var(--space-3)">
+                <div class="info"><span>${I18n.t('sc.hiredAt')}</span><b>${hired}</b></div>
+                <div class="info"><span>${I18n.t('sc.peak')}</span><b>${peak}</b></div>
             </div>`;
     },
 

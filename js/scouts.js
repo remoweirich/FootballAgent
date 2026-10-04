@@ -122,12 +122,47 @@ const Scouts = {
     // has no quotes. Filled deterministically — drawing from Rng at render time would desync the
     // seeded world from one repaint to the next.
     _ensureOffer(o) {
-        if (o && !o.quotes) o.quotes = this._quoteLadder(o.weeklyCost, 0, false);
+        if (!o) return o;
+        if (!o.quotes) o.quotes = this._quoteLadder(o.weeklyCost, 0, false);
+        // age likewise has to be filled without touching Rng, so it comes from the un-noised
+        // centre of the curve, and the birth week from the offer's own id
+        if (o.age == null) o.age = this._clamp(Math.round(34 + (this._clamp(o.quality, 15, 99) - 15) / 84 * 14), this.MIN_HIRE_AGE, this.MAX_HIRE_AGE);
+        if (o.birthWeek == null) {
+            let h = 0;
+            for (const ch of String(o.id || o.name || 'x')) h = (h * 31 + ch.charCodeAt(0)) % 52;
+            o.birthWeek = 1 + h;
+        }
         return o;
     },
     quoteFor(offer, weeks) {
         this._ensureOffer(offer);
         return offer.quotes[weeks] != null ? offer.quotes[weeks] : offer.weeklyCost;
+    },
+
+    // ---- age ----
+    MIN_HIRE_AGE: 25,
+    MAX_HIRE_AGE: 60,
+    // Age is loosely tied to standing: the centre climbs from 34 at the bottom of the market to 48
+    // at the top, so most elite scouts read as experienced. gaussN is the TRUE normal (PlayerGen.gauss
+    // is hard-bounded at ±sd and would make a young star mathematically impossible) — the tails are
+    // the point, because a 26-year-old chief scout should be rare rather than unheard of.
+    _offerAge(quality) {
+        const centre = 34 + (this._clamp(quality, 15, 99) - 15) / 84 * 14;
+        return this._clamp(Math.round(PlayerGen.gaussN(centre, 8.5)), this.MIN_HIRE_AGE, this.MAX_HIRE_AGE);
+    },
+
+    // What a year does to him, by the age he is turning. Growth stops at 55, decline starts at 65,
+    // and the decade between is a plateau.
+    GROWTH_CAP: 15,      // total gain above the ability he was hired at
+    QUALITY_FLOOR: 5,
+    RETIRE_AGE: 85,
+    yearlyDelta(age) {
+        if (age < 35) return 2;
+        if (age < 55) return 1;
+        if (age < 65) return 0;
+        if (age < 70) return -1;
+        if (age < 80) return -2;
+        return -3;
     },
 
     makeOffer(title, quality) {
@@ -137,6 +172,8 @@ const Scouts = {
             id: 's_' + Rng.next().toString(36).slice(2, 8),
             name: this.scoutName(), title,
             quality, weeklyCost, region: null, maxTalentAge: 22,
+            age: this._offerAge(quality),
+            birthWeek: 1 + Math.floor(Rng.next() * 52),
             quotes: this._quoteLadder(weeklyCost, stance, true)
         };
     },
@@ -262,9 +299,15 @@ const Scouts = {
         if (ag.scouts.length >= max) return { ok: false, message: this._t('scouts.err.officeFull', { office: Upgrades.office().name, max }, 'Your {office} only has room for {max} scout(s). Upgrade your office to hire more.') };
         const term = this.termFor(termWeeks) ? termWeeks : this.DEFAULT_TERM;
         const wage = this.quoteFor(offer, term);
+        this._ensureOffer(offer);
         ag.scouts.push({
             id: offer.id, name: offer.name, title: offer.title,
             quality: offer.quality, weeklyCost: wage,
+            // the baseline the +15 growth cap is measured from — not his current rating, which moves
+            hireQuality: offer.quality,
+            age: offer.age != null ? offer.age : this._offerAge(offer.quality),
+            birthWeek: offer.birthWeek != null ? offer.birthWeek : (1 + Math.floor(Rng.next() * 52)),
+            history: { ability: [{ t: GameState.absWeek(), value: offer.quality }] },
             contractWeeks: term, contractUntil: GameState.absWeek() + term,
             region: null, weeksUntilFind: this.nextFindDelay(offer.quality)
         });
@@ -460,6 +503,54 @@ const Scouts = {
 
     _prospectAge(maxAge) { const m = Math.max(15, Math.min(22, maxAge || 22)); return 15 + Math.floor(Math.pow(Rng.next(), 1.6) * (m - 15 + 1)); },
 
+    // minScoutQualityFor gates TAKING a foreign assignment, but nothing re-checked it afterwards,
+    // so a scout who declined with age kept working a league he could no longer be sent to. He is
+    // not recalled — he just gets worse at it, doubly so, since the shortfall is subtracted before
+    // the league's own quality bonus is added back. 0 whenever he is still up to the job.
+    leagueShortfallPenalty(s) {
+        if (!s || !s.league) return 0;
+        return Math.max(0, this.minScoutQualityFor(s.league) - s.quality) * 2;
+    },
+
+    // ---- a year older ----
+    // Ability moves on his birthday: up while he is young, flat through his fifties, down from 65,
+    // and at 85 he retires. Total growth is capped at GROWTH_CAP above the rating he was hired at,
+    // which is the real constraint — a scout hired at 25 tops out around 33 and then coasts.
+    // Decline is deliberately NOT capped: a scout you keep to the end becomes useless, which is
+    // what makes letting him go a decision. Wages never move with ability; he is paid what he
+    // negotiated. Returns notes for the caller to mail.
+    ageTick() {
+        const ag = GameState.agency;
+        if (!ag || !ag.scouts) return [];
+        const week = GameState.week, now = GameState.absWeek(), notes = [];
+        for (let i = ag.scouts.length - 1; i >= 0; i--) {
+            const s = ag.scouts[i];
+            if (!s || s.age == null || (s.birthWeek || 0) !== week) continue;
+            s.age += 1;
+            if (s.age >= this.RETIRE_AGE) {
+                const where = s.league ? ((COMPETITIONS[s.league] || {}).name || s.league)
+                    : s.region ? regionName(s.region) : null;
+                ag.scouts.splice(i, 1);
+                GameState.addLog(`${s.name} retired at ${s.age}.`, 'scout');
+                notes.push({ kind: 'retired', name: s.name, age: s.age, where });
+                continue;
+            }
+            const delta = this.yearlyDelta(s.age);
+            if (!delta) continue;
+            const base = s.hireQuality != null ? s.hireQuality : s.quality;
+            const ceiling = base + this.GROWTH_CAP;
+            const next = delta > 0
+                ? Math.min(s.quality + delta, ceiling)        // the cap binds, not the band
+                : Math.max(s.quality + delta, this.QUALITY_FLOOR);
+            if (next === s.quality) continue;                 // already at his ceiling: nothing to record
+            s.quality = next;
+            if (!s.history) s.history = {};
+            if (!s.history.ability) s.history.ability = [];
+            s.history.ability.push({ t: now, value: s.quality });
+        }
+        return notes;
+    },
+
     // called once per week from the simulation
     tick() {
         const ag = GameState.agency;
@@ -489,7 +580,9 @@ const Scouts = {
             const intl = !!s.league;
             const pool = intl ? Clubs.getClubsByDivision(s.league) : Clubs.getClubsByRegion(s.region);
             if (!pool.length) return;
-            const effQ = intl ? Math.min(99, s.quality + this.leagueQualityBonus(s.league)) : s.quality;
+            const effQ = intl
+                ? Math.min(99, Math.max(1, s.quality - this.leagueShortfallPenalty(s)) + this.leagueQualityBonus(s.league))
+                : s.quality;
             const span = Math.max(0, Math.min(7, (s.maxTalentAge || 22) - 15));   // wider age window -> more to find
             const spanF = span / 7;                                              // 0 (only 15yo) .. 1 (15-22)
             let n = s.quality < 30 ? Math.floor(Rng.next() * 2)               // 0-1 (sometimes empty-handed)

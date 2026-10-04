@@ -383,11 +383,12 @@ const GameState = {
     // run() upgrades a save from the previous version to its own `to`; the pipeline runs every entry
     // newer than the loaded save, in order. A legacy save with no schemaVersion is inferred from the
     // old `worldV` marker (v2) or treated as v1 otherwise, so the very first saves still upgrade cleanly.
-    SCHEMA_VERSION: 4,
+    SCHEMA_VERSION: 5,
     MIGRATIONS: [
         { to: 2, run(gs, d) { gs._migrateWorldV2(d); } },     // frozen-NPC world model + anchor/reputation split
         { to: 3, run(gs) { gs._migrateScoutRegions(); } },    // reshaped Portugal/Belgium scouting regions
-        { to: 4, run(gs) { gs._migrateScoutContracts(); } }   // scouts gained a negotiated minimum contract
+        { to: 4, run(gs) { gs._migrateScoutContracts(); } },  // scouts gained a negotiated minimum contract
+        { to: 5, run(gs) { gs._migrateScoutAges(); } }        // scouts gained an age, growth and retirement
     ],
     _runMigrations(d) {
         // Structural defaults, not versioned steps: they must apply on EVERY load, because a save at
@@ -493,6 +494,21 @@ const GameState = {
         ((this.agency && this.agency.scouts) || []).forEach(s => {
             if (!s) return;
             if (s.contractUntil == null) { s.contractUntil = now; s.contractWeeks = 0; }
+        });
+    },
+    // Scouts gained an age, a development curve and a retirement. Everyone already on the books
+    // is given one now. Their CURRENT rating becomes the baseline the +15 growth cap is measured
+    // from, so a long-serving scout can still improve from where he is rather than being treated
+    // as having already spent growth he never had.
+    _migrateScoutAges() {
+        const now = this.absWeek();
+        ((this.agency && this.agency.scouts) || []).forEach(s => {
+            if (!s) return;
+            if (s.age == null) s.age = Scouts._offerAge(s.quality);
+            if (s.birthWeek == null) s.birthWeek = 1 + Math.floor(Rng.next() * 52);
+            if (s.hireQuality == null) s.hireQuality = s.quality;
+            // one anchor point, so the History graph has something to draw from day one
+            if (!s.history || !s.history.ability) s.history = { ability: [{ t: now, value: s.quality }] };
         });
     },
     _migrateMoraleFields() {

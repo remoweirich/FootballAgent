@@ -242,6 +242,17 @@ const Sim = {
 
         // ---- scouts ----
         this._scoutLicence(events);   // enforce the International Scouting Licence (warn/fine/suspend) before scouts work
+        // birthdays first: a scout who retires this week does not then file a report
+        Scouts.ageTick().forEach(n => {
+            if (n.kind !== 'retired') return;
+            const t = I18n.t('sim.scoutRetired', { name: n.name, age: n.age });
+            GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
+            // name what he was covering, so you are not silently blind there for six weeks
+            const body = n.where
+                ? I18n.t('sim.scoutRetiredBodyPosted', { name: n.name, age: n.age, where: n.where })
+                : I18n.t('sim.scoutRetiredBody', { name: n.name, age: n.age });
+            GameState.addMail({ kind: 'news', cat: 'scout', subject: I18n.t('sim.scoutRetiredSubj', { name: n.name }), body, ttl: 6 });
+        });
         const finds = Scouts.tick();
         finds.forEach(f => {
             // an idle / home scout carries no region id — fall back to the found player's country,
