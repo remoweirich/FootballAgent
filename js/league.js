@@ -209,6 +209,11 @@ const RECENT_FORM_WINDOW = 12;
 // this has to move with it, or role promotions — and the playing time and morale that follow from
 // them — quietly dry up.
 const HOT_RATING = 7.6;
+// The rating line's two biggest knobs. Anything that moves these has to be re-measured against
+// growth (the pivot in js/players.js devTick), morale (MORALE.HOT_FORM_AVG_RATING) and the form
+// bands that drive offers — see docs/livesim-and-ratings-findings.md.
+const RATING_BASE = 6.35;
+const RATING_PER_GOAL = 1.00;
 
 // Squad lists are only needed for clubs employing a sim-relevant player (the agent's clients,
 // ex-clients, scouted prospects — ~dozens of people, a handful of clubs). Built lazily once per
@@ -2589,7 +2594,12 @@ const League = {
             // goals and assists weigh heavily: a season's scoring should visibly lift the average, so a
             // productive attacker rates above a same-level team-mate who doesn't chip in (goals 1.35,
             // assists 0.65 — up from 1.0 / 0.55)
-            let rating = 6.55 + levelGapRating(p.ability - (ghostClub ? ghostClub.reputation : 50)) + resultBonus + a.g * 1.35 + a.a * 0.65;
+            // Base 6.55 -> 6.35 and goals 1.35 -> 1.00, which puts the measured population mean
+            // at 7.0 (it was 7.21) and a 16-goal-in-34 striker at ~7.45 rather than ~7.81. The two
+            // move together on purpose: cutting the base alone leaves a scorer's season inflated,
+            // because outclassing your league is already paid once through levelGapRating and then
+            // paid again through the goals that outclassing produces.
+            let rating = RATING_BASE + levelGapRating(p.ability - (ghostClub ? ghostClub.reputation : 50)) + resultBonus + a.g * RATING_PER_GOAL + a.a * 0.65;
             if (conceded === 0 && (p.position === 'GK' || p.position === 'CB' || p.position === 'LB' || p.position === 'RB')) rating += 0.6;
             if (conceded >= 3 && (p.position === 'GK' || p.position === 'CB')) rating -= 0.45;
             rating += PlayerGen.gauss(0, 0.62);        // match to match: some days it just doesn't click

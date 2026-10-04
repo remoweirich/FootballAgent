@@ -626,6 +626,7 @@ I18n.register('it', {
     'ls.penClientMissed': '{name} si presenta sul dischetto… e la manda a lato. Occasione enorme sprecata.',
     'ls.penPastKeeper': '{keeper} intuisce l’angolo e non ci arriva comunque.',
     'ls.penKeeperSaved': '{keeper} si tuffa dalla parte giusta e la respinge: parata enorme.',
+    'ls.penMissedKeeper': 'A lato — {keeper} l’ha scampata.',
     'ls.cornerAnon': 'Calcio d\'angolo — {team}',
     'ls.cornerFollow1': 'Il cross trova una testa sul primo palo — fuori di un soffio!',
     'ls.cornerFollow2': 'Colpita con forza da pochi metri, ma addosso al portiere.',

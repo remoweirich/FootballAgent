@@ -598,6 +598,7 @@ I18n.register('de', {
     'ls.penClientMissed': '{name} tritt an… und zieht ihn am Tor vorbei. Eine Riesenchance vergeben.',
     'ls.penPastKeeper': '{keeper} ahnt die Ecke und kommt trotzdem nicht hin.',
     'ls.penKeeperSaved': '{keeper} geht in die richtige Ecke und hält — eine Riesenparade.',
+    'ls.penMissedKeeper': 'Daneben gesetzt — {keeper} kommt mit dem Schrecken davon.',
     'ls.cornerAnon': 'Ecke für {team}.',
     'ls.cornerFollow1': 'Die Hereingabe findet einen Kopf am ersten Pfosten, knapp vorbei!',
     'ls.cornerFollow2': 'Aus sechs Metern wuchtig getroffen, aber genau auf den Torwart.',

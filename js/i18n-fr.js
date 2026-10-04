@@ -623,6 +623,7 @@ I18n.register('fr', {
     'ls.penClientMissed': '{name} s’élance… et l’envoie à côté. Une énorme occasion gâchée.',
     'ls.penPastKeeper': '{keeper} part du bon côté et ne peut toujours pas l’atteindre.',
     'ls.penKeeperSaved': '{keeper} part du bon côté et la repousse — un arrêt énorme.',
+    'ls.penMissedKeeper': 'À côté — {keeper} s’en sort bien.',
     'ls.cornerAnon': 'Corner — {team}',
     'ls.cornerFollow1': 'Le centre trouve une tête au premier poteau, ça passe juste à côté !',
     'ls.cornerFollow2': 'Reprise ferme à six mètres, mais droit dans les gants du gardien.',

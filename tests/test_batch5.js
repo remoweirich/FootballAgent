@@ -103,10 +103,19 @@ check('3: signing a new contract auto-rejects open transfer offers', run(`
 check('4: morale can add at most +0.1 to a rating (penalty side untouched)', run(`
   return moraleRatingMod(100) <= 0.1001 && moraleRatingMod(85) <= 0.1001 && moraleRatingMod(0) <= -0.29;
 `));
-check('4: roughly 1 player in 30 is a reliable performer', run(`
-  let n=0; for (let i=0;i<6000;i++) if (PlayerGen.formTraitRoll() > 0.2) n++;
-  const rate = n/6000;
-  return rate > 1/60 && rate < 1/15;
+// Two rarities now, not one. ~1 in 40 of ANY player is consistently excellent (7.5+ every
+// season); ~1 in 100 of the very highest-potential players is generational (8.0+ every season).
+// Both share the low-swing branch of formBiasOf, which is what makes "every season" true.
+check('4: ~1 player in 40 is consistently excellent', run(`
+  let n=0; for (let i=0;i<40000;i++) if (PlayerGen.formTraitRoll(50) > 0.2) n++;
+  const rate = n/40000;
+  return rate > 1/60 && rate < 1/28;
+`));
+check('4: the generational one needs the very highest potential, and is far rarer', run(`
+  let low=0, high=0;
+  for (let i=0;i<40000;i++) { if (PlayerGen.formTraitRoll(50) > 1.3) low++; if (PlayerGen.formTraitRoll(95) > 1.3) high++; }
+  // impossible below the potential gate, and ~1 in 100 above it
+  return low === 0 && high > 40000/160 && high < 40000/60;
 `));
 check('4: form is drawn once per season, not per match', run(`
   const p = GameState.players.find(x=>x.agentId==="me");
@@ -148,8 +157,16 @@ check(`4: a player at his club's level is unremarkable by default (mean ${S.at.m
 // flaky: at ~4% a 150-season sample still only estimates it to about +/-1.5 points.
 check(`4: ...but CAN still have an exceptional season at his own level (${(S.at.hot*100).toFixed(1)}% of 150 seasons, best ${S.at.best.toFixed(2)})`, S.at.best >= 7.5 && S.at.hot > 0 && S.at.hot <= 0.25);
 check(`4: seasons genuinely vary (spread ${S.at.spread.toFixed(2)} rating points across 30 seasons)`, S.at.spread >= 0.4);
-check(`4: +5 over the club is already a real edge (mean ${S.g5.mean.toFixed(2)}, ${(S.g5.hot*100).toFixed(0)}% of seasons 7.5+)`, S.g5.mean >= 7.15 && S.g5.mean <= 7.6);
-check(`4: +12 over the club is a star (mean ${S.g12.mean.toFixed(2)}, ${(S.g12.hot*100).toFixed(0)}% of seasons 7.5+)`, S.g12.mean >= 7.8 && S.g12.hot >= 0.85);
+// Bands rebased when RATING_BASE moved 6.55 -> 6.35 and the per-goal weight 1.35 -> 1.00. The
+// property under test is the SHAPE — unremarkable at your level, a real edge at +5, a star at +12,
+// flattening after — so each step is pinned relative to the one below it, which survives the next
+// recalibration. The absolute bands are kept as a sanity rail and deliberately wide: each trial is
+// 150 seasons and swings about +/-0.15 run to run, which is what made the old tight bands fail
+// two runs in five.
+check(`4: +5 over the club is already a real edge (mean ${S.g5.mean.toFixed(2)}, ${(S.g5.hot*100).toFixed(0)}% of seasons 7.5+)`,
+    S.g5.mean >= 6.95 && S.g5.mean <= 7.6 && S.g5.mean > S.at.mean + 0.15);
+check(`4: +12 over the club is a star (mean ${S.g12.mean.toFixed(2)}, ${(S.g12.hot*100).toFixed(0)}% of seasons 7.5+)`,
+    S.g12.mean >= 7.55 && S.g12.hot >= 0.70 && S.g12.mean > S.g5.mean + 0.35);
 check(`4: returns flatten past +12 rather than running away (+12 ${S.g12.mean.toFixed(2)} -> +25 ${S.way.mean.toFixed(2)})`, S.way.mean - S.g12.mean < 0.6 && S.way.mean > S.g12.mean);
 
 // ---------- 5: hot rotation player plays more ----------

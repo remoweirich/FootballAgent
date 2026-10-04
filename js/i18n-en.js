@@ -613,6 +613,7 @@ I18n.register('en', {
     'ls.penClientMissed': '{name} steps up from the spot… and drags it wide. A huge chance gone.',
     'ls.penPastKeeper': '{keeper} guessed right and still could not reach it.',
     'ls.penKeeperSaved': '{keeper} goes the right way and keeps it out — an enormous save.',
+    'ls.penMissedKeeper': 'Dragged wide — {keeper} is off the hook.',
     'ls.cornerAnon': 'Corner — {team}',
     'ls.cornerFollow1': 'The delivery picks out a head at the near post — flashed just wide!',
     'ls.cornerFollow2': "Met firmly six yards out, but it's straight at the keeper.",

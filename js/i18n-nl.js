@@ -627,6 +627,7 @@ I18n.register('nl', {
     'ls.penClientMissed': '{name} legt aan vanaf de stip… en schiet hem naast. Een enorme kans verspeeld.',
     'ls.penPastKeeper': '{keeper} kiest de goede hoek en komt er toch niet bij.',
     'ls.penKeeperSaved': '{keeper} duikt naar de goede hoek en houdt hem eruit — een enorme redding.',
+    'ls.penMissedKeeper': 'Naast — {keeper} komt er goed vanaf.',
     'ls.cornerAnon': 'Corner — {team}',
     'ls.cornerFollow1': 'De voorzet vindt een hoofd bij de eerste paal — er net naast!',
     'ls.cornerFollow2': 'Hard geraakt van dichtbij, maar recht in de handen van de keeper.',

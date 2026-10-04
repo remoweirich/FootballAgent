@@ -36,6 +36,10 @@ const MORALE = {
     // from 29.5% to 22.5%, and end-of-career morale fell nearly five points with it. Anything that
     // changes the rating distribution has to be checked against this number.
     HOT_FORM_AVG_RATING: 7.5, HOT_FORM_MIN_APPS: 10, HOT_FORM_MSG_MIN_APPS: 30,
+    // A good season, short of a remarkable one: the same lift at GOOD_FORM_SHARE strength. Pitched
+    // so the two tiers together fire about as often as 7.50 alone used to, which is what keeps the
+    // morale economy where it was while leaving "season to remember" genuinely rare.
+    GOOD_FORM_AVG_RATING: 7.05, GOOD_FORM_SHARE: 0.60,
     HOT_FORM_TIME: 15, HOT_FORM_WAGE: -10, HOT_FORM_CLUB: 30, HOT_FORM_AGENT: 20,
 
     // playing-time weekly ticks, keyed by how many consecutive weeks he has (not) played
@@ -981,13 +985,25 @@ const Sim = {
         Agency.clients().forEach(p => {
             if (!p.morale) return;
             const tot = seasonTotals(p, year);
-            if (tot.apps < MORALE.HOT_FORM_MIN_APPS || tot.avg < MORALE.HOT_FORM_AVG_RATING) return;
+            if (tot.apps < MORALE.HOT_FORM_MIN_APPS || tot.avg < MORALE.GOOD_FORM_AVG_RATING) return;
             if (p._hotFormSeason === year) return;
             p._hotFormSeason = year;
-            p.morale.time = Math.min(100, p.morale.time + MORALE.HOT_FORM_TIME);
-            p.morale.wage = Math.max(0, p.morale.wage + MORALE.HOT_FORM_WAGE);
-            p.morale.club = Math.min(100, p.morale.club + MORALE.HOT_FORM_CLUB);
-            p.morale.agent = Math.min(100, p.morale.agent + MORALE.HOT_FORM_AGENT);
+            // Two tiers. The full bonus is a "season to remember" and stays gated at 7.50, which is
+            // rare by design. A merely GOOD season gets a fraction of it.
+            //
+            // The tier exists because this bonus is large enough to be part of the morale economy
+            // rather than a garnish on it. It used to fire for ~31% of seasons; once the rating
+            // line was recentred on 7.00 that fell to 14%, and measured end-of-career morale fell
+            // 8.5 points with it — not because anything about morale changed, but because a third
+            // of its income had quietly been this.
+            const full = tot.avg >= MORALE.HOT_FORM_AVG_RATING;
+            const k = full ? 1 : MORALE.GOOD_FORM_SHARE;
+            const add = (v, x) => Math.max(0, Math.min(100, v + Math.round(x * k)));
+            p.morale.time = add(p.morale.time, MORALE.HOT_FORM_TIME);
+            p.morale.wage = add(p.morale.wage, MORALE.HOT_FORM_WAGE);
+            p.morale.club = add(p.morale.club, MORALE.HOT_FORM_CLUB);
+            p.morale.agent = add(p.morale.agent, MORALE.HOT_FORM_AGENT);
+            if (!full) return;   // the message, and everything below, is for the real thing only
             // the "season to remember" note is reserved for a genuine FULL season of top form — a
             // handful of brilliant games (10+ apps) still lifts his morale, but doesn't earn the message
             if (tot.apps < MORALE.HOT_FORM_MSG_MIN_APPS) return;

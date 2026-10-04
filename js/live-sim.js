@@ -1071,6 +1071,12 @@ const LiveSim = {
             ev.lines = (ev.lines || []).concat(
                 this._t('ls.penKeeperSaved', { keeper: gk.player.name }, '{keeper} goes the right way and keeps it out — an enormous save.'));
             ev.keeperSave = gk.player;
+        } else {
+            // Missed. He did not touch it, but he is still the reason you are watching: the whole
+            // point of a penalty is that you want to know what happens to YOUR man, and a spot kick
+            // given away by your keeper and then dragged wide is a story about him either way.
+            ev.lines = (ev.lines || []).concat(
+                this._t('ls.penMissedKeeper', { keeper: gk.player.name }, "Dragged wide — {keeper} is off the hook."));
         }
         ev.beatenKeeper = scored ? gk.player : null;
         return ev;

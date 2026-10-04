@@ -620,6 +620,7 @@ I18n.register('es', {
     'ls.penClientMissed': '{name} se coloca el balón… y la manda fuera. Una ocasión enorme perdida.',
     'ls.penPastKeeper': '{keeper} adivina el lado y aun así no llega.',
     'ls.penKeeperSaved': '{keeper} se tira al lado correcto y la saca: una parada enorme.',
+    'ls.penMissedKeeper': 'Fuera — {keeper} se libra.',
     'ls.cornerAnon': 'Saque de esquina — {team}',
     'ls.cornerFollow1': 'El centro encuentra un remate de cabeza en el primer palo, ¡fuera por muy poco!',
     'ls.cornerFollow2': 'Golpeado con fuerza desde seis metros, pero directo a las manos del portero.',

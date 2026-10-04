@@ -630,6 +630,7 @@ I18n.register('pt', {
     'ls.penClientMissed': '{name} coloca a bola na marca… e atira ao lado. Uma ocasião enorme desperdiçada.',
     'ls.penPastKeeper': '{keeper} adivinha o lado e mesmo assim não lá chega.',
     'ls.penKeeperSaved': '{keeper} atira-se para o lado certo e defende — uma defesa enorme.',
+    'ls.penMissedKeeper': 'Ao lado — {keeper} escapa de boa.',
     'ls.cornerAnon': 'Canto — {team}',
     'ls.cornerFollow1': 'O cruzamento encontra uma cabeça no primeiro poste — passa muito perto!',
     'ls.cornerFollow2': 'Remate firme à entrada da pequena área, mas direto ao guarda-redes.',

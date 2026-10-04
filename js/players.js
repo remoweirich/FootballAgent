@@ -117,8 +117,28 @@ const PlayerGen = {
 
     // Temperament: roughly one player in thirty is a reliable performer wherever he goes, and
     // barely has a bad season. Everyone else carries a small permanent lean either way.
-    // ~1 in 30 is a model professional: a permanent lift, and (see formBiasOf) barely any swing.
-    formTraitRoll() { return Rng.next() < 1 / 30 ? this.gauss(0.34, 0.06) : this.gauss(0, 0.09); },
+    // Temperament. Almost everyone sits near zero and swings season to season; a rare few simply
+    // turn up, every year, and are remembered for it.
+    //
+    //   ~1 in 100 of the very highest-potential players  a generational one: 8.0+ every season
+    //   ~1 in 40  of everyone                            consistently excellent: 7.5+ every season
+    //   the rest                                         a small bias either way
+    //
+    // The lifts look large next to a 7.00 average because the bar is "every season", not "on
+    // average". A season average still carries about 0.29 of spread from results, goals and the
+    // form draw, so clearing 7.50 ~19 years in 20 needs a mean nearer 8.0, not 7.6.
+    //
+    // The size of the lift is what makes "every season" true rather than "usually". formBiasOf
+    // also reads the trait: anything above 0.2 gets a quarter of the normal season-to-season
+    // swing, so these players do not have off years — that IS the trait.
+    GOAT_POTENTIAL: 85,        // only the top of the potential range can produce one
+    GOAT_CHANCE: 1 / 100,
+    WONDERBOY_CHANCE: 1 / 40,
+    formTraitRoll(potential) {
+        if ((potential || 0) >= this.GOAT_POTENTIAL && Rng.next() < this.GOAT_CHANCE) return this.gauss(1.62, 0.05);
+        if (Rng.next() < this.WONDERBOY_CHANCE) return this.gauss(0.98, 0.05);
+        return this.gauss(0, 0.09);
+    },
 
     makePlayer(club, { ability, age, position }) {
         const nat = getRegionForClub(club);
@@ -135,7 +155,7 @@ const PlayerGen = {
             name: generateName(nat), nationality: nat, nationalityFlag: getNationalityFlag(nat),
             age, position, ability, potential, peakAge, declineAge: this.declineAgeFor(peakAge),
             peakAbility: ability,   // highest ability ever reached (tracked in weeklyTick; used by Best XI)
-            formTrait: this.formTraitRoll(),
+            formTrait: this.formTraitRoll(potential),
             clubId: club.id, clubTierAtJoin: club.tier,
             wage, sponsorIncome: this.sponsorBaseFor(ability),
             contractUntilSeason: GameState ? GameState.seasonStartYear + 1 + Math.floor(Rng.next() * 3) : 2027,
@@ -301,7 +321,10 @@ const PlayerDev = {
             // form: a strong recent rating accelerates development, a poor run slows it
             let form = 1;
             const st = (typeof seasonTotals === 'function') ? seasonTotals(p, year) : null;
-            if (st && st.apps >= 4) form = Math.max(0.7, Math.min(1.6, 1 + (st.avg - 6.9) * 0.45));
+            // Pivot moved 6.9 -> 6.70 alongside the 0.20 cut to RATING_BASE. It has to: this reads
+            // the season AVERAGE, so lowering every rating without moving the pivot would have
+            // slowed development across the whole game by about 9% as a side effect.
+            if (st && st.apps >= 4) form = Math.max(0.7, Math.min(1.6, 1 + (st.avg - 6.70) * 0.45));
             // organic week-to-week randomness
             const rnd = 0.7 + Rng.next() * 0.6;
             const up = (typeof Upgrades !== 'undefined') ? Upgrades.devSpeedMult() : 1;
@@ -357,7 +380,7 @@ function declineAgeOf(p) {
 // exactly what happened. Worth doing properly one day, with the draw keyed off appearances rather
 // than the calendar.
 function formBiasOf(p) {
-    if (p.formTrait == null) p.formTrait = PlayerGen.formTraitRoll();
+    if (p.formTrait == null) p.formTrait = PlayerGen.formTraitRoll(p.potential);
     const year = GameState.seasonStartYear;
     if (p._formSeason !== year) {
         p._formSeason = year;

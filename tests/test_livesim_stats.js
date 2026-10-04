@@ -221,23 +221,23 @@ console.log('\n-- a penalty is always taken, and by your man when it is his side
     check(`a penalty awarded is always taken (${awards} awarded, ${kicks} taken)`, awards > 0 && kicks >= awards);
 }
 {
-    // And at the other end it is his keeper facing it — when there is something for him to face.
-    // A penalty SCORED or SAVED is his moment and must name him; one dragged wide of the post is
-    // not, and inventing a keeper line for it would be worse than leaving him out.
-    let decided = 0, named = 0, missed = 0;
+    // Every penalty at his end names him — scored, saved OR missed. The miss matters most: you
+    // watched your keeper give one away, and being told only that it "was missed" with no mention
+    // of him is the moment the feed stops being about your player. He is off the hook, and the
+    // line says so.
+    let faced = 0, named = 0, missed = 0;
     for (let i = 0; i < 1200; i++) {
         const gk = client('GK', 'home');
         const tl = LiveSim.buildTimeline(Object.assign(spec([gk], 1, 1), { rnd: seeded(7000 + i) }));
         for (const e of tl.events) {
             if (e.kind !== 'penalty' || e.side !== 'away') continue;
-            const tags = (e.events || []).map(x => x.tag);
-            if (tags.includes('PENMISS')) { missed++; continue; }
-            decided++;
+            faced++;
+            if ((e.events || []).some(x => x.tag === 'PENMISS')) missed++;
             if ((e.lines || []).join(' ').includes(gk.player.name)) named++;
         }
     }
-    check(`a penalty scored or saved at his end always names him (${named}/${decided}; ${missed} missed the target)`,
-        decided > 0 && named === decided);
+    check(`every penalty at his end names him (${named}/${faced}, of which ${missed} missed the target)`,
+        faced > 0 && missed > 0 && named === faced);
 }
 
 // ---- 8. the corner counter ----------------------------------------------------------------------

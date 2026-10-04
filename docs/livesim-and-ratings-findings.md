@@ -223,3 +223,59 @@ The harness for all of this is in the scratchpad (`rating-impact.js`): three see
 forty clients, reporting the rating distribution next to growth, appearances and morale, with a
 seed-noise band so a real change can be told from luck. Anything that touches ratings should be run
 through it before and after.
+
+
+---
+
+# Implemented 2026-10-04 — the rating recalibration
+
+Done, measured over 3 seeds x 5 seasons x 40 clients, against the same harness
+(`rating-impact.js`), which reports growth, appearances and morale next to the ratings with a
+seed-noise band so a real change can be told from luck.
+
+| | before | after | noise band |
+|---|---|---|---|
+| mean season average | 7.23 | **7.04** | 0.08 |
+| % of seasons >= 7.50 (the hot-form gate) | 31.6% | **16.3%** | 8.4 |
+| ability gained per season | 1.93 | 1.94 | within noise |
+| appearances per season | 31.2 | 30.2 | within noise |
+| morale at the end | 47.2 | 46.8 | within noise |
+
+**What changed**
+
+* `RATING_BASE` 6.55 -> 6.35 and `RATING_PER_GOAL` 1.35 -> 1.00, both named constants now. They
+  move together: cutting the base alone leaves a scorer's season inflated, because outclassing
+  your league is already paid once through `levelGapRating` and then again through the goals that
+  outclassing produces.
+* The development pivot moved 6.9 -> 6.70 with it. It reads the season AVERAGE, so lowering every
+  rating without moving the pivot would have slowed development across the whole game by ~9% as a
+  side effect.
+* A second tier on the season-end form bonus (`GOOD_FORM_AVG_RATING` 7.05, at
+  `GOOD_FORM_SHARE` 0.60 strength). The full +15/+30/+20 stays gated at 7.50 and stays rare, as
+  asked. The tier exists because that bonus had been ~a third of the morale economy's income at
+  its old firing rate; without it, measured end-of-career morale fell 8.5 points purely as a
+  side effect of making hot form rare.
+
+**The two rare players**
+
+`formTraitRoll(potential)` now has three outcomes:
+
+| | chance | lift | result |
+|---|---|---|---|
+| generational | 1 in 100 of players with potential >= 85 (~1 in 1,100 overall) | +1.62 | mean 8.59, **99% of careers 8.0+ every season** |
+| consistently excellent | 1 in 40 of anyone | +0.98 | mean 7.94, **92% of careers 7.5+ every season** |
+| everyone else | — | ~0 | mean 7.04, 11% of seasons reach 7.5, never a whole career |
+
+The lifts look large against a 7.00 average because the bar is "every season", not "on average":
+a season average still carries ~0.29 of spread from results, goals and the form draw, so clearing
+7.50 nineteen years in twenty needs a mean nearer 8.0.
+
+**One thing that could not be satisfied as stated.** "An average season should be 7.0" and "a
+striker with 16 goals in 34 games would be about right" cannot both hold: with the mean at 7.0, a
+16-goal striker lands at ~7.45, and the only way to bring him to 7.0 is to make goals worth
+roughly nothing. The population mean was taken as the target, since it is the directly measurable
+one; a 16-goal season now reads as clearly good rather than elite (it was ~7.81).
+
+**Still open:** `levelGapRating` and the win bonus (C and D above) are untouched. If a 7.45 for 16
+goals still reads high, the next lever is the goal weight again, or tapering the level-gap reward
+for players who are also scoring.
