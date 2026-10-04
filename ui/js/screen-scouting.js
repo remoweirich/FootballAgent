@@ -43,50 +43,28 @@ const ScoutingScreen = {
     remove(id) { const p = GameState.getPlayer(id); if (p && p.agentId == null) { p.dismissedTalent = true; p.knownToAgent = false; GameState.save(); Router.refresh(); } },
 
     // ---------------- Your scouts ----------------
+    // One glanceable row per scout, tapping through to his card — the same shape as a client
+    // row. Everything editable (region, league, brief, recall, release) now lives on the card:
+    // with offices allowing up to 12 scouts, the old inline form per scout was unusable.
     yourScouts() {
         const ag = GameState.agency;
         if (!ag.scouts.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-user-plus"></i></div><div class="empty__title">${I18n.t('scouting.noScouts')}</div><div class="empty__hint">${I18n.t('scouting.noScoutsSub')}</div><button class="btn btn--accent-outline btn--sm empty__cta" onclick="ScoutingScreen.setTab('market')"><i class="ti ti-user-plus"></i>${I18n.t('scouting.hireScout')}</button></div>`;
-        const hc = GameState.homeCountry || 'Netherlands';
-        const homeRegions = regionsForCountry(hc);
-        const hasLic = Agency.hasIntlLicence();
+        const sep = `<span style="color:var(--text-chevron)">·</span>`;
         return `<p class="hint" style="margin-bottom:var(--space-4)">${I18n.t('scouting.scoutsIntro')}</p>` +
             ag.scouts.map(s => {
-                const scope = s.league ? `${(COMPETITIONS[s.league] || {}).name || s.league} · ${s.country}` : s.region ? regionName(s.region) : I18n.t('scouting.unassigned');
-                const regionOpts = homeRegions.map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${UI.esc(r.name)} — ${UI.euro(Scouts.regionReportCost(r.id))}${I18n.t('scouting.perReport')}</option>`).join('');
-                const intl = hasLic ? (() => {
-                    const countries = Scouts.intlCountries();
-                    const selC = (s.country && countries.includes(s.country)) ? s.country : countries[0];
-                    return `<select class="select-input" id="intlC_${s.id}" onchange="ScoutingScreen.onIntlCountry('${s.id}')">${countries.map(c => `<option value="${c}" ${selC === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
-                        <select class="select-input" id="intlL_${s.id}" style="margin-top:var(--space-2)">${this.intlLeagueOptions(selC, s.league, s.quality)}</select>
-                        <button class="btn btn--accent-outline btn--sm" style="margin-top:var(--space-2);width:auto" onclick="ScoutingScreen.assignLeague('${s.id}')">${I18n.t('scouting.sendAbroad')}</button>`;
-                })() : `<p class="hint">${I18n.t('scouting.needLicence')}</p>`;
-                return `<div class="card" style="margin-bottom:var(--space-3)">
-                    <div class="flex-row" style="justify-content:space-between">
-                        <div><div class="row-title">${UI.esc(s.name)}</div><div class="row-sub">${s.title} · ${scope}</div></div>
+                const on = !!(s.region || s.league);
+                const contract = ScoutCard.contractText(s);
+                return `<a href="${Router.link('scout', s.id)}" class="cl-card" style="display:block" data-scout-row="${s.id}">
+                    <div class="flex-row">
+                        <div style="flex:1;min-width:0">
+                            <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.esc(s.name)}</span>${s.age != null ? `<span style="font-size:var(--fs-sm);color:var(--text-faint)">${s.age}y</span>` : ''}</div>
+                            <div class="cl-sub">${UI.esc(ScoutCard.title(s))}</div>
+                            <div class="cl-sub">${UI.esc(ScoutCard.statusText(s))}</div>
+                            <div class="cl-sub" style="color:var(--text-faint)">${UI.euro(s.weeklyCost)}/wk ${sep} ${on ? I18n.t('sc.nextReportIn', { n: s.weeksUntilFind }) : I18n.t('sc.noAssignment')}${contract ? ` ${sep} ${contract}` : ''}</div>
+                        </div>
                         ${UI.abilityBadge(s.quality)}
                     </div>
-                    <div class="info-grid" style="margin:var(--space-3) 0">
-                        <div class="info"><span>${I18n.t('scouting.wage')}</span><b>${UI.euro(s.weeklyCost)}/wk</b></div>
-                        <div class="info"><span>${I18n.t('scouting.nextReport')}</span><b>${(s.region || s.league) ? '~' + s.weeksUntilFind + 'w' : I18n.t('scouting.idle')}</b></div>
-                    </div>
-                    <label class="field-label">${I18n.t('scouting.homeRegion')}</label>
-                    <select class="select-input" id="rg_${s.id}">${regionOpts}</select>
-                    <div class="flex-row" style="margin:var(--space-2) 0 var(--space-3)">
-                        <button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ScoutingScreen.assignRegion('${s.id}')">${s.region ? I18n.t('scouting.reassign') : I18n.t('scouting.assign')}</button>
-                        <button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.viewSelectedRegion('${s.id}')"><i class="ti ti-eye"></i>${I18n.t('scouting.viewClubs')}</button>
-                    </div>
-                    <label class="field-label">${I18n.t('scouting.international')}</label>${intl}
-                    <label class="field-label">${I18n.t('scouting.maxAge')}</label>
-                    <select class="select-input" onchange="ScoutingScreen.setAge('${s.id}',this.value)">${[15, 16, 17, 18, 19, 20, 21, 22].map(a => `<option value="${a}" ${(s.maxTalentAge || 22) === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
-                    <label class="field-label">${I18n.t('scouting.targetPos')}</label>
-                    <select class="select-input" onchange="ScoutingScreen.setPos('${s.id}',this.value)"><option value="" ${!s.targetPos ? 'selected' : ''}>${I18n.t('scouting.anyPosition')}</option>${(typeof POS_LIST !== 'undefined' ? POS_LIST : []).map(pos => `<option value="${pos}" ${s.targetPos === pos ? 'selected' : ''}>${pos}</option>`).join('')}</select>
-                    <label class="field-label">${I18n.t('scouting.targetLevel')} <span class="muted" style="font-weight:400">${I18n.t('scouting.targetLevelHint')}</span></label>
-                    <select class="select-input" onchange="ScoutingScreen.setTier('${s.id}',this.value)">${Object.entries(Scouts.TIERS).map(([k, t]) => `<option value="${k}" ${(s.targetTier || 'any') === k ? 'selected' : ''}>${Scouts.tierLabel(k)}</option>`).join('')}</select>
-                    <div class="flex-row" style="margin-top:var(--space-3)">
-                        ${(s.region || s.league) ? `<button class="btn btn--ghost btn--sm" style="width:auto" onclick="ScoutingScreen.setIdle('${s.id}')"><i class="ti ti-x"></i>${I18n.t('scouting.setIdle')}</button>` : ''}
-                        <button class="btn btn--danger btn--sm" style="width:auto" onclick="ScoutingScreen.release('${s.id}')">${I18n.t('agency.release')}</button>
-                    </div>
-                </div>`;
+                </a>`;
             }).join('') + `<div id="actionResult"></div>`;
     },
     intlLeagueOptions(country, selectedDiv, scoutQuality) {
@@ -97,36 +75,16 @@ const ScoutingScreen = {
             return `<option value="${d}" ${selectedDiv === d ? 'selected' : ''} ${tooLow ? 'disabled' : ''}>${(COMPETITIONS[d] || {}).name || d} — ${UI.euro(Scouts.intlLeagueCost(d))}${I18n.t('scouting.perReport')} · ${I18n.t('scouting.needsQ', { q: minQ })}${tooLow ? ' 🔒' : ''}</option>`;
         }).join('');
     },
-    onIntlCountry(scoutId) {
-        const c = document.getElementById('intlC_' + scoutId), l = document.getElementById('intlL_' + scoutId);
-        const s = GameState.agency.scouts.find(x => x.id === scoutId);
-        if (c && l) l.innerHTML = this.intlLeagueOptions(c.value, null, s ? s.quality : null);
-    },
-    assignLeague(scoutId) {
-        const c = document.getElementById('intlC_' + scoutId), l = document.getElementById('intlL_' + scoutId);
-        if (!c || !l) return;
-        const r = Scouts.assignLeague(scoutId, c.value, l.value); GameState.save(); Router.refresh();
-        Router.result(r.message, r.ok ? 'ok' : 'bad');
-    },
-    assignRegion(scoutId) {
-        const sel = document.getElementById('rg_' + scoutId); if (!sel) return;
-        const r = Scouts.assignRegion(scoutId, sel.value); GameState.save(); Router.refresh();
-        Router.result(r.message, r.ok ? 'ok' : 'bad');
-    },
-    // deliberately does NOT refresh the screen: a full re-render would snap any *other*
-    // pending dropdown (e.g. the region select) back to its last-saved value
-    setAge(scoutId, age) { Scouts.setMaxAge(scoutId, +age); GameState.save(); },
-    setPos(scoutId, pos) { Scouts.setPos(scoutId, pos); GameState.save(); },
-    setTier(scoutId, tier) { Scouts.setTier(scoutId, tier); GameState.save(); },
-    setIdle(scoutId) { const r = Scouts.setIdle(scoutId); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
-    release(scoutId) { Scouts.release(scoutId); GameState.save(); Router.refresh(); },
+    // Assigning, briefing, recalling and releasing all moved to the scout card
+    // (ui/js/screen-scout.js). intlLeagueOptions and showRegionClubs stay because the card
+    // and the Hire tab's region table both still render through them.
 
     // ---------------- Hiring market ----------------
     market() {
         const cat = Scouts.market();
         const rows = cat.map(o => `<div class="card" style="margin-bottom:var(--space-3)" data-scout="${o.id}">
             <div class="flex-row" style="justify-content:space-between">
-                <div><div class="row-title">${UI.esc(o.name)}</div><div class="row-sub">${o.title}</div></div>
+                <div><div class="row-title">${UI.esc(o.name)}</div><div class="row-sub">${UI.esc(ScoutCard.title(o))}</div></div>
                 ${UI.abilityBadge(o.quality)}
             </div>
             <div class="info-grid" style="margin:var(--space-3) 0">
@@ -153,7 +111,6 @@ const ScoutingScreen = {
             <div style="max-height:60vh;overflow-y:auto">${rows}</div>
             <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
     },
-    viewSelectedRegion(scoutId) { const sel = document.getElementById('rg_' + scoutId); if (sel) this.showRegionClubs(sel.value); },
     hire(o) { const r = Scouts.hire(o); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }
 };
 Router.register('scouting', { isMain: true, title: () => I18n.t('nav.scouting'), render(el) { ScoutingScreen.render(el); } });

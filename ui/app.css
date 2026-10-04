@@ -204,6 +204,9 @@ button { font-family: inherit; }
 .field-label { display: block; font-size: var(--fs-sm); font-weight: var(--weight-semibold); color: var(--text-secondary); margin: var(--space-4) 0 6px; }
 .text-input, .select-input { width: 100%; box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: 11px 12px; font-size: var(--fs-lg); color: var(--text); font-family: var(--font); }
 .select-input { appearance: none; }
+/* Matches .btn:disabled, which already greys out. Without this a locked dropdown (the scout
+   card's brief while he is out on assignment) looked identical to an editable one. */
+.text-input:disabled, .select-input:disabled { opacity: .45; cursor: default; }
 
 /* ---------- Tap-to-type slider values (ui-helpers.js) ---------- */
 .editable-val { cursor: pointer; border-bottom: 1px dotted var(--text-chevron); }
