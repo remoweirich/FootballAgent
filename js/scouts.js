@@ -51,6 +51,17 @@ const Scouts = {
 
     scoutName() {
         const hc = (typeof GameState !== 'undefined' && GameState.homeCountry) || 'Netherlands';
+        // A created country supplies its own scouts (Customize > Add names). Without this the
+        // market falls back to the Dutch pool, so an Austrian agency hires Sem Visser and Piet Bakker.
+        const made = (typeof WorldExt !== 'undefined' && WorldExt.created && WorldExt.created[hc]);
+        const own = made && made.names && made.names.scouts;
+        if (own && own.length) return own[Math.floor(Rng.next() * own.length)];
+        // no scout list given: build one from the country's own player-name pools rather than
+        // reaching for another country's scouts
+        const pool = made && made.names;
+        if (pool && (pool.first || []).length && (pool.last || []).length)
+            return pool.first[Math.floor(Rng.next() * pool.first.length)] + ' ' +
+                pool.last[Math.floor(Rng.next() * pool.last.length)];
         const set = SCOUT_NAMES[hc] || SCOUT_NAMES.Netherlands;
         return set.first[Math.floor(Rng.next() * set.first.length)] + ' ' +
             set.last[Math.floor(Rng.next() * set.last.length)];

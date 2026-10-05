@@ -1012,10 +1012,31 @@ const CustomizeScreen = {
             <button class="btn btn--primary cx-wide cx-menu" data-act="buildleague" data-id="${UI.esc(country)}"><i class="ti ti-sitemap"></i><span>${I18n.t('customize.buildLeague')}</span></button>
             <button class="btn btn--ghost cx-wide cx-menu" data-act="editnames" data-id="${UI.esc(country)}"><i class="ti ti-abc"></i><span>${I18n.t('customize.addNames')}</span></button>
             <button class="btn btn--ghost cx-wide cx-menu" data-act="regions" data-id="${UI.esc(country)}"><i class="ti ti-map-2"></i><span>${I18n.t('customize.scoutingRegions')}${hasRegions ? ' ✓' : ''}</span></button>
+            ${this._euroStandIns(cc)}
             <button class="btn btn--ghost cx-wide" style="margin-top:12px" data-act="exportcountry" data-id="${UI.esc(country)}"><i class="ti ti-download"></i> ${I18n.t('customize.exportCountry')}</button>`;
         this._screen(country, body, () => this.addCountryHome());
         this._delegate();
         this._explain('countryMenu', I18n.t('customize.explainCountryMenu'));
+    },
+    // Until a country is built, the European competitions field stand-in clubs for it (the pooled
+    // ranks 10-55 in EUROPE_DATA). Once it exists, europe.js feeds the REAL final table and cup
+    // winner into that association's berths instead — so these names are the clubs the player is
+    // effectively replacing, and worth naming while he is deciding what to call his own.
+    euroStandIns(cc) {
+        if (!cc || !cc.european || typeof EUROPE_DATA === 'undefined') return [];
+        const key = (typeof COUNTRY_EURO_KEY !== 'undefined' && COUNTRY_EURO_KEY[cc.name]) || cc.name;
+        const pool = EUROPE_DATA.pools && EUROPE_DATA.pools[key];
+        if (!pool || !pool.clubs) return [];
+        return pool.clubs.filter(c => !c.real).slice()
+            .sort((a, b) => (b.rep || 0) - (a.rep || 0))
+            .map(c => ({ name: c.name, rep: c.rep }));
+    },
+    _euroStandIns(cc) {
+        const list = this.euroStandIns(cc);
+        if (!list.length) return '';
+        const rows = list.map(c => `<div class="frow"><span class="frow__k">${UI.esc(c.name)}</span><span class="frow__v muted">${I18n.t('agency.eff.rep')} ${c.rep}</span></div>`).join('');
+        return `<div class="cx-note" style="margin-top:14px">${I18n.t('customize.euroStandInsNote', { country: UI.esc(cc.name), n: list.length })}</div>
+            <div class="fcard">${rows}</div>`;
     },
     // ----- league builder (reuses the editor over the created country's own clubs) -----
     buildLeague(country) {
@@ -1131,19 +1152,26 @@ const CustomizeScreen = {
             <textarea id="cxFirst" class="text-input cx-area" rows="7"></textarea>
             <label class="field-label" style="margin-top:10px">${I18n.t('customize.lastNames')} <span class="cx-ncount" id="cxLastN"></span></label>
             <textarea id="cxLast" class="text-input cx-area" rows="7"></textarea>
+            <p class="cx-note" style="margin-top:14px">${I18n.t('customize.scoutNamesNote')}</p>
+            <label class="field-label">${I18n.t('customize.scoutNames')} <span class="cx-ncount" id="cxScoutN"></span></label>
+            <textarea id="cxScout" class="text-input cx-area" rows="5"></textarea>
             <button class="btn btn--primary cx-wide" style="margin-top:14px" data-act="savenames" data-id="${UI.esc(country)}">${I18n.t('common.save')}</button>`;
         this._screen(I18n.t('customize.addNames'), body, () => this.countryMenu(country));
         this._delegate();
         // Set the textarea values in JS (not via innerHTML) so a long list can't be truncated by the
         // HTML parser, and keep the counts live + accurate as the player edits.
         const fe = document.getElementById('cxFirst'), le = document.getElementById('cxLast');
+        const se = document.getElementById('cxScout');
         const upd = () => {
-            const fn = document.getElementById('cxFirstN'), ln = document.getElementById('cxLastN');
+            const fn = document.getElementById('cxFirstN'), ln = document.getElementById('cxLastN'), sn = document.getElementById('cxScoutN');
             if (fn) fn.textContent = '(' + this._nameCount(fe && fe.value) + ')';
             if (ln) ln.textContent = '(' + this._nameCount(le && le.value) + ')';
+            if (sn) sn.textContent = '(' + this._nameCount(se && se.value) + ')';
         };
         if (fe) { fe.value = cc.names.first.join(', '); fe.addEventListener('input', upd); }
         if (le) { le.value = cc.names.last.join(', '); le.addEventListener('input', upd); }
+        // full names, one per line — scouts are named as whole people, not first+last pools
+        if (se) { se.value = ((cc.names && cc.names.scouts) || []).join('\n'); se.addEventListener('input', upd); }
         upd();
         this._explain('editNames', I18n.t('customize.explainNames'));
     },
@@ -1153,6 +1181,7 @@ const CustomizeScreen = {
         const parse = v => String(v || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean);
         cc.names.first = parse((document.getElementById('cxFirst') || {}).value);
         cc.names.last = parse((document.getElementById('cxLast') || {}).value);
+        cc.names.scouts = parse((document.getElementById('cxScout') || {}).value);
         this._toast(I18n.t('customize.namesSaved'));
         this.countryMenu(country);
     },

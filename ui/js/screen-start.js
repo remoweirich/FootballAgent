@@ -274,7 +274,22 @@ const StartScreen = {
         if (!res.ok) { const e = document.getElementById('ssSaveErr'); if (e) e.innerHTML = `<p class="ss-note" style="color:var(--state-bad);margin-top:8px">${UI.esc(res.message)}</p>`; return; }
         await this._doLoadSlot(id);
     },
+    // Deleting a save cannot be undone and the ✕ sits right next to the row you tap to load, so
+    // it asks first and names the save it would remove.
     async deleteSlot(id) {
+        const slots = (typeof GameState !== 'undefined' && GameState.listNamedSaves) ? await GameState.listNamedSaves() : [];
+        const s = slots.find(x => x.id === id) || {};
+        const label = s.name || I18n.t('start.saveDefault');
+        const sub = [s.agency, s.week ? I18n.t('common.weekN', { n: s.week }) : '', s.seasonLabel].filter(Boolean).join(' · ');
+        this._overlay(I18n.t('common.deleteSave'), `
+            <p class="ss-note">${I18n.t('start.confirmDelete', { name: UI.esc(label) })}</p>
+            ${sub ? `<p class="ss-note">${UI.esc(sub)}</p>` : ''}
+            <div class="ss-stack">
+                <button class="ss-btn" onclick="StartScreen.load()">${I18n.t('common.cancel')}</button>
+                <button class="ss-btn ss-btn--primary" onclick="StartScreen._doDeleteSlot('${id}')">${I18n.t('common.delete')}</button>
+            </div>`);
+    },
+    async _doDeleteSlot(id) {
         if (typeof GameState !== 'undefined' && GameState.deleteNamedSave) await GameState.deleteNamedSave(id);
         this.load();   // re-render the list
     },

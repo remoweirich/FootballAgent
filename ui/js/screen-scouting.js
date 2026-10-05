@@ -84,7 +84,7 @@ const ScoutingScreen = {
         const cat = Scouts.market();
         const rows = cat.map(o => `<div class="card" style="margin-bottom:var(--space-3)" data-scout="${o.id}">
             <div class="flex-row" style="justify-content:space-between">
-                <div><div class="row-title">${UI.esc(o.name)}</div><div class="row-sub">${UI.esc(ScoutCard.title(o))}</div></div>
+                <div><div class="row-title">${UI.esc(o.name)}${o.age != null ? ` <span style="font-size:var(--fs-sm);color:var(--text-faint);font-weight:400">${o.age}y</span>` : ''}</div><div class="row-sub">${UI.esc(ScoutCard.title(o))}</div></div>
                 ${UI.abilityBadge(o.quality)}
             </div>
             <div class="info-grid" style="margin:var(--space-3) 0">

@@ -154,6 +154,53 @@ const WorldExt = {
     },
 
     // ---- registration: inject a created country into every runtime global ----
+    // ---- scout-report ladder for a created country ----
+    // What a potential value is WORTH here, in this country's own pyramid, so a scout report reads
+    // "2nd Division · Star" against the clubs the player actually built rather than against the
+    // Dutch ladder that Scouting.tierLabel otherwise falls back to.
+    //
+    //   <division> Star     = the division's best club, minus 2   (you are nearly its best player)
+    //   <division> Regular  = the division's median club          (you belong at its midpoint)
+    //
+    // The international tiers above are the same everywhere (LEAGUE_TIERS.Netherlands), so a
+    // "world-class" verdict means the same thing whatever country you are scouting in.
+    INTL_SUPERSTAR_MIN: 90,
+    INTL_REGULAR_MIN: 85,
+    tierLadder(cc) {
+        const domestic = [];
+        (cc.divIds || []).forEach(div => {
+            const reps = (cc.clubs || []).filter(c => c.division === div && !c.reserve)
+                .map(c => c.reputation).sort((a, b) => a - b);
+            if (!reps.length) return;
+            const best = Math.round(reps[reps.length - 1]);
+            const median = Math.round(reps[Math.floor(reps.length / 2)]);
+            domestic.push({ min: best - 2, comp: div, rank: 'star' });
+            domestic.push({ min: median, comp: div, rank: 'regular' });
+        });
+        // A ladder is read top-down by `pot >= t.min`, so it MUST strictly descend. Reputations are
+        // the player's to set: divisions can overlap, a whole country can be rated 97, and nothing
+        // stops the second tier out-ranking the first. So sort, then force each rung below the one
+        // above rather than trusting the data.
+        //
+        // The international tiers sit above everything and keep their stock values, so "world class"
+        // means the same in every country. Domestic rungs are therefore capped below the
+        // international floor: no domestic league is a better player than an international regular.
+        domestic.sort((a, b) => b.min - a.min);
+        const out = [
+            { min: this.INTL_SUPERSTAR_MIN, rank: 'intlSuperstar' },
+            { min: this.INTL_REGULAR_MIN, rank: 'intlRegular' },
+        ];
+        let ceiling = this.INTL_REGULAR_MIN - 1;
+        for (const t of domestic) {
+            if (ceiling < 1) break;                       // out of room; the rest fold into amateurStar
+            const min = Math.min(Math.round(t.min), ceiling);
+            out.push({ min, comp: t.comp, rank: t.rank });
+            ceiling = min - 1;
+        }
+        out.push({ min: 0, rank: 'amateurStar' });
+        return { elo: 1000, tiers: out, custom: true };
+    },
+
     registerCountry(cc) {
         if (!cc || !cc.name || !cc.divIds) return;
         this.created[cc.name] = cc;
@@ -170,6 +217,11 @@ const WorldExt = {
         cc.divIds.forEach((id, i) => { Clubs.DIV_TIERS[id] = i + 1; Clubs.DIV_NAMES[id] = cc.divNames[i]; });
         // fixed international-scouting cost per division (like the stock leagues' INTL_LEAGUE_COST)
         if (typeof Scouts !== 'undefined') { const intl = [7500, 3300, 2100, 1020]; cc.divIds.forEach((id, i) => { Scouts.INTL_LEAGUE_COST[id] = intl[i]; }); }
+
+        // scout-report ladder, derived from THIS country's clubs (see tierLadder). Without it
+        // Scouting.tierLabel falls through to the Dutch ladder, so a scout would call a 78-potential
+        // prospect an "Eredivisie Star" in a country whose best club might be rep 55 or rep 92.
+        if (typeof LEAGUE_TIERS !== 'undefined') LEAGUE_TIERS[cc.name] = this.tierLadder(cc);
 
         // LEAGUES_DATA entry so staticDivSize / _assertDivisionSizes see the created leagues
         LEAGUES_DATA[cc.name] = {
