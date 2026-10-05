@@ -64,7 +64,7 @@ wrong is far worse than a missing crest.
 
 ---
 
-## 3. The gate is created countries, not the database — **Decided**
+## 3. The gate: the exact created country, matched by fingerprint — **Decided**
 
 Only one thing a database does is structural. `applyDatabase`
 ([js/clubs.js:1561](../js/clubs.js#L1561)) performs exactly four operations:
@@ -74,63 +74,94 @@ Only one thing a database does is structural. `applyDatabase`
 | `db.countries` → `WorldExt.registerCountry()` | injects whole leagues, clubs, regions, name pools | **Yes** |
 | `db.competitions` | competition name / short | No — cosmetic |
 | `db.overrides` → name, colors, logo | club identity | No — cosmetic |
-| `db.overrides` → reputation, division | club standing | No — see below |
+| `db.overrides` → reputation, division | club standing | No — the save's `clubState` is restored *after* the overlay and wins |
 
-Reputation and division look structural but are not: the save stores its own per-club `division`
-and `reputation` in `clubState`, and `_restoreClubState` runs **after** `applyDatabase`, so the
-save's values win either way. A missing database cannot move a club or change its standing.
+`registerCountry` injects into `COMPETITIONS`, `COUNTRY_DIVS`, `ALL_LEAGUE_DIVS`, `LEAGUES_DATA`,
+`Clubs.*`, `REGIONS_BY_COUNTRY`, `Scouts.REGION_REPORT_COST` and `NAMES_DATABASE`. Load an Austria
+save with no Austria at all and every Austrian club id resolves to `undefined`, clients point at
+clubs that do not exist, and `homeCountry` has no regions. Broken outright.
 
-`registerCountry` is the whole problem. It injects into `COMPETITIONS`, `COUNTRY_DIVS`,
-`ALL_LEAGUE_DIVS`, `LEAGUES_DATA`, `Clubs.*`, `REGIONS_BY_COUNTRY`, `Scouts.REGION_REPORT_COST`
-and `NAMES_DATABASE`. Load an Austria save without it and every Austrian club id resolves to
-`undefined`, clients point at clubs that do not exist, `league` holds divisions absent from
-`COMPETITIONS`, and `homeCountry` has no regions, so scouting has nowhere to look. That is not a
-degraded world, it is a broken one.
+### Why "has a country called Austria" is NOT enough
 
-**So the imprint records the created countries the save depends on, not the database identity.**
-`WorldExt.created` is already a live registry of exactly this, so the snapshot gains:
+Club ids for a created country are **positional, not derived from the name**
+([js/world-ext.js:109](../js/world-ext.js#L109)):
 
 ```js
-requiresCountries: Object.keys(WorldExt.created || {}),   // e.g. ["Austria"]
-databaseName: <the db's display name, for the message only>
+id: 'CUS:' + country + ':c' + n      // n counts across CUSTOM_DIV_SPEC
 ```
 
-The load gate is then a content check, not an identity check:
+and `CUSTOM_DIV_SPEC` is fixed at 20 / 20 / 24 / 20 clubs. So **every** Austria anyone ever
+creates has exactly the same 84 club ids, `CUS:Austria:c1` … `c84`, in exactly the same divisions.
+Renaming a club does not change its id.
 
-> **This save needs Austria.** It was started on the database "My World", which adds that country.
-> Import it in Customize, then load the save again.
+The consequence is the dangerous one, and it is worse than a crash:
 
-Consequences, all of them wanted:
+> Two independently built Austrias have **identical ids and different teams**. `CUS:Austria:c7`
+> is Rapid Wien in one and Sturm Graz in another. Load the save against the wrong Austria and
+> nothing errors — every id resolves. The client's career, his club history, the league tables
+> and the honours all silently re-attach to the wrong clubs.
 
-- A database that only renames clubs, recolours them or adds logos produces an **empty**
-  `requiresCountries`, so those saves load anywhere and simply look plain. Cosmetics are ignored,
-  exactly as intended.
-- A save that needs Austria loads on any device that has Austria — whichever database supplied it,
-  and whatever local id that database was given. A player who rebuilt the country under a new
-  database is not locked out of their own career by an id mismatch.
-- The database *name* appears only in the message, as a hint about where to find the country.
+So an existence check is useless as a gate: it always passes. It is precisely the check that would
+let a corrupted career through looking perfectly healthy. (An earlier draft of this document
+proposed exactly that; it was wrong.)
 
-This applies to **every** load path (autosave boot, named slot, imported file), not just import.
-Today a missing database is a silent no-op — `if (db) Clubs.applyDatabase(db)` with a `console.warn`
-— so this fixes a real bug that already exists, independently of export.
+The variance shows up entirely in names, because the structure cannot vary — which is also why
+the lower divisions are where it bites hardest. There is no real-world template for a 24-club
+fourth tier, so two people filling one in will disagree about almost every club, while the ids
+line up perfectly.
 
-### Still a prerequisite: databases have to be able to travel
+### The fingerprint
 
-**There is no whole-database export today.** Customize exports a names-template CSV and a
-per-country JSON, nothing more ([ui/js/screen-customize.js](../ui/js/screen-customize.js),
-`exporttpl` / `exportcountry`). Of those, the per-country JSON is close to what is needed — it is
-the created-country payload — but there is no way to move a database as a unit.
+A save records a hash of the created country's **content**, not the database's identity:
 
-So a country export/import ships with this, or the refusal tells the player to fetch something
-that cannot travel. Because the gate matches on country rather than database id, the existing
-`exportcountry` / `importcountry` pair may be sufficient on its own: the player exports Austria
-from the old device, imports it on the new one, and the save loads. **Confirm that path works
-end to end before building anything heavier** — it may turn a prerequisite into nothing at all.
+```js
+requiresCountries: {
+  Austria: 'c4f1e9…'   // sha-256 (or a cheap 32-bit rolling hash) over the ordered
+                       // id → name pairs, each club's division, and the division ids/names
+}
+```
 
-Keeping databases out of save files is also the better answer for the real-names posture: content
-stays something the player sources, rather than being redistributed inside every shared save.
+Hashed: club `id`, club `name`, club `division`, `divIds`, `divNames`. That is exactly the set
+that determines whether two Austrias are the same world.
 
----
+**Not** hashed, on purpose:
+
+- **logo** and **colors** — cosmetic, and would make a save refuse after a crest import.
+- **reputation** — a different Austria will differ in names anyway, so the hash already catches
+  it. Including reputation would instead lock a player out of their *own* save after editing one
+  club's standing in Customize. Worth a soft warning on load if reputations differ while names
+  match ("club strengths differ from the world this save was made in"), never a refusal — which
+  matches the judgement that different reputations are undesirable but not corrupting.
+
+The hash is recomputed on every save, so editing the world on the device you are playing on can
+never lock you out: the save follows the world it is actually in. Only a *cross-device* mismatch
+is caught, which is the case that matters.
+
+The refusal names the country and the database it came from, because the database name is the
+only thing the player can act on:
+
+> **This save needs the Austria it was created with.** The Austria on this device is a different
+> one — the clubs do not match. Import the country from the database "My World" and try again.
+
+This applies to **every** load path (autosave boot, named slot, imported file). Today a missing
+database is a silent no-op — `if (db) Clubs.applyDatabase(db)` with a `console.warn` — so this
+fixes a real bug that already exists, independently of export.
+
+### Transport: already solved
+
+Customize's existing per-country export writes the whole created country —
+`JSON.stringify(cc)`, clubs, names, divisions, reputations, regions and logos
+([ui/js/screen-customize.js:1064](../ui/js/screen-customize.js#L1064)) — and `importCountry`
+validates and reads it back. A country therefore round-trips **byte-faithfully** between devices,
+which means the fingerprint matches after a transfer, which means there is **no prerequisite to
+build**. Confirm the round trip, then rely on it.
+
+It also means the created country's logos travel with the *country*, even though logos are
+stripped from the save (§2). The common case keeps its crests.
+
+Keeping all of this out of save files remains the right answer for the real-names posture:
+world content stays something the player moves deliberately, not something redistributed inside
+every shared save.
 
 ## 4. The file
 
@@ -143,7 +174,7 @@ One file is one career. Extension `.fam`, named `<agency>-<season>-<date>.fam`.
   "schema": 5,
   "exported": 1759600000000,
   "encoding": "gzip+base64",
-  "requiresCountries": ["Austria"],
+  "requiresCountries": { "Austria": "c4f1e9a2" },
   "databaseName": "My World",
   "game": {
     "agency": "Ferrari & Partners", "manager": "A. Tester",
@@ -155,8 +186,8 @@ One file is one career. Extension `.fam`, named `<agency>-<season>-<date>.fam`.
 ```
 
 The header stays plain so a human — or you, reading a bug report — can see what a file is without
-running it. `requiresCountries` is the gate (§3) and is usually `[]`; `databaseName` is a hint for the
-message only. No overlay is embedded. `payload` is the `_snapshot()` JSON minus `clubLogos`.
+running it. `requiresCountries` is the gate (§3) — a content fingerprint per created country, usually `{}`;
+`databaseName` is a hint for the message only. No overlay is embedded. `payload` is the `_snapshot()` JSON minus `clubLogos`.
 
 **Compression**: `CompressionStream('gzip')`, which Android WebView has had since Chrome 80. The
 WebView updates through Play independently of the OS, so minSdk 24 is not the constraint — but a
@@ -244,9 +275,9 @@ change a number.
 ## 8. Scope
 
 **In:** export current game or named slot; import from Load game as a new slot; the
-created-country imprint and its hard refusal on every load path; whatever is needed to let a
-created country travel (§3 — possibly nothing, if the existing country export/import suffices);
-validation; strings in all seven languages.
+created-country **fingerprint** and its hard refusal on every load path; the soft reputation
+warning; validation; strings in all seven languages. No new transport — Customize's existing
+per-country export/import already moves a country faithfully (§3).
 
 **Out, deliberately:**
 - Cloud or account sync. Different feature, different cost.
@@ -260,10 +291,11 @@ validation; strings in all seven languages.
 
 1. **Move `_download()` to `UI`**, repoint CustomizeScreen. No behaviour change; existing customize
    tests must pass untouched.
-2. **Verify the existing country export/import round-trips a created country** between installs.
-   If it does, the §3 prerequisite costs nothing; if it does not, fix that first.
-3. **The created-country imprint + hard refusal** on every load path. Fixes the silent-broken-world
-   bug that exists today, independently of export.
+2. **Verify the existing country export/import round-trips a created country byte-faithfully**
+   between installs, so a transferred Austria fingerprints identically. If it does, §3 needs no
+   new transport; if it does not, fix that first.
+3. **The fingerprint + hard refusal** on every load path, plus the soft reputation warning. Fixes
+   the silent-wrong-clubs bug that exists today, independently of export.
 4. **Envelope + codec** (`SaveFile.pack()` / `unpack()`), engine-side and headless testable, with
    the plain-encoding fallback and the logo strip.
 5. **Export UI** in Settings.
@@ -282,9 +314,14 @@ Steps 1–3 are worth shipping even if the rest slips: they fix a real bug and a
   the original. Equality of the blob is not the point — the career continuing identically is.
 - **Logos**: `clubLogos` is absent from the payload; a save with 100 of them exports at roughly the
   same size as one with none; `clubNames` / `compNames` survive.
-- **Created-country gate**: a save needing Austria refuses on all three load paths, naming
-  Austria; importing Austria then loads it correctly. It loads whichever database supplied the
-  country, and regardless of that database's local id.
+- **The fingerprint catches a different Austria.** Build two Austrias with the same name and
+  different club names, confirm their club ids are IDENTICAL (they will be), and confirm the save
+  refuses. This is the test the whole section exists for — an id-existence check passes here, so
+  a test that only loads and looks for a crash proves nothing.
+- **The fingerprint accepts the same Austria after a transfer**: export the country, re-import it
+  into a different database with a different id, and the save still loads.
+- **Editing your own world never locks you out**: rename a club mid-save, save, reload — fine.
+- **Reputation differs, names match**: loads, with a warning, not a refusal.
 - **Cosmetic-only database**: a save from a renames/colours/logos database has an EMPTY
   `requiresCountries` and loads on a device with no databases at all — just plain. This is the
   check that proves cosmetics are genuinely ignored.
@@ -303,14 +340,12 @@ somewhere, import it back on the `-PdevId` build — which is exactly the setup 
 
 ## 11. Remaining question
 
-**Existing saves predate the imprint.** They carry `databaseId` but no `requiresCountries`. On a
-device that still has the database nothing changes, and the imprint can simply be back-filled at
-load time from `WorldExt.created` once the overlay has been applied — so it repairs itself before
-it is ever needed, at no cost.
+**Existing saves predate the fingerprint.** They carry `databaseId` but no `requiresCountries`.
+On a device that still has the database, the fingerprint back-fills itself at load time from the
+applied overlay, so it repairs before it is ever needed, at no cost.
 
-The gap is the device that does *not* have the database: there the countries cannot be derived,
-because the thing that would name them is the missing database. The options are to let those
-specific saves through with today's behaviour and a warning, or to refuse on the weaker signal
-(`databaseId` present, database absent) without being able to say which country is missing. I lean
-to refusing with the vaguer message — a broken world is worse than an unhelpful error — but it
-only affects saves made before this ships.
+The gap is the device that does *not* have it: the fingerprint cannot be derived, because the
+thing that would supply it is the missing database. Those saves can only be refused on the weaker
+signal (`databaseId` present, database absent) without naming the country. I lean to refusing
+anyway — a silently wrong career is worse than an unhelpful error — but it only affects saves made
+before this ships.
