@@ -358,6 +358,68 @@ const GameState = {
         Storage.saveGame(state);   // refresh the autosave so Continue/Load sees it as clean too
         return { ok: true, id, overwritten: !!existing, message: existing ? `Overwrote “${nm}”.` : `Saved as “${nm}”.` };
     },
+    // ---- importing an exported .fam ----
+    // Every created country stored on this device, across all databases. The conflict check needs
+    // this rather than WorldExt.created: on the Start screen nothing is loaded, so the live
+    // registry is empty and every country would look installable.
+    async localCountries() {
+        const out = {};
+        if (!Storage.listDatabases) return out;
+        const dbs = await Storage.listDatabases();
+        for (const meta of dbs) {
+            const db = await Storage.getDatabase(meta.id);
+            for (const name in ((db && db.countries) || {})) if (!out[name]) out[name] = db.countries[name];
+        }
+        return out;
+    },
+
+    // Land an unpacked export as a NEW named slot. Never touches the running career — the player
+    // loads it deliberately afterwards. Any created world it carries is written into a database
+    // first, so the slot can be loaded now and after a restart.
+    async importSave(unpacked) {
+        if (!unpacked || !unpacked.ok || !unpacked.state) return { ok: false, error: 'baddata' };
+        if (!Storage.putSlot) return { ok: false, error: 'unavailable' };
+        const state = unpacked.state, world = unpacked.world;
+
+        if (world && Object.keys(world).length) {
+            const plan = SaveFile.planWorld(world, await this.localCountries());
+            // a different country of the same name must refuse: registerCountry skips existing club
+            // ids but overwrites COMPETITIONS, so merging gives local clubs in imported divisions
+            if (plan.conflict.length) return { ok: false, error: 'worldconflict', countries: plan.conflict };
+            if (plan.install.length) {
+                const dbs = await Storage.listDatabases();
+                // keep the save's own database id, so its databaseId still resolves on load
+                const dbId = state.databaseId || ('db' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36));
+                const existing = dbs.find(d => d.id === dbId);
+                if (!existing && dbs.length >= (Storage.MAX_DBS || 5))
+                    return { ok: false, error: 'dbsfull', max: Storage.MAX_DBS || 5 };
+                const db = (existing && await Storage.getDatabase(dbId))
+                    || { id: dbId, name: unpacked.env && unpacked.env.databaseName ? unpacked.env.databaseName : (state.saveName || 'Imported world'), createdAt: Date.now(), overrides: {}, competitions: {}, countries: {} };
+                db.countries = db.countries || {};
+                plan.install.forEach(n => { db.countries[n] = world[n]; });
+                db.updatedAt = Date.now();
+                const okDb = await Storage.putDatabase(dbId, db, { id: dbId, name: db.name, updatedAt: db.updatedAt, countries: Object.keys(db.countries).length });
+                if (!okDb) return { ok: false, error: 'dbwrite' };
+                state.databaseId = dbId;
+            } else if (plan.reuse.length && !state.databaseId) {
+                // the countries are already here under some database; nothing to write
+            }
+        }
+
+        const slots = await Storage.listSlots();
+        if (slots.length >= Storage.MAX_SLOTS) return { ok: false, error: 'slotsfull', max: Storage.MAX_SLOTS };
+        // a name that does not collide with one already on the device
+        const base = (state.saveName || (state.agency && state.agency.name) || 'Imported').trim() || 'Imported';
+        let name = base, n = 2;
+        while (slots.some(s => (s.name || '').toLowerCase() === name.toLowerCase())) name = base + ' (' + (n++) + ')';
+        state.saveName = name;
+        state.namedClean = true;
+        const id = 's' + Date.now().toString(36) + '-' + (++this._slotSeq);
+        const ok = await Storage.putSlot(id, state, this._metaOf(state, name));
+        if (!ok) return { ok: false, error: 'slotwrite' };
+        return { ok: true, id, name, installed: (world && Object.keys(world)) || [] };
+    },
+
     // Load a named slot into the live game AND make it the rolling autosave, so Continue resumes it.
     async loadNamedSave(id) {
         if (!Storage.getSlot) return false;

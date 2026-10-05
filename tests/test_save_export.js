@@ -171,6 +171,89 @@ for (let i = 0; i < 60; i++) run('Sim.advanceWeek();');
     check('it writes plain JSON instead', plain.enc === 'plain' && plain.ok === true);
     check('and unpacks to the same career', plain.same === 'England' && typeof plain.week === 'number');
 
+    // ---------------- import, end to end ----------------
+    console.log('\n-- importing a file lands a new slot --');
+    // a working IndexedDB stand-in, so Storage's slot/database API is exercised for real
+    run(`
+        var MEM = {};
+        Storage._idbGetKey = function (k) { return Promise.resolve(MEM[k] === undefined ? null : MEM[k]); };
+        Storage._idbPutKey = function (k, v) { MEM[k] = JSON.parse(JSON.stringify(v)); return Promise.resolve(true); };
+        Storage._idbDeleteKey = function (k) { delete MEM[k]; return Promise.resolve(true); };
+        Storage.listSlots = async function () { return (await this._idbGetKey(this.SLOT_INDEX)) || []; };
+        Storage.getSlot = async function (id) { return await this._idbGetKey(this.SLOT_PREFIX + id); };
+        Storage.listDatabases = async function () { return (await this._idbGetKey(this.DB_INDEX)) || []; };
+        Storage.getDatabase = async function (id) { return await this._idbGetKey(this.DB_PREFIX + id); };
+        Storage.putDatabase = async function (id, db, meta) {
+            await this._idbPutKey(this.DB_PREFIX + id, db);
+            var idx = await this.listDatabases(); var e = Object.assign({ id: id }, meta);
+            var i = idx.findIndex(function (d) { return d.id === id; });
+            if (i >= 0) idx[i] = e; else idx.push(e);
+            await this._idbPutKey(this.DB_INDEX, idx); return true;
+        };
+        __MEMRESET = function () { for (var k in MEM) delete MEM[k]; };
+    `);
+
+    sb.__file = withCC.text;   // the export that carries Austria
+    const imp = await runAsync('return await GameState.importSave(await SaveFile.unpack(__file));');
+    check('the save lands as a new slot', imp.ok === true && !!imp.id);
+    check('named after the career', typeof imp.name === 'string' && imp.name.length > 0);
+    const stored = await runAsync('return await Storage.getSlot(' + JSON.stringify(imp.id) + ');');
+    check('the slot really holds the career', !!stored && stored.homeCountry === 'England' && Array.isArray(stored.players));
+    const dbs = await runAsync('return await Storage.listDatabases();');
+    check('the world it brought is written to a database, so it survives a restart', dbs.length === 1);
+    const db0 = await runAsync('return await Storage.getDatabase((await Storage.listDatabases())[0].id);');
+    check('...with all 84 Austrian clubs in it', !!(db0 && db0.countries && db0.countries.Austria)
+        && db0.countries.Austria.clubs.length === 84);
+    check('the slot points at that database', stored.databaseId === dbs[0].id);
+
+    // importing must never disturb the running career
+    const liveBefore = run('return JSON.stringify(GameState._snapshot().agency);');
+    await runAsync('return await GameState.importSave(await SaveFile.unpack(__file));');
+    check('the running career is untouched by an import',
+        run('return JSON.stringify(GameState._snapshot().agency);') === liveBefore);
+    const slots2 = await runAsync('return await Storage.listSlots();');
+    check('a second import gets its own name rather than colliding',
+        slots2.length === 2 && slots2[0].name !== slots2[1].name);
+
+    // ---------------- the conflict must refuse ----------------
+    console.log('\n-- a different Austria is refused, not merged --');
+    run('__MEMRESET();');
+    await runAsync(`
+        var other = JSON.parse(JSON.stringify(WorldExt.created['Austria']));
+        other.clubs.forEach(function (c, i) { c.name = 'Someone Else ' + (i + 1); });
+        return await Storage.putDatabase('dbLocal', { id: 'dbLocal', name: 'Mine', countries: { Austria: other } }, { name: 'Mine' });
+    `);
+    const conflict = await runAsync('return await GameState.importSave(await SaveFile.unpack(__file));');
+    check('refused, with the reason and the country named',
+        conflict.ok === false && conflict.error === 'worldconflict' && (conflict.countries || [])[0] === 'Austria');
+    check('nothing was written', (await runAsync('return await Storage.listSlots();')).length === 0);
+    // the check must read STORED databases: on the Start screen nothing is loaded, so comparing
+    // against the live WorldExt.created would have missed this conflict entirely
+    const localSeen = await runAsync('return Object.keys(await GameState.localCountries());');
+    check('local countries are read from stored databases, not the live registry',
+        localSeen.join(',') === 'Austria');
+
+    run('__MEMRESET();');
+    await runAsync(`
+        var same = JSON.parse(JSON.stringify(WorldExt.created['Austria']));
+        return await Storage.putDatabase('dbLocal', { id: 'dbLocal', name: 'Mine', countries: { Austria: same } }, { name: 'Mine' });
+    `);
+    const reuse = await runAsync('return await GameState.importSave(await SaveFile.unpack(__file));');
+    check('an identical world is accepted', reuse.ok === true);
+    check('...without creating a second database',
+        (await runAsync('return await Storage.listDatabases();')).length === 1);
+
+    // ---------------- caps ----------------
+    console.log('\n-- the caps are honoured --');
+    run('__MEMRESET();');
+    await runAsync(`
+        var idx = [];
+        for (var i = 0; i < Storage.MAX_SLOTS; i++) idx.push({ id: 'x' + i, name: 'Filler ' + i });
+        return await Storage._idbPutKey(Storage.SLOT_INDEX, idx);
+    `);
+    const full = await runAsync('return await GameState.importSave(await SaveFile.unpack(__file));');
+    check('a full slot list refuses with slotsfull', full.ok === false && full.error === 'slotsfull');
+
     console.log(failed ? '\n*** FAIL ***' : '\nAll save-export checks passed.');
     process.exit(failed ? 1 : 0);
 })().catch(e => { console.log('FAIL  threw: ' + (e && e.stack || e)); process.exit(1); });

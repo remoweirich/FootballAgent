@@ -192,9 +192,13 @@ const SaveFile = {
     // (a DIFFERENT country of the same name is already registered). A conflict must refuse:
     // registerCountry skips clubs whose ids exist but overwrites COMPETITIONS, so letting one
     // through produces the local world's clubs inside the imported world's divisions.
-    planWorld(world) {
+    //
+    // `localCountries` must be supplied when nothing is loaded — on the Start screen WorldExt.created
+    // is empty, so defaulting to it would report "install" for a country the device already has in a
+    // stored database, and quietly create a second copy.
+    planWorld(world, localCountries) {
         const plan = { install: [], reuse: [], conflict: [] };
-        const local = (typeof WorldExt !== 'undefined' && WorldExt.created) || {};
+        const local = localCountries || (typeof WorldExt !== 'undefined' && WorldExt.created) || {};
         for (const name in (world || {})) {
             if (!local[name]) plan.install.push(name);
             else if (this.sameCountry(local[name], world[name])) plan.reuse.push(name);

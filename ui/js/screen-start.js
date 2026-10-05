@@ -135,7 +135,85 @@ const StartScreen = {
         let rows = auto ? this._slotRow('auto', auto, true) : '';
         slots.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).forEach(s => rows += this._slotRow(s.id, s, false));
         if (!rows) rows = `<p class="ss-empty">${I18n.t('start.noSaves')}</p>`;
-        this._overlay(I18n.t('start.loadGame'), `${rows}<p class="ss-note">${I18n.t('start.loadNote')}</p>`);
+        this._overlay(I18n.t('start.loadGame'), `${rows}<p class="ss-note">${I18n.t('start.loadNote')}</p>
+            <button class="ss-btn" style="margin-top:10px" onclick="StartScreen.importSave()">${I18n.t('start.importSave')}</button>
+            <div id="ssImportMsg"></div>`);
+    },
+
+    // ---- import an exported .fam ----
+    // Lands as a NEW slot; the running career is never touched. <input type="file"> works in this
+    // WebView (Capacitor's bridge supplies onShowFileChooser) — the logo and names importers in
+    // Customize already rely on it.
+    importSave() {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = '.fam,application/json,text/plain';
+        inp.addEventListener('change', () => {
+            const f = inp.files && inp.files[0];
+            if (f) this._readImport(f);
+        });
+        inp.click();
+    },
+    _importMsg(html, cls) {
+        const el = document.getElementById('ssImportMsg');
+        if (el) el.innerHTML = html ? `<div class="result ${cls || 'info'}" style="margin-top:10px">${html}</div>` : '';
+    },
+    _readImport(file) {
+        this._importMsg(I18n.t('start.importReading'));
+        const reader = new FileReader();
+        reader.onerror = () => this._importMsg(I18n.t('start.importUnreadable'), 'bad');
+        reader.onload = async () => {
+            try {
+                const res = await SaveFile.unpack(String(reader.result || ''));
+                if (!res.ok) { this._importMsg(I18n.t('start.importErr.' + res.error) || I18n.t('start.importBad'), 'bad'); return; }
+                this._pending = res;
+                this._previewImport(res);
+            } catch (e) { this._importMsg(I18n.t('start.importBad'), 'bad'); }
+        };
+        reader.readAsText(file);
+    },
+    // Say what is in the file BEFORE it is committed to a slot, including the worlds it brings.
+    _previewImport(res) {
+        const g = (res.env && res.env.game) || {};
+        const needs = (res.env && res.env.needs) || [];
+        const line = (k, v) => v ? `<div class="frow"><span class="frow__k">${k}</span><span class="frow__v">${UI.esc(String(v))}</span></div>` : '';
+        this._overlay(I18n.t('start.importTitle'), `
+            <div class="fcard" style="margin-bottom:10px">
+                ${line(I18n.t('start.importAgency'), g.agency)}
+                ${line(I18n.t('start.importManager'), g.manager)}
+                ${line(I18n.t('start.importCountry'), g.country)}
+                ${line(I18n.t('start.importSeason'), g.season)}
+                ${line(I18n.t('common.weekN', { n: g.week || 0 }), I18n.t('start.importClients', { n: g.clients || 0 }))}
+                ${line(I18n.t('start.importExported'), res.env.exported ? new Date(res.env.exported).toLocaleDateString() : '')}
+                ${needs.length ? line(I18n.t('start.importWorlds'), needs.join(', ')) : ''}
+            </div>
+            ${res.modified ? `<p class="ss-note">${I18n.t('start.importModified')}</p>` : ''}
+            <p class="ss-note">${I18n.t('start.importNote')}</p>
+            <div class="ss-stack">
+                <button class="ss-btn ss-btn--primary" onclick="StartScreen._doImport()">${I18n.t('start.importConfirm')}</button>
+                <button class="ss-btn" onclick="StartScreen.load()">${I18n.t('common.cancel')}</button>
+            </div>`);
+    },
+    async _doImport() {
+        const res = this._pending;
+        if (!res) { this.load(); return; }
+        const r = await GameState.importSave(res);
+        if (!r.ok) {
+            const msg = r.error === 'worldconflict' ? I18n.t('start.importConflict', { countries: (r.countries || []).join(', ') })
+                : r.error === 'dbsfull' ? I18n.t('start.importDbsFull', { max: r.max })
+                    : r.error === 'slotsfull' ? I18n.t('start.importSlotsFull', { max: r.max })
+                        : I18n.t('start.importBad');
+            this._overlay(I18n.t('start.importTitle'), `<p class="ss-note">${msg}</p>
+                <div class="ss-stack"><button class="ss-btn" onclick="StartScreen.load()">${I18n.t('common.close')}</button></div>`);
+            return;
+        }
+        this._pending = null;
+        this._overlay(I18n.t('start.importTitle'), `
+            <p class="ss-note">${I18n.t('start.importDone', { name: UI.esc(r.name) })}</p>
+            <div class="ss-stack">
+                <button class="ss-btn ss-btn--primary" onclick="StartScreen.loadSlot('${r.id}')">${I18n.t('start.importLoadNow')}</button>
+                <button class="ss-btn" onclick="StartScreen.load()">${I18n.t('common.close')}</button>
+            </div>`);
     },
     _slotRow(id, meta, isAuto) {
         const when = this._when(meta.savedAt);
