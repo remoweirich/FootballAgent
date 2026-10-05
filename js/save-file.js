@@ -16,7 +16,11 @@
 // ============================================================
 const SaveFile = {
     FORMAT: 1,
-    EXT: '.fam',
+    // Ends in .json so the platform can resolve a MIME type for it. Android maps an unknown
+    // extension to nothing, which makes the file unselectable in any picker that filters and
+    // leaves the share sheet guessing at application/octet-stream. The ".fam" stays in the name
+    // so a save is still recognisable at a glance; identity is checked from the content anyway.
+    EXT: '.fam.json',
     MAX_BYTES: 25 * 1024 * 1024,   // refuse absurd input before trying to decompress it
 
     // ---- primitives -------------------------------------------------------------------------

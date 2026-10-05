@@ -38,7 +38,18 @@ for (let i = 0; i < 60; i++) run('Sim.advanceWeek();');
     console.log('-- a career survives the round trip --');
     const snap = run('return JSON.stringify(GameState._snapshot());');
     const packed = await runAsync("return await SaveFile.pack(GameState._snapshot(), { app: 'v1.0.26', season: '26/27' });");
-    check('pack succeeds and names a .fam file', packed.ok && /\.fam$/.test(packed.filename));
+    // The extension must end in .json. Android resolves a picker/share MIME type from the LAST
+    // extension; an unknown one (plain ".fam") makes the file unselectable in the import picker,
+    // which is exactly what shipped and had to be fixed.
+    check('pack succeeds and names a .fam.json file', packed.ok && /\.fam\.json$/.test(packed.filename));
+    check('the file-picker accept is unfiltered, or the saved file cannot be chosen', (() => {
+        const src = fs.readFileSync(root + 'ui/js/screen-start.js', 'utf8');
+        const at = src.indexOf('importSave() {');   // the method, not the onclick= in the markup
+        const body = at < 0 ? '' : src.slice(at, at + 900);
+        // Capacitor drops accept entries it cannot map to a MIME type, leaving the rest as a
+        // filter that excludes the save. Anything other than */* re-breaks this.
+        return /inp\.accept\s*=\s*'\*\/\*'/.test(body);
+    })());
     check('the header is readable without decoding the payload',
         packed.env.fam === 1 && packed.env.app === 'v1.0.26' && packed.env.game.agency === 'Export Test'
         && packed.env.game.country === 'England' && typeof packed.env.game.week === 'number');

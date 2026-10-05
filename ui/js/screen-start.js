@@ -147,7 +147,12 @@ const StartScreen = {
     importSave() {
         const inp = document.createElement('input');
         inp.type = 'file';
-        inp.accept = '.fam,application/json,text/plain';
+        // Deliberately unfiltered. Capacitor's BridgeWebChromeClient.getValidTypes() turns each
+        // accept entry into a MIME type via MimeTypeMap and DROPS anything it cannot resolve, so
+        // a ".fam" entry vanishes and the picker is left filtering on the others — against which
+        // a save registers as application/octet-stream and cannot be selected at all.
+        // Validation is by content (SaveFile.unpack), so nothing is lost by accepting everything.
+        inp.accept = '*/*';
         inp.addEventListener('change', () => {
             const f = inp.files && inp.files[0];
             if (f) this._readImport(f);
