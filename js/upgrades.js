@@ -261,17 +261,19 @@ Object.assign(UPGRADE_ART, {
 if (typeof window !== 'undefined') { window.Upgrades = Upgrades; }
 // ===================== Equipment, facilities & staff (non-sequential) =====================
 const EQUIPMENT = [
-    { id: 'resistance_bands', name: 'Resistance Bands', price: 250, dev: 0.5, injury: -0.25, rep: 0, expires: 1 },
+    { id: 'resistance_bands', name: 'Resistance Bands', price: 250, dev: 0.5, injury: -0.25, rep: 0, expiresWeeks: 52 },
     { id: 'dumbbells', name: 'Dumbbells', price: 1000, dev: 0.5, injury: -0.25, rep: 0 },
     { id: 'treadmills', name: 'Treadmills', price: 2500, dev: 0.5, injury: -0.25, rep: 1 },
     { id: 'strength_machine', name: 'Multifunctional Strength Machine', price: 10000, dev: 0.5, injury: -0.25, rep: 1 },
-    { id: 'first_aid', name: 'First-Aid Kit', price: 250, dev: 0, injury: -1, rep: 0, expires: 1 },
+    { id: 'first_aid', name: 'First-Aid Kit', price: 250, dev: 0, injury: -1, rep: 0, expiresWeeks: 52 },
     { id: 'gym', name: 'Gym', price: 2000000, weekly: 15000, dev: 2, injury: -1, rep: 2, facility: true },
     { id: 'pool', name: 'Swimming Pool', price: 4000000, weekly: 35000, dev: 2, injury: -1, rep: 2, facility: true },
     { id: 'training_ground', name: 'Training Ground', price: 10000000, weekly: 80000, dev: 5, injury: 1, rep: 3, facility: true },
     { id: 'medical_center', name: 'Medical Center', price: 10000000, weekly: 120000, dev: 0, injury: -10, rep: 3, facility: true },
 ];
 const STAFF = [
+    // `yearly` is the consumable they keep stocked. It is no longer yearly in the calendar sense —
+    // see facTick: it is replaced the moment it runs out, so employing staff makes the expiry moot.
     { id: 'physio', name: 'Physio', weekly: 2500, dev: 0, injury: -1, rep: 0, max: 5, yearly: 'first_aid', yearlyName: 'First-Aid Kit' },
     { id: 'trainer', name: 'Personal Trainer', weekly: 5000, dev: 1, injury: 0, rep: 1, max: 5, yearly: 'resistance_bands', yearlyName: 'Resistance Bands' },
 ];
@@ -288,9 +290,9 @@ Object.assign(Upgrades, {
         if (this.ownsEquip(id)) return { ok: false, message: this._t('upg.err.alreadyHave', { name: e.name }, 'You already have {name}.') };
         if (GameState.agency.balance < e.price) return { ok: false, message: this._t('upg.err.cantAffordItem', { name: e.name, price: UI.money(e.price) }, 'Not enough cash for {name} (€{price}).') };
         GameState.agency.balance -= e.price; GameState.addFinance('Upgrades', -e.price);
-        this.facState().items.push({ id, expiresSeason: e.expires ? GameState.seasonStartYear + e.expires : null });
+        this.facState().items.push({ id, expiresWeek: e.expiresWeeks ? GameState.absWeek() + e.expiresWeeks : null });
         GameState.addLog(`Bought ${e.name} (€${UI.money(e.price)}).`, 'money');
-        const eff = [e.dev ? `+${e.dev}% development` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% injury risk` : '', e.rep ? `+${e.rep} rep limit` : '', e.expires ? `expires in ${e.expires} year` : ''].filter(Boolean).join(', ');
+        const eff = [e.dev ? `+${e.dev}% development` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% injury risk` : '', e.rep ? `+${e.rep} rep limit` : '', e.expiresWeeks ? `lasts ${e.expiresWeeks} weeks` : ''].filter(Boolean).join(', ');
         return { ok: true, message: this._t('upg.ok.item', { name: e.name, effect: eff }, '{name} added. {effect}.') };
     },
     sellNoteEquip() {},
@@ -301,7 +303,7 @@ Object.assign(Upgrades, {
         if (st[key] >= s.max) return { ok: false, message: this._t('upg.err.staffMax', { max: s.max, name: s.name }, 'You already employ the maximum of {max} {name}s.') };
         st[key] += 1;
         // a freshly hired member brings their yearly consumable straight away
-        if (s.yearly && !this.ownsEquip(s.yearly)) st.items.push({ id: s.yearly, expiresSeason: GameState.seasonStartYear + 1 });
+        if (s.yearly && !this.ownsEquip(s.yearly)) st.items.push({ id: s.yearly, expiresWeek: GameState.absWeek() + this.consumableWeeks(s.yearly) });
         GameState.addLog(this._t('upg.log.hiredStaff', { name: s.name, weekly: UI.money(s.weekly) }, 'Hired a {name} (€{weekly}/wk).'), 'money');
         // The three perks are optional, so each is its own fragment rather than one sentence with
         // holes in it — a language may order or punctuate them differently.
@@ -327,14 +329,37 @@ Object.assign(Upgrades, {
     devSpeedMult() { return 1 + this.facDevBonus() / 100; },
     injuryRiskMult() { return Math.max(0.1, Math.min(2, 1 + this.facInjuryBonus() / 100)); },
 
-    // yearly upkeep: expire lapsed consumables, then let staff restock theirs
-    facRollover() {
+    consumableWeeks(id) { const e = this.equipById(id); return (e && e.expiresWeeks) || 52; },
+    // Weeks left on an owned consumable, or null if it never expires. Old saves stored the season
+    // it lapsed in rather than a week, so those are read back at the season boundary they meant.
+    weeksLeft(id) {
+        const it = this.facState().items.find(x => x.id === id);
+        if (!it) return null;
+        if (it.expiresWeek != null) return Math.max(0, it.expiresWeek - GameState.absWeek());
+        if (it.expiresSeason != null) return Math.max(0, (it.expiresSeason - GameState.seasonStartYear) * 52 + (52 - GameState.week));
+        return null;
+    },
+    _lapsed(it) {
+        if (it.expiresWeek != null) return it.expiresWeek <= GameState.absWeek();
+        if (it.expiresSeason != null) return it.expiresSeason < GameState.seasonStartYear;   // legacy save
+        return false;
+    },
+
+    // Weekly upkeep. These run out 52 weeks after they were BOUGHT rather than at the next season
+    // rollover — buying a kit in week 50 used to give you two weeks of it. Staff replace theirs the
+    // moment it lapses, so while you employ a physio or a trainer the expiry never shows.
+    facTick() {
         const st = this.facState();
-        st.items = st.items.filter(it => it.expiresSeason == null || it.expiresSeason >= GameState.seasonStartYear);
-        const refresh = (cid) => { const ex = st.items.find(it => it.id === cid); if (ex) ex.expiresSeason = GameState.seasonStartYear + 1; else st.items.push({ id: cid, expiresSeason: GameState.seasonStartYear + 1 }); };
+        st.items = st.items.filter(it => !this._lapsed(it));
+        const refresh = (cid) => {
+            if (st.items.some(it => it.id === cid)) return;      // still in date
+            st.items.push({ id: cid, expiresWeek: GameState.absWeek() + this.consumableWeeks(cid) });
+        };
         if (st.physios > 0) refresh('first_aid');
         if (st.trainers > 0) refresh('resistance_bands');
     },
+    // kept for the season rollover; the weekly tick does the work now
+    facRollover() { this.facTick(); },
 });
 
 if (typeof window !== 'undefined') { window.Upgrades = Upgrades; }

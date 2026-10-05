@@ -591,7 +591,8 @@ I18n.register('es', {
     'agency.eff.dev': 'desarr.',
     'agency.eff.injury': 'lesiones',
     'agency.eff.rep': 'rep',
-    'agency.eff.expires': 'caduca en {y} a',
+    'agency.eff.expiresIn': 'quedan {w} sem.',
+    'agency.eff.lastsWeeks': 'dura {w} sem.',
     'agency.eff.restocks': 'repone {name}/año',
 
     // ---- shared (more) ----

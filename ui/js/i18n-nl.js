@@ -583,7 +583,8 @@ I18n.register('nl', {
     'agency.eff.dev': 'groei',
     'agency.eff.injury': 'blessures',
     'agency.eff.rep': 'rep',
-    'agency.eff.expires': 'verloopt in {y} j',
+    'agency.eff.expiresIn': 'nog {w} wk',
+    'agency.eff.lastsWeeks': 'gaat {w} wk mee',
     'agency.eff.restocks': 'vult {name}/jaar aan',
 
     // ---- shared (more) ----

@@ -818,7 +818,7 @@ I18n.register('es', {
     'upg.log.movedOffice': 'Mudanza a {name} (acondicionamiento €{fitOut}, €{weekly}/sem).',
     'upg.log.hiredStaff': '{name} contratado (€{weekly}/sem).',
     'upg.log.releasedStaff': '{name} despedido.',
-    'upg.ok.staffHired': '{name} contratado: €{weekly}/sem. Repone {yearly} cada año{extras}.',
+    'upg.ok.staffHired': '{name} contratado — €{weekly}/sem. Mantiene {yearly} siempre disponible{extras}.',
     'upg.frag.dev': ', +{n}% de desarrollo',
     'upg.frag.injury': ', {n}% de riesgo de lesión',
     'upg.frag.rep': ', +{n} al límite de reputación',

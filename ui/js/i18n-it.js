@@ -583,7 +583,8 @@ I18n.register('it', {
     'agency.eff.dev': 'cresc.',
     'agency.eff.injury': 'infortuni',
     'agency.eff.rep': 'rep',
-    'agency.eff.expires': 'scade in {y} a',
+    'agency.eff.expiresIn': '{w} sett. rimaste',
+    'agency.eff.lastsWeeks': 'dura {w} sett.',
     'agency.eff.restocks': 'rifornisce {name}/anno',
 
     // ---- shared (more) ----

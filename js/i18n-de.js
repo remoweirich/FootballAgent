@@ -796,7 +796,7 @@ I18n.register('de', {
     'upg.log.movedOffice': 'Umzug in {name} (Einrichtung €{fitOut}, €{weekly}/Wo).',
     'upg.log.hiredStaff': '{name} eingestellt (€{weekly}/Wo).',
     'upg.log.releasedStaff': '{name} entlassen.',
-    'upg.ok.staffHired': '{name} eingestellt — €{weekly}/Wo. Sorgt jedes Jahr für neue {yearly}{extras}.',
+    'upg.ok.staffHired': '{name} verpflichtet — €{weekly}/Wo. Sorgt dafür, dass {yearly} nie ausgeht{extras}.',
     'upg.frag.dev': ', +{n}% Entwicklung',
     'upg.frag.injury': ', {n}% Verletzungsrisiko',
     'upg.frag.rep': ', +{n} Reputationsgrenze',

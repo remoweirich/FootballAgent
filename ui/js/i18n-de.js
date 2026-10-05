@@ -577,7 +577,8 @@ I18n.register('de', {
     'agency.eff.dev': 'Entw.',
     'agency.eff.injury': 'Verletzung',
     'agency.eff.rep': 'Ans.',
-    'agency.eff.expires': 'läuft in {y} J. ab',
+    'agency.eff.expiresIn': 'noch {w} Wo.',
+    'agency.eff.lastsWeeks': 'hält {w} Wo.',
     'agency.eff.restocks': 'füllt {name}/Jahr auf',
 
     // ---- shared (more) ----

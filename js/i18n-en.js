@@ -813,7 +813,7 @@ I18n.register('en', {
     'upg.log.movedOffice': 'Moved to {name} (fit-out €{fitOut}, €{weekly}/wk).',
     'upg.log.hiredStaff': 'Hired a {name} (€{weekly}/wk).',
     'upg.log.releasedStaff': 'Released a {name}.',
-    'upg.ok.staffHired': '{name} hired — €{weekly}/wk. They restock {yearly} every year{extras}.',
+    'upg.ok.staffHired': '{name} hired — €{weekly}/wk. They keep {yearly} stocked for you{extras}.',
     'upg.frag.dev': ', +{n}% development',
     'upg.frag.injury': ', {n}% injury risk',
     'upg.frag.rep': ', +{n} rep limit',

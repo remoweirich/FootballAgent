@@ -585,7 +585,8 @@ I18n.register('pt', {
     'agency.eff.dev': 'evol.',
     'agency.eff.injury': 'lesões',
     'agency.eff.rep': 'rep',
-    'agency.eff.expires': 'caduca em {y} a',
+    'agency.eff.expiresIn': 'faltam {w} sem.',
+    'agency.eff.lastsWeeks': 'dura {w} sem.',
     'agency.eff.restocks': 'repõe {name}/ano',
 
     // ---- shared (more) ----

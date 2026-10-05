@@ -825,7 +825,7 @@ I18n.register('nl', {
     'upg.log.movedOffice': 'Verhuisd naar {name} (inrichting €{fitOut}, €{weekly}/wk).',
     'upg.log.hiredStaff': '{name} aangenomen (€{weekly}/wk).',
     'upg.log.releasedStaff': '{name} ontslagen.',
-    'upg.ok.staffHired': '{name} aangenomen — €{weekly}/wk. Vult elk jaar {yearly} aan{extras}.',
+    'upg.ok.staffHired': '{name} aangenomen — €{weekly}/wk. Houdt {yearly} altijd op voorraad{extras}.',
     'upg.frag.dev': ', +{n}% ontwikkeling',
     'upg.frag.injury': ', {n}% blessurerisico',
     'upg.frag.rep': ', +{n} reputatiegrens',

@@ -240,6 +240,11 @@ const Sim = {
         this._morale(events);
         this._moraleCases(events);
 
+        // ---- facilities ----
+        // consumables run out 52 weeks after purchase, so this is weekly now rather than only at
+        // the season rollover; staff restock theirs the moment it lapses
+        Upgrades.facTick();
+
         // ---- scouts ----
         this._scoutLicence(events);   // enforce the International Scouting Licence (warn/fine/suspend) before scouts work
         // birthdays first: a scout who retires this week does not then file a report

@@ -141,7 +141,12 @@ const AgencyScreen = {
     equipCards() {
         return EQUIPMENT.map(e => {
             const owned = Upgrades.ownsEquip(e.id);
-            const eff = [e.dev ? `+${e.dev}% ${I18n.t('agency.eff.dev')}` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% ${I18n.t('agency.eff.injury')}` : '', e.rep ? `+${e.rep} ${I18n.t('agency.eff.rep')}` : '', e.weekly ? `${UI.euro(e.weekly)}/wk` : '', e.expires ? I18n.t('agency.eff.expires', { y: e.expires }) : ''].filter(Boolean).join(' · ');
+            // an owned consumable counts down the weeks it has left; an unowned one advertises its term
+            const left = e.expiresWeeks ? (owned ? Upgrades.weeksLeft(e.id) : null) : null;
+            const expiry = !e.expiresWeeks ? ''
+                : owned && left != null ? I18n.t('agency.eff.expiresIn', { w: left })
+                    : I18n.t('agency.eff.lastsWeeks', { w: e.expiresWeeks });
+            const eff = [e.dev ? `+${e.dev}% ${I18n.t('agency.eff.dev')}` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% ${I18n.t('agency.eff.injury')}` : '', e.rep ? `+${e.rep} ${I18n.t('agency.eff.rep')}` : '', e.weekly ? `${UI.euro(e.weekly)}/wk` : '', expiry].filter(Boolean).join(' · ');
             return `<div class="card">
                 <div class="flex-row" style="justify-content:space-between">
                     <div class="flex-row" style="gap:10px">
