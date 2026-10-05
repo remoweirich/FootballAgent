@@ -68,10 +68,10 @@ const ClientsScreen = {
         const info = p.clubId ? UI.currentClubInfo(p) : null;
         const teamHTML = info ? (info.tag ? `<span style="color:var(--info-text)">${UI.esc(info.name)} (${info.tag})</span>` : info.name) : I18n.t('common.freeAgent');
         return `<a href="#client/${p.id}" class="cl-card">
-            <div class="flex-row">
+            <div class="flex-row" data-wt="cl-general">
                 <div style="flex:1;min-width:0">
                     <div class="flex-row" style="gap:6px">
-                        <span class="cl-name" data-wt="cl-general">${UI.flag(p.nationality)} ${UI.esc(p.name)}</span>
+                        <span class="cl-name">${UI.flag(p.nationality)} ${UI.esc(p.name)}</span>
                         <span style="font-size:var(--fs-sm);color:var(--text-faint)">${p.age}y</span>
                         ${r.hasOffer ? '<i class="ti ti-currency-euro" style="font-size:14px;color:var(--accent)"></i>' : ''}
                         ${p.injury ? '<i class="ti ti-bandage" style="font-size:14px;color:var(--danger)"></i>' : ''}

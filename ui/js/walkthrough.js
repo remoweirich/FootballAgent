@@ -45,7 +45,7 @@ const Walkthrough = {
         if (typeof Router !== 'undefined') Router.go('home');
         // let the home render settle before measuring the first target
         setTimeout(() => this._show(), 60);
-        this._tick = setInterval(() => this._position(), 220);
+        this._tick = setInterval(() => { this._autoMin(); this._position(); }, 220);
     },
 
     // Leave the tutorial: put the player's own game back exactly as it was, then land on Home.
@@ -101,7 +101,7 @@ const Walkthrough = {
         // hand the player an upgraded office and a garage in his brand-new game.
         G.agency = Object.assign(JSON.parse(JSON.stringify(this._saved.agency || {})), {
             balance: 1850000,
-            reputation: 80,
+            reputation: 82,
             homeCountry: 'England',
             scouts: [],
             // A fixed shortlist instead of the random catalogue. Wages come from the game's own
@@ -363,7 +363,13 @@ const Walkthrough = {
         { key: 'wt.inbox.intro', target: '[data-wt="inbox-list"]' },
         {
             key: 'wt.inbox.read', target: '[data-wt="inbox-list"]',
+            // The card sits over the screen, so it tucks itself away while a mail is open and comes
+            // back when he returns to the list — otherwise it covers the second mail he is told to read.
+            autoMin: () => /^#?mail\//.test(location.hash || ''),
+            // ...and only advance once he is back on the LIST with both read. Advancing while still
+            // inside the second mail put the next step's "go back" prompt on top of what he was reading.
             until: () => GameState.inbox.length > 0 && GameState.inbox.every(m => m.read)
+                && !/^#?mail\//.test(location.hash || '')
         },
         { key: 'wt.inbox.back', target: '.push-bar__back', tap: true },
 
@@ -379,16 +385,9 @@ const Walkthrough = {
 
         // ---------------- Client detail: overview ----------------
         { key: 'wt.client.overview' },
-        { key: 'wt.client.transferList', target: 'button[onclick*="toggleTL"]' },
         { key: 'wt.client.shop', target: 'button[onclick*="openShop"]' },
-        { key: 'wt.client.loan', target: 'button[onclick*="reqLoan"]' },
         { key: 'wt.client.youth', target: 'button[onclick*="sendU21"]', place: 'above' },
         { key: 'wt.client.chat', target: 'button[onclick*="checkIn"]' },
-        { key: 'wt.client.renew', target: 'button[onclick*="reqRenewal"]' },
-
-        // ---------------- Potential ----------------
-        { key: 'wt.client.toPotential', target: 'button.tab[onclick*="\'potential\'"]', tap: true },
-        { key: 'wt.client.potential' },
 
         // ---------------- Morale ----------------
         { key: 'wt.client.toMorale', target: 'button.tab[onclick*="\'morale\'"]', tap: true },
@@ -399,16 +398,11 @@ const Walkthrough = {
         { key: 'wt.client.toInjuries', target: 'button.tab[onclick*="\'injuries\'"]', tap: true },
         { key: 'wt.client.injuries' },
 
-        // ---------------- Contract ----------------
-        { key: 'wt.client.toContract', target: 'button.tab[onclick*="\'contract\'"]', tap: true },
-        { key: 'wt.client.contract' },
-
         // ---------------- Back to the list ----------------
         { key: 'wt.client.back', target: '.push-bar__back', tap: true },
         { key: 'wt.clients.filters', go: 'clients', target: '[data-wt="cl-filters"]' },
         { key: 'wt.clients.sort', target: 'button[onclick*="pickSort"]' },
         { key: 'wt.clients.history', target: 'a.gbtn[href="#clienthist"]' },
-        { key: 'wt.clients.bestxi', target: 'a.gbtn[href="#bestxi"]' },
         { key: 'wt.clients.outro' },
 
         // ---------------- Scouting: hire and post a scout ----------------
@@ -416,17 +410,17 @@ const Walkthrough = {
         { key: 'wt.scout.empty' },
         { key: 'wt.scout.toHire', target: 'button.tab[onclick*="\'market\'"]', tap: true },
         { key: 'wt.scout.list' },
-        { key: 'wt.scout.regions', target: '[data-wt="scout-regions"]' },
+        { key: 'wt.scout.regions', target: '[data-wt="scout-regions"]', scrollTo: true },
         { key: 'wt.scout.hireGemma', target: '[data-scout="wt_harris"] button', tap: true, scrollTo: true },
         // Hiring opens the contract negotiation. Without a step here the tour fences the player
         // behind the sheet: #wtLayer sits at z-index 150, above .sheet-backdrop at 100, so the
         // next target would be unreachable underneath it.
-        { key: 'wt.scout.contract', target: '.sheet .btn--primary', tap: true },
-        { key: 'wt.scout.toYours', target: 'button.tab[onclick*="\'scouts\'"]', tap: true },
+        { key: 'wt.scout.contract', target: '.sheet .btn--primary', tap: true, gate: 'scoutTerm18' },
+        { key: 'wt.scout.toYours', target: 'button.tab[onclick*="\'scouts\'"]', tap: true, scroll: 'top' },
         // Orders live on the scout card now, not inline on the list, so the tour has to open it.
         { key: 'wt.scout.openCard', target: 'a[data-scout-row="wt_harris"]', tap: true, scrollTo: true },
         {
-            key: 'wt.scout.assign',
+            key: 'wt.scout.assign', gate: 'scoutBrief',
             until: () => (GameState.agency.scouts || []).some(s => s.region === 'west-midlands')
         },
         { key: 'wt.scout.brief', before: () => Walkthrough._briefGemma() },
@@ -460,9 +454,9 @@ const Walkthrough = {
             before: () => { if (typeof ScoutingScreen !== 'undefined') ScoutingScreen.tab = 'finds'; }
         },
         { key: 'wt.found.tapWayne', target: 'a.cl-card[href*="wt_wayne"]', tap: true },
-        { key: 'wt.wayne.card', place: 'below', anchor: 'button[onclick*="openSign"]' },
+        { key: 'wt.wayne.card', place: 'bottom' },
         { key: 'wt.wayne.toPotential', target: 'button.tab[onclick*="\'potential\'"]', tap: true },
-        { key: 'wt.wayne.potential' },
+        { key: 'wt.wayne.potential', place: 'bottom' },
         { key: 'wt.wayne.offerRep', target: 'button[onclick*="openSign"]', tap: true },
         {
             key: 'wt.wayne.neg1', target: 'button[onclick*="proposeSign"]', place: 'top',
@@ -561,11 +555,33 @@ const Walkthrough = {
     // values the narration can interpolate
     vars() {
         const ag = (typeof GameState !== 'undefined' && GameState.agency) || {};
-        return { agency: ag.name || 'your agency' };
+        const t = k => (typeof I18n !== 'undefined' && I18n.t) ? I18n.t(k) : k;
+        return {
+            agency: ag.name || 'your agency',
+            // Real control labels, so an instruction can never name a button that does not exist.
+            // These drifted in German: the tour said "Anheuern" where the tab reads "Anwerben" and
+            // the button reads "Anstellen". Interpolating them makes that impossible to repeat.
+            tabHire: t('scouting.tab.market'),
+            btnHire: t('agency.hire'),
+            btnSetAssignment: t('sc.setAssignment'),
+        };
     },
 
     // ---- step machinery --------------------------------------------------------------------
     step() { return this._steps[this._i]; },
+
+    // Some steps teach by doing: the confirm button stays disabled until the player has actually
+    // set what the narration asked for. The screens ask here rather than importing step keys.
+    //
+    // The NEXT step counts too. A gated control is usually created by the tap that advances into
+    // the gated step — the hire sheet is built while "tap Hire" is still current — so checking
+    // only the current step renders the button ungated and the gate never bites.
+    gating(name) {
+        if (!this._active) return false;
+        const cur = this._steps && this._steps[this._i];
+        const next = this._steps && this._steps[this._i + 1];
+        return !!((cur && cur.gate === name) || (next && next.gate === name));
+    },
 
     next() {
         if (!this._active) return;
@@ -582,10 +598,11 @@ const Walkthrough = {
         }
         if (typeof s.before === 'function') { try { s.before(); } catch (e) { /* never block the tour */ } }
         if (s.scrollTo) this._scrollIntoView(s.target);
-        if (s.scroll === 'bottom') {
+        if (s.scroll === 'bottom' || s.scroll === 'top') {
             const scr = document.querySelector('.screen');
-            if (scr) scr.scrollTo({ top: scr.scrollHeight, behavior: 'smooth' });
+            if (scr) scr.scrollTo({ top: s.scroll === 'top' ? 0 : scr.scrollHeight, behavior: 'smooth' });
         }
+        this._autoMinWas = null;   // re-evaluate the auto-minimise for the new step
         this._awaitTarget(s, 0);
     },
 
@@ -648,6 +665,7 @@ const Walkthrough = {
     _paint() {
         const l = this._layer(), s = this.step(); if (!s) return;
         this._min = false;                       // every new step arrives open, ready to be read
+        this._autoMinWas = null;
         l.querySelector('.wt-text').innerHTML = I18n.t(s.key, this.vars());
         l.querySelector('.wt-skip').textContent = I18n.t('wt.skip');
         l.querySelector('.wt-hide').textContent = I18n.t('wt.hide');
@@ -665,6 +683,17 @@ const Walkthrough = {
 
     // Tucking the card away to a handle on the right is what makes the tour usable: you can read
     // the step, put it aside, look at (or work with) whatever it just described, then bring it back.
+    // A step may ask to tuck the card away while the player is somewhere it would be in the way
+    // (reading a mail). Fired on the TRANSITION only, so he can still expand it by hand and it
+    // will not fight him on the next tick.
+    _autoMin() {
+        const s = this.step(); if (!s || typeof s.autoMin !== 'function') return;
+        let want = false;
+        try { want = !!s.autoMin(); } catch (e) { return; }
+        if (want === this._autoMinWas) return;
+        this._autoMinWas = want;
+        this._min = want;
+    },
     collapse() { if (!this._active) return; this._min = true; this._position(); },
     expand() { if (!this._active) return; this._min = false; this._position(); },
 

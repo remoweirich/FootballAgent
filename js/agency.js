@@ -165,7 +165,18 @@ const Agency = {
         return give;
     },
 
-    bumpRep(d) { const a = GameState.agency; a.reputation = Math.max(0, Math.min(this.repLimit(), a.reputation + d)); return a.reputation; },
+    // The office/vehicle/property limit caps how far reputation can GROW — it must not drag an
+    // already-higher reputation down to it. It used to: `min(limit, rep + d)` meant that if
+    // reputation ever sat above the cap, the next +0.05 slammed it to the limit in one step. That
+    // is reachable in the real game (downgrade an office) and it broke the tutorial outright, where
+    // an established agency on 80 collapsed to its office cap the moment the player accepted a
+    // sponsor, and could then no longer sign the prospect the tour hands him.
+    bumpRep(d) {
+        const a = GameState.agency, lim = this.repLimit();
+        const next = d >= 0 ? Math.min(Math.max(a.reputation, lim), a.reputation + d) : a.reputation + d;
+        a.reputation = Math.max(0, next);
+        return a.reputation;
+    },
     atCapacity() { return this.clients().length >= this.capacity(); },
 
     relationship(clubId) { const r = GameState.agency.relationships; if (r[clubId] == null) r[clubId] = 55; return r[clubId]; },

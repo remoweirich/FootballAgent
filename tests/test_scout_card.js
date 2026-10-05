@@ -238,6 +238,49 @@ check('...but he is NOT recalled — the decision stays the player\'s',
 run("GameState.agency.scouts[0].quality = 90; ScoutCard.render(document.getElementById('app'), 'sc_lo');");
 check('a scout who meets the bar gets no warning', !/slipped below/.test(appHTML));
 
+// ---------------- the tutorial's brief gate ----------------
+// The tour asks for one exact brief and the button stays dead until it is set, so the player
+// cannot skim past the step. Only ever active while the tour is on that step.
+console.log('\n-- the brief gate --');
+vm.runInContext(`
+    var __gate = null;
+    Walkthrough = { gating: function (n) { return __gate === n; } };
+    GameState.agency.scouts = [{ id: 'g1', name: 'Gemma', title: 'Chief scout', quality: 75,
+        weeklyCost: 4590, region: null, league: null, weeksUntilFind: 6, maxTalentAge: 22,
+        contractUntil: GameState.absWeek(), history: { ability: [] } }];
+`, sb);
+const g = () => run("return GameState.agency.scouts[0];");
+const blocked = () => run("return ScoutCard.briefBlocked(GameState.agency.scouts[0]);");
+check('off the tour, nothing is ever gated', blocked() === false);
+run("__gate = 'scoutBrief';");
+check('on the step, a default brief is blocked', blocked() === true);
+run("GameState.agency.scouts[0].region = 'west-midlands'; Scouts.setMaxAge('g1', 19); Scouts.setPos('g1', null); Scouts.setTier('g1', 'any');");
+check('the exact brief unblocks it', blocked() === false);
+// each wrong field on its own must still block, or the step teaches nothing
+run("Scouts.setMaxAge('g1', 22);");
+check('...wrong age blocks', blocked() === true);
+run("Scouts.setMaxAge('g1', 19); Scouts.setPos('g1', 'ST');");
+check('...a position blocks', blocked() === true);
+run("Scouts.setPos('g1', null); Scouts.setTier('g1', 'top');");
+check('...a target level blocks', blocked() === true);
+run("Scouts.setTier('g1', 'any'); GameState.agency.scouts[0].region = 'greater-london';");
+check('...the wrong region blocks', blocked() === true);
+run("GameState.agency.scouts[0].region = 'west-midlands';");
+check('and it renders the button disabled', (() => {
+    // Set assignment only exists while he is UNassigned, and the region comes from the dropdown
+    // rather than the scout, so the select has to be there for the gate to read.
+    byId['scRg_g1'] = { value: 'west-midlands' };
+    run("GameState.agency.scouts[0].region = null;");
+    const tag = () => (appHTML.match(/<button[^>]*id="scSet_g1"[^>]*>/) || [''])[0];
+    run("Router.isFreshNav = false; ScoutCard.setTab('g1','assignment'); Scouts.setMaxAge('g1', 22); ScoutCard.render(document.getElementById('app'), 'g1');");
+    const off = /disabled/.test(tag());
+    run("Scouts.setMaxAge('g1', 19); ScoutCard.render(document.getElementById('app'), 'g1');");
+    const on = tag().length > 0 && !/disabled/.test(tag());
+    delete byId['scRg_g1'];
+    return off && on;
+})());
+run("Walkthrough = undefined;");   // leave the scout in place; later checks still use scouts[0]
+
 // ---------------- the tutorial must not be fenced behind the sheet ----------------
 // #wtLayer sits at z-index 150, above .sheet-backdrop at 100, so once the tour's Hire tap opens
 // the negotiation the walkthrough fences everything except its next target — which would be

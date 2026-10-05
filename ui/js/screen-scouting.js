@@ -148,11 +148,16 @@ const ScoutingScreen = {
                 <span class="frow__v" style="${on ? 'color:var(--accent-text)' : ''}">${UI.euro(wage)}/wk <span class="muted" style="font-weight:400">· ${UI.euro(wage * t.weeks)}</span></span>
             </button>`;
         }).join('');
+        // During the tutorial's contract step the player is asked for a specific term, and Hire
+        // stays dead until he picks it — the point of the step is that he changes the default.
+        const gated = typeof Walkthrough !== 'undefined' && Walkthrough.gating && Walkthrough.gating('scoutTerm18');
+        const blocked = gated && sel !== 78;
         return `<div class="fcard" style="margin-bottom:var(--space-3)">${rows}</div>
             <p class="hint">${I18n.t('scouting.contractExplainer')}</p>
+            ${blocked ? `<p class="hint" style="color:var(--accent-text)">${I18n.t('scouting.pickTermFirst')}</p>` : ''}
             <div style="display:flex;gap:var(--space-3);margin-top:var(--space-3)">
                 <button class="btn btn--ghost" style="flex:1" onclick="Router.closeSheet()">${I18n.t('common.cancel')}</button>
-                <button class="btn btn--primary" style="flex:1" onclick="ScoutingScreen.confirmHire('${id}')">${I18n.t('agency.hire')}</button>
+                <button class="btn btn--primary" style="flex:1" ${blocked ? 'disabled' : ''} onclick="ScoutingScreen.confirmHire('${id}')">${I18n.t('agency.hire')}</button>
             </div>`;
     },
     confirmHire(id) {

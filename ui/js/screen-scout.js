@@ -178,8 +178,33 @@ const ScoutCard = {
                 ${on
                 ? `<button class="btn btn--accent-outline" style="width:100%" onclick="ScoutCard.recall('${s.id}')"><i class="ti ti-x"></i>${I18n.t('sc.recall')}</button>
                    <p class="hint" style="margin-top:var(--space-2)">${I18n.t('sc.lockedHint')}</p>`
-                : `<button class="btn btn--primary" style="width:100%" onclick="ScoutCard.setAssignment('${s.id}')">${I18n.t('sc.setAssignment')}</button>`}
+                : `<button class="btn btn--primary" style="width:100%" id="scSet_${s.id}" ${this.briefBlocked(s) ? 'disabled' : ''} onclick="ScoutCard.setAssignment('${s.id}')">${I18n.t('sc.setAssignment')}</button>
+                   ${this.briefBlocked(s) ? `<p class="hint" style="margin-top:var(--space-2);color:var(--accent-text)">${I18n.t('sc.briefMustMatch')}</p>` : ''}`}
             </div>`;
+    },
+
+    // The tutorial asks for one exact brief and will not let the player past until he has set it:
+    // West Midlands, nobody over 19, any position, any level. Only ever active during the tour.
+    WT_BRIEF: { region: 'west-midlands', maxTalentAge: 19, targetPos: null, targetTier: null },
+    briefBlocked(s) {
+        if (typeof Walkthrough === 'undefined' || !Walkthrough.gating || !Walkthrough.gating('scoutBrief')) return false;
+        const want = this.WT_BRIEF;
+        // the region is whatever the dropdown currently shows, not what is saved on the scout
+        const sel = (typeof document !== 'undefined') && document.getElementById('scRg_' + s.id);
+        const region = sel ? sel.value : s.region;
+        return region !== want.region
+            || (s.maxTalentAge || 22) !== want.maxTalentAge
+            || (s.targetPos || null) !== want.targetPos
+            || (s.targetTier || null) !== want.targetTier;
+    },
+    // The brief dropdowns save without re-rendering (so a pending select cannot snap back), so the
+    // gated button has to be re-evaluated by hand whenever one of them changes.
+    _syncGate(id) {
+        const s = this.get(id); if (!s) return;
+        const btn = (typeof document !== 'undefined') && document.getElementById('scSet_' + id);
+        if (!btn) return;
+        const blocked = this.briefBlocked(s);
+        if (blocked) btn.setAttribute('disabled', ''); else btn.removeAttribute('disabled');
     },
 
     // the part of the Assignment tab that differs between home and abroad
@@ -205,7 +230,7 @@ const ScoutCard = {
         const hc = GameState.homeCountry || 'Netherlands';
         const opts = regionsForCountry(hc).map(r => `<option value="${r.id}" ${s.region === r.id ? 'selected' : ''}>${UI.esc(r.name)} — ${UI.euro(Scouts.regionReportCost(r.id))}${I18n.t('scouting.perReport')}</option>`).join('');
         return `<label class="field-label">${I18n.t('sc.region')}</label>
-            <select class="select-input" id="scRg_${s.id}" ${dis}>${opts}</select>
+            <select class="select-input" id="scRg_${s.id}" ${dis} onchange="ScoutCard._syncGate('${s.id}')">${opts}</select>
             <button class="btn btn--ghost btn--sm" style="width:auto;margin-top:var(--space-2)" onclick="ScoutCard.viewRegionClubs('${s.id}')"><i class="ti ti-eye"></i>${I18n.t('scouting.viewClubs')}</button>`;
     },
 
@@ -224,9 +249,9 @@ const ScoutCard = {
     },
 
     // these save straight away and deliberately do NOT refresh (see setScope)
-    setAge(id, age) { Scouts.setMaxAge(id, +age); GameState.save(); },
-    setPos(id, pos) { Scouts.setPos(id, pos); GameState.save(); },
-    setTier(id, tier) { Scouts.setTier(id, tier); GameState.save(); },
+    setAge(id, age) { Scouts.setMaxAge(id, +age); GameState.save(); this._syncGate(id); },
+    setPos(id, pos) { Scouts.setPos(id, pos); GameState.save(); this._syncGate(id); },
+    setTier(id, tier) { Scouts.setTier(id, tier); GameState.save(); this._syncGate(id); },
 
     setAssignment(id) {
         const ctx = this.ctx(id);

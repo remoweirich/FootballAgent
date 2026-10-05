@@ -12,6 +12,7 @@ const sb = {
     Math, Date, JSON, indexedDB: idb(),
     localStorage: { getItem: () => null, setItem() { }, removeItem() { } },
     document: { addEventListener() { }, getElementById: () => null, querySelector: () => null, createElement: () => ({ style: {}, classList: { toggle() { } }, appendChild() { } }), head: { appendChild() { } }, body: { appendChild() { } } },
+    location: { hash: '' },   // the inbox step reads it to decide whether a mail is open
     window: { addEventListener() { }, innerWidth: 400, innerHeight: 800 },
     UI: {
         money: n => Math.round(n || 0).toLocaleString('en-US'),
@@ -315,11 +316,125 @@ check('steps that would sit over what they describe are pinned', runv(`
   const by = k => Walkthrough.SCRIPT.find(s => s.key === k);
   return by('wt.client.youth').place === 'above'
       && by('wt.adv.sponsor').place === 'top' && by('wt.adv.found').place === 'top'
-      && by('wt.wayne.card').place === 'below'
-      && by('wt.wayne.card').anchor === 'button[onclick*="openSign"]'
+      // both Wayne steps sit at the BOTTOM: they talk about what the card shows above them, and
+      // anchoring to the sign button used to park the text right over his details
+      && by('wt.wayne.card').place === 'bottom'
+      && by('wt.wayne.potential').place === 'bottom'
       && by('wt.wayne.neg1').place === 'top' && by('wt.wayne.neg2').place === 'top'
       && by('wt.scout.hireGemma').scrollTo === true
+      && by('wt.scout.regions').scrollTo === true
+      && by('wt.scout.toYours').scroll === 'top'
       && by('wt.wayne.neg1').waitFor === 'button[onclick*="proposeSign"]';`));
+
+// The tour broke itself here: accepting the sponsor called creditSponsorRep -> bumpRep, which
+// clamped reputation DOWN to the office limit. The demo agency sits on 82 with a small office,
+// so it collapsed to ~20-46 and Wayne (potential 83, intlStar, floor 58) became unsignable.
+check('accepting a sponsor no longer collapses the tutorial reputation', runv(`
+  const rep0 = GameState.agency.reputation;
+  const limit = Upgrades.repLimit();
+  Agency.creditSponsorRep();
+  Agency.bumpRep(0.3);
+  return rep0 >= 58 && limit < rep0 && GameState.agency.reputation === rep0;`));
+check('a reputation PENALTY still lands', runv(`
+  const before = GameState.agency.reputation;
+  Agency.bumpRep(-3);
+  const after = GameState.agency.reputation;
+  GameState.agency.reputation = before;   // bumpRep cannot climb back above the office cap
+  return after === before - 3;`));
+check('...and a gain below the cap still grows normally', runv(`
+  const keep = GameState.agency.reputation;
+  GameState.agency.reputation = 5;
+  Agency.bumpRep(2);
+  const grown = GameState.agency.reputation;
+  GameState.agency.reputation = keep;
+  return grown === 7;`));
+// a diagnostic string would be TRUTHY and report a false pass, so compare strictly
+const wayneGate = runv(`
+  const w = GameState.players.find(p => p.id === 'wt_wayne');
+  if (!w) return 'no wayne in the demo';
+  // an earlier check in this file signs him; ask the gate about the state he is in AT the step
+  const was = w.agentId; w.agentId = null;
+  const g = Agency.canSign(w);
+  w.agentId = was;
+  return g.ok === true ? true : ('rep ' + GameState.agency.reputation + ' / floor for '
+    + Agency.POTENTIAL_TIER(w.potential) + ' -> ' + (g.reason || g.code));`);
+check('Wayne can actually be offered representation at the step that asks for it'
+    + (wayneGate === true ? '' : ' — ' + wayneGate), wayneGate === true);
+
+// Steps the player does not need told: the obvious buttons and tabs.
+check('the obvious steps are gone from the script', runv(`
+  const keys = Walkthrough.SCRIPT.map(s => s.key);
+  const dead = ['wt.client.transferList','wt.client.loan','wt.client.renew','wt.client.toPotential',
+                'wt.client.potential','wt.client.toContract','wt.client.contract','wt.clients.bestxi'];
+  return dead.every(k => keys.indexOf(k) < 0);`));
+check('...and their text is gone from every pack too', (() => {
+    const fsx = require('fs');
+    const dead = ['wt.client.transferList', 'wt.client.loan', 'wt.client.renew', 'wt.client.toPotential',
+        'wt.client.potential', 'wt.client.toContract', 'wt.client.contract', 'wt.clients.bestxi'];
+    return ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl'].every(l => {
+        const src = fsx.readFileSync(path.join(uiBase, 'i18n-' + l + '.js'), 'utf8');
+        return dead.every(k => src.indexOf("'" + k + "'") < 0 && src.indexOf('"' + k + '"') < 0);
+    });
+})());
+
+// The inbox card has to get out of the way of the mail it is telling him to read.
+check('the inbox step tucks the card away while a mail is open', runv(`
+  const s = Walkthrough.SCRIPT.find(x => x.key === 'wt.inbox.read');
+  if (typeof s.autoMin !== 'function') return false;
+  location.hash = '#mail/abc';  const inMail = s.autoMin();
+  location.hash = '#inbox';     const onList = s.autoMin();
+  return inMail === true && onList === false;`));
+check('...and does not advance until he is back on the list', runv(`
+  const s = Walkthrough.SCRIPT.find(x => x.key === 'wt.inbox.read');
+  GameState.inbox.forEach(m => { m.read = true; });
+  location.hash = '#mail/abc';  const inMail = s.until();
+  location.hash = '#inbox';     const onList = s.until();
+  return inMail === false && onList === true;`));
+
+// Two steps teach by doing and stay locked until the player has set what was asked.
+check('the contract and brief steps are gated', runv(`
+  const by = k => Walkthrough.SCRIPT.find(s => s.key === k);
+  return by('wt.scout.contract').gate === 'scoutTerm18' && by('wt.scout.assign').gate === 'scoutBrief';`));
+check('gating() only reports the step the tour is actually on', runv(`
+  Walkthrough._active = true;
+  Walkthrough._steps = Walkthrough.SCRIPT.slice();
+  Walkthrough._i = Walkthrough._steps.findIndex(s => s.key === 'wt.scout.contract');
+  const onTerm = Walkthrough.gating('scoutTerm18') && !Walkthrough.gating('scoutBrief');
+  Walkthrough._i = Walkthrough._steps.findIndex(s => s.key === 'wt.scout.assign');
+  const onBrief = Walkthrough.gating('scoutBrief') && !Walkthrough.gating('scoutTerm18');
+  Walkthrough._active = false;
+  const offTour = !Walkthrough.gating('scoutBrief');
+  return onTerm && onBrief && offTour;`));
+
+// Instructions must name the real controls. In German the tour said "Anheuern" where the tab
+// reads "Anwerben" and the button reads "Anstellen"; they are interpolated now so they cannot drift.
+check('button names are interpolated, not hardcoded', (() => {
+    const want = {
+        'wt.scout.toHire': '{tabHire}',
+        'wt.scout.hireGemma': '{btnHire}',
+        'wt.scout.contract': '{btnHire}',
+        'wt.scout.assign': '{btnSetAssignment}',
+    };
+    return ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl'].every(l => {
+        const lines = fs.readFileSync(path.join(uiBase, 'i18n-' + l + '.js'), 'utf8').split('\n');
+        return Object.keys(want).every(k => {
+            const ln = lines.find(x => x.indexOf("'" + k + "':") >= 0 || x.indexOf('"' + k + '":') >= 0);
+            return !!ln && ln.indexOf(want[k]) >= 0;
+        });
+    });
+})());
+check('vars() supplies them from the real labels', runv(`
+  const v = Walkthrough.vars();
+  return v.tabHire === I18n.t('scouting.tab.market')
+      && v.btnHire === I18n.t('agency.hire')
+      && v.btnSetAssignment === I18n.t('sc.setAssignment');`));
+// the generic scout sentences must not assume a male scout — Gemma is a woman
+check('the German contract step uses no gendered pronoun', (() => {
+    const lines = fs.readFileSync(path.join(uiBase, 'i18n-de.js'), 'utf8').split('\n');
+    const ln = lines.find(x => x.indexOf('wt.scout.contract') >= 0) || '';
+    // Gemma is a woman; the generic sentences must not assume a male scout
+    return ln.length > 0 && !/(ihm|ihn)/.test(ln);
+})());
 
 check('her report is three weeks away in every field the UI prints', runv(`
   // both the toast shown on posting her and the "next report" line read the same roll
