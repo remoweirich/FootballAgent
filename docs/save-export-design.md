@@ -124,6 +124,41 @@ requiresCountries: {
 Hashed: club `id`, club `name`, club `division`, `divIds`, `divNames`. That is exactly the set
 that determines whether two Austrias are the same world.
 
+**The source is the country DEFINITION, never the live world.** This is the part that is easy to
+get wrong, and getting it wrong breaks every save after one season.
+
+`registerCountry` copies each club into a **fresh object** before pushing it into the live
+registry ([js/world-ext.js:186](../js/world-ext.js#L186)):
+
+```js
+cc.clubs.forEach(c => {
+    const club = { id: c.id, name: c.name, /* … */ division: c.division, /* … */ };
+    Clubs.allClubs.push(club);
+});
+```
+
+So promotion and relegation mutate `Clubs.allClubs` and the save's `clubState`; they never touch
+`WorldExt.created[name].clubs[].division`. `applyPromotionRelegationCustom` only *reads*
+`cc.divIds` ([js/league.js:1665](../js/league.js#L1665)) and writes through `Clubs.setDivision`.
+The definition is immutable at runtime — the only thing that ever rewrites it is the Customize
+editor, which genuinely is making a different world.
+
+Hence `division` is safe to hash, and worth hashing: two Austrias could share every club name and
+still arrange them into a different pyramid, which is a different world. But the hash must be
+taken from `WorldExt.created[name]`, and a future change that computes it from `Clubs.allClubs`
+instead would see the fingerprint drift at the first promotion. A test pins this: **fingerprint,
+simulate five seasons of promotion and relegation, fingerprint again, assert unchanged.**
+
+Because the definition is immutable, the hash can be computed once at `registerCountry` and
+cached, and invalidated only when the editor writes. Recomputing per save is also fine — it is
+84 short string concatenations.
+
+**Every club is hashed; nothing is sampled.** A fingerprint is a hash, so it occupies one short
+string in the save whether it digests 8 clubs or 84 — sampling saves no space at all, only a
+negligible amount of compute. And it would forfeit the guarantee precisely where it is needed:
+the variance is concentrated in the lower divisions, where there is no real-world template, so
+any sample that skipped them would wave through exactly the saves this check exists to stop.
+
 **Not** hashed, on purpose:
 
 - **logo** and **colors** — cosmetic, and would make a save refuse after a crest import.
@@ -320,6 +355,9 @@ Steps 1–3 are worth shipping even if the rest slips: they fix a real bug and a
   a test that only loads and looks for a crash proves nothing.
 - **The fingerprint accepts the same Austria after a transfer**: export the country, re-import it
   into a different database with a different id, and the save still loads.
+- **Promotion and relegation do not move the fingerprint**: fingerprint, simulate five seasons,
+  fingerprint again, assert identical. This is the one that catches a future refactor computing
+  the hash from `Clubs.allClubs` instead of the country definition.
 - **Editing your own world never locks you out**: rename a club mid-save, save, reload — fine.
 - **Reputation differs, names match**: loads, with a warning, not a refusal.
 - **Cosmetic-only database**: a save from a renames/colours/logos database has an EMPTY
