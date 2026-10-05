@@ -177,6 +177,71 @@ check('region cost shows once a region has clubs', (() => {
     } catch (e) { errs.push(String(e)); return false; }
 })());
 check('export country produces JSON without throwing', (() => { try { CX.exportCountry('Nigeria'); return true; } catch (e) { errs.push(String(e)); return false; } })());
+
+// After a logo import the question is "who got missed?". Ordinarily the table is reputation-first,
+// which buries the gaps; review order floats every crest-less club to the top, A-Z.
+console.log('\n-- logo review ordering --');
+// a real, populated division, and real overrides — not a synthetic list, so this exercises the
+// ordering the screen actually renders
+const setup = runv(`
+    CustomizeScreen._created = null;
+    CustomizeScreen.country = 'England';
+    CustomizeScreen.division = (COUNTRY_DIVS['England'] || [])[0];
+    const ids = CustomizeScreen._membersOf('England', CustomizeScreen.division);
+    CustomizeScreen.db = CustomizeScreen.db || { id: 'x', name: 'x', overrides: {}, competitions: {}, countries: {} };
+    CustomizeScreen.db.overrides = CustomizeScreen.db.overrides || {};
+    // give two thirds of them a crest, leaving a clear set of gaps
+    ids.forEach((id, i) => { if (i % 3 !== 0) CustomizeScreen.db.overrides[id] = Object.assign({}, CustomizeScreen.db.overrides[id], { logo: 'data:image/png;base64,AAA' }); });
+    return ids.length;
+`);
+check('the test is looking at a populated division (' + setup + ' clubs)', setup > 5);
+
+const names = (review) => runv(`
+    CustomizeScreen._logoReview = ${review ? 'true' : 'false'};
+    const ids = CustomizeScreen._membersOf(CustomizeScreen.country, CustomizeScreen.division);
+    const list = ids.map(id => CustomizeScreen.clubView(id)).sort(CustomizeScreen._logoReview
+        ? (a, b) => (!!a.logo - !!b.logo) || a.name.localeCompare(b.name)
+        : (a, b) => (b.reputation - a.reputation) || a.name.localeCompare(b.name));
+    return JSON.stringify(list.map(v => ({ n: v.name, l: !!v.logo, r: v.reputation })));
+`);
+const rev = JSON.parse(names(true));
+check('some clubs have a crest and some do not', rev.some(v => v.l) && rev.some(v => !v.l));
+check('every club without a crest comes first', (() => {
+    const firstWith = rev.findIndex(v => v.l);
+    return firstWith > 0 && rev.slice(0, firstWith).every(v => !v.l) && rev.slice(firstWith).every(v => v.l);
+})());
+check('...and each group is alphabetical', (() => {
+    const group = g => rev.filter(v => v.l === g).map(v => v.n);
+    const az = a => a.slice().sort((x, y) => x.localeCompare(y));
+    return group(false).length > 1 && group(true).length > 1
+        && JSON.stringify(group(false)) === JSON.stringify(az(group(false)))
+        && JSON.stringify(group(true)) === JSON.stringify(az(group(true)));
+})());
+check('without review mode the table is still reputation-first', (() => {
+    const norm = JSON.parse(names(false));
+    return norm.length > 5 && norm.every((v, i) => i === 0 || norm[i - 1].r >= v.r);
+})());
+// the rendered table must honour it too, not just the comparator
+check('the rendered rows follow the review order', (() => {
+    const html = runv("CustomizeScreen._logoReview = true; return CustomizeScreen._divisionRows(CustomizeScreen.division, false);");
+    const order = [...html.matchAll(/class="cx-name"[^>]*>([^<]+)</g)].map(m => m[1].trim());
+    return order.length > 5 && order[0] === rev[0].n && order[order.length - 1] === rev[rev.length - 1].n;
+})());
+// this harness loads only the ENGINE packs, so customize.* renders as the raw key — assert the
+// structure here and the wording straight from the UI pack
+check('...and offers a way back to reputation order', (() => {
+    const html = runv("return CustomizeScreen._divisionRows(CustomizeScreen.division, false);");
+    return /data-act="logoreviewoff"/.test(html) && /logoReviewNote/.test(html);
+})());
+check('the note is translated in every language, with the count', (() => {
+    return ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl'].every(l => {
+        const lines = fs.readFileSync(root + 'ui/js/i18n-' + l + '.js', 'utf8').split('\n');
+        const note = lines.find(x => x.indexOf('customize.logoReviewNote') >= 0) || '';
+        const off = lines.find(x => x.indexOf('customize.logoReviewOff') >= 0) || '';
+        return note.indexOf('{n}') >= 0 && off.length > 0;
+    });
+})());
+runv("CustomizeScreen._logoReview = false;");
 // the move to UI.saveFileOut must not have silently stopped writing anything
 check('...and actually hands a country JSON file to the file-out path', (() => {
     const w = sb.__written[sb.__written.length - 1];

@@ -744,6 +744,8 @@ I18n.register('en', {
     'customize.exportTemplate': 'Export names template',
     'customize.namesImported': 'Imported {n} names.',
     'customize.logosImported': 'Imported {n} logos ({dropped} skipped).',
+    'customize.logoReviewNote': '{n} still without a crest, listed first.',
+    'customize.logoReviewOff': 'Sort by reputation',
     'customize.pickCountryLogos': 'Which country are these logos for?',
     'customize.assignLogos': 'Assign logos',
     'customize.applyLogos': 'Apply',

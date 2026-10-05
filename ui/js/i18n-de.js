@@ -742,6 +742,8 @@ I18n.register('de', {
     'customize.exportTemplate': 'Namensvorlage exportieren',
     'customize.namesImported': '{n} Namen importiert.',
     'customize.logosImported': '{n} Logos importiert ({dropped} übersprungen).',
+    'customize.logoReviewNote': '{n} noch ohne Wappen, zuerst aufgelistet.',
+    'customize.logoReviewOff': 'Nach Ansehen sortieren',
     'customize.pickCountryLogos': 'Für welches Land sind diese Logos?',
     'customize.assignLogos': 'Logos zuordnen',
     'customize.applyLogos': 'Übernehmen',

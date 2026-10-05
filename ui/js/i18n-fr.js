@@ -748,6 +748,8 @@ I18n.register('fr', {
     'customize.exportTemplate': 'Exporter le modèle de noms',
     'customize.namesImported': '{n} noms importés.',
     'customize.logosImported': '{n} logos importés ({dropped} ignorés).',
+    'customize.logoReviewNote': '{n} encore sans écusson, affichés en premier.',
+    'customize.logoReviewOff': 'Trier par réputation',
     'customize.pickCountryLogos': 'À quel pays correspondent ces logos ?',
     'customize.assignLogos': 'Attribuer les logos',
     'customize.applyLogos': 'Appliquer',

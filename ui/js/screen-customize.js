@@ -31,7 +31,7 @@ const CustomizeScreen = {
         this.db = null; this.country = null; this.division = null;
         await this._chooser();
     },
-    exit() { if (typeof StartScreen !== 'undefined') StartScreen.show(); },
+    exit() { this._endLogoReview(); if (typeof StartScreen !== 'undefined') StartScreen.show(); },
 
     // ---------- database chooser ----------
     async _chooser() {
@@ -97,6 +97,7 @@ const CustomizeScreen = {
         this.menu();
     },
     async _loadDb(id) {
+        this._endLogoReview();
         let d = null;
         try { d = await Storage.getDatabase(id); } catch (e) { d = null; }
         if (!d) { this._toast(I18n.t('customize.loadFailed')); return; }
@@ -254,13 +255,21 @@ const CustomizeScreen = {
         const created = this._created;
         const list = this._membersOf(this.country, divId)
             .map(id => this.clubView(id))
-            .sort((a, b) => (b.reputation - a.reputation) || a.name.localeCompare(b.name));
+            .sort(this._logoReview
+                // review order: everything still missing a crest first, each group A-Z
+                ? (a, b) => (!!a.logo - !!b.logo) || a.name.localeCompare(b.name)
+                : (a, b) => (b.reputation - a.reputation) || a.name.localeCompare(b.name));
         const expected = created ? this._createdDivSize(divId) : Clubs.staticDivSize(divId);
         const sizeClass = (expected != null && list.length !== expected) ? ' cx-count--bad' : '';
         const editor = (typeof GameState !== 'undefined' && GameState.canEditGameState);
         const repCap = created ? WorldExt.repCapFor(created, divId) : null;
         const capNote = (created && repCap != null && !editor) ? ' · ' + I18n.t('customize.repCapNote', { cap: repCap }) : '';
-        const head = `<div class="cx-count${sizeClass}">${I18n.t('customize.sizeLabel', { n: list.length, exp: (expected != null ? expected : '?') })}${capNote}</div>`;
+        // say WHY the order changed, and how many are still missing, so it is not just mysterious
+        const missing = this._logoReview ? list.filter(v => !v.logo).length : 0;
+        const reviewNote = this._logoReview
+            ? `<div class="cx-count">${I18n.t('customize.logoReviewNote', { n: missing })} <button class="cx-bbtn" data-act="logoreviewoff">${I18n.t('customize.logoReviewOff')}</button></div>`
+            : '';
+        const head = `<div class="cx-count${sizeClass}">${I18n.t('customize.sizeLabel', { n: list.length, exp: (expected != null ? expected : '?') })}${capNote}</div>${reviewNote}`;
         const divIdx = created ? created.divIds.indexOf(divId) : -1;
         const canReserve = created && divIdx >= 1;   // D2-D4 may hold B-teams
         const rows = list.map(v => {
@@ -744,6 +753,10 @@ const CustomizeScreen = {
             if (typeof Router !== 'undefined' && Router.refresh) Router.refresh();
         } else {
             if (!this._created) this._snapshot = JSON.stringify(this.db.overrides);   // fold imports into the cancel baseline
+            // After an import the question is always "who got missed?", and hunting for the gaps in
+            // a reputation-ordered list of 20-24 clubs means scrolling the lot. Float the clubs
+            // still without a crest to the top until the player leaves the table.
+            this._logoReview = true;
             this._refreshTable();
         }
         this._toast(I18n.t('customize.logosImported', { n: done, dropped: pend.length - done }));
@@ -903,6 +916,7 @@ const CustomizeScreen = {
             case 'impnames': this.importNames(); break;
             case 'implogos': this.importLogos(); break;
             case 'asgapply': this._applyAssignedLogos(); break;
+            case 'logoreviewoff': this._logoReview = false; this._refreshTable(); break;
             case 'livecountry': this._livePickCountry(id); break;
             case 'livecancel': this._live = false; this._closeOverlay(); break;
             case 'exporttpl': this.exportTemplate(); break;
@@ -1142,6 +1156,8 @@ const CustomizeScreen = {
         if (this._insideEditor()) this._renderEditor(); else this.competitionNames();
     },
     _insideEditor() { return !!document.getElementById('cxTable'); },
+    // the post-import ordering is for reviewing that import, not a lasting preference
+    _endLogoReview() { this._logoReview = false; },
     // ----- name editor -----
     editNames(country) {
         const cc = this.db.countries[country]; if (!cc) return;

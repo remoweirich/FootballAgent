@@ -481,7 +481,8 @@ const Walkthrough = {
 
         // ---------------- can he expect to play? -> a loan ----------------
         { key: 'wt.loan.checkClub', target: '.cl-sub a[href*="clubs"]', tap: true },
-        { key: 'wt.loan.clubProfile', place: 'bottom' },
+        // point at the reputation line itself — the step is entirely about that number
+        { key: 'wt.loan.clubProfile', target: '[data-wt="club-rep"]', place: 'bottom' },
         { key: 'wt.loan.back', target: '.push-bar__back', tap: true },
         {
             key: 'wt.loan.request', target: 'button[onclick*="reqLoan"]', place: 'above',
@@ -670,6 +671,7 @@ const Walkthrough = {
             <div class="wt-pane" data-p="b" onclick="Walkthrough.collapse()"></div>
             <div class="wt-pane" data-p="l" onclick="Walkthrough.collapse()"></div>
             <div class="wt-pane" data-p="r" onclick="Walkthrough.collapse()"></div>
+            <div class="wt-safe"></div>
             <div class="wt-ring"></div>
             <div class="wt-tap"><span></span></div>
             <button class="wt-fab" onclick="Walkthrough.expand()" aria-label="${I18n.t('wt.reopen')}"><i class="ti ti-route"></i></button>
@@ -780,13 +782,22 @@ const Walkthrough = {
         this._placeCard(card, s, anchorEl, H);
     },
 
+    // How much of the bottom of the screen belongs to the system (nav bar / home indicator).
+    _safeBottom() {
+        const l = document.getElementById('wtLayer');
+        const probe = l && l.querySelector('.wt-safe');
+        return probe ? (probe.offsetHeight || 0) : 0;
+    },
+
     // Where the card sits. A step can pin it (the weekly summary and the negotiation sliders both
     // need it out of the way); otherwise it goes under its anchor when there is room, above it if not.
     _placeCard(card, s, anchorEl, H) {
         card.classList.toggle('wt-card--top', s.place === 'top');
         if (s.place === 'top') { card.style.cssText = 'left:50%;transform:translateX(-50%)'; return; }
         const CH = card.offsetHeight || 170;
-        const lo = this.EDGE, hi = Math.max(lo, H - CH - this.EDGE);
+        // keep clear of the nav bar / home indicator, which window.innerHeight counts as usable
+        const safeB = this._safeBottom();
+        const lo = this.EDGE, hi = Math.max(lo, H - CH - this.EDGE - safeB);
         const clamp = v => Math.max(lo, Math.min(hi, v));
         let top;
         if (!anchorEl) top = s.place === 'bottom' ? hi : Math.max(lo, (H - CH) / 2);
@@ -827,6 +838,11 @@ const Walkthrough = {
             border:2px solid var(--accent);animation:wtPulse 1.4s ease-out infinite}
         @keyframes wtPulse{0%{transform:scale(.55);opacity:.95}100%{transform:scale(1.5);opacity:0}}
         .wt-card--top{top:calc(env(safe-area-inset-top,0px) + 14px)}
+        /* The card is positioned in JS off window.innerHeight, which with viewport-fit=cover
+           includes the strip behind the Android nav bar. This probe measures that inset so the
+           bottom-pinned card can sit above it instead of having its buttons clipped. */
+        .wt-safe{position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);
+            pointer-events:none;visibility:hidden}
         .wt-card{position:fixed;width:min(92vw,400px);background:var(--surface);color:var(--text);
             border:1px solid var(--accent);border-radius:var(--radius-lg);padding:var(--space-5);
             box-shadow:0 0 0 9999px rgba(4,7,11,.18), 0 18px 48px rgba(0,0,0,.75);pointer-events:auto}

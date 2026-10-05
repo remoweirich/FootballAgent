@@ -750,6 +750,8 @@ I18n.register('pt', {
     'customize.exportTemplate': 'Exportar modelo de nomes',
     'customize.namesImported': '{n} nomes importados.',
     'customize.logosImported': '{n} emblemas importados ({dropped} ignorados).',
+    'customize.logoReviewNote': '{n} ainda sem emblema, listados primeiro.',
+    'customize.logoReviewOff': 'Ordenar por reputação',
     'customize.pickCountryLogos': 'A que país pertencem estes emblemas?',
     'customize.assignLogos': 'Atribuir emblemas',
     'customize.applyLogos': 'Aplicar',

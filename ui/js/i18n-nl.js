@@ -748,6 +748,8 @@ I18n.register('nl', {
     'customize.exportTemplate': 'Namensjabloon exporteren',
     'customize.namesImported': '{n} namen geïmporteerd.',
     'customize.logosImported': '{n} logo\'s geïmporteerd ({dropped} overgeslagen).',
+    'customize.logoReviewNote': '{n} nog zonder logo, bovenaan de lijst.',
+    'customize.logoReviewOff': 'Op reputatie sorteren',
     'customize.pickCountryLogos': 'Bij welk land horen deze logo\'s?',
     'customize.assignLogos': 'Logo\'s toewijzen',
     'customize.applyLogos': 'Toepassen',

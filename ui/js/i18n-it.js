@@ -748,6 +748,8 @@ I18n.register('it', {
     'customize.exportTemplate': 'Esporta modello dei nomi',
     'customize.namesImported': '{n} nomi importati.',
     'customize.logosImported': '{n} stemmi importati ({dropped} saltati).',
+    'customize.logoReviewNote': '{n} ancora senza stemma, elencati per primi.',
+    'customize.logoReviewOff': 'Ordina per reputazione',
     'customize.pickCountryLogos': 'A quale paese appartengono questi stemmi?',
     'customize.assignLogos': 'Assegna gli stemmi',
     'customize.applyLogos': 'Applica',

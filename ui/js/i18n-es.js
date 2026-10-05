@@ -756,6 +756,8 @@ I18n.register('es', {
     'customize.exportTemplate': 'Exportar plantilla de nombres',
     'customize.namesImported': '{n} nombres importados.',
     'customize.logosImported': '{n} escudos importados ({dropped} omitidos).',
+    'customize.logoReviewNote': '{n} todavía sin escudo, primero en la lista.',
+    'customize.logoReviewOff': 'Ordenar por reputación',
     'customize.pickCountryLogos': '¿A qué país corresponden estos escudos?',
     'customize.assignLogos': 'Asignar escudos',
     'customize.applyLogos': 'Aplicar',
