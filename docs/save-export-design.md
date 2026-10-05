@@ -149,9 +149,9 @@ taken from `WorldExt.created[name]`, and a future change that computes it from `
 instead would see the fingerprint drift at the first promotion. A test pins this: **fingerprint,
 simulate five seasons of promotion and relegation, fingerprint again, assert unchanged.**
 
-Because the definition is immutable, the hash can be computed once at `registerCountry` and
-cached, and invalidated only when the editor writes. Recomputing per save is also fine — it is
-84 short string concatenations.
+Because the definition is immutable at runtime, the hash can be computed once at
+`registerCountry` and cached, invalidated only when the editor writes. (When it is *taken* and
+stored in a save is a separate question — see below.)
 
 **Every club is hashed; nothing is sampled.** A fingerprint is a hash, so it occupies one short
 string in the save whether it digests 8 clubs or 84 — sampling saves no space at all, only a
@@ -168,9 +168,64 @@ any sample that skipped them would wave through exactly the saves this check exi
   match ("club strengths differ from the world this save was made in"), never a refusal — which
   matches the judgement that different reputations are undesirable but not corrupting.
 
-The hash is recomputed on every save, so editing the world on the device you are playing on can
-never lock you out: the save follows the world it is actually in. Only a *cross-device* mismatch
-is caught, which is the case that matters.
+### When the fingerprint is taken
+
+An earlier draft said "recomputed on every save". That is wrong, and wrong in the direction that
+makes the check useless: a print recomputed from the current world is always self-consistent, so
+it can never detect that the world underneath the save has changed. It would quietly re-stamp
+itself onto a corrupted career.
+
+**Captured once, when the career starts, and never silently rewritten.** That is the honest record
+of which world this career began in.
+
+Export is then the right moment to *verify* rather than to originate. On export, recompute from
+the live world and compare with the captured print:
+
+- **Match** — the normal case. Export the print.
+- **Differ** — the world has been edited since the career began. Say so at export ("the world
+  this save was created in has changed since"), and export the **captured** print, not the
+  current one. A save must describe the world it was built in, not the one it happens to sit
+  beside today.
+
+On load (any path) the captured print is compared with the local world and a mismatch refuses.
+Because the print is now immutable, editing your own world mid-career would otherwise lock you
+out of your own save — so when the database **id** also matches, the refusal offers an explicit
+override: *"This looks like an edited version of the world this save began in. Continue and
+update the save?"* Player-confirmed, never automatic.
+
+### The local hole this leaves, and where to close it
+
+A fingerprint only detects corruption; it does not prevent it. The local vector is real and
+unguarded today: `_doCreate(name, overwriteId)` **reuses the existing id** when overwriting a
+database ([ui/js/screen-customize.js:91](../ui/js/screen-customize.js#L91)), and
+`deleteDatabase` checks nothing. So a player can replace "My Austria" with an entirely different
+world under the same id, and every career built on it silently re-attaches to the wrong clubs.
+
+Close that at the cause, not with a hash: **Customize warns before overwriting or deleting a
+database that a save depends on**, naming the saves. Cheap, and it stops the corruption instead
+of reporting it afterwards.
+
+### What gets fingerprinted
+
+**Every created country in play, each separately.** `requiresCountries` is a map keyed by country
+name, so a career with clients in two created countries carries two prints and each is checked
+independently. Adding a third country to the database later does not disturb the first two.
+
+**Only created countries.** Stock countries live in `LEAGUES_DATA` in code and cannot vary between
+installs; a database can only rename, recolour or re-badge their clubs, which is exactly the
+cosmetic class already decided to be irrelevant. Fingerprinting them would refuse a save because
+someone's Bayern is called "FC Bayern München" — the opposite of what is wanted.
+
+**The whole country definition, not the clubs the clients happen to occupy.** Targeting clients'
+clubs is appealing but weaker for no saving:
+
+- A career references far more clubs than its clients' current ones — every club in their career
+  history, in `clubHistory`, in the honours lists and in the league tables. All of those ids must
+  resolve to the same teams.
+- Clients move. A print taken over current clubs would describe a different subset each season.
+- It saves nothing. The print is a hash: one short string whether it digests 12 clubs or 84.
+- It reintroduces the blind spot. The variance is concentrated in the lower divisions, which is
+  where clients are least likely to be and where a sample is least likely to look.
 
 The refusal names the country and the database it came from, because the database name is the
 only thing the player can act on:
@@ -329,16 +384,19 @@ per-country export/import already moves a country faithfully (§3).
 2. **Verify the existing country export/import round-trips a created country byte-faithfully**
    between installs, so a transferred Austria fingerprints identically. If it does, §3 needs no
    new transport; if it does not, fix that first.
-3. **The fingerprint + hard refusal** on every load path, plus the soft reputation warning. Fixes
-   the silent-wrong-clubs bug that exists today, independently of export.
-4. **Envelope + codec** (`SaveFile.pack()` / `unpack()`), engine-side and headless testable, with
+3. **Warn in Customize before overwriting or deleting a database a save depends on.** Stops the
+   local corruption at its cause; worth doing on its own.
+4. **The fingerprint**: captured at career start, verified at export, enforced on every load path,
+   with the same-database override prompt and the soft reputation warning.
+5. **Envelope + codec** (`SaveFile.pack()` / `unpack()`), engine-side and headless testable, with
    the plain-encoding fallback and the logo strip.
-5. **Export UI** in Settings.
-6. **Import UI** on Load game: picker, validation, preview, land as a slot.
-7. Strings, seven languages, ~25 keys, **informal register** (the mobile UI is informal throughout;
+6. **Export UI** in Settings.
+7. **Import UI** on Load game: picker, validation, preview, land as a slot.
+8. Strings, seven languages, ~25 keys, **informal register** (the mobile UI is informal throughout;
    formal only if any of it ends up in a mail).
 
-Steps 1–3 are worth shipping even if the rest slips: they fix a real bug and add a real feature.
+Steps 1–4 are worth shipping even if the rest slips: they close a corruption vector that exists
+today, with or without export.
 
 ---
 
@@ -358,7 +416,14 @@ Steps 1–3 are worth shipping even if the rest slips: they fix a real bug and a
 - **Promotion and relegation do not move the fingerprint**: fingerprint, simulate five seasons,
   fingerprint again, assert identical. This is the one that catches a future refactor computing
   the hash from `Clubs.allClubs` instead of the country definition.
-- **Editing your own world never locks you out**: rename a club mid-save, save, reload — fine.
+- **The print does not re-stamp itself**: start a career, swap the database underneath it for a
+  different world with the same id, save, reload — the save must REFUSE, not quietly adopt the new
+  world. This is the test the capture-once rule exists for.
+- **Editing your own world offers an override**: rename a club mid-career, reload — refused, with
+  the same-database continue prompt, and accepting it updates the stored print.
+- **Two created countries**: a career with clients in both carries two prints; corrupting one
+  refuses while the other is untouched.
+- **A renamed stock club is not a refusal**: a database that renames Bayern loads anywhere.
 - **Reputation differs, names match**: loads, with a warning, not a refusal.
 - **Cosmetic-only database**: a save from a renames/colours/logos database has an EMPTY
   `requiresCountries` and loads on a device with no databases at all — just plain. This is the
