@@ -3,6 +3,8 @@
 Let a player move a career off one device and onto another: a new phone, a backup before a risky
 update, a save attached to a bug report, or the `-PdevId` test build sitting beside the real one.
 
+Decisions settled 2026-10-05 are marked **Decided**.
+
 ---
 
 ## 0. Most of this already exists
@@ -15,9 +17,7 @@ The work is smaller than it looks, because every hard part has a proven implemen
 | The one deserializer | [js/game-state.js](../js/game-state.js) `_applySaved()` + `_runMigrations()` | Already upgrades an old save. Import is just "feed it an object from a file instead of IndexedDB". |
 | Writing a file on Android | [ui/js/screen-customize.js:1283](../ui/js/screen-customize.js#L1283) `_download()` | Already solves the real trap — Android's WebView **ignores `<a download>` and `blob:` URLs**. Writes to CACHE via Filesystem, then hands the uri to the system share sheet. Browser keeps the blob path. |
 | Reading a file | [ui/js/screen-customize.js:419](../ui/js/screen-customize.js#L419) etc. | `<input type="file">` + `FileReader` already works in this WebView (logo import, names CSV, country JSON) — Capacitor's bridge supplies `onShowFileChooser`, so no Activity wiring is needed. |
-| Named save slots | [js/storage.js:170](../js/storage.js#L170) `listSlots/putSlot/deleteSlot`, `MAX_SLOTS: 5` | Import should land here rather than inventing new storage. |
-
-So the new code is a file format, two screens' worth of buttons, and the validation in between.
+| Named save slots | [js/storage.js:170](../js/storage.js#L170) `listSlots/putSlot/deleteSlot`, `MAX_SLOTS: 5` | Import lands here rather than inventing new storage. |
 
 ---
 
@@ -33,227 +33,251 @@ Not guessed — simulated, at three career lengths, on a real `_snapshot()`:
 
 base64 of the gzip at 15 seasons: **288 KB**.
 
-Three things fall out of this:
-
 - **Raw JSON is too fat to be the wire format.** 1.8 MB is awkward to email or paste into a bug
-  report; 288 KB is not. Compression pays for itself immediately.
-- **`clubHistory` grows without bound** — 66 KB → 281 KB → 819 KB, and it is the only key that
-  does. That is the "save grows unbounded" item already on the open list. Export makes it visible
-  but does not cause it, and it should be fixed separately rather than papered over here.
+  report; 288 KB is not.
+- **`clubHistory` grows without bound** — 66 → 281 → 819 KB, the only key that does. That is the
+  "save grows unbounded" item already on the open list. Export makes it visible but does not cause
+  it; fix it at source, separately, and never by trimming history on the way out.
 - **`league` is a flat 561 KB from season one.** Worth a look sometime; not this task.
 
-### The logo exception
+---
 
-`clubLogos` lives *inside* the save (mid-save imports via Settings), so logos travel with an
-export, which is what you want for fidelity. But they are 128px PNG data URIs — roughly 5–15 KB
-each, already compressed, so gzip barely touches them. A player who has logo'd one country
-(~50–100 clubs) adds **0.5–1 MB** to an export that would otherwise be 288 KB; all 856 clubs
-would add several MB.
+## 2. Logos are never exported — **Decided**
 
-So the export must report its own size, and the UI must not promise "a small file".
+`clubLogos` in the save holds 128px PNG data URIs. They are already compressed, so gzip barely
+touches them: one logo'd country (~50–100 clubs) adds 0.5–1 MB to a 288 KB export, and all 856
+clubs would add several MB. They are stripped from the payload.
+
+This is cheaper than it sounds, because **there are two kinds of logo and only one is lost**:
+
+| Added via | Stored in | Survives export? |
+|---|---|---|
+| Customize → club logo / logo zip | the **database** (`ov.logo`, applied in [js/clubs.js:1576](../js/clubs.js#L1576)) | **Yes** — §3 requires the database to be present, and it brings its logos with it |
+| Settings → Import logos (mid-save) | `GameState.clubLogos` in the save | No — these fall back to generated crests |
+
+So the common case (a logo pack applied through a database) survives intact, and only ad-hoc
+mid-save additions are dropped. The export confirmation says so in one line rather than letting
+the player discover it.
+
+`clubNames` and `compNames` stay in the export: they are small text, and club identity reading
+wrong is far worse than a missing crest.
 
 ---
 
-## 2. The file
+## 3. The database imprint — **Decided**
 
-One file is one career. Extension `.fam`, MIME `application/json`, named
-`<agency>-<season>-<date>.fam`.
-
-```json
-{
-  "fam": 1,
-  "app": "1.0.27",
-  "schema": 5,
-  "exported": 1730000000000,
-  "encoding": "gzip+base64",
-  "game": {
-    "agency": "Ferrari & Partners",
-    "manager": "A. Tester",
-    "country": "Switzerland",
-    "season": "29/30",
-    "week": 12,
-    "clients": 14
-  },
-  "database": { "id": "...", "name": "...", "overrides": { } },
-  "payload": "H4sIAAAA…"
-}
-```
-
-The header stays plain so a human (or you, reading a bug report) can see what a file is without
-running it. Only `payload` — the `_snapshot()` JSON — is compressed.
-
-**Compression**: `CompressionStream('gzip')`, which Android WebView has had since Chrome 80. The
-WebView updates through Play independently of the OS, so minSdk 24 is not the constraint — but a
-device with a frozen old WebView is still possible, so if `CompressionStream` is missing, write
-`"encoding": "plain"` with the raw JSON instead. Import handles both. No library, no bundle growth.
-
----
-
-## 3. Export
-
-Lives in **Settings → Save game**, beside the existing named-save list, so export sits where saves
-already are rather than in a new place.
-
-- **Export current game** — snapshots live state (the same `_snapshot()` the autosave uses).
-- **Export** on any named slot row — exports that slot's stored state.
-
-Both build the envelope and hand it to a shared version of `_download()`. That helper currently
-lives on `CustomizeScreen`; it should move to `UI` (ui-helpers/shim) so Settings can use it without
-reaching across screens. That is a lift-and-shift of working code, not a rewrite.
-
-The confirmation names the file and its size, because a 4 MB logo-laden export should not be a
-surprise after the share sheet opens.
-
----
-
-## 4. Import
-
-**Import never touches the running career.** It always lands as a *new named slot*, which the
-player then loads deliberately from the existing Load list. Overwriting the autosave on import is
-the one mistake that turns a convenience feature into lost progress, and there is no undo for it.
-
-Flow: file picker → read → validate → show what the file contains (agency, season, week, clients,
-exported date) → confirm → `Storage.putSlot()` → offer to load it now.
-
-If all 5 slots are full, the player must free one first — same rule `createNamedSave` already
-enforces, not a new one.
-
-### Validation, in order
-
-1. Parses as JSON, and `fam` is a version this build knows.
-2. `schema` is **not newer** than `SCHEMA_VERSION`. A save from a future build can carry fields and
-   invariants this one has never heard of; refuse it with "this save is from a newer version of the
-   game" rather than importing something half-understood. Older is fine — that is what the
-   migration pipeline is for.
-3. Payload decodes and parses.
-4. It looks like a save: `week`, `seasonStartYear`, `homeCountry`, `agency`, `players` all present
-   and the right types. A country the build does not know is a refusal, not a crash.
-5. Size ceiling (say 25 MB) before decompressing, so a malformed or hostile file cannot be used to
-   blow up memory.
-
-Every refusal says which check failed. "Invalid save file" with no reason is the kind of message
-that generates support mail.
-
----
-
-## 5. Four traps
-
-### 5a. The customization database — the one that bites silently
-
-A save stores `databaseId`, but the database itself lives separately at `db:<id>`
-([js/storage.js](../js/storage.js), `MAX_DBS: 5`). On load, `_hydrateDatabase()` does:
+A save stores `databaseId`, but the database lives separately at `db:<id>`. On load,
+`_hydrateDatabase()` does:
 
 ```js
 try { const db = await Storage.getDatabase(this.databaseId); if (db) Clubs.applyDatabase(db); }
 catch (e) { console.warn('Database overlay load failed', e); }
 ```
 
-If the database is absent, that is a **silent no-op**. Import a custom-database save onto a device
-without that database and the game does not fail — it loads with generic club names and the
-day-one pyramid, while the save's own drifted reputations and divisions apply on top. A wrong
-world, quietly, with no error.
+If the database is absent that is a **silent no-op**: the game loads with generic club names and
+the day-one pyramid, while the save's own drifted reputations and divisions apply on top. A wrong
+world, quietly, with no error. Today that can only happen through a corrupted install; once saves
+move between devices it becomes the normal case.
 
-So: **embed the referenced database in the envelope** (`database`), and on import, if the id is not
-present locally, install it alongside the save. If the id *is* present locally, prefer the local
-copy and say so — the player may have edited it since.
+**The rule:** a save started on a non-default database carries an imprint of that database — its
+`id` *and* its exact display name. Loading it without that database installed is a hard refusal,
+not a degraded load:
 
-A save started on the base game has no `databaseId` and skips all of this.
+> **"Bundesliga Real Names" is missing.** This save was started with that database and cannot be
+> loaded without it. Import it in Customize, then try again.
 
-### 5b. Save editing vs. the paid Gamestate editor
+Named exactly, so the message tells the player what to go and find. This applies to **every** load
+path (autosave boot, named slot, imported file), not just import — the silent-wrong-world bug
+exists today and this is its fix.
 
-This is a product decision, not a technical one, and it should be made before any code is written.
+Matching is by `id`; the name appears only in the message, because names can be edited and can
+collide.
 
-`Monetization.canEditGameState` gates a paid editor. A compressed, base64'd payload is
-**obfuscation, not protection** — anyone who wants to edit a save will, and a signature or HMAC
-does not change that, because the key would ship inside a readable JS bundle. Security theatre
-costs real complexity and buys nothing.
+### The prerequisite this creates
 
-Three honest positions:
+**There is no whole-database export today.** Customize exports a names-template CSV and a
+per-country JSON, nothing more ([ui/js/screen-customize.js](../ui/js/screen-customize.js),
+`exporttpl` / `exportcountry`). So on a new device the refusal above would be unsatisfiable: the
+player is told to go and get a database that has no way to travel.
 
-1. **Accept it.** Ship export/import; treat the paid editor as a *convenience* (a proper in-game UI
-   on live state) rather than an exclusive capability. Most single-player games land here.
-2. **Export only, no import.** Backups and bug reports still work; moving to a new phone does not.
-   This guts the main use case to protect a feature that is already editable by anyone determined.
-3. **Import, with tamper *detection* rather than prevention.** Store a checksum of the payload;
-   on import, a mismatch does not block the load but marks the save `modified: true`. Useful later
-   if leaderboards or shared achievements ever exist. Costs very little.
+Database export/import therefore **ships with this, not after it**, and the export must preserve
+the original `id` — `_doCreate` mints `'db' + Date.now() + random` per device, so a re-created
+database would never match the imprint even when it is the same content.
 
-I would ship **1 + the checksum from 3**: full export and import, no gate, but the save knows
-whether it was altered outside the game.
-
-### 5c. Nothing shrinks the save on the way out
-
-Export is the moment a player meets `clubHistory`'s growth as a concrete number. Resist the urge to
-trim history during export: a "smaller" export that silently drops career data is a worse bug than
-a large file. Fix the growth at source, separately.
-
-### 5d. Determinism travels, and should
-
-`rngSeed` and `rngState` are both in the snapshot, so an imported save resumes the same stream and
-regenerates identical background squads. That is correct and needs no work — but it does mean a
-round-trip must be **byte-identical**, which the tests below pin.
+This is also the better answer for the real-names posture: database content stays something the
+player sources themselves, rather than being redistributed inside every shared save file.
 
 ---
 
-## 6. Scope
+## 4. The file
 
-**In:** export the current game or a named slot; import as a new slot; the embedded database; the
-validation above; `.fam` in all seven languages.
+One file is one career. Extension `.fam`, named `<agency>-<season>-<date>.fam`.
+
+```json
+{
+  "fam": 1,
+  "app": "1.0.27",
+  "schema": 5,
+  "exported": 1759600000000,
+  "encoding": "gzip+base64",
+  "database": { "id": "dbm2x9f3a1", "name": "Bundesliga Real Names" },
+  "game": {
+    "agency": "Ferrari & Partners", "manager": "A. Tester",
+    "country": "Switzerland", "season": "29/30", "week": 12, "clients": 14
+  },
+  "checksum": "…",
+  "payload": "H4sIAAAA…"
+}
+```
+
+The header stays plain so a human — or you, reading a bug report — can see what a file is without
+running it. `database` is the imprint only; the overlay itself is not embedded. `payload` is the
+`_snapshot()` JSON minus `clubLogos`.
+
+**Compression**: `CompressionStream('gzip')`, which Android WebView has had since Chrome 80. The
+WebView updates through Play independently of the OS, so minSdk 24 is not the constraint — but a
+frozen old WebView is possible, so if `CompressionStream` is missing, write `"encoding": "plain"`
+with raw JSON. Import handles both. No library, no bundle growth.
+
+---
+
+## 5. Export
+
+Lives in **Settings → Save game**, beside the existing named-save list.
+
+- **Export current game** — snapshots live state.
+- **Export** on any named slot row — exports that slot's stored state.
+
+Both build the envelope and hand it to a shared version of `_download()`. That helper currently
+lives on `CustomizeScreen` and should move to `UI` so Settings can use it — a lift-and-shift of
+working code, not a rewrite.
+
+The confirmation names the file, its size, and the one thing that was left out (mid-save logos).
+
+---
+
+## 6. Import — **Decided: in Load game**
+
+A button on the **Load game** screen, alongside the save list: that is where a player who has just
+reinstalled looks, and it is the moment of need.
+
+**Import never touches the running career.** It always lands as a *new named slot*, which the
+player then loads deliberately. Overwriting the autosave on import is the one mistake that turns a
+convenience feature into lost progress, and there is no undo.
+
+Flow: picker → read → validate → preview (agency, season, week, clients, exported date, and the
+database it needs) → confirm → `Storage.putSlot()` → offer to load it now.
+
+If all 5 slots are full, the player frees one first — the rule `createNamedSave` already enforces.
+
+### Validation, in order
+
+1. Parses as JSON, and `fam` is a version this build knows.
+2. `schema` is **not newer** than `SCHEMA_VERSION`. A save from a future build carries invariants
+   this one has never heard of; refuse with "this save is from a newer version of the game".
+   Older is fine — that is what the migration pipeline is for.
+3. Payload decodes and parses.
+4. It looks like a save: `week`, `seasonStartYear`, `homeCountry`, `agency`, `players` present and
+   the right types. An unknown country is a refusal, not a crash.
+5. Size ceiling (25 MB) checked *before* decompressing, so a malformed file cannot blow up memory.
+6. The §3 database check — reported at **import preview**, not only at load, so the player learns
+   what they need before the file is committed to a slot.
+
+Every refusal says which check failed. "Invalid save file" with no reason generates support mail.
+
+---
+
+## 7. Paid content — **Decided: nothing to do**
+
+Worth recording, because the original concern was based on a misreading.
+
+**Entitlements are already outside the save.** [ui/js/monetization.js](../ui/js/monetization.js)
+states it in its own header:
+
+> "Entitlements live in Prefs (localStorage), NOT in the game snapshot: a purchase belongs to the
+> device/account and must apply across every save and survive starting a new game."
+
+`_snapshot()` contains no entitlement, product or purchase field. An exported save therefore
+**cannot** carry `editor`, `sandbox` or `removeAds` onto another device — the thing to prevent is
+already structurally impossible, and no stripping step is needed.
+
+The real (and much smaller) issue is different: once a save is a file on disk, a determined player
+can edit it — money, ability, reputation — which overlaps what the €9.99 sandbox tier sells as a
+convenience. That cannot be prevented in a client-side JS app; an HMAC would ship its own key in a
+readable bundle. Two things make it a non-issue in practice:
+
+- gzip + base64 means casual editing needs decompress → edit → recompress. A real speed bump for
+  the curious, no barrier to the determined, and it costs nothing because compression is there for
+  size anyway.
+- A `checksum` over the payload. It does **not** block loading; it marks the save `modified: true`,
+  which is there if shared achievements or leaderboards ever need it.
+
+The sandbox tier stays worth paying for as the in-game UI on live state, not as the only way to
+change a number.
+
+---
+
+## 8. Scope
+
+**In:** export current game or named slot; import from Load game as a new slot; the database
+imprint and its hard refusal; **whole-database export/import with a preserved id** (prerequisite,
+§3); validation; strings in all seven languages.
 
 **Out, deliberately:**
 - Cloud or account sync. Different feature, different cost.
-- Exporting all slots in one file. One file = one career keeps the mental model and the error
-  messages simple.
-- Exporting the customization databases on their own — Customize already has its own
-  export/import for those.
-- Auto-backup on a schedule. Worth considering later; not needed for any of the use cases above.
+- Exporting all slots in one file — one file = one career keeps the model and the errors simple.
+- Auto-backup on a schedule.
+- Any attempt to make saves tamper-*proof* (§7).
 
 ---
 
-## 7. Build order
+## 9. Build order
 
-1. **Move `_download()` to `UI`** and repoint CustomizeScreen at it. No behaviour change; the
-   existing customize export tests should still pass untouched.
-2. **Envelope + codec** (`SaveFile.pack()` / `SaveFile.unpack()`), engine-side and headless
-   testable, with the plain-encoding fallback.
-3. **Export UI** in Settings, current game and per slot.
-4. **Import UI**: picker, validation, preview, land as a slot.
-5. **Database embedding** and the missing/colliding-id handling.
-6. Strings in all seven languages (~20 keys), **informal register** for the UI, formal only if any
-   of it ends up in a mail.
+1. **Move `_download()` to `UI`**, repoint CustomizeScreen. No behaviour change; existing customize
+   tests must pass untouched.
+2. **Whole-database export/import**, id-preserving. The prerequisite — and useful on its own.
+3. **The database imprint + hard refusal** on every load path. Fixes the silent-wrong-world bug
+   that exists today, independently of export.
+4. **Envelope + codec** (`SaveFile.pack()` / `unpack()`), engine-side and headless testable, with
+   the plain-encoding fallback and the logo strip.
+5. **Export UI** in Settings.
+6. **Import UI** on Load game: picker, validation, preview, land as a slot.
+7. Strings, seven languages, ~25 keys, **informal register** (the mobile UI is informal throughout;
+   formal only if any of it ends up in a mail).
 
-Each step leaves the game working.
+Steps 1–3 are worth shipping even if the rest slips: they fix a real bug and add a real feature.
 
 ---
 
-## 8. Tests
+## 10. Tests
 
-- **Round trip**: `pack()` → `unpack()` reproduces `_snapshot()` exactly, including `rngState`;
-  then a loaded round-tripped save advances a week to the *same* result as the original. Equality
-  of the blob is not enough — the point is that the career continues identically.
-- **Both encodings**: gzip path and the plain fallback produce the same object.
-- **Old schema in**: a schema-3 envelope imports and runs the migration pipeline to 5.
-- **Future schema out**: a schema-99 envelope is refused with the right reason.
-- **Garbage in**: not JSON, JSON that is not a save, truncated payload, a 30 MB file — each
-  refused, each with its own message, none crashing.
-- **Missing database**: importing a save whose `databaseId` is unknown locally installs the
-  embedded one and the club names come out right. This is 5a and it is the test that matters most.
+- **Round trip**: `pack()` → `unpack()` reproduces `_snapshot()` exactly apart from the stripped
+  logos, including `rngState`; then a round-tripped save advances a week to the *same* result as
+  the original. Equality of the blob is not the point — the career continuing identically is.
+- **Logos**: `clubLogos` is absent from the payload; a save with 100 of them exports at roughly the
+  same size as one with none; `clubNames` / `compNames` survive.
+- **Database imprint**: a save on database X refuses to load without X, with X's exact name in the
+  message, on all three load paths; installing X then loads it correctly with the right club names
+  *and* the database's logos. An id-preserving database export/import round-trips.
+- **Base-game save**: no imprint, no gate, loads anywhere.
+- **Both encodings** produce the same object.
+- **Old schema in**: a schema-3 envelope migrates to 5. **Future schema out**: schema-99 refused.
+- **Garbage in**: not JSON, JSON that is not a save, truncated payload, a 30 MB file — each refused
+  with its own message, none crashing.
 - **Import does not touch the live game**: a running career is byte-identical after an import.
-- **Slots full**: refused the same way `createNamedSave` refuses.
-- **Size reporting**: a save with 100 logos reports its real size.
+- **Checksum**: an edited payload still loads, and is marked `modified`.
 
-And, because a DOM stub cannot prove a share sheet opens: one real-device pass exporting a save,
-sending it somewhere, and importing it back on the `-PdevId` build — which is exactly the setup
-this feature is for.
+A DOM stub cannot prove a share sheet opens, so one real-device pass: export a save, send it
+somewhere, import it back on the `-PdevId` build — which is exactly the setup this feature is for.
 
 ---
 
-## 9. Open questions
+## 11. Remaining question
 
-1. **The 5b decision** — accept editable saves, or export-only? Everything else is downstream of it.
-2. **Where does import live?** Settings → Save game, next to the slots (consistent), or also on the
-   Start screen, so a player who has just reinstalled can restore before starting a career
-   (discoverable at the moment of need). The second is more useful and slightly more work.
-3. **Should export offer a "lean" variant** that drops `clubLogos` for a dramatically smaller file,
-   clearly labelled as losing custom logos? Useful for bug reports, risky if a player picks it for
-   a phone transfer without reading.
+Only one left. **What happens to an existing save that was started on a database, before the
+imprint exists?** It has `databaseId` but no recorded name. On a device that still has the
+database, nothing changes. On one that does not, the refusal can only say "a database this save
+needs is missing" without naming it. The alternatives are to let those specific saves through with
+a warning (preserving today's behaviour for pre-existing saves only), or to back-fill the name at
+load time whenever the database *is* present, so the imprint repairs itself before it is ever
+needed. The second is better and nearly free.
