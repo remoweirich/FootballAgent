@@ -33,7 +33,13 @@ const sb = {
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     window: { addEventListener() {} },
 };
-sb.UI = { money: n => String(n), esc: s => (s == null ? '' : String(s)), crest: () => '<crest>', cur: () => '€' };
+// saveFileOut moved from CustomizeScreen to UI (ui/js/shim.js) when Settings needed it for save
+// export; captured here so the export assertions below still see what was written.
+sb.__written = [];
+sb.UI = {
+    money: n => String(n), esc: s => (s == null ? '' : String(s)), crest: () => '<crest>', cur: () => '€',
+    saveFileOut: (filename, text, mime) => { sb.__written.push({ filename, text, mime }); return Promise.resolve({ ok: true }); },
+};
 vm.createContext(sb);
 for (const f of ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'injuries-data.js', 'simulation.js'])
     vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });
@@ -171,6 +177,13 @@ check('region cost shows once a region has clubs', (() => {
     } catch (e) { errs.push(String(e)); return false; }
 })());
 check('export country produces JSON without throwing', (() => { try { CX.exportCountry('Nigeria'); return true; } catch (e) { errs.push(String(e)); return false; } })());
+// the move to UI.saveFileOut must not have silently stopped writing anything
+check('...and actually hands a country JSON file to the file-out path', (() => {
+    const w = sb.__written[sb.__written.length - 1];
+    if (!w) return false;
+    try { const cc = JSON.parse(w.text); return /\.json$/.test(w.filename) && cc && cc.name === 'Nigeria' && Array.isArray(cc.clubs); }
+    catch (e) { return false; }
+})());
 
 check('no errors thrown across the render/validation smoke, got ' + JSON.stringify(errs.slice(0, 3)), errs.length === 0);
 

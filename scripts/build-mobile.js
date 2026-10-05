@@ -14,7 +14,7 @@ const ENGINE_FILES = [
     'rng.js',
     'i18n.js', 'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'i18n-pt.js', 'i18n-it.js', 'i18n-nl.js',
     'names-data.js', 'clubs.js', 'players.js', 'storage.js', 'game-state.js',
-    'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'achievements.js', 'injuries-data.js', 'simulation.js',
+    'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'world-ext.js', 'agency.js', 'achievements.js', 'injuries-data.js', 'simulation.js', 'save-file.js',
     'live-sim-data.js', 'live-sim-data-de.js', 'live-sim-data-es.js', 'live-sim-data-fr.js', 'live-sim-data-pt.js', 'live-sim-data-it.js', 'live-sim-data-nl.js', 'live-sim.js', 'attend.js', 'dialogue-data.js', 'dialogue-data-de.js', 'dialogue-data-es.js', 'dialogue-data-fr.js', 'dialogue-data-pt.js', 'dialogue-data-it.js', 'dialogue-data-nl.js', 'dialogue.js'
 ];
 const UI_JS_FILES = [

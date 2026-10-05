@@ -240,5 +240,39 @@ const UI = {
     },
     kindColor(kind) {
         return ({ transfer: 'var(--state-good)', loan: 'var(--info)', renewal: 'var(--warning)', sponsor: 'var(--state-good)', news: 'var(--text-secondary)', summary: 'var(--gold)', info: 'var(--info)', attend: 'var(--gold)' })[kind] || 'var(--text-secondary)';
+    },
+
+    // Hand a generated file to the player. Lived on CustomizeScreen first; moved here once
+    // Settings needed it too (save export).
+    //
+    // Android's WebView ignores <a download> and blob: URLs, so the native path writes the file
+    // for real and hands it to the system share sheet — it can then go to Drive, email or Files
+    // like any other document. The browser path keeps the blob download, which is what works there.
+    // Returns { ok } or { ok:false, cancelled } so the caller can report honestly.
+    async saveFileOut(filename, text, mime) {
+        const cap = (typeof window !== 'undefined') && window.Capacitor;
+        const native = !!(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+        const P = (cap && cap.Plugins) || {};
+        if (native && P.Filesystem) {
+            try {
+                await P.Filesystem.writeFile({ path: filename, data: text, directory: 'CACHE', encoding: 'utf8' });
+                const { uri } = await P.Filesystem.getUri({ path: filename, directory: 'CACHE' });
+                if (P.Share) await P.Share.share({ title: filename, url: uri, dialogTitle: I18n.t('customize.shareFile') });
+                return { ok: true, shared: !!P.Share };
+            } catch (e) {
+                // a cancelled share sheet is not a failure worth shouting about
+                if (/cancel/i.test(String((e && e.message) || e || ''))) return { ok: false, cancelled: true };
+                return { ok: false, error: String((e && e.message) || e || '') };
+            }
+        }
+        try {
+            const blob = new Blob([text], { type: mime || 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            return { ok: true };
+        } catch (e) { return { ok: false, error: String((e && e.message) || e || '') }; }
     }
 };

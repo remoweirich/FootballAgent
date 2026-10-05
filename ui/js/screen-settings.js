@@ -200,8 +200,38 @@ const SettingsScreen = {
             <p class="set-note">${I18n.t('settings.saveNote', { max, used: slots.length })}</p>
             ${chips}
             <input id="setSaveName" class="text-input" type="text" maxlength="32" placeholder="${I18n.t('start.savePlaceholder')}" value="${UI.esc(cur)}" style="margin-top:10px">
-            <button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="SettingsScreen._doSave()">${I18n.t('common.save')}</button>`);
+            <button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="SettingsScreen._doSave()">${I18n.t('common.save')}</button>
+            <div class="set-note" style="margin-top:16px">${I18n.t('settings.exportNote')}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:8px" onclick="SettingsScreen.exportSave()"><i class="ti ti-download"></i>${I18n.t('settings.exportSave')}</button>
+            <div id="setExportMsg"></div>`);
         setTimeout(() => { const el = document.getElementById('setSaveName'); if (el) el.focus(); }, 30);
+    },
+
+    // Write the running career out as a .fam file and hand it to the share sheet.
+    async exportSave() {
+        const msg = document.getElementById('setExportMsg');
+        const say = (t, cls) => { if (msg) msg.innerHTML = `<div class="result ${cls || 'info'}" style="margin-top:10px">${t}</div>`; };
+        if (typeof SaveFile === 'undefined' || typeof GameState === 'undefined') { say(I18n.t('settings.exportFailed'), 'bad'); return; }
+        say(I18n.t('settings.exporting'));
+        try {
+            // flush first: the autosave is debounced, so the newest week may not be written yet
+            if (typeof Storage !== 'undefined' && Storage.flush) await Storage.flush();
+            const res = await SaveFile.pack(GameState._snapshot(), {
+                app: (I18n.t('settings.version').match(/v[\d.]+/) || [null])[0],
+                season: GameState.seasonLabel ? GameState.seasonLabel() : null
+            });
+            if (!res.ok) {
+                say(res.error === 'worldmissing' ? I18n.t('settings.exportWorldMissing') : I18n.t('settings.exportFailed'), 'bad');
+                return;
+            }
+            const out = await UI.saveFileOut(res.filename, res.text, 'application/json');
+            if (out.cancelled) { say(''); return; }
+            if (!out.ok) { say(I18n.t('settings.exportFailed'), 'bad'); return; }
+            const kb = Math.max(1, Math.round(res.bytes / 1024));
+            say(I18n.t('settings.exportDone', { file: res.filename, kb }), 'ok');
+        } catch (e) {
+            say(I18n.t('settings.exportFailed'), 'bad');
+        }
     },
     _useName(btn) { const el = document.getElementById('setSaveName'); if (el) el.value = btn.textContent; },
     async _doSave() {
