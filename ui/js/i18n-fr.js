@@ -1063,6 +1063,7 @@ I18n.register('fr', {
     'cd.sponsorCut': 'Ta commission sur le sponsoring :',
     'cd.repLength': 'Durée de la représentation :',
     'cd.proposeTerms': 'Proposer les conditions',
+    'cd.signMustMatch': 'Règle exactement les conditions demandées par le tutoriel pour continuer.',
     'cd.signSealed': 'Très bien, signons ce contrat.',
     // potential
     'cd.scoutingReport': 'Rapport de recrutement',

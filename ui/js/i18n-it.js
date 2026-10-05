@@ -1063,6 +1063,7 @@ I18n.register('it', {
     'cd.sponsorCut': 'La tua quota sulle sponsorizzazioni:',
     'cd.repLength': 'Durata della rappresentanza:',
     'cd.proposeTerms': 'Proponi le condizioni',
+    'cd.signMustMatch': 'Imposta esattamente le condizioni chieste dal tutorial per proseguire.',
     'cd.signSealed': 'Bene — andiamo a firmare questo contratto.',
     // potential
     'cd.scoutingReport': 'Rapporto di osservazione',

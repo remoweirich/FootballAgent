@@ -406,6 +406,63 @@ check('gating() only reports the step the tour is actually on', runv(`
   const offTour = !Walkthrough.gating('scoutBrief');
   return onTerm && onBrief && offTour;`));
 
+// A plain `target` must not hold the narration back. It used to: while _awaitTarget waited (up to
+// 60 x 60ms) for an element that might never appear, the card still showed the PREVIOUS step's
+// words, so pressing Next looked like the same text box coming up again and again.
+check('only waitFor holds the text back, never a plain target', (() => {
+    const src = fs.readFileSync(path.join(uiBase, 'walkthrough.js'), 'utf8');
+    const at = src.indexOf('_awaitTarget(s, tries) {');
+    const body = at < 0 ? '' : src.slice(at, at + 700);
+    // the old code built a gate from `s.waitFor || s.target`; the new one keys on waitFor alone
+    return body.length > 0 && !/s\.waitFor\s*\|\|\s*s\.target/.test(body) && /if \(!s\.waitFor\)/.test(body);
+})());
+
+// The tutorial books used wage * commission with no /100 — Johan on 250k at 8% read as €2,000,000
+// a week against the real game's €20,000.
+check('the tutorial books pay a realistic commission', runv(`
+  const j = GameState.players.find(p => p.id === 'wt_johan');
+  if (!j) return 'no johan';
+  const ev = [];
+  const before = GameState.agency.balance;
+  Walkthrough._settleBooks(ev);
+  const moved = GameState.agency.balance - before;
+  GameState.agency.balance = before;
+  // gross commission is wage x pct / 100; net is that minus scouts and the office
+  const gross = Math.round(j.wage * j.wageCommission / 100);
+  return gross === 20000 && moved <= gross && moved > 10000;`));
+
+// In demo mode every club bites on purpose, so pitching a division answered with 23 offers.
+check('a tutorial pitch is capped', runv(`
+  return Walkthrough.DEMO_MAX_OFFERS === 4;`));
+check('...and the shop screen honours the cap', (() => {
+    const src = fs.readFileSync(path.join(uiBase, 'screen-client-detail.js'), 'utf8');
+    const at = src.indexOf('doShop(id)');
+    const body = at < 0 ? '' : src.slice(at, at + 1200);
+    return /DEMO_MAX_OFFERS/.test(body) && /bites >= cap/.test(body);
+})());
+
+// The negotiation steps name exact terms and the button stays dead until they are set.
+check('both negotiation steps are gated', runv(`
+  const by = k => Walkthrough.SCRIPT.find(s => s.key === k);
+  return by('wt.wayne.neg1').gate === 'signTerms' && by('wt.wayne.neg2').gate === 'signTerms';`));
+check('the required terms are per round and match the narration', runv(`
+  Walkthrough._active = true;
+  Walkthrough._steps = Walkthrough.SCRIPT.slice();
+  Walkthrough._i = Walkthrough._steps.findIndex(s => s.key === 'wt.wayne.neg1');
+  const r1 = Walkthrough.signTerms(1), r2 = Walkthrough.signTerms(2);
+  Walkthrough._active = false;
+  const offTour = Walkthrough.signTerms(1);
+  return r1.wage === 14 && r1.sponsor === 12 && r1.term === 4
+      && r2.wage === 11 && r2.sponsor === 9 && r2.term === 5
+      && offTour === null;`));
+// the numbers in the text and the numbers the button checks must be the same numbers
+check('the narration quotes exactly those terms', (() => {
+    const lines = fs.readFileSync(path.join(uiBase, 'i18n-en.js'), 'utf8').split('\n');
+    const t = k => lines.find(x => x.indexOf("'" + k + "'") >= 0) || '';
+    return /14%/.test(t('wt.wayne.neg1')) && /12%/.test(t('wt.wayne.neg1')) && /4<\/b> seasons|4 seasons/.test(t('wt.wayne.neg1'))
+        && /11%/.test(t('wt.wayne.neg2')) && /9%/.test(t('wt.wayne.neg2')) && /5<\/b>|5 seasons/.test(t('wt.wayne.neg2'));
+})());
+
 // Instructions must name the real controls. In German the tour said "Anheuern" where the tab
 // reads "Anwerben" and the button reads "Anstellen"; they are interpolated now so they cannot drift.
 check('button names are interpolated, not hardcoded', (() => {
@@ -433,7 +490,7 @@ check('the German contract step uses no gendered pronoun', (() => {
     const lines = fs.readFileSync(path.join(uiBase, 'i18n-de.js'), 'utf8').split('\n');
     const ln = lines.find(x => x.indexOf('wt.scout.contract') >= 0) || '';
     // Gemma is a woman; the generic sentences must not assume a male scout
-    return ln.length > 0 && !/(ihm|ihn)/.test(ln);
+    return ln.length > 0 && !/(^|[^A-Za-zÄÖÜäöüß])(ihm|ihn)([^A-Za-zÄÖÜäöüß]|$)/.test(ln);
 })());
 
 check('her report is three weeks away in every field the UI prints', runv(`

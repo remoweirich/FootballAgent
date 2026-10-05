@@ -215,7 +215,19 @@ const ClientDetail = {
         if (!targets.length) return;
         const p = GameState.getPlayer(id);
         const loan = shop.mode === 'loan';
-        const lines = targets.map(cid => (loan ? Agency.shopPlayerLoan(p, cid) : Agency.shopPlayer(p, cid)).message);
+        // During the tutorial every club bites by design (Agency.shopPlayerLoan), so pitching a
+        // whole division answered with 23 offers — unreadable, and nothing like the real game.
+        // Stop once the tour has enough to make the point.
+        const demo = typeof GameState !== 'undefined' && GameState.demoMode;
+        const cap = (typeof Walkthrough !== 'undefined' && Walkthrough.DEMO_MAX_OFFERS) || 4;
+        const lines = [];
+        let bites = 0;
+        for (const cid of targets) {
+            if (demo && bites >= cap) break;
+            const r = loan ? Agency.shopPlayerLoan(p, cid) : Agency.shopPlayer(p, cid);
+            if (r && r.interested) bites++;
+            lines.push(r.message);
+        }
         GameState.save();
         shop.selected = new Set();
         // Interested clubs reply immediately, and those replies live on the page UNDER this sheet —
@@ -241,8 +253,18 @@ const ClientDetail = {
             <label class="field-label">${I18n.t('cd.wageCut')} <span id="signWageVal" class="editable-val">${s.wage}</span>%</label><input class="range" type="range" min="1" max="25" value="${s.wage}" oninput="ClientDetail.signSlide('${id}','wage',this.value)">
             <label class="field-label">${I18n.t('cd.sponsorCut')} <span id="signSponsorVal" class="editable-val">${s.sponsor}</span>%</label><input class="range" type="range" min="1" max="25" value="${s.sponsor}" oninput="ClientDetail.signSlide('${id}','sponsor',this.value)">
             <label class="field-label">${I18n.t('cd.repLength')} <span id="signTermVal" class="editable-val">${s.term}</span>${I18n.t('nego.seasonsSuffix')}</label><input class="range" type="range" min="1" max="10" value="${s.term}" oninput="ClientDetail.signSlide('${id}','term',this.value)">
-            <button class="btn btn--primary" style="margin-top:var(--space-5)" onclick="ClientDetail.proposeSign('${id}')"><i class="ti ti-send"></i>${I18n.t('cd.proposeTerms')}</button>
+            <button class="btn btn--primary" style="margin-top:var(--space-5)" id="signProposeBtn" ${this.signBlocked(id) ? 'disabled' : ''} onclick="ClientDetail.proposeSign('${id}')"><i class="ti ti-send"></i>${I18n.t('cd.proposeTerms')}</button>
+            ${this.signBlocked(id) ? `<p class="hint" style="margin-top:var(--space-2);color:var(--accent-text)">${I18n.t('cd.signMustMatch')}</p>` : ''}
             <div id="actionResult"></div>`);
+    },
+    // The tutorial names exact terms and will not let the player propose anything else, so the
+    // step actually teaches what moving the sliders does. Never active outside the tour.
+    signBlocked(id) {
+        const s = this.ctx(id).sign; if (!s) return false;
+        const want = (typeof Walkthrough !== 'undefined' && Walkthrough.signTerms)
+            ? Walkthrough.signTerms(s.round) : null;
+        if (!want) return false;
+        return s.wage !== want.wage || s.sponsor !== want.sponsor || s.term !== want.term;
     },
     // update state + just the label text — re-rendering the sheet on every drag tick would
     // destroy and recreate the <input type=range> mid-drag, which is what made it "jump back"
@@ -251,6 +273,9 @@ const ClientDetail = {
         const map = { wage: 'signWageVal', sponsor: 'signSponsorVal', term: 'signTermVal' };
         const el = document.getElementById(map[key]);
         if (el) el.textContent = val;
+        // the sheet is deliberately not re-rendered mid-drag, so the gated button is synced by hand
+        const btn = document.getElementById('signProposeBtn');
+        if (btn) { if (this.signBlocked(id)) btn.setAttribute('disabled', ''); else btn.removeAttribute('disabled'); }
     },
     proposeSign(id) {
         const p = GameState.getPlayer(id), s = this.ctx(id).sign;

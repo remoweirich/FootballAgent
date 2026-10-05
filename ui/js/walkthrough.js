@@ -260,8 +260,10 @@ const Walkthrough = {
         const G = GameState, ag = G.agency;
         const scoutCost = (ag.scouts || []).reduce((n, s) => n + (s.weeklyCost || 0), 0);
         const office = (typeof Upgrades !== 'undefined' && Upgrades.office()) ? Upgrades.office().weekly : 0;
+        // wageCommission is a PERCENTAGE — the real books divide by 100 (Agency.weeklyBreakdown).
+        // Without it the tutorial paid 100x: Johan on 250k at 8% read as €2,000,000 a week.
         const commission = (typeof Agency !== 'undefined' ? Agency.clients() : []).reduce(
-            (n, p) => n + Math.round((p.wage || 0) * (p.wageCommission || 0)), 0);
+            (n, p) => n + Math.round((p.wage || 0) * (p.wageCommission || 0) / 100), 0);
         if (commission) { ag.balance += commission; G.addFinance('Commission', commission); }
         if (scoutCost) { ag.balance -= scoutCost; G.addFinance('Scouts', -scoutCost); }
         if (office) { ag.balance -= office; G.addFinance('Office', -office); }
@@ -460,7 +462,7 @@ const Walkthrough = {
         { key: 'wt.wayne.offerRep', target: 'button[onclick*="openSign"]', tap: true },
         {
             key: 'wt.wayne.neg1', target: 'button[onclick*="proposeSign"]', place: 'top',
-            waitFor: 'button[onclick*="proposeSign"]',
+            waitFor: 'button[onclick*="proposeSign"]', gate: 'signTerms',
             until: () => {
                 if (typeof ClientDetail === 'undefined') return false;
                 const c = ClientDetail.ctx && ClientDetail.ctx('wt_wayne');
@@ -469,6 +471,7 @@ const Walkthrough = {
         },
         {
             key: 'wt.wayne.neg2', target: 'button[onclick*="proposeSign"]', place: 'top',
+            gate: 'signTerms',
             until: () => {
                 const w = (GameState.players || []).find(p => p.id === 'wt_wayne');
                 return !!(w && w.agentId === 'me');
@@ -583,6 +586,24 @@ const Walkthrough = {
         return !!((cur && cur.gate === name) || (next && next.gate === name));
     },
 
+    // At most this many clubs answer a tutorial pitch. In demo mode every club bites (so the tour
+    // can never be stranded waiting for an offer), which turned "pitch to the whole division" into
+    // 23 replies. See ClientDetail.doShop.
+    DEMO_MAX_OFFERS: 4,
+
+    // The terms the negotiation steps ask for, per round. Kept here beside the script so the
+    // narration and the thing the button checks cannot drift apart; the sign sheet reads this and
+    // leaves Propose disabled until the sliders match. Keyed by round rather than by step, because
+    // the tour advances to the second step only after the first proposal has been rejected.
+    SIGN_TERMS: {
+        1: { wage: 14, sponsor: 12, term: 4 },
+        2: { wage: 11, sponsor: 9, term: 5 },
+    },
+    signTerms(round) {
+        if (!this.gating('signTerms')) return null;
+        return this.SIGN_TERMS[round] || null;
+    },
+
     next() {
         if (!this._active) return;
         this._i++;
@@ -620,9 +641,12 @@ const Walkthrough = {
     // rather than measuring a node that is not in the DOM yet.
     _awaitTarget(s, tries) {
         if (!this._active || this.step() !== s) return;
-        // waitFor is a hard gate (don't speak until the sheet is open); target is a soft one
-        const gate = s.waitFor || s.target;
-        if (!gate || document.querySelector(gate) || tries > 60) { this._paint(); return; }
+        // waitFor is a HARD gate — don't speak until the sheet is open. A plain target is soft and
+        // must not hold the text back: it used to, and while it waited (up to 60 x 60ms) the card
+        // still showed the PREVIOUS step's words. Pressing Next then looked like the same box
+        // appearing again and again. The ring and placement catch up on the next _position tick.
+        if (!s.waitFor) { this._paint(); return; }
+        if (document.querySelector(s.waitFor) || tries > 60) { this._paint(); return; }
         setTimeout(() => this._awaitTarget(s, tries + 1), 60);
     },
 

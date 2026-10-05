@@ -1065,6 +1065,7 @@ I18n.register('pt', {
     'cd.sponsorCut': 'A tua comissão sobre patrocínios:',
     'cd.repLength': 'Duração da representação:',
     'cd.proposeTerms': 'Propor condições',
+    'cd.signMustMatch': 'Define exatamente as condições que o tutorial pede para continuares.',
     'cd.signSealed': 'Muito bem — vamos assinar este contrato.',
     // potential
     'cd.scoutingReport': 'Relatório de observação',

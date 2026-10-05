@@ -1063,6 +1063,7 @@ I18n.register('nl', {
     'cd.sponsorCut': 'Jouw deel van de sponsorcontracten:',
     'cd.repLength': 'Duur van de vertegenwoordiging:',
     'cd.proposeTerms': 'Voorwaarden voorstellen',
+    'cd.signMustMatch': 'Stel precies de voorwaarden in die de uitleg vraagt om verder te gaan.',
     'cd.signSealed': 'Goed — laten we dit contract ondertekenen.',
     // potential
     'cd.scoutingReport': 'Scoutingrapport',

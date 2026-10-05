@@ -1057,6 +1057,7 @@ I18n.register('de', {
     'cd.sponsorCut': 'Dein Sponsoringanteil:',
     'cd.repLength': 'Mandatsdauer:',
     'cd.proposeTerms': 'Konditionen vorschlagen',
+    'cd.signMustMatch': 'Stell genau die Konditionen ein, die das Tutorial verlangt, um fortzufahren.',
     'cd.signSealed': 'Alles klar — dann lass uns den Vertrag unterschreiben.',
     // potential
     'cd.scoutingReport': 'Scout-Bericht',
