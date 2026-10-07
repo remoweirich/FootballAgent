@@ -265,7 +265,7 @@ I18n.register('en', {
     'settings.credits': 'Credits',
     'settings.copyright': 'Copyright',
     'settings.privacy': 'Privacy policy',
-    'settings.version': 'Football Agency Simulator · v1.0.27',
+    'settings.version': 'Football Agency Simulator · v1.0.28',
     'settings.saveNote': 'Name this save. Tap an existing name to overwrite it. You can keep up to {max} ({used} used).',
     'settings.exportSave': 'Export save to a file',
     'settings.exportNote': 'Write this career to a file you can keep, send somewhere, or load on another device. Custom logos are not included.',
