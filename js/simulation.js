@@ -639,6 +639,10 @@ const Sim = {
     // full interactive negotiation UI, since the whole point is that he's gone over your head
     _forcedMoves(events) {
         if (!GameState.isTransferWindowOpen()) return;
+        // indexed like _generateOffers, but this pass DOES move players (acceptTransfer below), so
+        // the index is rebuilt after every move — each lookup still sees every move made so far,
+        // exactly as the unindexed scan did
+        let posIdx = Agency.myPosIndex();
         Agency.clients().forEach(p => {
             const c = p.moraleCase;
             if (!c || !c.forcedMove || p.onLoanAt) return;
@@ -647,7 +651,7 @@ const Sim = {
             const val = Agency.playerValue(p);
             const cands = Clubs.allClubs.filter(cl =>
                 cl.id !== p.clubId && cl.reputation >= p.ability - 12 && cl.reputation <= p.ability + 16 &&
-                Agency.buyerMaxFee(cl) >= val * 0.4 && !Agency.clubHasMyPlayerAtPos(cl.id, p.position, p.id));
+                Agency.buyerMaxFee(cl) >= val * 0.4 && !Agency.clubHasMyPlayerAtPos(cl.id, p.position, p.id, posIdx));
             if (!cands.length) return;   // nobody suitable yet — try again next window
             const dest = Agency.pickBuyer(cands, p); if (!dest) return;
             // stage 3 discounts uniformly for either dimension (time or club), so applied here
@@ -658,6 +662,7 @@ const Sim = {
             const wage = Agency.offeredWage(p, dest, { loyalty: false });
             const mail = { offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, transferFee: fee } };
             Agency.acceptTransfer(mail, wage, role, term, 0, { forced: true });
+            posIdx = Agency.myPosIndex();   // he may have changed club: re-index before the next client
             GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.forcedSubj', { name: p.name, dest: dest.name }), body: I18n.t('sim.forcedBody', { name: p.name, dest: dest.name, fee: UI.money(fee) }), ttl: 6 });
             if (typeof Dialogue !== 'undefined') Dialogue.addBond(p, -6);   // it came to this because you didn't fix it
             events.push({ type: 'morale', text: I18n.t('sim.forcedEvent', { name: p.name, dest: dest.name }) });
@@ -688,7 +693,18 @@ const Sim = {
 
     _generateOffers(events) {
         const winKey = GameState.transferWindowKey ? GameState.transferWindowKey() : null;
+        // Built ONCE for the whole pass. Since 1.0.22 the buyer pool is assembled before the roll
+        // (form and honours need it to set the chance), so the per-club "already have a player
+        // there?" check runs for every client every week rather than only on a successful roll —
+        // and unindexed, each check scanned all ~14k players. That was ~80% of a transfer-window
+        // week (53ms -> 264ms between 1.0.21 and 1.0.22). Nothing in this pass moves a player
+        // between clubs — it only writes offer mail — so one index stays exact throughout.
+        const posIdx = Agency.myPosIndex();
         Agency.clients().forEach(p => {
+            // clubs this client already has a transfer offer from, gathered once rather than by
+            // rescanning the inbox for every candidate club
+            const offeredBy = new Set();
+            for (const m of GameState.inbox) if (m.kind === 'transfer' && m.offer && m.offer.playerId === p.id) offeredBy.add(m.offer.toClubId);
             if (p.injury) return;
             if (p.retiringThisSeason) return;   // announced his final season -> clubs stop chasing him (you can still tout him out)
             if (p.onLoanAt) return;   // out on loan / with reserves -> no transfer interest until he's back
@@ -699,8 +715,8 @@ const Sim = {
                 if (pending < 2 && Rng.next() < 0.5) {
                     const cands = Clubs.allClubs.filter(c =>
                         c.reputation >= p.ability - 10 && c.reputation <= p.ability + 14 &&
-                        !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
-                        !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
+                        !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id, posIdx) &&
+                        !offeredBy.has(c.id));
                     if (cands.length) {
                         const club = Agency.pickBuyer(cands, p); if (!club) return;
                         const offer = Agency._offerObj(p, null, club.id, 0, { initiatedByAgent: false });
@@ -740,8 +756,8 @@ const Sim = {
                 const cands = Clubs.allClubs.filter(c =>
                     c.id !== p.clubId && c.reputation >= lo && c.reputation <= hi &&
                     Agency.buyerMaxFee(c) >= val * 0.55 &&
-                    !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id) &&
-                    !GameState.inbox.some(m => m.kind === 'transfer' && m.offer.playerId === p.id && m.offer.toClubId === c.id));
+                    !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id, posIdx) &&
+                    !offeredBy.has(c.id));
                 const chance = Math.min(0.26, 0.02 + attract / 320) * scarcity * w.boost * Agency.meanBuyerWeight(p, cands, w);
                 if (cands.length && Rng.next() < chance) {
                     {
@@ -795,7 +811,7 @@ const Sim = {
                 if (Rng.next() < appeal) {
                     const club = Clubs.getClubById(p.clubId);
                     const dest = Agency._findLoanClub(p, club || Clubs.allClubs[0]);
-                    if (dest && !Agency.clubHasMyPlayerAtPos(dest.id, p.position, p.id)) {
+                    if (dest && !Agency.clubHasMyPlayerAtPos(dest.id, p.position, p.id, posIdx)) {
                         GameState.addMail({ kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: dest.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, role: Agency.maxRoleAt(p, dest) }, persistence: 0, ttl: 3 });
                         events.push({ type: 'offer', text: I18n.t('sim.ev.loanWant', { club: dest.name, name: p.name }) });
                     }

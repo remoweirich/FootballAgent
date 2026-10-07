@@ -388,8 +388,27 @@ const Agency = {
         return 'youth';
     },
     rolesUpTo(role) { const i = ROLE_ORDER.indexOf(role); return ROLE_ORDER.slice(0, i + 1); },
-    clubHasMyPlayerAtPos(clubId, pos, excludeId) {
+    // Does one of MY players already play this position at this club? Without an index this scans
+    // every player in the world (~14k) to answer a question about ~18 clients — fine for a single
+    // call, ruinous in a loop. _generateOffers asks it once per candidate club per client per week,
+    // which made it ~80% of a transfer-window week. Pass an index from myPosIndex() in hot loops.
+    clubHasMyPlayerAtPos(clubId, pos, excludeId, idx) {
+        if (idx) { const ids = idx.get(clubId + '|' + pos); return !!ids && ids.some(id => id !== excludeId); }
         return GameState.players.some(p => p.agentId === 'me' && p.id !== excludeId && p.clubId === clubId && p.position === pos);
+    },
+    // One pass over the players, keyed "clubId|position" -> my player ids there. Uses EXACTLY the
+    // predicate of the scan above (agentId 'me', archived included) rather than clients(), which
+    // skips archived players — so a lookup answers the same question the scan would. Only valid
+    // while nobody changes club, so build it per pass and never cache it across a transfer.
+    myPosIndex() {
+        const idx = new Map();
+        for (const p of GameState.players) {
+            if (p.agentId !== 'me' || p.clubId == null) continue;
+            const k = p.clubId + '|' + p.position;
+            const ids = idx.get(k);
+            if (ids) ids.push(p.id); else idx.set(k, [p.id]);
+        }
+        return idx;
     },
 
     signPlayer(p, wage, sponsor, term) {
