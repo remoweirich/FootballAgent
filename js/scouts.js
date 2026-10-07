@@ -307,7 +307,7 @@ const Scouts = {
         const ag = GameState.agency;
         if (ag.scouts.find(s => s.id === offer.id)) return { ok: false, message: this._t('scouts.err.alreadyHired', null, 'That scout is already on your books.') };
         const max = Upgrades.maxScouts();
-        if (ag.scouts.length >= max) return { ok: false, message: this._t('scouts.err.officeFull', { office: Upgrades.office().name, max }, 'Your {office} only has room for {max} scout(s). Upgrade your office to hire more.') };
+        if (ag.scouts.length >= max) return { ok: false, message: this._t('scouts.err.officeFull', { office: Upgrades.itemName(Upgrades.office()), max }, 'Your {office} only has room for {max} scout(s). Upgrade your office to hire more.') };
         const term = this.termFor(termWeeks) ? termWeeks : this.DEFAULT_TERM;
         const wage = this.quoteFor(offer, term);
         this._ensureOffer(offer);

@@ -445,12 +445,13 @@ const GameState = {
     // run() upgrades a save from the previous version to its own `to`; the pipeline runs every entry
     // newer than the loaded save, in order. A legacy save with no schemaVersion is inferred from the
     // old `worldV` marker (v2) or treated as v1 otherwise, so the very first saves still upgrade cleanly.
-    SCHEMA_VERSION: 5,
+    SCHEMA_VERSION: 6,
     MIGRATIONS: [
         { to: 2, run(gs, d) { gs._migrateWorldV2(d); } },     // frozen-NPC world model + anchor/reputation split
         { to: 3, run(gs) { gs._migrateScoutRegions(); } },    // reshaped Portugal/Belgium scouting regions
         { to: 4, run(gs) { gs._migrateScoutContracts(); } },  // scouts gained a negotiated minimum contract
-        { to: 5, run(gs) { gs._migrateScoutAges(); } }        // scouts gained an age, growth and retirement
+        { to: 5, run(gs) { gs._migrateScoutAges(); } },       // scouts gained an age, growth and retirement
+        { to: 6, run(gs) { gs._migrateStrengthMachine(); } }  // the Strength Machine became four machines
     ],
     _runMigrations(d) {
         // Structural defaults, not versioned steps: they must apply on EVERY load, because a save at
@@ -562,6 +563,15 @@ const GameState = {
     // is given one now. Their CURRENT rating becomes the baseline the +15 growth cap is measured
     // from, so a long-serving scout can still improve from where he is rather than being treated
     // as having already spent growth he never had.
+    // The Multifunctional Strength Machine was split into four machines. An owner keeps exactly
+    // what he paid for and had: the Leg Curl Machine costs the same and does the same.
+    _migrateStrengthMachine() {
+        const st = this.agency && this.agency.facilities;
+        if (!st || !st.items) return;
+        const had = st.items.some(it => it.id === 'strength_machine');
+        st.items = st.items.filter(it => it.id !== 'strength_machine');
+        if (had && !st.items.some(it => it.id === 'leg_curl')) st.items.push({ id: 'leg_curl', expiresWeek: null });
+    },
     _migrateScoutAges() {
         const now = this.absWeek();
         ((this.agency && this.agency.scouts) || []).forEach(s => {

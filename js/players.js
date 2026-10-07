@@ -47,7 +47,20 @@ function clubWageMult(club) { return club && SUPER_CLUBS.has(club.id) ? 1.00 : (
 const DEV_BASE = 0.08;
 
 const PlayerGen = {
-    _id() { return 'p_' + Date.now().toString(36) + '_' + Rng.next().toString(36).slice(2, 8); },
+    // Ids must never repeat: links, saves and every lookup go by id, because names do (a 5-season
+    // world has ~730 names shared by two or more players). Timestamp + random all but guarantees
+    // it; the registry makes it certain, even across a device clock set back, and without one
+    // extra random draw, so a seeded world rolls exactly the same dice as before.
+    _ids: new Set(), _idsFrom: null,
+    _id() {
+        const all = typeof GameState !== 'undefined' && GameState.players;
+        if (all && all !== this._idsFrom) { all.forEach(p => this._ids.add(p.id)); this._idsFrom = all; }   // a loaded save's ids count too
+        const base = 'p_' + Date.now().toString(36) + '_' + Rng.next().toString(36).slice(2, 8);
+        let id = base, n = 1;
+        while (this._ids.has(id)) id = base + '_' + (n++);
+        this._ids.add(id);
+        return id;
+    },
     squadSizeByTier(t) { return ({ 1: 20, 2: 18, 3: 16, 4: 14 })[t] || 16; },
     randPos() { return POS_LIST[Math.floor(Rng.next() * POS_LIST.length)]; },
     gauss(mean, sd) { const r = (Rng.next() + Rng.next() + Rng.next()) / 3; return mean + (r - 0.5) * 2 * sd; },

@@ -1060,10 +1060,12 @@ const Agency = {
     // 80–95% of it as its opening line; it inches that standing offer UP toward the max as you concede
     // (drop your ask) or simply persist. A wildly greedy ask (>30% over its true max) is held off
     // WITHOUT revealing the ceiling. Mutates neg.woffer/wmax/wprev; returns { result, offer }.
-    _wageBargain(neg, max, requested) {
+    // `floor` is a wage the club has already put on the table (its own opening offer): it never
+    // opens the bargain below that, so asking for exactly what it offered is always a yes.
+    _wageBargain(neg, max, requested, floor) {
         if (neg.wmax == null) {
             neg.wmax = max;
-            neg.woffer = Math.round(max * (0.80 + Rng.next() * 0.15) / 10) * 10;   // open at 80–95% of the true max
+            neg.woffer = Math.max(floor || 0, Math.round(max * (0.80 + Rng.next() * 0.15) / 10) * 10);   // open at 80–95% of the true max
             neg.wprev = null;
         }
         neg.wmax = Math.max(neg.woffer, max);   // the true max can drift (form/rel) but never below the standing offer
@@ -1077,10 +1079,10 @@ const Agency = {
         return { result: A <= neg.woffer ? 'accept' : 'counter', offer: neg.woffer };
     },
     // `neg` is the persisted patience/threat state (see initNeg), created lazily and mutated in place.
-    negotiateWage(p, club, requested, neg) {
+    negotiateWage(p, club, requested, neg, floor) {
         const max = this.maxClubWage(p, club);
         neg = this.initNeg(neg, club, max);
-        const b = this._wageBargain(neg, max, requested);
+        const b = this._wageBargain(neg, max, requested, floor);
         neg.lastCounter = b.offer;
         if (b.result === 'accept')
             return { status: 'accept', neg, message: neg.round === 1 ? I18n.t('nego.wage.acceptR1', { amt: UI.money(requested) }) : I18n.t('nego.wage.acceptRn', { amt: UI.money(requested) }) };
@@ -1099,6 +1101,25 @@ const Agency = {
         const band = this.threatBand(neg.threat);
         const flavor = this.negLine('NEUTRAL', band, 'renewal', { amt: UI.money(b.offer) });
         return { status: 'counter', counter: b.offer, neg, message: flavor || I18n.t('nego.wage.close', { amt: UI.money(b.offer) }) };
+    },
+    // A renewal judged as ONE package, the way a transfer is: the wage through the bargain above,
+    // the role against the club's ceiling, the length against its cap. Whatever comes back as
+    // `counter` is a package the club has agreed to — the only thing the agent may then sign.
+    // `floor` is the club's own opening wage (see _wageBargain).
+    evaluateRenewal(p, club, pkg, neg, floor) {
+        const term = Math.max(1, Math.min(this.maxContractTerm(p, club), pkg.term || 2));
+        const ceil = this.clubRoleCeiling(p, club);
+        const roleOk = !pkg.role || this.roleAcceptable(p, club, pkg.role);
+        const role = roleOk ? pkg.role : ceil;
+        const w = this.negotiateWage(p, club, pkg.wage, neg, floor);
+        if (w.status === 'walkout') return { status: 'walkout', neg: w.neg, message: w.message };
+        const wage = w.status === 'accept' ? pkg.wage : w.counter;
+        const roleMsg = roleOk ? '' : I18n.t('nego.loanRole.counter', { name: p.name, role: roleLabel(ceil, p.age, p.position), reqRole: roleLabel(pkg.role, p.age, p.position) });
+        const status = (w.status === 'accept' && roleOk) ? 'accept' : 'counter';
+        // "agreed" followed by a pushback reads as a contradiction, so a yes on the wage stays quiet
+        // when the role is what the club is pushing back on
+        const message = w.status === 'accept' ? (roleMsg || w.message) : w.message + (roleMsg ? ' ' + roleMsg : '');
+        return { status, counter: { wage, role, term }, neg: w.neg, message };
     },
     // negotiate loan game time: ask above the club's comfort level and they may dig in — or, with a good
     // relationship and persistence, eventually relent. Sometimes they stay stubborn.
@@ -1203,7 +1224,11 @@ const Agency = {
         const wageFloor = 30;
         const effMaxWage = Math.round(Math.max(wageFloor, maxWage - NEGO.FEE_TO_WAGE * feeAnnual / 52) / 10) * 10;
         const wageOk = pkg.wage <= effMaxWage, bonusOk = (pkg.bonus || 0) <= feeCeil;
-        const counter = { wage: Math.min(pkg.wage, effMaxWage), role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, feeCeil) };
+        // The counter is a package the club will sign, so its fee must also clear the club's
+        // willingness AT THE COUNTERED WAGE (what acceptTransfer checks), not only at the wage
+        // asked: a big fee ask can drag the countered wage down, and the fee room with it.
+        const counterWage = Math.min(pkg.wage, effMaxWage);
+        const counter = { wage: counterWage, role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, feeCeil, this.clubBonusWillingness(p, club, counterWage, pkg.fee)) };
 
         if (wageOk && roleOk && bonusOk) {
             const lines = [I18n.t('nego.tr.accept1', { name: p.name }), I18n.t('nego.tr.accept2', { name: p.name }), I18n.t('nego.tr.accept3')];

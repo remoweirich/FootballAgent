@@ -218,7 +218,8 @@ const ScoutCard = {
             if (typeof Agency !== 'undefined' && Agency.intlSuspended && Agency.intlSuspended())
                 return `<p class="hint">${I18n.t('scouts.err.intlSuspended', { weeks: Agency.intlSuspendWeeksLeft() })}</p>`;
             if (typeof Agency === 'undefined' || !Agency.hasIntlLicence())
-                return `<p class="hint">${I18n.t('sc.needISL')}</p>`;
+                return `<p class="hint">${I18n.t('sc.needISL')}</p>
+                    <button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ScoutingScreen.openLicence()"><i class="ti ti-license"></i>${I18n.t('sc.getLicence')}</button>`;
             const countries = Scouts.intlCountries();
             const selC = (s.country && countries.includes(s.country)) ? s.country : countries[0];
             return `<label class="field-label">${I18n.t('sc.country')}</label>

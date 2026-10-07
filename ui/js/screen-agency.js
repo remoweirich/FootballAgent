@@ -1,7 +1,8 @@
 // ============================================================
-//  Agency — reputation/clients/scouts/sponsor-reach stats, plus
-//  upgrade ladders (office, vehicles, properties), the
-//  International Scouting Licence, equipment/facilities and staff.
+//  Agency — reputation/clients/scouts/sponsor-reach stats, the
+//  Upgrades (office, vehicles, properties, equipment, facilities:
+//  one row each, opening its list) and staff. The International
+//  Scouting Licence lives on the Scouting screen.
 // ============================================================
 // Per-tier pictograms so an upgrade ladder visually climbs, not just numerically.
 // Offices come in 5 named families of 3 sub-tiers each (Home/Co-working/Traditional/
@@ -11,8 +12,9 @@ const AGENCY_PICS = {
     vehicle: ['ti-car', 'ti-car', 'ti-car', 'ti-helicopter', 'ti-anchor', 'ti-plane'],
     property: ['ti-caravan', 'ti-building', 'ti-home', 'ti-building-estate', 'ti-building-castle', 'ti-building-skyscraper'],
     equipment: {
-        resistance_bands: 'ti-stretching', dumbbells: 'ti-barbell', treadmills: 'ti-treadmill',
-        strength_machine: 'ti-barbell', first_aid: 'ti-first-aid-kit', gym: 'ti-building-warehouse',
+        resistance_bands: 'ti-stretching', dumbbells: 'ti-barbell', plyo_boxes: 'ti-arrow-up', kettlebells: 'ti-barbell',
+        treadmills: 'ti-treadmill', weight_bench: 'ti-barbell', leg_curl: 'ti-adjustments', leg_extension: 'ti-adjustments',
+        squat_rack: 'ti-barbell', functional_trainer: 'ti-tools', first_aid: 'ti-first-aid-kit', gym: 'ti-building-warehouse',
         pool: 'ti-swimming', training_ground: 'ti-run', medical_center: 'ti-heartbeat'
     },
     staff: { physio: 'ti-first-aid-kit', trainer: 'ti-run' }
@@ -70,8 +72,7 @@ const AgencyScreen = {
         const off = Upgrades.office(), nextOff = Upgrades.nextOffice();
         const vNext = Upgrades.nextVehicle(), pNext = Upgrades.nextProperty();
         const sl = SPONSOR_LABEL[Upgrades.sponsorLevel()];
-        const has = Agency.hasIntlLicence();
-
+        
         el.innerHTML = `
         <div class="info-grid" style="margin-bottom:var(--space-5)">
             <div class="info"><span><i class="ti ti-star"></i>${I18n.t('agency.reputation')}</span><b>${(ag.reputation || 0).toFixed(2)}<span class="muted" style="font-size:var(--fs-xs)">/${Agency.repLimit()}</span></b></div>
@@ -84,42 +85,16 @@ const AgencyScreen = {
             <i class="ti ti-chevron-right row-chev"></i>
         </a>
 
-        <div class="section-label">${I18n.t('agency.office')} <span class="muted" style="font-weight:400">${I18n.t('agency.weeklyCost')}</span></div>
-        <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('office')">
-            <div class="tier__body tier__body--current">
-                <div class="pic pic--current"><i class="ti ${this.iconFor('office', Upgrades.state().officeIndex)}"></i></div>
-                <div style="flex:1"><div class="tier__name">${UI.esc(off.name)}</div><div class="tier__benefit muted">${I18n.t('agency.repShort')} ${off.repLimit} · ${I18n.t('agency.scoutsN', { n: off.maxScouts })} · ${sl} · ${UI.euro(off.weekly)}/wk</div></div>
-                <i class="ti ti-chevron-right row-chev"></i>
-            </div>
-        </a>
-
-        <div class="section-label">${I18n.t('agency.vehicles')} <span class="muted" style="font-weight:400">${I18n.t('agency.buyInOrder')}</span></div>
-        <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('vehicle')">
-            <div class="tier__body ${vNext ? '' : 'tier__body--current'}">
-                <div class="pic ${vNext ? 'pic--locked' : 'pic--current'}">${this.picInner('vehicle', vNext ? Upgrades.state().vehicleIndex + 1 : Upgrades.state().vehicleIndex, !vNext)}</div>
-                <div style="flex:1"><div class="tier__name">${I18n.t('agency.ownedN', { n: Upgrades.ownedVehicles().length })}</div><div class="tier__benefit muted">${vNext ? I18n.t('agency.next', { name: vNext.name, price: UI.euro(vNext.price) }) : I18n.t('agency.fullGarage')}</div></div>
-                <i class="ti ti-chevron-right row-chev"></i>
-            </div>
-        </a>
-
-        <div class="section-label">${I18n.t('agency.properties')} <span class="muted" style="font-weight:400">${I18n.t('agency.buyInOrder')}</span></div>
-        <a class="tier" style="margin-bottom:var(--space-5);cursor:pointer" onclick="AgencyScreen.ladder('property')">
-            <div class="tier__body ${pNext ? '' : 'tier__body--current'}">
-                <div class="pic ${pNext ? 'pic--locked' : 'pic--current'}">${this.picInner('property', pNext ? Upgrades.state().propertyIndex + 1 : Upgrades.state().propertyIndex, !pNext)}</div>
-                <div style="flex:1"><div class="tier__name">${I18n.t('agency.ownedN', { n: Upgrades.ownedProperties().length })}</div><div class="tier__benefit muted">${pNext ? I18n.t('agency.next', { name: pNext.name, price: UI.euro(pNext.price) }) : I18n.t('agency.ownAllProps')}</div></div>
-                <i class="ti ti-chevron-right row-chev"></i>
-            </div>
-        </a>
-
-        <div class="section-label">${I18n.t('agency.intlLicence')}</div>
-        <div class="fcard">
-            <div class="frow"><span class="frow__k"><i class="ti ti-license"></i>${I18n.t('agency.status')}</span><span class="frow__v">${Agency.intlSuspended() ? `<span style="color:var(--danger)">${I18n.t('agency.suspendedW', { w: Agency.intlSuspendWeeksLeft() })}</span>` : has ? I18n.t('agency.activeW', { w: Agency.intlLicenceWeeksLeft() }) : I18n.t('agency.notHeld')}</span></div>
-            <div style="padding:9px 0"><p class="hint" style="margin:0 0 var(--space-3)">${I18n.t('agency.licenceHint')}${Agency.intlSuspended() ? I18n.t('agency.licenceSuspendedHint') : I18n.t('agency.licenceRenewHint')}</p>
-            ${Agency.intlSuspended() ? '' : `<div class="flex-row" style="gap:6px;flex-wrap:wrap">${Agency.INTL_LICENCE_OPTIONS.map(o => `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyLicence(${o.weeks})">${Agency.durLabel(o.label)} — ${UI.euro(o.cost)}</button>`).join('')}</div>`}</div>
-        </div>
-
-        <div class="section-label">${I18n.t('agency.equipment')} <span class="muted" style="font-weight:400">${I18n.t('agency.anyOrder')}</span></div>
-        <div class="gap-3" style="display:flex;flex-direction:column;margin-bottom:var(--space-5)">${this.equipCards()}</div>
+        <div class="section-label">${I18n.t('agency.upgrades')}</div>
+        ${this.upgradeRow('office', I18n.t('agency.office'), `<div class="pic pic--current"><i class="ti ${this.iconFor('office', Upgrades.state().officeIndex)}"></i></div>`,
+            UI.esc(Upgrades.itemName(off)), `${I18n.t('agency.repShort')} ${off.repLimit} · ${I18n.t('agency.scoutsN', { n: off.maxScouts })} · ${sl} · ${UI.euro(off.weekly)}/wk`, true)}
+        ${this.upgradeRow('vehicle', I18n.t('agency.vehicles'), `<div class="pic ${vNext ? 'pic--locked' : 'pic--current'}">${this.picInner('vehicle', vNext ? Upgrades.state().vehicleIndex + 1 : Upgrades.state().vehicleIndex, !vNext)}</div>`,
+            I18n.t('agency.ownedN', { n: Upgrades.ownedVehicles().length }), vNext ? I18n.t('agency.next', { name: Upgrades.itemName(vNext), price: UI.euro(vNext.price) }) : I18n.t('agency.fullGarage'), !vNext)}
+        ${this.upgradeRow('property', I18n.t('agency.properties'), `<div class="pic ${pNext ? 'pic--locked' : 'pic--current'}">${this.picInner('property', pNext ? Upgrades.state().propertyIndex + 1 : Upgrades.state().propertyIndex, !pNext)}</div>`,
+            I18n.t('agency.ownedN', { n: Upgrades.ownedProperties().length }), pNext ? I18n.t('agency.next', { name: Upgrades.itemName(pNext), price: UI.euro(pNext.price) }) : I18n.t('agency.ownAllProps'), !pNext)}
+        ${this.shelfRow('equipment')}
+        ${this.shelfRow('facilities')}
+        <div style="margin-bottom:var(--space-5)"></div>
 
         <div class="section-label">${I18n.t('agency.staff')}</div>
         <div class="gap-3" style="display:flex;flex-direction:column;margin-bottom:var(--space-6)">${this.staffCards()}</div>
@@ -138,8 +113,39 @@ const AgencyScreen = {
     },
     doReset() { GameState.hardReset(); },
 
-    equipCards() {
-        return EQUIPMENT.map(e => {
+    // One row of the Upgrades section: what it is (kicker), where you stand, and a tap to its list.
+    upgradeRow(kind, label, pic, name, benefit, done) {
+        const open = kind === 'equipment' || kind === 'facilities' ? `AgencyScreen.shelf('${kind}')` : `AgencyScreen.ladder('${kind}')`;
+        return `<a class="tier" style="margin-bottom:var(--space-3);cursor:pointer" onclick="${open}">
+            <div class="tier__body ${done ? 'tier__body--current' : ''}">
+                ${pic}
+                <div style="flex:1;min-width:0"><div class="muted" style="font-size:var(--fs-xs)">${label}</div><div class="tier__name">${name}</div><div class="tier__benefit muted">${benefit}</div></div>
+                <i class="ti ti-chevron-right row-chev"></i>
+            </div>
+        </a>`;
+    },
+    // Equipment and facilities are not ladders: buy them in any order. Cheapest first in the list.
+    shelfItems(kind) {
+        return EQUIPMENT.filter(e => kind === 'facilities' ? e.facility : !e.facility)
+            .map((e, i) => ({ e, i })).sort((a, b) => a.e.price - b.e.price || a.i - b.i).map(x => x.e);
+    },
+    shelfRow(kind) {
+        const items = this.shelfItems(kind), owned = items.filter(e => Upgrades.ownsEquip(e.id));
+        const next = items.find(e => !Upgrades.ownsEquip(e.id));
+        const upkeep = owned.reduce((t, e) => t + (e.weekly || 0), 0);
+        const benefit = next ? I18n.t('agency.next', { name: Upgrades.equipName(next.id), price: UI.euro(next.price) })
+            : I18n.t(kind === 'facilities' ? 'agency.allFacilities' : 'agency.fullyEquipped');
+        const icon = kind === 'facilities' ? 'ti-building-warehouse' : 'ti-barbell';
+        return this.upgradeRow(kind, I18n.t('agency.' + kind), `<div class="pic ${owned.length ? 'pic--owned' : ''}"><i class="ti ${icon}"></i></div>`,
+            I18n.t('agency.ownedOf', { n: owned.length, total: items.length }), benefit + (upkeep ? ` · ${UI.euro(upkeep)}/wk` : ''), !next);
+    },
+    shelf(kind) {
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('agency.' + kind)} <span class="muted" style="font-weight:400;font-size:var(--fs-sm)">${I18n.t('agency.anyOrder')}</span></div>
+            <div class="gap-3" style="display:flex;flex-direction:column;max-height:60vh;overflow-y:auto">${this.equipCards(this.shelfItems(kind))}</div>
+            <div id="actionResult"></div>`);
+    },
+    equipCards(list) {
+        return list.map(e => {
             const owned = Upgrades.ownsEquip(e.id);
             // an owned consumable counts down the weeks it has left; an unowned one advertises its term
             const left = e.expiresWeeks ? (owned ? Upgrades.weeksLeft(e.id) : null) : null;
@@ -151,7 +157,7 @@ const AgencyScreen = {
                 <div class="flex-row" style="justify-content:space-between">
                     <div class="flex-row" style="gap:10px">
                         <div class="pic ${owned ? 'pic--owned' : ''}"><i class="ti ${AGENCY_PICS.equipment[e.id] || 'ti-tool'}"></i></div>
-                        <div><div class="row-title">${UI.esc(e.name)} ${owned ? `<span class="pill pill--accent">${I18n.t('common.owned')}</span>` : ''}</div><div class="row-sub">${eff}</div></div>
+                        <div><div class="row-title">${UI.esc(Upgrades.equipName(e.id))} ${owned ? `<span class="pill pill--accent">${I18n.t('common.owned')}</span>` : ''}</div><div class="row-sub">${eff}</div></div>
                     </div>
                     ${owned ? '' : `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="AgencyScreen.buyEquip('${e.id}')">${UI.euro(e.price)}</button>`}
                 </div></div>`;
@@ -160,12 +166,12 @@ const AgencyScreen = {
     staffCards() {
         return STAFF.map(s => {
             const n = Upgrades.staffCount(s.id);
-            const eff = [s.dev ? `+${s.dev}% ${I18n.t('agency.eff.dev')}` : '', s.injury ? `${s.injury}% ${I18n.t('agency.eff.injury')}` : '', s.rep ? `+${s.rep} ${I18n.t('agency.eff.rep')}` : '', I18n.t('agency.eff.restocks', { name: s.yearlyName })].filter(Boolean).join(' · ');
+            const eff = [s.dev ? `+${s.dev}% ${I18n.t('agency.eff.dev')}` : '', s.injury ? `${s.injury}% ${I18n.t('agency.eff.injury')}` : '', s.rep ? `+${s.rep} ${I18n.t('agency.eff.rep')}` : '', I18n.t('agency.eff.restocks', { name: Upgrades.equipName(s.yearly) })].filter(Boolean).join(' · ');
             return `<div class="card">
                 <div class="flex-row" style="justify-content:space-between">
                     <div class="flex-row" style="gap:10px">
                         <div class="pic ${n > 0 ? 'pic--owned' : ''}"><i class="ti ${AGENCY_PICS.staff[s.id] || 'ti-user'}"></i></div>
-                        <div><div class="row-title">${UI.esc(s.name)} <span class="pill">${n}/${s.max}</span></div><div class="row-sub">${UI.euro(s.weekly)}/wk · ${eff}</div></div>
+                        <div><div class="row-title">${UI.esc(Upgrades.itemName(s))} <span class="pill">${n}/${s.max}</span></div><div class="row-sub">${UI.euro(s.weekly)}/wk · ${eff}</div></div>
                     </div>
                     <div class="flex-row" style="gap:6px">
                         <button class="btn btn--accent-outline btn--sm" style="width:auto" ${n >= s.max ? 'disabled' : ''} onclick="AgencyScreen.hireStaff('${s.id}')">${I18n.t('agency.hire')}</button>
@@ -187,7 +193,7 @@ const AgencyScreen = {
             const pic = state === 'owned' ? 'pic--owned' : state === 'current' ? 'pic--current' : state === 'locked' ? 'pic--locked' : '';
             const action = state === 'buyable' ? `<button class="btn btn--primary btn--sm" style="width:auto" onclick="AgencyScreen.buy('${kind}')">${kind === 'office' ? I18n.t('agency.moveIn') : I18n.t('agency.buyPrefix')}${UI.euro(price)}</button>`
                 : state === 'current' ? `<span class="pill pill--accent">${I18n.t('common.current')}</span>` : state === 'owned' ? `<span class="pill">${I18n.t('common.owned')}</span>` : '<i class="ti ti-lock" style="color:var(--text-dim)"></i>';
-            return `<div class="tier" style="margin-bottom:var(--space-3)"><div class="tier__body ${cls}"><div class="pic ${pic}">${this.picInner(kind, i, state === 'owned' || state === 'current')}</div><div style="flex:1"><div class="tier__name">${UI.esc(item.name)}</div><div class="tier__benefit muted">${meta}</div></div>${action}</div></div>`;
+            return `<div class="tier" style="margin-bottom:var(--space-3)"><div class="tier__body ${cls}"><div class="pic ${pic}">${this.picInner(kind, i, state === 'owned' || state === 'current')}</div><div style="flex:1"><div class="tier__name">${UI.esc(Upgrades.itemName(item))}</div><div class="tier__benefit muted">${meta}</div></div>${action}</div></div>`;
         }).join('');
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('agency.ladder' + kind[0].toUpperCase() + kind.slice(1))}</div>
             <div style="max-height:60vh;overflow-y:auto">${rows}</div>
@@ -203,8 +209,16 @@ const AgencyScreen = {
         }
         Router.result(r.message, r.ok ? 'ok' : 'bad');
     },
-    buyLicence(weeks) { const r = Agency.buyIntlLicence(weeks); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
-    buyEquip(id) { const r = Upgrades.buyEquip(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
+    // bought from its list: redraw the screen underneath and the list in place, like buy() above
+    buyEquip(id) {
+        const r = Upgrades.buyEquip(id), e = Upgrades.equipById(id);
+        GameState.save();
+        if (r.ok) {
+            this.render(document.getElementById('screenBody'));
+            this.shelf(e && e.facility ? 'facilities' : 'equipment');
+        }
+        Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
     hireStaff(id) { const r = Upgrades.hireStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     releaseStaff(id) { const r = Upgrades.releaseStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }
 };

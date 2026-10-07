@@ -1,13 +1,14 @@
 // ============================================================
 //  Scouting — recent finds (unsigned talent), your scouts and
-//  their assignments, and the hiring market.
+//  their assignments, the hiring market, and the International
+//  Scouting Licence that lets scouts work abroad.
 // ============================================================
 const ScoutingScreen = {
     tab: 'finds',
 
     render(el) {
         el.innerHTML = `<div class="tab-bar" style="margin-bottom:var(--space-4)">
-            ${[['finds', I18n.t('scouting.tab.finds')], ['scouts', I18n.t('scouting.tab.scouts')], ['market', I18n.t('scouting.tab.market')]].map(([k, l]) => `<button class="tab ${this.tab === k ? 'is-active' : ''}" onclick="ScoutingScreen.setTab('${k}')">${l}</button>`).join('')}
+            ${[['finds', I18n.t('scouting.tab.finds')], ['scouts', I18n.t('scouting.tab.scouts')], ['market', I18n.t('scouting.tab.market')], ['licence', I18n.t('scouting.tab.licence')]].map(([k, l]) => `<button class="tab ${this.tab === k ? 'is-active' : ''}" onclick="ScoutingScreen.setTab('${k}')">${l}</button>`).join('')}
         </div>
         <div id="scoutSection"></div>`;
         this.renderSection();
@@ -17,8 +18,23 @@ const ScoutingScreen = {
         const body = document.getElementById('scoutSection'); if (!body) return;
         if (this.tab === 'finds') body.innerHTML = this.finds();
         else if (this.tab === 'scouts') body.innerHTML = this.yourScouts();
+        else if (this.tab === 'licence') body.innerHTML = this.licence();
         else body.innerHTML = this.market();
     },
+
+    // ---------------- International Scouting Licence ----------------
+    licence() {
+        const has = Agency.hasIntlLicence(), susp = Agency.intlSuspended();
+        return `<div class="fcard">
+            <div class="frow"><span class="frow__k"><i class="ti ti-license"></i>${I18n.t('agency.status')}</span><span class="frow__v">${susp ? `<span style="color:var(--danger)">${I18n.t('agency.suspendedW', { w: Agency.intlSuspendWeeksLeft() })}</span>` : has ? I18n.t('agency.activeW', { w: Agency.intlLicenceWeeksLeft() }) : I18n.t('agency.notHeld')}</span></div>
+            <div style="padding:9px 0"><p class="hint" style="margin:0 0 var(--space-3)">${I18n.t('agency.licenceHint')}${susp ? I18n.t('agency.licenceSuspendedHint') : I18n.t('agency.licenceRenewHint')}</p>
+            ${susp ? '' : `<div class="flex-row" style="gap:6px;flex-wrap:wrap">${Agency.INTL_LICENCE_OPTIONS.map(o => `<button class="btn btn--accent-outline btn--sm" style="width:auto" onclick="ScoutingScreen.buyLicence(${o.weeks})">${Agency.durLabel(o.label)} — ${UI.euro(o.cost)}</button>`).join('')}</div>`}</div>
+        </div>
+        <div id="actionResult"></div>`;
+    },
+    buyLicence(weeks) { const r = Agency.buyIntlLicence(weeks); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
+    // from anywhere that says "you need a licence": straight to the tab that sells it
+    openLicence() { this.tab = 'licence'; Router.go('scouting'); },
 
     // ---------------- Finds (unsigned talent) ----------------
     finds() {

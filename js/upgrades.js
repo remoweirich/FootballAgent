@@ -14,7 +14,7 @@ const VEHICLES = [
 // ---- Properties (bought in order) ----
 const PROPERTIES = [
     { id: 'caravan', name: 'Caravan', price: 18000, repLimit: 4, players: 2 },
-    { id: 'apartment', name: 'Appartment', price: 350000, repLimit: 4, players: 3 },
+    { id: 'apartment', name: 'Apartment', price: 350000, repLimit: 4, players: 3 },
     { id: 'house', name: 'House', price: 1000000, repLimit: 4, players: 3 },
     { id: 'penthouse', name: 'Luxury Penthouse', price: 3000000, repLimit: 4, players: 4 },
     { id: 'mansion', name: 'Mansion', price: 8000000, repLimit: 4, players: 5 },
@@ -166,17 +166,17 @@ const Upgrades = {
     // ---- purchases ----
     buyVehicle() {
         const v = this.nextVehicle(); if (!v) return { ok: false, message: this._t('upg.err.topVehicle', null, 'You already own the very best there is — nothing above it.') };
-        if (GameState.agency.balance < v.price) return { ok: false, message: this._t('upg.err.cantAfford', { name: v.name, price: UI.money(v.price) }, 'Not enough cash for the {name} (€{price}).') };
+        if (GameState.agency.balance < v.price) return { ok: false, message: this._t('upg.err.cantAfford', { name: this.itemName(v), price: UI.money(v.price) }, 'Not enough cash for the {name} (€{price}).') };
         GameState.agency.balance -= v.price; GameState.addFinance('Upgrades', -v.price); this.state().vehicleIndex++;
-        GameState.addLog(this._t('upg.log.bought', { name: v.name, price: UI.money(v.price) }, 'Bought a {name} (€{price}).'), 'money');
-        return { ok: true, message: this._t('upg.ok.vehicle', { name: v.name, rep: v.repLimit, clients: v.players, pct: Math.round(v.scoutDiscount * 100) }, '{name} acquired. Rep limit +{rep}, client limit +{clients}, scouting −{pct}%.') };
+        GameState.addLog(this._t('upg.log.boughtItem', { name: this.itemName(v), price: UI.money(v.price) }, 'Bought {name} (€{price}).'), 'money');
+        return { ok: true, message: this._t('upg.ok.vehicle', { name: this.itemName(v), rep: v.repLimit, clients: v.players, pct: Math.round(v.scoutDiscount * 100) }, '{name} acquired. Rep limit +{rep}, client limit +{clients}, scouting −{pct}%.') };
     },
     buyProperty() {
         const p = this.nextProperty(); if (!p) return { ok: false, message: this._t('upg.err.topProperty', null, 'You already own the biggest there is — nothing bigger to buy.') };
-        if (GameState.agency.balance < p.price) return { ok: false, message: this._t('upg.err.cantAfford', { name: p.name, price: UI.money(p.price) }, 'Not enough cash for the {name} (€{price}).') };
+        if (GameState.agency.balance < p.price) return { ok: false, message: this._t('upg.err.cantAfford', { name: this.itemName(p), price: UI.money(p.price) }, 'Not enough cash for the {name} (€{price}).') };
         GameState.agency.balance -= p.price; GameState.addFinance('Upgrades', -p.price); this.state().propertyIndex++;
-        GameState.addLog(this._t('upg.log.bought', { name: p.name, price: UI.money(p.price) }, 'Bought a {name} (€{price}).'), 'money');
-        return { ok: true, message: this._t('upg.ok.property', { name: p.name, rep: p.repLimit, clients: p.players }, '{name} acquired. Rep limit +{rep}, client limit +{clients}.') };
+        GameState.addLog(this._t('upg.log.boughtItem', { name: this.itemName(p), price: UI.money(p.price) }, 'Bought {name} (€{price}).'), 'money');
+        return { ok: true, message: this._t('upg.ok.property', { name: this.itemName(p), rep: p.repLimit, clients: p.players }, '{name} acquired. Rep limit +{rep}, client limit +{clients}.') };
     },
     upgradeOffice() {
         const o = this.nextOffice(); if (!o) return { ok: false, message: this._t('upg.err.topOffice', null, 'You already run the very best office there is.') };
@@ -184,8 +184,8 @@ const Upgrades = {
         const fitOut = o.weekly * 4;
         if (GameState.agency.balance < fitOut) return { ok: false, message: this._t('upg.err.fitOut', { price: UI.money(fitOut) }, "Moving in costs €{price} (4 weeks' rent up front) — you can't cover it yet.") };
         GameState.agency.balance -= fitOut; GameState.addFinance('Upgrades', -fitOut); this.state().officeIndex++;
-        GameState.addLog(this._t('upg.log.movedOffice', { name: o.name, fitOut: UI.money(fitOut), weekly: UI.money(o.weekly) }, 'Moved to {name} (fit-out €{fitOut}, €{weekly}/wk).'), 'money');
-        return { ok: true, message: this._t('upg.ok.office', { name: o.name, rep: this.repLimit(), scouts: o.maxScouts, sponsors: SPONSOR_LABEL[o.sponsor], weekly: UI.money(o.weekly) }, 'Welcome to your {name}. Rep limit {rep}, up to {scouts} scout(s), {sponsors} sponsors, +1 client limit. Running cost €{weekly}/wk.') };
+        GameState.addLog(this._t('upg.log.movedOffice', { name: this.itemName(o), fitOut: UI.money(fitOut), weekly: UI.money(o.weekly) }, 'Moved to {name} (fit-out €{fitOut}, €{weekly}/wk).'), 'money');
+        return { ok: true, message: this._t('upg.ok.office', { name: this.itemName(o), rep: this.repLimit(), scouts: o.maxScouts, sponsors: SPONSOR_LABEL[o.sponsor], weekly: UI.money(o.weekly) }, 'Welcome to your {name}. Rep limit {rep}, up to {scouts} scout(s), {sponsors} sponsors, +1 client limit. Running cost €{weekly}/wk.') };
     },
 
     // ---- sponsor company picker ----
@@ -261,10 +261,18 @@ Object.assign(UPGRADE_ART, {
 if (typeof window !== 'undefined') { window.Upgrades = Upgrades; }
 // ===================== Equipment, facilities & staff (non-sequential) =====================
 const EQUIPMENT = [
+    // Equipment, cheapest first. The four machines replaced the one Multifunctional Strength
+    // Machine (saves that owned it were given the Leg Curl Machine: same price, same effect).
     { id: 'resistance_bands', name: 'Resistance Bands', price: 250, dev: 0.5, injury: -0.25, rep: 0, expiresWeeks: 52 },
     { id: 'dumbbells', name: 'Dumbbells', price: 1000, dev: 0.5, injury: -0.25, rep: 0 },
+    { id: 'plyo_boxes', name: 'Plyo Boxes', price: 1000, dev: 0.5, injury: -0.25, rep: 0 },
+    { id: 'kettlebells', name: 'Kettlebells', price: 2000, dev: 0.5, injury: -0.25, rep: 0 },
     { id: 'treadmills', name: 'Treadmills', price: 2500, dev: 0.5, injury: -0.25, rep: 1 },
-    { id: 'strength_machine', name: 'Multifunctional Strength Machine', price: 10000, dev: 0.5, injury: -0.25, rep: 1 },
+    { id: 'weight_bench', name: 'Weight Bench', price: 4000, dev: 0.5, injury: -0.25, rep: 0 },
+    { id: 'leg_curl', name: 'Leg Curl Machine', price: 10000, dev: 0.5, injury: -0.25, rep: 1 },
+    { id: 'leg_extension', name: 'Leg Extension Machine', price: 10000, dev: 0.5, injury: -0.25, rep: 1 },
+    { id: 'squat_rack', name: 'Squat Rack', price: 15000, dev: 0.5, injury: -0.25, rep: 1 },
+    { id: 'functional_trainer', name: 'Functional Trainer', price: 20000, dev: 0.5, injury: -0.25, rep: 1 },
     { id: 'first_aid', name: 'First-Aid Kit', price: 250, dev: 0, injury: -1, rep: 0, expiresWeeks: 52 },
     { id: 'gym', name: 'Gym', price: 2000000, weekly: 15000, dev: 2, injury: -1, rep: 2, facility: true },
     { id: 'pool', name: 'Swimming Pool', price: 4000000, weekly: 35000, dev: 2, injury: -1, rep: 2, facility: true },
@@ -281,44 +289,49 @@ const STAFF = [
 Object.assign(Upgrades, {
     facState() { const a = GameState.agency; if (!a.facilities) a.facilities = { items: [], physios: 0, trainers: 0 }; return a.facilities; },
     equipById(id) { return EQUIPMENT.find(e => e.id === id); },
+    // item names are translated (equip.<id>); the English name in EQUIPMENT is the fallback
+    // offices, vehicles, properties and staff: translated as upg.name.<id>, English name as fallback
+    itemName(item) { return item ? this._t('upg.name.' + item.id, null, item.name) : ''; },
+    equipName(id) { const e = this.equipById(id); return this._t('equip.' + id, null, e ? e.name : id); },
     staffById(id) { return STAFF.find(s => s.id === id); },
     ownsEquip(id) { return this.facState().items.some(it => it.id === id); },
     ownedEquipment() { return this.facState().items.map(it => this.equipById(it.id)).filter(Boolean); },
 
     buyEquip(id) {
         const e = this.equipById(id); if (!e) return { ok: false, message: this._t('upg.err.unknownItem', null, 'Unknown item.') };
-        if (this.ownsEquip(id)) return { ok: false, message: this._t('upg.err.alreadyHave', { name: e.name }, 'You already have {name}.') };
-        if (GameState.agency.balance < e.price) return { ok: false, message: this._t('upg.err.cantAffordItem', { name: e.name, price: UI.money(e.price) }, 'Not enough cash for {name} (€{price}).') };
+        const name = this.equipName(id);
+        if (this.ownsEquip(id)) return { ok: false, message: this._t('upg.err.alreadyHave', { name }, 'You already have {name}.') };
+        if (GameState.agency.balance < e.price) return { ok: false, message: this._t('upg.err.cantAffordItem', { name, price: UI.money(e.price) }, 'Not enough cash for {name} (€{price}).') };
         GameState.agency.balance -= e.price; GameState.addFinance('Upgrades', -e.price);
         this.facState().items.push({ id, expiresWeek: e.expiresWeeks ? GameState.absWeek() + e.expiresWeeks : null });
-        GameState.addLog(`Bought ${e.name} (€${UI.money(e.price)}).`, 'money');
+        GameState.addLog(this._t('upg.log.boughtItem', { name, price: UI.money(e.price) }, 'Bought {name} (€{price}).'), 'money');
         const eff = [e.dev ? `+${e.dev}% development` : '', e.injury ? `${e.injury > 0 ? '+' : ''}${e.injury}% injury risk` : '', e.rep ? `+${e.rep} rep limit` : '', e.expiresWeeks ? `lasts ${e.expiresWeeks} weeks` : ''].filter(Boolean).join(', ');
-        return { ok: true, message: this._t('upg.ok.item', { name: e.name, effect: eff }, '{name} added. {effect}.') };
+        return { ok: true, message: this._t('upg.ok.item', { name, effect: eff }, '{name} added. {effect}.') };
     },
     sellNoteEquip() {},
 
     hireStaff(id) {
         const s = this.staffById(id); if (!s) return { ok: false, message: this._t('upg.err.unknownRole', null, 'Unknown role.') };
         const st = this.facState(); const key = id === 'physio' ? 'physios' : 'trainers';
-        if (st[key] >= s.max) return { ok: false, message: this._t('upg.err.staffMax', { max: s.max, name: s.name }, 'You already employ the maximum of {max} {name}s.') };
+        if (st[key] >= s.max) return { ok: false, message: this._t('upg.err.staffMax', { max: s.max, name: this.itemName(s) }, '{name}: you already employ the maximum of {max}.') };
         st[key] += 1;
         // a freshly hired member brings their yearly consumable straight away
         if (s.yearly && !this.ownsEquip(s.yearly)) st.items.push({ id: s.yearly, expiresWeek: GameState.absWeek() + this.consumableWeeks(s.yearly) });
-        GameState.addLog(this._t('upg.log.hiredStaff', { name: s.name, weekly: UI.money(s.weekly) }, 'Hired a {name} (€{weekly}/wk).'), 'money');
+        GameState.addLog(this._t('upg.log.hiredStaff', { name: this.itemName(s), weekly: UI.money(s.weekly) }, 'Hired a {name} (€{weekly}/wk).'), 'money');
         // The three perks are optional, so each is its own fragment rather than one sentence with
         // holes in it — a language may order or punctuate them differently.
         const extras = (s.dev ? this._t('upg.frag.dev', { n: s.dev }, ', +{n}% development') : '')
             + (s.injury ? this._t('upg.frag.injury', { n: s.injury }, ', {n}% injury risk') : '')
             + (s.rep ? this._t('upg.frag.rep', { n: s.rep }, ', +{n} rep limit') : '');
-        return { ok: true, message: this._t('upg.ok.staffHired', { name: s.name, weekly: UI.money(s.weekly), yearly: s.yearlyName, extras },
+        return { ok: true, message: this._t('upg.ok.staffHired', { name: this.itemName(s), weekly: UI.money(s.weekly), yearly: this.equipName(s.yearly), extras },
             '{name} hired — €{weekly}/wk. They restock {yearly} every year{extras}.') };
     },
     releaseStaff(id) {
         const st = this.facState(); const key = id === 'physio' ? 'physios' : 'trainers';
         if (st[key] <= 0) return { ok: false, message: this._t('upg.err.noneEmployed', null, 'None employed.') };
         st[key] -= 1;
-        GameState.addLog(this._t('upg.log.releasedStaff', { name: this.staffById(id).name }, 'Released a {name}.'), 'info');
-        return { ok: true, message: this._t('upg.ok.released', { name: this.staffById(id).name }, '{name} released.') };
+        GameState.addLog(this._t('upg.log.releasedStaff', { name: this.itemName(this.staffById(id)) }, 'Released a {name}.'), 'info');
+        return { ok: true, message: this._t('upg.ok.released', { name: this.itemName(this.staffById(id)) }, '{name} released.') };
     },
     staffCount(id) { const st = this.facState(); return id === 'physio' ? st.physios : st.trainers; },
 

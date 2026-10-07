@@ -276,7 +276,7 @@ const Sim = {
             const names = f.players.map(pl => `${pl.name} (${pl.position}, ${pl.ability} OVR — ${Clubs.getClubById(pl.clubId)?.name})`).join('; ');
             const t = I18n.t('sim.scoutFound', { scout: f.scout, region, n: f.players.length, cost: f.cost ? I18n.t('sim.scoutCost', { amt: UI.money(f.cost) }) : '', names });
             GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
-            GameState.addMail({ kind: 'news', subject: I18n.t('sim.scoutFoundSubj', { region, n: f.players.length }), body: t, ttl: 4 });
+            GameState.addMail({ kind: 'news', subject: I18n.t('sim.scoutFoundSubj', { region, n: f.players.length }), body: t, playerIds: f.players.map(pl => pl.id), ttl: 4 });   // ids, not names, say who the report means (see Nego.linkifyPlayers)
         });
 
         // ---- finances ----
