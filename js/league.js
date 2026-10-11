@@ -75,7 +75,12 @@ const COMPETITIONS = {
     UEL: { name: 'European Cup', short: 'EUR', type: 'cont' },
     UECL: { name: 'European Challenge Cup', short: 'ECh', type: 'cont' },
     JCS: { name: 'Dutch Super Cup', short: 'NL SC', type: 'super' },
-    U21: { name: 'U21 League', short: 'U21', type: 'youth', youth: true }
+    U21: { name: 'U21 League', short: 'U21', type: 'youth', youth: true },
+    // national-team football (js/internationals.js). Generic names; the real-names pack restores them.
+    INTL_NL: { name: 'Nations Series', short: 'NS', type: 'intl' },
+    INTL_QUAL: { name: 'European Qualifying', short: 'EQ', type: 'intl' },
+    INTL_EURO: { name: 'European Nations Cup', short: 'ENC', type: 'intl' },
+    INTL_WC: { name: 'World Nations Cup', short: 'WNC', type: 'intl' }
 };
 // Snapshot of the shipped generic names + shorts. COMPETITIONS is a shared global mutated in place by
 // database/import name overlays, so this lets Clubs.init() reset it each game (resetCompetitionNames)
@@ -187,14 +192,43 @@ const DIV_TIER = { ERE: 1, EED: 2, TWD: 3, DRD: 4 };
 // every country's league ladder, top tier first
 const COUNTRY_DIVS = { Netherlands: ['ERE', 'EED', 'TWD', 'DRD'], England: ['PREM', 'CHAMP', 'LEAGUE1', 'LEAGUE2', 'Natleague'], Germany: ['BUNDES', '2BUNDES', '3LIGA', 'REGIONAL1', 'REGIONAL2', 'REGIONAL3'], Spain: ['LaLiga', 'LaLiga2', 'PrimeraSup', 'PrimeraInf', 'Segunda'], Switzerland: ['SuperLeagueCH', 'ChallengeLeague', 'PromotionLeague', '1.LigaCH', '2.LigaCH'], Italy: ['SerieA', 'SerieB', 'SerieC', 'SerieD'], Portugal: ['LigaPortugal', 'LigaPortugal2', 'Liga3', 'Liga4'], Belgium: ['JupilerProLeague', 'ChallengerProLeague', 'BelgianDivision1', 'BelgianDivision2'], France: ['Ligue1', 'Ligue2', 'Ligue3', 'Ligue4', 'Ligue5'] };
 const ALL_LEAGUE_DIVS = Object.values(COUNTRY_DIVS).reduce((a, b) => a.concat(b), []);
-// Cup calendars. A standard national cup runs its knockout on CUP_WEEKS; a clean 64-team (6-round)
-// cup skips week 32 (CUP_WEEKS_NO32). Kept as named constants so the fixture schedule is defined once
-// rather than repeated as a literal at ~20 call sites in simulateWeek and each stepper.
-const CUP_WEEKS = [4, 7, 15, 26, 32, 38, 47];
-const CUP_WEEKS_NO32 = [4, 7, 15, 26, 38, 47];
-// Weeks with no domestic league fixtures: the opening fortnight and the international breaks. Cups
-// still run in these weeks; league matchdays are spread across the remaining ones.
-const NO_LEAGUE_WEEKS = new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]);
+// ---- Season calendar (docs/international-football-spec.md) ----
+// Weeks with no domestic league football: pre-season (1-2), the three international breaks
+// (11-12, 17-18, 36-37) and the winter break (27). Cups and Europe may still play in some of them.
+const NO_LEAGUE_WEEKS = new Set([1, 2, 11, 12, 17, 18, 27, 36, 37]);
+// the 36 league weeks, in order: every league plays one round in each
+const LEAGUE_WEEKS = (() => { const w = []; for (let i = 3; i <= 45; i++) if (!NO_LEAGUE_WEEKS.has(i)) w.push(i); return w; })();
+// Leagues with more than 36 rounds play a SECOND round in these weeks, fixed per season length so
+// the fixture list is exact and no league ever plays three in a week. A 34-round league simply
+// plays the first 34 league weeks (last round in week 43).
+const LEAGUE_DOUBLE_WEEKS = {
+    38: [10, 14],
+    42: [9, 10, 14, 22, 30, 42],
+    44: [9, 10, 19, 23, 30, 34, 39, 43],
+    46: [7, 9, 10, 14, 20, 24, 29, 33, 40, 44],
+};
+// Domestic cups keep their round logic (round names, entry rounds, "is this the final") on fixed
+// ROUND weeks 4/7/15/26/32/38/47. The calendar maps the real week onto them, so the calendar can
+// move without touching any cup: round 2 is played in week 8, and the top-tier cup's final in
+// week 46 while lower-tier cups keep week 47. A 64-team cup has no QF round week (32).
+const CUP_ROUND_OF_WEEK = { 4: 4, 8: 7, 15: 15, 26: 26, 32: 32, 38: 38 };
+const CUP_FINAL_WEEK = { top: 46, lower: 47 };
+// the cup first-division clubs play in, one per country (created countries: their higher cup)
+const TOP_TIER_CUPS = new Set(['beker', 'facup', 'dfb', 'cdr', 'schwcup', 'lichcup', 'coppaitalia', 'coupefrance', 'tacaportugal', 'belgiancup']);
+// Side-competition weeks (real week -> that competition's round week), new calendar and old.
+const SIDE_CUP_WEEKS = {
+    llcGroups: { 4: 4, 8: 7 }, llcKO: { 10: 11, 15: 15, 26: 26, 32: 32, 38: 38, 47: 47 }, kbekGroups: [4, 8, 16],
+};
+// The calendar before the international breaks moved (up to v1.0.29). A season that was already
+// past week 6 when a save was updated finishes on it (GameState.league.legacyCalendar, set by save
+// migration 7); GameState.league is rebuilt every season, so the flag expires at the next rollover.
+// Up to week 6 the two calendars are identical, which is why earlier saves switch straight away.
+const LEGACY_CALENDAR = {
+    noLeague: new Set([1, 2, 10, 11, 12, 17, 18, 27, 28]),
+    cupRound: { 4: 4, 7: 7, 15: 15, 26: 26, 32: 32, 38: 38 }, finalTop: 47, finalLower: 47,
+    llcGroups: { 4: 4, 7: 7 }, llcKO: { 11: 11, 15: 15, 26: 26, 32: 32, 38: 38, 47: 47 }, kbekGroups: [4, 7, 16],
+    europe: { leaguePhase: [11, 16, 17, 19, 22, 24, 29, 31], knockoutPO: [34, 35], R16: [37, 38], QF: [41, 42], SF: [44, 45], final: 47 },
+};
 // cups shown per country in the Leagues tab (extend this when adding more countries)
 // Second element is a generic fallback label only; the Leagues tab and season review display
 // compName(<COMPETITIONS id>) instead, so real names load from real-club-names.json when imported.
@@ -1721,7 +1755,7 @@ const League = {
         });
     },
     // higher cup = D1 seeded + D2/D3; lower cup = D2 seeded + D3/D4 — each a clean 64-team seeded
-    // knockout on the Spanish/Italian calendar (CUP_WEEKS_NO32, skips week 32).
+    // knockout on the Spanish/Italian calendar (64 clubs, so no QF round week 32).
     buildCustomCups() {
         const out = {};
         this._customCountries().forEach(cc => {
@@ -2255,33 +2289,65 @@ const League = {
 
     // ---------------- weekly simulation ----------------
     _leagueWeeksRemaining(fromWeek) {
-        let n = 0; for (let w = fromWeek; w <= 45; w++) if (!NO_LEAGUE_WEEKS.has(w)) n++;
-        return n;
+        return LEAGUE_WEEKS.filter(w => w >= fromWeek).length;
+    },
+    // How many league rounds a league of `len` rounds plays in `week` (see LEAGUE_DOUBLE_WEEKS).
+    // A length with no fixed table (created content) spreads its extra rounds evenly instead.
+    roundsInWeek(len, week) {
+        const i = LEAGUE_WEEKS.indexOf(week);
+        if (i < 0) return 0;
+        const n = LEAGUE_WEEKS.length;
+        if (len <= n) return i < len ? 1 : 0;
+        const extra = len - n;
+        const fixed = LEAGUE_DOUBLE_WEEKS[len];
+        if (fixed) return 1 + fixed.filter(w => w === week).length;
+        let k = 0;
+        for (let j = 0; j < extra; j++) if (Math.floor((j + 0.5) * n / extra) === i) k++;
+        return 1 + k;
+    },
+    // rounds a league of `len` rounds should have played once `week` is done
+    roundsByWeek(len, week) {
+        let t = 0;
+        for (const w of LEAGUE_WEEKS) { if (w > week) break; t += this.roundsInWeek(len, w); }
+        return Math.min(len, t);
+    },
+    // The cup's internal round week for real `week`, or null when it does not play (see CUP_ROUND_OF_WEEK).
+    cupRoundWeek(key, week) {
+        const old = this.legacyCalendar();
+        const fin = old ? LEGACY_CALENDAR.finalTop : (TOP_TIER_CUPS.has(key) ? CUP_FINAL_WEEK.top : CUP_FINAL_WEEK.lower);
+        if (week === fin) return 47;
+        return (old ? LEGACY_CALENDAR.cupRound : CUP_ROUND_OF_WEEK)[week] || null;
+    },
+    // a season that began on the calendar before the international breaks moved (see LEGACY_CALENDAR)
+    legacyCalendar() { const L = GameState.league; return !!(L && L.legacyCalendar); },
+    noLeagueWeeks() { return this.legacyCalendar() ? LEGACY_CALENDAR.noLeague : NO_LEAGUE_WEEKS; },
+    sideCupWeeks() { return this.legacyCalendar() ? LEGACY_CALENDAR : SIDE_CUP_WEEKS; },
+    // the old pacing, for a legacy season only: single rounds for the first six league weeks, then
+    // a linear pace with any doubles spread across the campaign
+    _legacyRoundsDue(len, md, week) {
+        const NO = LEGACY_CALENDAR.noLeague;
+        let elapsed = 0, total = 0;
+        for (let w = 1; w <= 45; w++) { if (NO.has(w)) continue; total++; if (w <= week) elapsed++; }
+        if (elapsed <= 6) return Math.min(len - md, 1);
+        return Math.max(1, Math.min(len - md, Math.round(len * elapsed / total) - md));
     },
     simulateWeek() {
         const L = GameState.league; if (!L) return;
         const week = GameState.week;
 
-        // no league matches in the opening fortnight or during international breaks (cups still run)
-        const NO_LEAGUE = NO_LEAGUE_WEEKS;
-        if (!NO_LEAGUE.has(week)) {
-            // how many active league weeks have elapsed (incl. this one) vs the whole season — used to spread
-            // any extra rounds evenly across the campaign instead of cramming them into the opening weeks
-            let elapsed = 0, total = 0;
-            for (let w = 1; w <= 45; w++) { if (NO_LEAGUE.has(w)) continue; total++; if (w <= week) elapsed++; }
+        // league rounds on the fixed calendar (LEAGUE_WEEKS / LEAGUE_DOUBLE_WEEKS). Aiming at "rounds due
+        // by the end of this week" rather than "rounds in this week" lets a save from an older
+        // calendar settle onto this one by itself, a round or so at a time.
+        const legacy = this.legacyCalendar();
+        if (!this.noLeagueWeeks().has(week)) {
             ALL_LEAGUE_DIVS.forEach(div => {
                 const s = L.schedule[div]; if (!s) return;
                 const remMd = s.length - L.mdIndex[div];
                 if (remMd <= 0) return;
-                // ease in: the first few active league weeks play a single matchday so fixtures don't jump by two
-                // right away; afterwards we hold a linear pace, with any doubles spread across the campaign
-                let perWeek;
-                if (elapsed <= 6) {
-                    perWeek = Math.min(remMd, 1);
-                } else {
-                    const targetByNow = Math.round(s.length * elapsed / total);
-                    perWeek = Math.max(1, Math.min(remMd, targetByNow - L.mdIndex[div]));
-                }
+                const lastWeek = LEAGUE_WEEKS[LEAGUE_WEEKS.length - 1];
+                const due = week >= lastWeek ? s.length : this.roundsByWeek(s.length, week);
+                const perWeek = legacy ? this._legacyRoundsDue(s.length, L.mdIndex[div], week)
+                    : Math.max(0, Math.min(remMd, due - L.mdIndex[div]));
                 for (let k = 0; k < perWeek && L.mdIndex[div] < s.length; k++) {
                     const md = L.mdIndex[div];
                     // the FINAL round may be a title decider the agent can attend: if a client's club can
@@ -2311,59 +2377,82 @@ const League = {
             });
         }
 
-        if (CUP_WEEKS.includes(week)) this.bekerStep(week);
+        // ---- domestic cups ----
+        // Each cup runs on its own fixed ROUND weeks (see CUP_ROUND_OF_WEEK); `cw(key)` is that round
+        // week for this real week, or null. A result is stamped with the real week afterwards so the
+        // Leagues tab shows when it was actually played.
+        const cw = key => this.cupRoundWeek(key, week);
+        const cw64 = key => { const r = cw(key); return r === 32 ? null : r; };   // 64-team cups: no QF week
+        const cup = (obj, round, fn) => {
+            if (!obj || round == null) return;
+            const n = obj.results ? obj.results.length : 0;
+            fn(round);
+            if (obj.results && obj.results.length > n) obj.results[obj.results.length - 1].week = week;
+        };
 
-        if ([4, 7, 16].includes(week) && L.kbek && !L.kbek.groupDone) {
+        // Dutch cups: the Beker on the standard rounds; the Kleine Beker has a group phase
+        // (weeks 4, 8, 16) and then its own knockout (26, 32, 38, final 47)
+        cup(L.beker, cw('beker'), r => this.bekerStep(r));
+        const side = this.sideCupWeeks();
+        if (side.kbekGroups.includes(week) && L.kbek && !L.kbek.groupDone) {
             this.kleineGroupStep();
             if (week === 16) { this.seedKleineKO(); L.kbek.groupDone = true; }
-        } else if ([26, 32, 38, 47].includes(week) && L.kbek && L.kbek.groupDone) {
-            this.kleineKOStep(week);
+        } else if (L.kbek && L.kbek.groupDone) {
+            const r = ({ 26: 26, 32: 32, 38: 38, 47: 47 })[week];
+            cup(L.kbek, r, rr => this.kleineKOStep(rr));
         }
 
-        // English cups (run in parallel with the Dutch ones)
-        if (CUP_WEEKS.includes(week) && L.facup) this.facupStep(week);
-        if ((week === 4 || week === 7) && L.llc) this.llcGroupStep(week);
-        else if ([11, 15, 26, 32, 38, 47].includes(week) && L.llc) this.llcKOStep(week);
+        // English cups: the English Cup on the standard rounds; the Lower Leagues Cup has groups in
+        // weeks 4 and 8 (its round weeks 4 and 7) and a knockout from week 10 (its round week 11)
+        cup(L.facup, cw('facup'), r => this.facupStep(r));
+        if (L.llc) {
+            const g = side.llcGroups[week];
+            if (g) this.llcGroupStep(g);
+            else cup(L.llc, side.llcKO[week], r => this.llcKOStep(r));
+        }
 
-        // German cups (same rounds/weeks as the others)
-        if (CUP_WEEKS.includes(week) && L.dfb) this.dfbStep(week);
-        if (CUP_WEEKS.includes(week) && L.lpokal) this.lpokalStep(week);
+        // German cups
+        cup(L.dfb, cw('dfb'), r => this.dfbStep(r));
+        cup(L.lpokal, cw('lpokal'), r => this.lpokalStep(r));
 
-        // Spanish cups (64 clubs -> one fewer round; week 32 is skipped)
-        if (CUP_WEEKS_NO32.includes(week) && L.cdr) this.spanishCupStep('cdr', week);
-        if (CUP_WEEKS_NO32.includes(week) && L.cfed) this.spanishCupStep('cfed', week);
+        // Spanish cups (64 clubs -> one fewer round, no QF week)
+        cup(L.cdr, cw64('cdr'), r => this.spanishCupStep('cdr', r));
+        cup(L.cfed, cw64('cfed'), r => this.spanishCupStep('cfed', r));
 
-        // Swiss cups: Schweizer Cup runs the full 7 rounds like the others; Cupa Bass is 64 clubs so
-        // skips week 32 like the Spanish cups; the Liechtensteiner Cup is just QF/SF/Final
-        if (CUP_WEEKS.includes(week) && L.schwcup) this.schweizerCupStep(week);
-        if (CUP_WEEKS_NO32.includes(week) && L.cupabass) this.cupaBassStep(week);
-        if ([32, 38, 47].includes(week) && L.lichcup) this.lichCupStep(week);
+        // Swiss cups: the Schweizer Cup runs all 7 rounds; Cupa Bass is 64 clubs; the Liechtenstein
+        // Cup is just QF (32), SF (38) and its final, which is a top-tier final (week 46)
+        cup(L.schwcup, cw('schwcup'), r => this.schweizerCupStep(r));
+        cup(L.cupabass, cw64('cupabass'), r => this.cupaBassStep(r));
+        const lich = cw('lichcup');
+        cup(L.lichcup, [32, 38, 47].includes(lich) ? lich : null, r => this.lichCupStep(r));
 
-        // Italian cups: both are 64 clubs, so 6 rounds skipping week 32 like the Spanish/Cupa Bass cups
-        if (CUP_WEEKS_NO32.includes(week) && L.coppaitalia) this.italianCupStep('coppaitalia', week);
-        if (CUP_WEEKS_NO32.includes(week) && L.coppacompagno) this.italianCupStep('coppacompagno', week);
+        // Italian cups: both 64 clubs
+        cup(L.coppaitalia, cw64('coppaitalia'), r => this.italianCupStep('coppaitalia', r));
+        cup(L.coppacompagno, cw64('coppacompagno'), r => this.italianCupStep('coppacompagno', r));
 
-        // French cups: Coupe de France is 124 clubs -> 7 rounds (uses week 32); Coupe National
-        // is a clean 64 -> 6 rounds (skips week 32)
-        if (CUP_WEEKS.includes(week) && L.coupefrance) this.coupeFranceStep(week);
-        if (CUP_WEEKS_NO32.includes(week) && L.coupenational) this.coupeNationalStep(week);
+        // French cups: Coupe de France is 124 clubs -> 7 rounds; Coupe National a clean 64
+        cup(L.coupefrance, cw('coupefrance'), r => this.coupeFranceStep(r));
+        cup(L.coupenational, cw64('coupenational'), r => this.coupeNationalStep(r));
 
-        // Portuguese cups: Taça de Portugal has a Liga 4 preliminary (wk4) then a 64-team seeded
-        // knockout using week 32; the Segunda Taça is a clean 64 -> 6 rounds, skipping week 32
-        if (CUP_WEEKS.includes(week) && L.tacaportugal) this.tacaPortugalStep(week);
-        if (CUP_WEEKS_NO32.includes(week) && L.segundataca) this.segundaTacaStep(week);
+        // Portuguese cups: Taça de Portugal has a Liga 4 preliminary (round week 4) then a 64-team
+        // seeded knockout; the Segunda Taça is a clean 64
+        cup(L.tacaportugal, cw('tacaportugal'), r => this.tacaPortugalStep(r));
+        cup(L.segundataca, cw64('segundataca'), r => this.segundaTacaStep(r));
 
-        // Belgian cups: the Belgian Cup runs a Division 2 group phase (wk4) then a 64-team seeded
-        // knockout using week 32; Notre Coupe is a clean 64 -> 6 rounds, skipping week 32
-        if (CUP_WEEKS.includes(week) && L.belgiancup) this.belgianCupStep(week);
-        if (CUP_WEEKS_NO32.includes(week) && L.notrecoupe) this.notreCoupeStep(week);
+        // Belgian cups: the Belgian Cup has a Division 2 group phase (round week 4) then a 64-team
+        // seeded knockout; Notre Coupe is a clean 64
+        cup(L.belgiancup, cw('belgiancup'), r => this.belgianCupStep(r));
+        cup(L.notrecoupe, cw64('notrecoupe'), r => this.notreCoupeStep(r));
 
-        // created-country cups (Customize Part 2): clean 64-team knockouts, skip week 32 like the others
-        if (CUP_WEEKS_NO32.includes(week) && L.customCups) {
+        // created-country cups (Customize Part 2): clean 64-team knockouts; the higher cup is the
+        // country's top-tier cup (final week 46), the lower one keeps week 47
+        if (L.customCups) {
+            // a created country's higher cup is its top-tier cup: same weeks as the Dutch Beker etc.
+            const hi = cw64('beker'), lo = cw64('kbek');
             this._customCountries().forEach(cc => {
                 const cups = L.customCups[cc.name]; if (!cups) return;
-                this._customCupStep(cups.higher, cc.cups.higher.id, week);
-                this._customCupStep(cups.lower, cc.cups.lower.id, week);
+                cup(cups.higher, hi, r => this._customCupStep(cups.higher, cc.cups.higher.id, r));
+                cup(cups.lower, lo, r => this._customCupStep(cups.lower, cc.cups.lower.id, r));
             });
         }
 
@@ -2371,7 +2460,7 @@ const League = {
         if (week === 46 && L.playoffs && !L.playoffs._done) { this._bigMatch = true; this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); this.playPlayoffsPortugal(); this.playPlayoffsBelgium(); this.playCustomPlayoffs(); this._bigMatch = false; L.playoffs._done = true; }
 
         // UEFA club competitions (UCL/UEL/UECL) run in parallel all season — qualifying wk1-6,
-        // league phase wk11-31, knockouts wk34-48. See js/europe.js.
+        // league phase wk10-31, knockouts wk34-47. Weeks in EUROPE_DATA.calendar; see js/europe.js.
         if (typeof Europe !== 'undefined' && L.europe) Europe.step(week);
     },
 

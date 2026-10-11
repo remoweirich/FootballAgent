@@ -78,8 +78,8 @@ check('intl scout: unknown division falls back without throwing', runv(`const v=
 check('intl scout: all 42 league keys present', runv(`return Object.keys(Scouts.INTL_LEAGUE_COST).length===42;`));
 
 // ---- item 3: europe calendar weeks are present in data (UI reads these) ----
-check('europe: leaguePhase weeks present (8)', runv(`return EUROPE_DATA.calendar.leaguePhase.length===8 && EUROPE_DATA.calendar.leaguePhase[0]===11;`));
-check('europe: knockout calendar present', runv(`const c=EUROPE_DATA.calendar; return c.knockoutPO[0]===34 && c.R16[0]===37 && c.QF[0]===41 && c.SF[0]===44 && c.final===47;`));
+check('europe: leaguePhase weeks present (8)', runv(`return EUROPE_DATA.calendar.leaguePhase.length===8 && EUROPE_DATA.calendar.leaguePhase[0]===10;`));
+check('europe: knockout calendar present', runv(`const c=EUROPE_DATA.calendar; return c.knockoutPO[0]===34 && c.R16[0]===38 && c.QF[0]===41 && c.SF[0]===44 && c.final===47;`));
 
 console.log('\nengine errors:', errors.length ? errors : 'none');
 console.log(failed || errors.length ? '\n*** FAIL ***' : '\nAll batch-2 checks passed.');

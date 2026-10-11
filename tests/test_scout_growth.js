@@ -120,8 +120,8 @@ check('he only ages on his own birth week', quiet === 50);
 console.log('\n-- retirement --');
 const ret = JSON.parse(run(`
     GameState.agency.scouts = [{ id: 'r', name: 'Old Hand', quality: 40, hireQuality: 40, age: 84,
-        birthWeek: 7, league: 'BUNDES', country: 'Germany', history: { ability: [] } }];
-    GameState.week = 7;
+        birthWeek: 9, league: 'BUNDES', country: 'Germany', history: { ability: [] } }];
+    GameState.week = 9;   // a week whose next week has no cup round: the test jumps the calendar
     var notes = Scouts.ageTick();
     return JSON.stringify({ notes: notes, left: GameState.agency.scouts.length });
 `));

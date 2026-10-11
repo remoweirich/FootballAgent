@@ -12,6 +12,7 @@ const LeaguesScreen = {
         const fixed = ['England', 'Germany', 'Spain', 'Italy', 'France', 'Netherlands', 'Portugal', 'Switzerland', 'Belgium'];
         const list = [home];
         if (typeof Europe !== 'undefined') list.push('Europe');
+        if (typeof IntlScreen !== 'undefined') list.push('International');
         return list.concat(fixed.filter(c => c !== home));
     },
     render(el) {
@@ -19,7 +20,11 @@ const LeaguesScreen = {
         if (!this.state.country || !order.includes(this.state.country)) this.state.country = order[0];
         const country = this.state.country, isEurope = country === 'Europe';
         let tabs;
-        if (isEurope) {
+        if (country === 'International') {
+            tabs = IntlScreen.tabs();
+            if (this.state.intlAutoTab !== false || !tabs.some(([k]) => k === this.state.tab)) this.state.tab = IntlScreen.defaultTab();
+            if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = tabs[0][0];
+        } else if (isEurope) {
             tabs = this.euPhaseTabs();
             if (this.state.euAutoTab) this.state.tab = this.euCurrentDefault();          // follow the live phase
             else if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = this.euCurrentDefault();
@@ -28,7 +33,7 @@ const LeaguesScreen = {
             tabs = [['tables', I18n.t('leagues.tables')], ...cups, ['po', I18n.t('leagues.playoffs')]];
             if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = 'tables';
         }
-        const countryOpts = order.map(c => `<option value="${c}" ${country === c ? 'selected' : ''}>${c === 'Europe' ? '🇪🇺 ' + I18n.t('leagues.europe') : c}</option>`).join('');
+        const countryOpts = order.map(c => `<option value="${c}" ${country === c ? 'selected' : ''}>${c === 'Europe' ? '🇪🇺 ' + I18n.t('leagues.europe') : c === 'International' ? '🌍 ' + I18n.t('intl.country') : c}</option>`).join('');
         el.innerHTML = `
         <div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4)">
             <span class="hint">${GameState.league && GameState.league.finished ? I18n.t('leagues.seasonComplete') : I18n.t('leagues.seasonN', { label: GameState.seasonLabel() })}</span>
@@ -38,8 +43,8 @@ const LeaguesScreen = {
         <div id="lgSection"></div>`;
         this.renderSection();
     },
-    setCountry(c) { this.state.country = c; this.state.tab = (c === 'Europe') ? null : 'tables'; this.state.division = null; this.state.euAutoTab = true; Router.refresh(); },
-    setTab(t) { this.state.tab = t; if (this.state.country === 'Europe') this.state.euAutoTab = false; Router.refresh(); },   // a manual pick stops auto-following the phase
+    setCountry(c) { this.state.country = c; this.state.tab = (c === 'Europe' || c === 'International') ? null : 'tables'; this.state.division = null; this.state.euAutoTab = true; this.state.intlAutoTab = true; Router.refresh(); },
+    setTab(t) { this.state.tab = t; if (this.state.country === 'Europe') this.state.euAutoTab = false; if (this.state.country === 'International') this.state.intlAutoTab = false; Router.refresh(); },   // a manual pick stops auto-following the phase
     setDivision(d) { this.state.division = d; this.state.leagueMd = null; this.renderSection(); },
     setLeagueView(v) { this.state.leagueView = v; this.state.leagueMd = null; this.renderSection(); },
     setLeagueMd(n) { this.state.leagueMd = n; this.renderSection(); },
@@ -70,6 +75,8 @@ const LeaguesScreen = {
         const country = this.state.country, tab = this.state.tab;
         if (country === 'Europe') {
             body.innerHTML = this.europeSection();
+        } else if (country === 'International') {
+            body.innerHTML = IntlScreen.section(tab);
         } else if (tab === 'tables') {
             const divs = COUNTRY_DIVS[country];
             if (!divs.includes(this.state.division)) this.state.division = divs[0];
@@ -512,7 +519,7 @@ const LeaguesScreen = {
             case 'lp': return (c.table ? this.euTable(c) : `<p class="hint">${I18n.t('leagues.lpDrawNote')}</p>`) + (c.pots ? `<details style="margin-top:var(--space-4)"><summary class="section-label" style="cursor:pointer;list-style:revert">${I18n.t('leagues.seedingPots')}</summary>${this.euPots(c)}</details>` : '');
             case 'fixtures': return this.euFixtures(c);
             case 'po': return this.euRound(c, 'po', I18n.t('leagues.koPlayoffLabel'), this._euCal('knockoutPO', 34));
-            case 'r16': return this.euRound(c, 'r16', I18n.t('leagues.r16Tab'), this._euCal('R16', 37));
+            case 'r16': return this.euRound(c, 'r16', I18n.t('leagues.r16Tab'), this._euCal('R16', 38));
             case 'qf': return this.euRound(c, 'qf', I18n.t('leagues.qfTab'), this._euCal('QF', 41));
             case 'sf': return this.euRound(c, 'sf', I18n.t('leagues.sfTab'), this._euCal('SF', 44));
             case 'final': return this.euFinalView(c);
@@ -525,7 +532,7 @@ const LeaguesScreen = {
     },
     // a knockout round's first-leg week from EUROPE_DATA.calendar (fallback to the historical default)
     _euCal(key, fallback) {
-        const cal = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar) || {};
+        const cal = (typeof Europe !== 'undefined' && Europe.calendar) ? Europe.calendar() : ((typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar) || {});
         const v = cal[key];
         return Array.isArray(v) ? v[0] : (v != null ? v : fallback);
     },
@@ -580,7 +587,7 @@ const LeaguesScreen = {
             <span style="display:inline-flex;align-items:center;gap:5px">${dot('#2563EB')} ${I18n.t('leagues.legend2')}</span>
             <span>${I18n.t('leagues.legend3')}</span></div>`;
         const done = c.ranked ? '' : `<p class="hint" style="margin-top:2px">${I18n.t('leagues.playedMd', { n: c.mdPlayed })}</p>`;
-        const lpWeeks = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase) || [];
+        const lpWeeks = ((typeof Europe !== 'undefined' && Europe.calendar) ? Europe.calendar().leaguePhase : (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase)) || [];
         const weeksNote = lpWeeks.length ? `<p class="hint" style="margin:0 0 var(--space-2)">${I18n.t('leagues.mdWeeks', { weeks: lpWeeks.join(', ') })}</p>` : '';
         return `<div class="section-label">${I18n.t('leagues.leaguePhase')}</div>${weeksNote}<div style="overflow-x:auto"><table class="standings"><thead><tr><th>#</th><th>${I18n.t('nego.club')}</th><th class="num">P</th><th class="num">GD</th><th class="num">Pts</th></tr></thead><tbody>${body}</tbody></table></div>${legend}${done}`;
     },
@@ -590,7 +597,7 @@ const LeaguesScreen = {
         if (!c.schedule) return `<p class="hint">${I18n.t('leagues.fixturesDraw')}</p>`;
         let md = this.state.euMd; if (!md || md < 1 || md > 8) md = Math.max(1, c.mdPlayed || 1);
         const played = md <= (c.mdPlayed || 0);
-        const lpWeeks = (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase) || [];
+        const lpWeeks = ((typeof Europe !== 'undefined' && Europe.calendar) ? Europe.calendar().leaguePhase : (typeof EUROPE_DATA !== 'undefined' && EUROPE_DATA.calendar && EUROPE_DATA.calendar.leaguePhase)) || [];
         const wk = lpWeeks[md - 1];
         const header = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <div class="section-label" style="margin:0">${I18n.t('leagues.matchdayN', { n: md })}${wk ? ` <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${wk}</span>` : ''}${played ? '' : ` <span class="muted" style="font-weight:400">${I18n.t('leagues.notPlayedYetTag')}</span>`}</div>

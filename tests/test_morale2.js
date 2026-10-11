@@ -23,9 +23,9 @@ check('recovered & played: streak resumes to 7', runv("return P._playStreak")===
 check('recovered & played: long-tier +5 applied (50->55)', runv("return P.morale.time")===55);
 
 // --- B: international-break week halts the bench streak, no decay ---
-run("P.injury=null; P._weekApps=0; P._benchStreak=3; P._playStreak=0; P.morale.time=50; GameState.week=10; Sim._morale([]);");
-check('int-break wk10: bench streak halted at 3', runv("return P._benchStreak")===3);
-check('int-break wk10: time unchanged', runv("return P.morale.time")===50);
+run("P.injury=null; P._weekApps=0; P._benchStreak=3; P._playStreak=0; P.morale.time=50; GameState.week=11; Sim._morale([]);");
+check('int-break wk11: bench streak halted at 3', runv("return P._benchStreak")===3);
+check('int-break wk11: time unchanged', runv("return P.morale.time")===50);
 
 // --- C: ordinary week with no apps still decays (sanity: mechanic intact) ---
 run("P.injury=null; P._weekApps=0; P._benchStreak=2; P._playStreak=0; P.morale.time=50; GameState.week=5; Sim._morale([]);");

@@ -20,7 +20,18 @@ const NATIONALITY_ISO = {
     'South Korea': 'kr', Spain: 'es', Sweden: 'se', Switzerland: 'ch', Tunisia: 'tn', Turkey: 'tr',
     USA: 'us', Uganda: 'ug', Ukraine: 'ua', Uruguay: 'uy', Wales: 'gb-wls',
     Russia: 'ru', Suriname: 'sr', 'Cape Verde': 'cv', Angola: 'ao', 'Guinea-Bissau': 'gw',
-    Jamaica: 'jm', Pakistan: 'pk', Paraguay: 'py', Bolivia: 'bo', Iran: 'ir'
+    Jamaica: 'jm', Pakistan: 'pk', Paraguay: 'py', Bolivia: 'bo', Iran: 'ir',
+    // official spellings (js/nations.js); the older ones above stay as aliases, because a created
+    // country registers its own label ("Ireland") as a nationality
+    'Türkiye': 'tr', Czechia: 'cz', 'Republic of Ireland': 'ie', 'Bosnia and Herzegovina': 'ba', 'DR Congo': 'cd',
+    "Côte d'Ivoire": 'ci',
+    // national teams with no players in the game yet
+    Israel: 'il', Montenegro: 'me', Belarus: 'by', Azerbaijan: 'az', 'Faroe Islands': 'fo', Estonia: 'ee',
+    Latvia: 'lv', Lithuania: 'lt', Moldova: 'md', Malta: 'mt', Andorra: 'ad', Gibraltar: 'gi', 'San Marino': 'sm',
+    Venezuela: 've', 'Saudi Arabia': 'sa', Uzbekistan: 'uz', Qatar: 'qa', Jordan: 'jo', 'United Arab Emirates': 'ae',
+    Oman: 'om', Bahrain: 'bh', Syria: 'sy', Palestine: 'ps', 'Burkina Faso': 'bf', Guinea: 'gn', Zambia: 'zm',
+    'Equatorial Guinea': 'gq', Panama: 'pa', 'Costa Rica': 'cr', Honduras: 'hn', 'Curaçao': 'cw', Haiti: 'ht',
+    'El Salvador': 'sv', 'New Caledonia': 'nc', Fiji: 'fj', Tahiti: 'pf'
 };
 
 // External destinations shared by Settings > About and the post-season rate prompt.

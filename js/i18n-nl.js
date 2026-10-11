@@ -823,6 +823,13 @@ I18n.register('nl', {
     'scouts.err.cannotAffordPayoff': 'U kunt de afkoopsom van {amt} voor {name} niet opbrengen.',
     'upg.log.bought': '{name} gekocht (€{price}).',
     'upg.log.boughtItem': '{name} gekocht (€{price}).',
+    // --- international football (js/internationals.js) ---
+    'intl.mail.nlWinSubj': '{nation} wint de {comp}',
+    'intl.mail.nlWinBody': '{nation} verslaat {opp} met {score} in de finale van de {comp}.',
+    'intl.mail.tourWinSubj': '{nation} wint de {comp}',
+    'intl.mail.tourWinBody': '{nation} verslaat {opp} met {score} in de finale van de {comp}.',
+    'intl.score.aet': '{s} n.v.',
+    'intl.score.pens': '{s} ({p} na strafschoppen)',
     'equip.resistance_bands': 'Weerstandsbanden',
     'equip.dumbbells': 'Dumbbells',
     'equip.plyo_boxes': 'Plyoboxen',

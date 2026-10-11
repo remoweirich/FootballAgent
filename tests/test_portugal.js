@@ -48,10 +48,10 @@ check('findVirtualClub resolves a Segunda Taça virtual', runv(`return !!findVir
 
 // ---- simulate a season, inspect the cups ----
 run(`GameState.week=1;`);
-for (let i = 0; i < 7; i++) run(`Sim.advanceWeek();`);   // through wk8 (prelim wk4, first round wk7)
+for (let i = 0; i < 7; i++) run(`Sim.advanceWeek();`);   // through wk8 (prelim wk4, first round wk8)
 const taca = JSON.parse(runv(`
   const c=GameState.league.tacaportugal;
-  const prelim=c.results.find(r=>r.week===4), r1=c.results.find(r=>r.week===7);
+  const prelim=c.results.find(r=>r.week===4), r1=c.results.find(r=>r.week===8);
   const isRes=id=>{const cl=Clubs.getClubById(id);return cl?isReserveClub(cl.id):false;};
   const bInR1=r1.ties.some(t=>(t.h&&isRes(t.h))||(t.a&&isRes(t.a)));
   const liga4=new Set(Clubs.getClubsByDivision('Liga4').map(x=>x.id));  // note: post-sim still fine, no rollover yet

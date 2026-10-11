@@ -816,6 +816,13 @@ I18n.register('es', {
     'scouts.err.cannotAffordPayoff': 'No puede cubrir la indemnización de {amt} de {name}.',
     'upg.log.bought': '{name} comprado (€{price}).',
     'upg.log.boughtItem': 'Compra: {name} (€{price}).',
+    // --- international football (js/internationals.js) ---
+    'intl.mail.nlWinSubj': '{nation} gana la {comp}',
+    'intl.mail.nlWinBody': '{nation} vence a {opp} por {score} en la final de la {comp}.',
+    'intl.mail.tourWinSubj': '{nation} gana la {comp}',
+    'intl.mail.tourWinBody': '{nation} vence a {opp} por {score} en la final de la {comp}.',
+    'intl.score.aet': '{s} tras la prórroga',
+    'intl.score.pens': '{s} ({p} en los penaltis)',
     'equip.resistance_bands': 'Bandas elásticas',
     'equip.dumbbells': 'Mancuernas',
     'equip.plyo_boxes': 'Cajones pliométricos',

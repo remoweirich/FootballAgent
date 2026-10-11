@@ -48,9 +48,9 @@ check('findVirtualClub resolves a Notre Coupe virtual', runv(`return !!findVirtu
 
 // ---- simulate a season, inspect the cups ----
 run(`GameState.week=1;`);
-for (let i = 0; i < 7; i++) run(`Sim.advanceWeek();`);   // through wk8 (group phase wk4, round of 64 wk7)
+for (let i = 0; i < 7; i++) run(`Sim.advanceWeek();`);   // through wk8 (group phase wk4, round of 64 wk8)
 check('Belgian Cup group phase done (8 groups played)', runv(`const c=GameState.league.belgiancup;return c.groupDone && c.groups.every(g=>g.table.every(r=>r.P===2))`));
-const bc = JSON.parse(runv(`const c=GameState.league.belgiancup;const r=c.results.find(x=>x.week===7);return JSON.stringify({ties:r?r.ties.length:0});`));
+const bc = JSON.parse(runv(`const c=GameState.league.belgiancup;const r=c.results.find(x=>x.week===8);return JSON.stringify({ties:r?r.ties.length:0});`));
 check('Belgian Cup Round of 64 = 32 ties (64 teams)', bc.ties === 32);
 const nc = JSON.parse(runv(`const c=GameState.league.notrecoupe;const r=c.results.find(x=>x.week===4);return JSON.stringify({ties:r.ties.length});`));
 check('Notre Coupe round 1 = 32 ties (64 teams)', nc.ties === 32);

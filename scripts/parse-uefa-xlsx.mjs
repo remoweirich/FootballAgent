@@ -209,9 +209,9 @@ const CALENDAR = {
   // Note: the game's competitive season runs weeks 1-47 (it is crowned at the 47->48 boundary,
   // weeks 48-52 are a dead off-season), so the final sits at week 47 rather than the spec's 48 —
   // otherwise it would be played after the season is already snapshotted.
-  leaguePhase: [11, 16, 17, 19, 22, 24, 29, 31], // MD1..MD8
+  leaguePhase: [10, 15, 16, 19, 21, 25, 29, 31], // MD1..MD8 (international breaks 11-12, 17-18, 36-37)
   knockoutPO: [34, 35],   // play-off round, two legs
-  R16: [37, 38],
+  R16: [38, 39],
   QF: [41, 42],
   SF: [44, 45],
   final: 47,              // single match, neutral venue

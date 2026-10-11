@@ -1,4 +1,4 @@
-/* flag-icons (lipis/flag-icons), trimmed to the ~76 nationalities this game actually uses, self-hosted so it never depends on a CDN. Full set/license: https://github.com/lipis/flag-icons */
+/* flag-icons (lipis/flag-icons), trimmed to the nationalities and national teams this game actually uses, self-hosted so it never depends on a CDN. Full set/license: https://github.com/lipis/flag-icons */
 /* explicit height (not the upstream line-height+:before trick) — an empty inline-block with
    no text content collapses to zero height, so the background-image never became visible */
 .fi{background-size:contain;background-position:50%;background-repeat:no-repeat;display:inline-block;width:1.333333em;height:1em;vertical-align:-0.1em;border-radius:2px;box-shadow:0 0 0 .5px rgba(255,255,255,.18)}
@@ -88,3 +88,40 @@
 .fi-py{background-image:url(flags/4x3/py.svg)}
 .fi-ru{background-image:url(flags/4x3/ru.svg)}
 .fi-sr{background-image:url(flags/4x3/sr.svg)}
+.fi-ci{background-image:url(flags/4x3/ci.svg)}
+.fi-il{background-image:url(flags/4x3/il.svg)}
+.fi-me{background-image:url(flags/4x3/me.webp)}
+.fi-by{background-image:url(flags/4x3/by.svg)}
+.fi-az{background-image:url(flags/4x3/az.svg)}
+.fi-fo{background-image:url(flags/4x3/fo.svg)}
+.fi-ee{background-image:url(flags/4x3/ee.svg)}
+.fi-lv{background-image:url(flags/4x3/lv.svg)}
+.fi-lt{background-image:url(flags/4x3/lt.svg)}
+.fi-md{background-image:url(flags/4x3/md.svg)}
+.fi-mt{background-image:url(flags/4x3/mt.svg)}
+.fi-ad{background-image:url(flags/4x3/ad.webp)}
+.fi-gi{background-image:url(flags/4x3/gi.svg)}
+.fi-sm{background-image:url(flags/4x3/sm.svg)}
+.fi-ve{background-image:url(flags/4x3/ve.svg)}
+.fi-sa{background-image:url(flags/4x3/sa.svg)}
+.fi-uz{background-image:url(flags/4x3/uz.svg)}
+.fi-qa{background-image:url(flags/4x3/qa.svg)}
+.fi-jo{background-image:url(flags/4x3/jo.svg)}
+.fi-ae{background-image:url(flags/4x3/ae.svg)}
+.fi-om{background-image:url(flags/4x3/om.svg)}
+.fi-bh{background-image:url(flags/4x3/bh.svg)}
+.fi-sy{background-image:url(flags/4x3/sy.svg)}
+.fi-ps{background-image:url(flags/4x3/ps.svg)}
+.fi-bf{background-image:url(flags/4x3/bf.svg)}
+.fi-gn{background-image:url(flags/4x3/gn.svg)}
+.fi-zm{background-image:url(flags/4x3/zm.svg)}
+.fi-gq{background-image:url(flags/4x3/gq.svg)}
+.fi-pa{background-image:url(flags/4x3/pa.svg)}
+.fi-cr{background-image:url(flags/4x3/cr.svg)}
+.fi-hn{background-image:url(flags/4x3/hn.svg)}
+.fi-cw{background-image:url(flags/4x3/cw.svg)}
+.fi-ht{background-image:url(flags/4x3/ht.svg)}
+.fi-sv{background-image:url(flags/4x3/sv.webp)}
+.fi-nc{background-image:url(flags/4x3/nc.svg)}
+.fi-fj{background-image:url(flags/4x3/fj.webp)}
+.fi-pf{background-image:url(flags/4x3/pf.svg)}

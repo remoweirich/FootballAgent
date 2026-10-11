@@ -4,42 +4,42 @@ const NAMES_DATABASE = {
     "firstNames": [
         "Lukas", "Noah", "Leon", "Luca", "David", "Nico", "Simon", "Fabian", "Marco", "Jonas", "Hans", "Luca", "Lenny", "Louis", "Liam", "Lars", "Jens", "Mario", "Remo",
         "Sandro", "Kevin", "Robin", "Manuel", "Adrian", "Loris", "Joel", "Fabio", "Tim", "Jan", "Marco", "Päde", "Ben", "Simon", "Leo", "Leandro", "Leander", "Alessandro",
-        "Samuel", "Matthias", "Cédric", "Yannick", "Julian", "Andreas", "Florian", "Dominik", "Patrick", "Marc", "Giuliano", "Luki",
-        "Reto", "Beat", "Urs", "Christian", "Thomas", "Daniel", "Stefan", "Martin", "Pius", "Andrin",
-        "Levin", "Elias", "Liam", "Leandro", "Matteo", "Nino", "Alessio", "Leandro", "Elia", "Nevio",
-        "Dragan", "Besnik", "Adnan", "Emir", "Amir", "Luan", "Valon", "Arben", "Mergim", "Bekim",
-        "Jean", "Pierre", "Luc", "Mathieu", "Guillaume", "Bastien", "Loïc", "Arnaud", "Florent", "Quentin",
-        "Alessandro", "Leonardo", "Diego", "Giuseppe", "Francesco", "Pietro", "Antonio", "Lorenzo", "Rocco", "Flavio",
-        "Gion", "Flurin", "Corsin", "Gian", "Curdin", "Duri", "Andri", "Peider", "Linard", "Madlaina",
-        "Tiago", "João", "Ricardo", "Carlos", "Luis", "Miguel", "Enzo", "Rafael", "Gabriel", "Ismael", "Remo", "Jens",
-	"Pascal", "Ludovic", "Guillaume", "George", "Damian", "Noah", "Noel", "Karl", "Karli", "Hans", "Peter", "Hanspeter", "Ueli",
-	"Ferdinand", "Arno", "Michael", "Mike", "Mika", "Micha", "Martin", "Tinu", "Tino", "Valentin", "Alex", "Alexander", "Jan",
-	"Sven", "Gian", "Kai", "Silas", "Paul", "Mario", "Timon", "Ben", "Benny", "Benjamin", "Adam",
+        "Samuel", "Matthias", "Cédric", "Yannick", "Julian", "Andreas", "Florian", "Dominik", "Patrick", "Marc", "Giuliano", "Luki", "Leon", "Jamie", "Matteo", "Nehemie", "Nicola",
+        "Reto", "Beat", "Urs", "Christian", "Thomas", "Daniel", "Stefan", "Martin", "Pius", "Andrin", "Evan", "Loris", "Davide", "Yannis", "Noah", "Lino", "Moritz",
+        "Levin", "Elias", "Liam", "Leandro", "Matteo", "Nino", "Alessio", "Leandro", "Elia", "Nevio", "Loic", "Bruno", "Steven", "Sébastien", "Dion", "Gian", "Ruben", "Cyrill",
+        "Dragan", "Besnik", "Adnan", "Emir", "Amir", "Luan", "Valon", "Arben", "Mergim", "Bekim", "Bastien", "Roman", "Yann", "Theo", "Giuliano", "Roland", "Severin", "Remo", "Nathan",
+        "Jean", "Pierre", "Luc", "Mathieu", "Guillaume", "Bastien", "Loïc", "Arnaud", "Florent", "Quentin", "Jonathan", "Yuri", "Valéry", "Leo", "Mathis", "Gianluca", "Giancarlo",
+        "Alessandro", "Leonardo", "Diego", "Giuseppe", "Francesco", "Pietro", "Antonio", "Lorenzo", "Rocco", "Flavio", "Carlo", "Jean", "Jan", "Flurin", "Flo", "Florian", "Albin",
+        "Gion", "Flurin", "Corsin", "Gian", "Curdin", "Duri", "Andri", "Peider", "Linard", "Marino", "Albian", "Zeki", "Elio", "Pascal", "Ludovic", "Marvin", "Enea", "Giorgio",
+        "Tiago", "João", "Ricardo", "Carlos", "Luis", "Miguel", "Enzo", "Rafael", "Gabriel", "Ismael", "Remo", "Jens", "Julian", "Patrick", "Tobias", "Julius", "Daniel", "Gerardo",
+	"Pascal", "Ludovic", "Guillaume", "George", "Damian", "Noah", "Noel", "Karl", "Karli", "Hans", "Peter", "Hanspeter", "Ueli", "Gökhan", "Valon", "Lars", "Sven", "Leonardo",
+	"Ferdinand", "Arno", "Michael", "Mike", "Mika", "Micha", "Martin", "Tinu", "Tino", "Valentin", "Alex", "Alexander", "Jan", "Demir", "Levin", "Sascha", "Tim", "Raphael",
+	"Sven", "Gian", "Kai", "Silas", "Paul", "Mario", "Timon", "Ben", "Benny", "Benjamin", "Adam", "Renato", "Nicolo", "Uran", "Jason", "Joel", "David", "Diego", "Mario",
 	"Dario", "Albian", "Albin", "Ardon", "Kujtim", "Sindri", "Teijo", "Lindrit", "Sergio", "Fritz", "Peter", "Pedro", "Mike", "Nika", "Niklas", "Sam", "Samuel", "Christoph",
     "Mario", "Luca", "Lukas", "Nino", "Linus", "Liam", "Andrin", "Marco", "Remo", "Patrick", "Louis", "Florian", "Damian", "Damiano", "Jan", "Dennis", "Alex", "Alessandro",
-    "Carlo", "Matteo", "Gregor", "Yann", "Manu", "Manuel", "Sven", "Philip", "Jonathan", "Pascal", "Robin", "Robby", "Toby", "Tobi", "Tobias", "Arno", "Steven",
+    "Carlo", "Matteo", "Gregor", "Yann", "Manu", "Manuel", "Sven", "Philip", "Jonathan", "Pascal", "Robin", "Robby", "Toby", "Tobi", "Tobias", "Arno", "Steven", "Nevio",
     "Jason", "Kristian", "Yannick", "Yanick", "Janik", "Jannik", "Yannik", "Jaros", "Wolfgang", "Jean-Pierre", "Jean", "Raúl", "Ramon", "Timon", "Nick", "Niko", "Nico",
-    "Benny", "Ben", "Benjamin", "Benni", "Benno", "Hugo", "Simon", "Jonas", "Julian", "Jules", "Dan", "Dani", "Jannis", "Patrick", "Pär", "Gianni", "Gianluca"
+    "Benny", "Ben", "Benjamin", "Benni", "Benno", "Hugo", "Simon", "Jonas", "Julian", "Jules", "Dan", "Dani", "Jannis", "Patrick", "Pär", "Gianni", "Gianluca", "Lindrit", "Bleron"
     ],
     "lastNames": [
-        "Müller", "Meier", "Schmid", "Keller", "Weber", "Huber", "Schneider", "Meyer", "Steiner", "Fischer",
-        "Gerber", "Brunner", "Baumann", "Moser", "Zimmermann", "Frei", "Widmer", "Graf", "Hofmann", "Roth",
-        "Sutter", "Studer", "Wyss", "Lüthi", "Bachmann", "Pfister", "Bieri", "Marti", "Egger", "Glaus",
-        "Hajrizi", "Petkovic", "Rakitic", "Shaqiri", "Xhaka", "Lustrinelli", "Yakin", "Dragovic", "Sulimani", "Krasniqi",
-        "Favre", "Piccard", "Dutoit", "Girard", "Richard", "Lambert", "Grosjean", "Dubois", "Michaud", "Moret",
-        "Bernasconi", "Bianchi", "Fontana", "Ferrari", "Zanetti", "Riva", "Crivelli", "Rossi", "Colombo", "Galli",
-        "Candreia", "Capaul", "Caviezel", "Tuor", "Venzin", "Caduff", "Derungs", "Giger", "Tinner", "Sialm",
-        "Da Silva", "Dos Santos", "Ferreira", "Pereira", "Rodrigues", "Almeida", "Lopes", "Oliveira", "Fernandez", "Garcia",
-        "Sommer", "Kobel", "Akanji", "Embolo", "Zakaria", "Freuler", "Zuber", "Widmer", "Sow", "Steffen",
-        "Vargas", "Okafor", "Aebischer", "Elvedi", "Schär", "Imeri", "Stergiou", "Lotomba", "Males", "Schlumpf",
-	"Bucher", "Weirich", "Hanggartner", "Cologna", "Ammann", "Büchel", "Büchner", "Kägi", "Zweifel", "Freimann", "Frei",
-	"Kamboundji", "Vergé-Depré", "Kälin", "Heidrich", "Mäder", "Bruderer", "Federer", "Brunner", "Geiger", "Gyger", "Gygax",
-	"Gartenmann", "Schwertzmann", "Schweigler", "Schwegler", "Baumann", "Schär", "Scheidegger", "Sonderegger", "Schnyder",
-	"Schneiter", "Dzemaili", "Neziraj", "Camus", "Comaran", "Sanches", "Koindredi", "Studer", "Farkas", "Schmuki", "Rohner",
-	"Gavillet", "Martim", "Martin", "Ferrari", "Fontana", "Stäheli", "Stadel", "Schönbächler", "Stocker", "Zuberbühler",
-	"Maissen", "Cavegn", "Wyss", "Schweizer", "Marthaler", "Berner", "Basler", "Burgener", "Degen", "Alpsteg", "Peter", 
-	"Bieri", "Gasser", "Gashi", "Siegenthaler", "Vogt", "Küng", "Kuhn", "Odermatt", "Andermatt", "Chapuis", "Chautems", "Clement", "Schweizer",
-    "Schwarz", "Wies", "Leu", "Stark", "Grollimann", "Branner", "Riemann", "Birmanns", "Birs", "Kaul", "Wiesmann", "Pohl", "Hauser", "Bachmann",
+        "Müller", "Meier", "Schmid", "Keller", "Weber", "Huber", "Schneider", "Meyer", "Steiner", "Fischer", "Huber", "Kablan", "Walker", "Sauter", "Volken", "Hodza", "Kamberi",
+        "Gerber", "Brunner", "Baumann", "Moser", "Zimmermann", "Frei", "Widmer", "Graf", "Hofmann", "Roth", "Ajeti", "Schödler", "Di Giusto", "Spadanuda", "Reichmuth", "Stiel",
+        "Sutter", "Studer", "Wyss", "Lüthi", "Bachmann", "Pfister", "Bieri", "Marti", "Egger", "Glaus", "Koller", "Maier", "Mayer", "Wyss", "Derbaci", "Roth", "Saiz", "Bürki",
+        "Hajrizi", "Petkovic", "Rakitic", "Shaqiri", "Xhaka", "Lustrinelli", "Yakin", "Dragovic", "Sulimani", "Krasniqi", "Bamert", "Spycher", "Steffen", "Stucki", "Stirnimann",
+        "Favre", "Piccard", "Dutoit", "Girard", "Richard", "Lambert", "Grosjean", "Dubois", "Michaud", "Moret", "Koloto", "Barbieri", "Shaqiri", "Doucoure", "Marchand", "Omeragic",
+        "Bernasconi", "Bianchi", "Fontana", "Ferrari", "Zanetti", "Riva", "Crivelli", "Rossi", "Colombo", "Galli", "Vouilloz", "Rüegg", "Kakor", "Omlin", "Sommer", "Winter", 
+        "Candreia", "Capaul", "Caviezel", "Tuor", "Venzin", "Caduff", "Derungs", "Giger", "Tinner", "Sialm", "Hoch", "Salvi", "Hitz", "Hitzfeld", "Kuhn", "Neelakandan", "Dalipi",
+        "Da Silva", "Dos Santos", "Ferreira", "Pereira", "Rodrigues", "Almeida", "Lopes", "Oliveira", "Fernandez", "Garcia", "Eberhard", "Berisha", "Lang", "Lang", "Lang", "Föllmi",
+        "Sommer", "Kobel", "Akanji", "Embolo", "Zakaria", "Freuler", "Zuber", "Widmer", "Sow", "Steffen", "Hunziker", "Seferovic", "Gavranovic", "Moubanje", "Djimsiti", "Djourou",
+        "Vargas", "Okafor", "Aebischer", "Elvedi", "Schär", "Imeri", "Stergiou", "Lotomba", "Males", "Schlumpf", "Senderos", "Freuler", "Vargas", "Ndoye", "Amdouni", "Sanches", "Manzambi",
+	"Bucher", "Weirich", "Hanggartner", "Cologna", "Ammann", "Büchel", "Büchner", "Kägi", "Zweifel", "Freimann", "Frei", "Scherrer", "Boteli", "Itten", "Jashari", "Sow", "Rieder",
+	"Kamboundji", "Vergé-Depré", "Kälin", "Heidrich", "Mäder", "Bruderer", "Federer", "Brunner", "Geiger", "Gyger", "Gygax", "Monteiro", "Athekame", "Britschgi", "Elvedi", "Schmidt", "Schmid",
+	"Gartenmann", "Schwertzmann", "Schweigler", "Schwegler", "Baumann", "Schär", "Scheidegger", "Sonderegger", "Schnyder", "Kobel", "Mvogo", "Racioppi", "Cömert", "Petretta", "Bajrami",
+	"Schneiter", "Dzemaili", "Neziraj", "Camus", "Comaran", "Sanches", "Koindredi", "Studer", "Farkas", "Schmuki", "Rohner", "Widmer", "Lang", "Mbabu", "Frei", "Schär", "Lotomba", "Mehmedi",
+	"Gavillet", "Martim", "Martin", "Ferrari", "Fontana", "Stäheli", "Stadel", "Schönbächler", "Stocker", "Zuberbühler", "Zuber", "Sohm", "Benito", "Drmic", "Dzemaili", "Kasami", "Lichtsteiner",
+	"Maissen", "Cavegn", "Wyss", "Schweizer", "Marthaler", "Berner", "Basler", "Burgener", "Degen", "Alpsteg", "Peter", "von Bergen", "Rodriguez", "Barnetta", "Lustenberger", "Behrami", "Inler",
+	"Bieri", "Gasser", "Gashi", "Siegenthaler", "Vogt", "Küng", "Kuhn", "Odermatt", "Andermatt", "Chapuis", "Chautems", "Clement", "Schweizer", "Frey", "Benaglio", "Wölfli", "Klose", "Ziegler",
+    "Schwarz", "Wies", "Leu", "Stark", "Grollimann", "Branner", "Riemann", "Birmanns", "Birs", "Kaul", "Wiesmann", "Pohl", "Hauser", "Bachmann", "Degen", "Emeghara", "Derdiyok",
     "Pfannenstiel", "Hitzfeld", "Kuhn", "Gartenmann", "Gärtner", "Hanggärtner", "Petkovic", "Turkyilmaz", "Yilmaz", "Peterhans", "Peter", "Lukas",
     "Meyer", "Frey", "Spielmann", "Stocker", "Walker", "Sommaruga", "Zurbriggen", "Brügger", "Gut", "Stolz", "Derrer", "Ebneter", "Ebert", "Blum", "Rüti",
     "Siegenthaler", "Palacios", "Häusler", "Buschor", "Bächlin", "Knecht", "Specht", "Speyer", "Speier", "Rösli", "Spörri", "Stettler", "Bosshard",
@@ -293,14 +293,14 @@ const NAMES_DATABASE = {
         "Thomas", "Tim", "Max", "Stijn", "Thijs", "Jan", "Ruben", "Noah", "Sven", "Niels", "Mats", "Ryan", "Jerdy", "Luuk", "Sami", "Giovanni", "Bart", "Kwame", "Thomas", "Tom",
         "Jasper", "Rick", "Kevin", "Joris", "Bart", "Jeroen", "Dennis", "Mike", "Tom", "Pieter", "Mark", "Jeremy", "Jeremiah", "Mats", "Luciano", "Shaqueel", "Dick", "Rob", "Robbie",
         "Floris", "Mees", "Julian", "Sam", "Teun", "Gijs", "Jens", "Hugo", "Olivier", "Lars", "Rob", "Robbie", "Pelle", "Rijk", "Daan", "Daan", "Jens", "Jens", "Wout", "Wouter",
-        "Robert", "Jeroen", "Jeroen", "Liélio", "Mariano", "Nouz", "Gijs", "Abel", "Joep", "Ben", "Jens", "Mo", "Marco", "Tika", "Tygo", "David", "Thom", "Mark",
-        "Robin", "Wouter", "Maarten", "Martijn", "Stefan", "Erik", "Mark", "Patrick", "Bas", "Sander", "Henry", "Jasper", "Tom", "Nick", "Len", "Olivier", "Damian", 
-        "Mohamed", "Ahmed", "Ali", "Omar", "Youssef", "Adam", "Ibrahim", "Hassan", "Bilal", "Hamza", "Gabriël", "Gilles", "Koen", "Sydney", 
-        "Ismail", "Ayoub", "Amine", "Mehdi", "Karim", "Rayan", "Zakaria", "Ilias", "Imran", "Tariq",
-        "Murat", "Emre", "Eren", "Ahmet", "Mustafa", "Hasan", "Mehmet", "Burak", "Cem", "Deniz",
-        "Emir", "Kerem", "Ömer", "Yusuf", "Can", "Kaan", "Barış", "Onur", "Serkan", "Fatih", "Jip", "Mike",
-        "Piotr", "Jakub", "Mateusz", "Kamil", "Tomasz", "Marcin", "Wojciech", "Adrian", "Paweł", "Michał",
-        "Arjen", "Rohan", "Devino", "Ravi", "Arman", "Kirano", "Nikhil", "Rahul", "Noah", "Vijay", "Mitchell",
+        "Robert", "Jeroen", "Jeroen", "Liélio", "Mariano", "Nouz", "Gijs", "Abel", "Joep", "Ben", "Jens", "Mo", "Marco", "Tika", "Tygo", "David", "Thom", "Mark", "Jelle", "Denzel",
+        "Robin", "Wouter", "Maarten", "Martijn", "Stefan", "Erik", "Mark", "Patrick", "Bas", "Sander", "Henry", "Jasper", "Tom", "Nick", "Len", "Olivier", "Damian", "Cody", "Tijiani",
+        "Mohamed", "Ahmed", "Ali", "Omar", "Youssef", "Adam", "Ibrahim", "Hassan", "Bilal", "Hamza", "Gabriël", "Gilles", "Koen", "Sydney", "Joshua", "Noa", "Mexx", "Ruben", "Ryan",
+        "Ismail", "Ayoub", "Amine", "Mehdi", "Karim", "Rayan", "Zakaria", "Ilias", "Imran", "Tariq", "Crysencio", "Quinten", "Jurriën", "Teun", "Joey", "Kenneth", "Guus", "Gjivai",
+        "Murat", "Emre", "Eren", "Ahmet", "Mustafa", "Hasan", "Mehmet", "Burak", "Cem", "Deniz", "Virgil", "Jeremie", "Nathan", "Jorrel", "Micky", "Jan Paul", "Bart", "Mark", "Robin",
+        "Emir", "Kerem", "Ömer", "Yusuf", "Can", "Kaan", "Barış", "Onur", "Serkan", "Fatih", "Jip", "Mike", "Klaas-Jan", "Ibrahim", "Wesley", "Dirk", "Mark", "Rafael", "Erik", "Eric",
+        "Piotr", "Jakub", "Mateusz", "Kamil", "Tomasz", "Marcin", "Wojciech", "Adrian", "Paweł", "Michał", "Joris", "Johnny", "Gregory", "Maarten", "Michel", "Khalid", "Peter", "Wout",
+        "Arjen", "Rohan", "Devino", "Ravi", "Arman", "Kirano", "Nikhil", "Rahul", "Noah", "Vijay", "Mitchell", "Urby", "Ruud", "Jeremain",
         "Luca", "Marco", "Matteo", "Alessandro", "Lorenzo", "Francesco", "Andrea", "Davide", "Simone", "Stefano",
         "Alexander", "Daniel", "David", "Samuel", "Nathan", "Benjamin", "Gabriel", "Joshua", "Matthew", "Michael",
         "Chen", "Wei", "Ming", "Yang", "Hao", "Jun", "Lei", "Jian", "Feng", "Kai", "Mees", "Sem", "Noud",
@@ -327,7 +327,10 @@ const NAMES_DATABASE = {
         "de Leeuw", "van Dalen", "Bosman", "Hermans", "van Os", "Mol", "Kloopmans", "Stam", "Lubbers", "Rietveld", "Huissen", 	"Koeman", "Blind", "Kaptijn", "Koen", "Graaneberg", "Kreeftman", "Hubers", "Stevens", "Kwado", "Propper", "Archaoui",
         "van Beek", "van der Heide", "Hoekstra", "Bosch", "Vink", "Schouten", "de Lange", "van Wijk", "Koning", "van der Poel", "Broersma", "Krips", "van Dellen", "Coehoorn", "de Hoorn",
         "Zwarts", "Smits", "Zwarts", "van Niekerk", "Wienhoven", "Krips", "Peters", "de Jong", "Jansen", "Janssen", "Peters", "de Jong", "de Tempe", "Overvelde", "Berghout", "Bergman",
-        "Kussy", "Peters", "Bregman", "Huijssen", "van Duijl", "Mulders", "Vogelzang", "Visser", "van der Heide", "Vink", "Henstra", "Bruinsma"
+        "Kussy", "Peters", "Bregman", "Huijssen", "van Duijl", "Mulders", "Vogelzang", "Visser", "van der Heide", "Vink", "Henstra", "Bruinsma", "Lens", "van Nistelrooy", "Emanuelson", "Brama",
+        "Wisgerhof", "Boulahrouz", "Vorm", "Stekelenburg", "van der Wiel", "van der Vaart", "Sneijder", "Robben", "Kuyt", "van Persie", "de Jong", "de Vrij", "de Ligt", "de Boer", "de Roon", "de Guzman",
+        "Afellay", "van Bommel", "Mathijsen", "Heitinga", "Pieters", "Huntelaar", "Roefs", "Flekken", "Verbruggen", "van Hecke", "van de Ven", "Hato", "Aké", "Timber", "Frimpong", "van Dijk", "Zechiël",
+        "Veerman", "Taylor", "Til", "Koopmeiners", "Summerville", "Gravenberch", "Reijnders", "Gakpo", "Dumfries", "Meerdink", "Lang", "Zirkzee", "Bruijn"
     ]
 },
     "Portugal": {
@@ -537,7 +540,7 @@ const NAMES_DATABASE = {
     firstNames: ["Georgios", "Dimitrios", "Konstantinos", "Ioannis", "Nikolaos", "Panagiotis", "Christos", "Vasileios", "Andreas", 	"Alexandros", "Michail", "Athanasios", "Stefanos", "Apostolos", "Evangelos", "Theodoros", "Spyridon", "Petros", "Nikos", 	"Giorgos"],
     lastNames: ["Papadopoulos", "Papadakis", "Pappas", "Georgiou", "Dimitriou", "Nikolaou", "Ioannou", "Konstantinou", "Christodoulou", "Vasileiou", "Petridis", "Michalopoulos", "Angelopoulos", "Stavropoulos", "Vlahos", "Karagiannis", 	"Athanasiou", "Kouris", "Makris", "Economou"]
 },
-   "Turkey": {
+   "Türkiye": {
     firstNames: ["Mehmet", "Mustafa", "Ahmet", "Ali", "Hüseyin", "Hasan", "İbrahim", "İsmail", "Yusuf", "Ömer", "Murat", "Emre", 	"Burak", "Cem", "Eren", "Can", "Deniz", "Kerem", "Barış", "Onur"],
     lastNames: ["Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Yıldırım", "Öztürk", "Aydın", "Özdemir", "Arslan", "Doğan", 	"Aslan", "Çetin", "Kara", "Koç", "Kurt", "Özkan", "Şimşek", "Erdoğan"]
 },
@@ -545,7 +548,7 @@ const NAMES_DATABASE = {
     firstNames: ["James", "Jack", "Lewis", "Logan", "Oliver", "Harris", "Callum", "Cameron", "Liam", "Andrew", "Alexander", "Ryan", 	"Dylan", "Jamie", "Ross", "Connor", "Kyle", "Finlay", "Ewan", "Fraser"],
     lastNames: ["Smith", "Brown", "Wilson", "Robertson", "Campbell", "Stewart", "Thomson", "Anderson", "MacDonald", "Scott", "Murray", 	"Miller", "Reid", "Ferguson", "Taylor", "Clark", "Ross", "Young", "Mitchell", "Watson"]
 },
-   "Ireland": {
+   "Republic of Ireland": {
     firstNames: ["Jack", "James", "Conor", "Sean", "Cian", "Liam", "Ryan", "Oisín", "Patrick", "Daniel", "Michael", "Darragh", 	"Cathal", "Finn", "Luke", "Adam", "Eoin", "Dylan", "Tadhg", "Cillian"],
     lastNames: ["Murphy", "Kelly", "O'Sullivan", "Walsh", "Smith", "O'Brien", "Byrne", "Ryan", "O'Connor", "O'Neill", "Reilly", 	"Doyle", "McCarthy", "Gallagher", "Doherty", "Kennedy", "Lynch", "Murray", "Quinn", "Moore"]
 },
@@ -577,7 +580,7 @@ const NAMES_DATABASE = {
     firstNames: ["Mateo", "Santiago", "Nicolás", "Joaquín", "Benjamín", "Valentín", "Thiago", "Lucas", "Bautista", "Felipe", "Franco", 	"Agustín", "Tomás", "Facundo", "Bruno", "Emiliano", "Juan", "Sebastián", "Ignacio", "Diego"],
     lastNames: ["Rodríguez", "González", "Pérez", "Fernández", "García", "Martínez", "López", "Sánchez", "Hernández", "Díaz", "Silva", 	"Castro", "Álvarez", "Romero", "Suárez", "Torres", "Vázquez", "Benítez", "Ramírez", "Acosta"]
 },
-   "Czech Republic": {
+   "Czechia": {
     firstNames: ["Jakub", "Jan", "Tomáš", "Lukáš", "Matěj", "David", "Ondřej", "Petr", "Martin", "Filip", "Vojtěch", "Adam", "Michal", 	"Daniel", "Jiří", "Pavel", "Marek", "Václav", "Stanislav", "Karel"],
     lastNames: ["Novák", "Svoboda", "Novotný", "Dvořák", "Černý", "Procházka", "Kučera", "Veselý", "Horák", "Němec", "Pokorný", 	"Marek", "Pospíšil", "Hájek", "Jelínek", "Král", "Růžička", "Beneš", "Fiala", "Sedláček"]
 },
@@ -641,7 +644,7 @@ const NAMES_DATABASE = {
     firstNames: ["Yuki", "Takeshi", "Hiroshi", "Kenji", "Satoshi", "Masato", "Daisuke", "Ryo", "Shun", "Kazuki", "Haruto", "Sota", 	"Yuto", "Ren", "Kaito", "Hayato", "Ryota", "Kenta", "Tsubasa", "Sho"],
     lastNames: ["Sato", "Suzuki", "Takahashi", "Tanaka", "Watanabe", "Ito", "Yamamoto", "Nakamura", "Kobayashi", "Kato", "Yoshida", 	"Yamada", "Sasaki", "Yamaguchi", "Saito", "Matsumoto", "Inoue", "Kimura", "Hayashi", "Shimizu"]
 },
-   "DRC": {
+   "DR Congo": {
     firstNames: ["Emmanuel", "Jean", "Joseph", "Pascal", "Claude", "Bienvenu", "Fiston", "Didier", "Jacques", "Patient", "Héritier", 	"Papy", "Glody", "Junior", "Merveille", "Grâce", "Espoir", "Prince", "Chance", "Beni"],
     lastNames: ["Kabila", "Tshisekedi", "Kasongo", "Mbuyi", "Nkulu", "Mutombo", "Ngoy", "Kalala", "Kayembe", "Ilunga", "Mukendi", 	"Banza", "Luamba", "Mwamba", "Kabeya", "Mukoko", "Ntumba", "Kabongo", "Mujinga", "Mulamba"]
 },
@@ -701,7 +704,7 @@ const NAMES_DATABASE = {
     firstNames: ["Ján", "Peter", "Michal", "Martin", "Tomáš", "Marek", "Matej", "Jakub", "Lukáš", "Pavol", "Stanislav", "Miroslav", 	"Vladimír", "Jozef", "Ladislav", "Milan", "Roman", "Štefan", "Zdenko", "Andrej"],
     lastNames: ["Varga", "Horváth", "Tóth", "Baláž", "Molnár", "Kováč", "Nagy", "Takács", "Farkas", "Szabó", "Kiss", "Oláh", "Fekete", 	"Gál", "Lukáč", "Simon", "Balogh", "Papp", "Mészáros", "Antal"]
 },
-   "Bosnia": {
+   "Bosnia and Herzegovina": {
     firstNames: ["Mirza", "Emir", "Amir", "Adnan", "Sead", "Nermin", "Amer", "Senad", "Samir", "Kenan", "Dino", "Haris", "Tarik", 	"Denis", "Almir", "Armin", "Faruk", "Jasmin", "Nedim", "Zlatan"],
     lastNames: ["Mehmedović", "Mustafić", "Hodžić", "Hadžić", "Begović", "Softić", "Smajlović", "Imamović", "Šehić", "Jusufović", 	"Omanović", "Alibašić", "Delić", "Hasanović", "Salihović", "Aličković", "Halilović", "Isaković", "Kovačević", "Jovanović"]
 },
@@ -791,8 +794,8 @@ const NATIONALITY_DISTRIBUTION = {
     // Tier 3: Good European (25%)
     "Poland": 2,
     "Ukraine": 2,
-    "Turkey": 2,
-    "Czech Republic": 1.5,
+    "Türkiye": 2,
+    "Czechia": 1.5,
     "Serbia": 1.5,
     "Romania": 1.5,
     "Greece": 1.5,
@@ -800,11 +803,11 @@ const NATIONALITY_DISTRIBUTION = {
     "Norway": 1.2,
     "Scotland": 1.2,
     "Wales": 1,
-    "Ireland": 1,
+    "Republic of Ireland": 1,
     "Slovakia": 1,
     "Slovenia": 1,
     "Bulgaria": 0.8,
-    "Bosnia": 0.8,
+    "Bosnia and Herzegovina": 0.8,
     
     // Tier 4: Emerging/Others (20%)
     "Japan": 1.5,
@@ -932,33 +935,33 @@ function getRegionPrimaryNationality(region) {
 function getRegionSecondaryNationality(region) {
     const secondaryMap = {
         // Netherlands: Common immigrant populations + neighbors
-        "Netherlands": ["Germany", "Belgium", "Morocco", "Turkey", "Suriname", "Indonesia", "Poland"],
-        "North Holland": ["Germany", "Belgium", "Morocco", "Turkey", "Suriname"],
-        "South Holland": ["Morocco", "Turkey", "Suriname", "Indonesia", "Cape Verde"],
-        "Utrecht": ["Germany", "Morocco", "Turkey", "Suriname"],
-        "Gelderland": ["Germany", "Turkey", "Poland"],
-        "North Brabant": ["Belgium", "Germany", "Turkey", "Morocco"],
-        "Limburg": ["Belgium", "Germany", "Turkey"],
+        "Netherlands": ["Germany", "Belgium", "Morocco", "Türkiye", "Suriname", "Indonesia", "Poland"],
+        "North Holland": ["Germany", "Belgium", "Morocco", "Türkiye", "Suriname"],
+        "South Holland": ["Morocco", "Türkiye", "Suriname", "Indonesia", "Cape Verde"],
+        "Utrecht": ["Germany", "Morocco", "Türkiye", "Suriname"],
+        "Gelderland": ["Germany", "Türkiye", "Poland"],
+        "North Brabant": ["Belgium", "Germany", "Türkiye", "Morocco"],
+        "Limburg": ["Belgium", "Germany", "Türkiye"],
         "Friesland": ["Germany", "Poland"],
         "Groningen": ["Germany", "Poland"],
         
         // Germany: Neighbors + immigrants
-        "Germany": ["Poland", "Turkey", "Italy", "Croatia", "Serbia", "Greece", "Netherlands"],
-        "Bavaria": ["Austria", "Czech Republic", "Italy", "Croatia", "Turkey"],
-        "North Rhine-Westphalia": ["Netherlands", "Belgium", "Turkey", "Poland", "Italy"],
-        "Baden-Württemberg": ["Switzerland", "France", "Italy", "Turkey", "Croatia"],
+        "Germany": ["Poland", "Türkiye", "Italy", "Croatia", "Serbia", "Greece", "Netherlands"],
+        "Bavaria": ["Austria", "Czechia", "Italy", "Croatia", "Türkiye"],
+        "North Rhine-Westphalia": ["Netherlands", "Belgium", "Türkiye", "Poland", "Italy"],
+        "Baden-Württemberg": ["Switzerland", "France", "Italy", "Türkiye", "Croatia"],
         
         // Switzerland: Mix of all 4 language regions
-        "Switzerland": ["Germany", "France", "Italy", "Portugal", "Spain", "Serbia", "Kosovo", "Turkey"],
+        "Switzerland": ["Germany", "France", "Italy", "Portugal", "Spain", "Serbia", "Kosovo", "Türkiye"],
         
         // Belgium: FR/NL mix + immigrants
-        "Belgium": ["Netherlands", "France", "Morocco", "Turkey", "Italy", "Poland"],
+        "Belgium": ["Netherlands", "France", "Morocco", "Türkiye", "Italy", "Poland"],
         
         // Others
         "France": ["Algeria", "Morocco", "Tunisia", "Senegal", "Cameroon", "Portugal", "Italy"],
         "Spain": ["Morocco", "Ecuador", "Colombia", "Argentina", "Brazil"],
         "Italy": ["Albania", "Romania", "Morocco", "Senegal", "Brazil"],
-        "England": ["Ireland", "Jamaica", "Nigeria", "Ghana", "Pakistan", "India", "Poland"],
+        "England": ["Republic of Ireland", "Jamaica", "Nigeria", "Ghana", "Pakistan", "India", "Poland"],
         "Portugal": ["Brazil", "Cape Verde", "Angola", "Guinea-Bissau"],
         "Brazil": ["Italy", "Germany", "Japan", "Portugal", "Spain"],
         "Argentina": ["Italy", "Spain", "Paraguay", "Bolivia"]
@@ -1000,8 +1003,8 @@ function getNationalityFlag(nationality) {
         "Sweden": "🇸🇪",
         "Austria": "🇦🇹",
         "Poland": "🇵🇱",
-        "Czech Republic": "🇨🇿",
-        "Turkey": "🇹🇷",
+        "Czechia": "🇨🇿",
+        "Türkiye": "🇹🇷",
         "Scotland": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
         "Serbia": "🇷🇸",
         "Norway": "🇳🇴",
@@ -1013,7 +1016,7 @@ function getNationalityFlag(nationality) {
         "Hungary": "🇭🇺",
         "Finland": "🇫🇮",
         "Wales": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-        "Ireland": "🇮🇪",
+        "Republic of Ireland": "🇮🇪",
         "Ghana": "🇬🇭",
         "Senegal": "🇸🇳",
         "Nigeria": "🇳🇬",
@@ -1027,12 +1030,12 @@ function getNationalityFlag(nationality) {
         "Chile": "🇨🇱",
         "Peru": "🇵🇪",
         "Ecuador": "🇪🇨",
-        "Morocco": "🇲🇦", "Turkey": "🇹🇷", "Suriname": "🇸🇷", "Indonesia": "🇮🇩",
+        "Morocco": "🇲🇦", "Türkiye": "🇹🇷", "Suriname": "🇸🇷", "Indonesia": "🇮🇩",
         "Cape Verde": "🇨🇻", "Kosovo": "🇽🇰", "Albania": "🇦🇱", "Algeria": "🇩🇿",
         "Tunisia": "🇹🇳", "Angola": "🇦🇴", "Guinea-Bissau": "🇬🇼", "Jamaica": "🇯🇲",
         "Pakistan": "🇵🇰", "India": "🇮🇳", "Paraguay": "🇵🇾", "Bolivia": "🇧🇴",
-        "Iran": "🇮🇷", "Iraq": "🇮🇶", "Bosnia": "🇧🇦", "Bulgaria": "🇧🇬",
-        "Georgia": "🇬🇪", "Armenia": "🇦🇲", "Iceland": "🇮🇸", "DRC": "🇨🇩",
+        "Iran": "🇮🇷", "Iraq": "🇮🇶", "Bosnia and Herzegovina": "🇧🇦", "Bulgaria": "🇧🇬",
+        "Georgia": "🇬🇪", "Armenia": "🇦🇲", "Iceland": "🇮🇸", "DR Congo": "🇨🇩",
         "Gabon": "🇬🇦", "Gambia": "🇬🇲", "Kenya": "🇰🇪", "China": "🇨🇳",
         "Canada": "🇨🇦", "Cyprus": "🇨🇾"
     };

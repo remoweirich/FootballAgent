@@ -53,6 +53,7 @@ Router.register('home', {
                 <div class="flex-row" style="gap:7px">
                     <span style="font-size:var(--fs-xs);color:var(--text-dim);letter-spacing:.02em">${I18n.t('home.season', { label: GameState.seasonLabel() })}</span>
                     ${windowOpen ? `<span class="pill pill--accent"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></span>${I18n.t('home.windowOpen')}</span>` : ''}
+                    ${(typeof Internationals !== 'undefined' && Internationals.isBreakWeek()) ? `<span class="pill"><span style="width:6px;height:6px;border-radius:50%;background:var(--gold)"></span>${I18n.t('home.intlBreak')}</span>` : ''}
                 </div>
                 <div style="font-size:var(--fs-xl);font-weight:var(--weight-semibold);margin-top:3px">${I18n.t('home.weekMonth', { w: GameState.week, month: UI.monthLabel(GameState.week, GameState.seasonStartYear) })}</div>
             </div>

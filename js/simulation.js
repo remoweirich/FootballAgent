@@ -50,9 +50,9 @@ const MORALE = {
     CLUB_RESET_ON_MOVE: 90,      // he has to agree to sign, so he starts happy at a club he just joined
     CLUB_RENEW_BOOST: 20,        // re-signing a contract at a club he's already at lifts club morale
     // no "didn't play" penalty in weeks where matches aren't really available: the off-season
-    // (48-52 + 1) and the international-break weeks (no league fixtures - league.js NO_LEAGUE).
-    // Streaks are frozen in these weeks, not reset.
-    BENCH_EXEMPT_WEEKS: [48, 49, 50, 51, 52, 1, 2, 10, 11, 12, 17, 18, 27, 28],
+    // (48-52) and every week without league fixtures (League.noLeagueWeeks(): pre-season, the
+    // international breaks, the winter break). Streaks are frozen in these weeks, not reset.
+    benchExempt(week) { return week >= 48 || League.noLeagueWeeks().has(week); },
 
     // ---- Phase 2: agent dimension (earn-and-neglect, replaces the old flat decay) ----
     AGENT_DEAL_BONUS: 25,                                    // transfer/renewal concluded by the agent (never a stage-3 forced move)
@@ -215,6 +215,12 @@ const Sim = {
                     GameState.addMail({ kind: 'news', subject: I18n.t('sim.recallSubj', { club: back ? back.name : I18n.t('co.club'), name: p.name }), body: I18n.t('sim.recallBody', { club: back ? back.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 4 });
                 }
             });
+        }
+
+        // ---- international football (js/internationals.js) — every week, including the tournament
+        // window (49-52) and its tail in weeks 1-2. Guarded: a fault there must never cost a week.
+        if (typeof Internationals !== 'undefined') {
+            try { Internationals.step(); } catch (e) { if (typeof console !== 'undefined') console.error('[international]', e); }
         }
 
         // ---- matches + development (leagues, cups, play-offs run through week 47) ----
@@ -412,7 +418,7 @@ const Sim = {
 
     _morale(events) {
         const week = GameState.week, aw = GameState.absWeek();
-        const offSeasonNoMatch = MORALE.BENCH_EXEMPT_WEEKS.includes(week);
+        const offSeasonNoMatch = MORALE.benchExempt(week);
         Agency.clients().forEach(p => {
             this._ensureMoraleFields(p, aw);
             // sandbox "lock morale": re-assert the frozen values (undoing any match-day nudges) and skip

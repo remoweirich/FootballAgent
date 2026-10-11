@@ -822,6 +822,13 @@ I18n.register('it', {
     'scouts.err.cannotAffordPayoff': 'Non può coprire la buonuscita di {amt} per {name}.',
     'upg.log.bought': '{name} acquistato (€{price}).',
     'upg.log.boughtItem': 'Acquisto: {name} (€{price}).',
+    // --- international football (js/internationals.js) ---
+    'intl.mail.nlWinSubj': '{nation} vince la {comp}',
+    'intl.mail.nlWinBody': '{nation} batte {opp} {score} nella finale della {comp}.',
+    'intl.mail.tourWinSubj': '{nation} vince la {comp}',
+    'intl.mail.tourWinBody': '{nation} batte {opp} {score} nella finale della {comp}.',
+    'intl.score.aet': '{s} d.t.s.',
+    'intl.score.pens': '{s} ({p} ai rigori)',
     'equip.resistance_bands': 'Elastici',
     'equip.dumbbells': 'Manubri',
     'equip.plyo_boxes': 'Box pliometrici',

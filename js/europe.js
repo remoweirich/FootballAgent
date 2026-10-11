@@ -223,6 +223,12 @@ const Europe = {
         return out;
     },
 
+    // this season's match weeks: the data's calendar, or the old one for a season that started
+    // before the calendar moved (League.legacyCalendar)
+    calendar() {
+        return (typeof League !== 'undefined' && League.legacyCalendar && League.legacyCalendar()) ? LEGACY_CALENDAR.europe : EUROPE_DATA.calendar;
+    },
+
     // ============================================================ weekly step
     step(week) {
         const ed = (typeof GameState !== 'undefined' && GameState.league && GameState.league.europe) || null;
@@ -232,7 +238,7 @@ const Europe = {
             for (const comp of this.COMPS) for (const rc of EUROPE_DATA.qualifying[comp].rounds) if (rc.week === week) this._playQualRound(ed, comp, rc);
 
             // league phase
-            const lpWeeks = EUROPE_DATA.calendar.leaguePhase, mdIdx = lpWeeks.indexOf(week);
+            const lpWeeks = this.calendar().leaguePhase, mdIdx = lpWeeks.indexOf(week);
             if (mdIdx >= 0) {
                 for (const comp of this.COMPS) if (!ed.comps[comp].pots) this._buildLeaguePhase(ed, comp);
                 for (const comp of this.COMPS) this._playMatchday(ed, comp, mdIdx);
@@ -240,7 +246,7 @@ const Europe = {
             }
 
             // knockouts — leg 1 in the first calendar week of each round, leg 2 in the second
-            const cal = EUROPE_DATA.calendar;
+            const cal = this.calendar();
             if (week === cal.knockoutPO[0]) for (const c of this.COMPS) this._poLeg1(ed, c);
             if (week === cal.knockoutPO[1]) for (const c of this.COMPS) this._koLeg2Round(ed, c, 'po');
             if (week === cal.R16[0]) for (const c of this.COMPS) this._r16Leg1(ed, c);

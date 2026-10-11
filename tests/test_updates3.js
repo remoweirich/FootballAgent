@@ -131,7 +131,7 @@ check('final played WITHOUT home advantage (neutral ground)', cup.calls[2].adv =
 
 // ================= 4. break-week + injury playing-time freezes =================
 run(`
-    GameState.week = 10;   // international break (NO_LEAGUE, now exempt)
+    GameState.week = 11;   // international break (NO_LEAGUE, now exempt)
     const club = Clubs.getClubById('ajax');
     const p = PlayerGen.makePlayer(club, { ability: 60, age: 24, position: 'CM' });
     p.agentId = 'me'; p.everClient = true; p.clubId = club.id;

@@ -152,12 +152,12 @@ All three competitions use the **identical** format.
 | Qualifying R3 | 3 / 4 / 5 |
 | Qualifying R4 | 4 / 5 / 6 |
 | Qualifying R5 | 5 (UCL), 6 (UEL) — UECL has no R5 |
-| League phase MD1–MD8 | **11, 16, 17, 19, 22, 24, 29, 31** |
+| League phase MD1–MD8 | **10, 15, 16, 19, 21, 25, 29, 31** (moved out of the international breaks, see international-football-spec.md) |
 | Knockout play-off (2 legs) | **34 & 35** |
-| Round of 16 (2 legs) | **37 & 38** |
+| Round of 16 (2 legs) | **38 & 39** |
 | Quarter-finals (2 legs) | **41 & 42** |
 | Semi-finals (2 legs) | **44 & 45** |
-| Final (single match, neutral venue) | **48** |
+| Final (single match, neutral venue) | **47** |
 
 Both legs of a two-legged qualifying round happen inside the same game week (a midweek/second fixture slot), since each round occupies only one week. If the engine can't schedule two fixtures in one week, resolve the tie as a single aggregate simulation over two simulated legs and record both results.
 

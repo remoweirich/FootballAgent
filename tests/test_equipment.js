@@ -83,7 +83,7 @@ check('...and the confirmation names it', buy.msg.includes('Kettlebells'), buy.m
 
 // ---------------- old saves ----------------
 console.log('\n-- saves with the old Strength Machine --');
-check('the save schema moved on (6)', run('return GameState.SCHEMA_VERSION;') === 6);
+check('the save schema moved on (6 or later)', run('return GameState.SCHEMA_VERSION;') >= 6);
 check('...with a migration to 6', run('return GameState.MIGRATIONS.some(function (m) { return m.to === 6; });') === true);
 const mig = JSON.parse(run(`
     var st = Upgrades.facState();

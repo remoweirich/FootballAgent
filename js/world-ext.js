@@ -22,8 +22,8 @@ const COUNTRY_BLOCKED = ['Liechtenstein', 'Monaco', 'Vatican City'];
 // Some names differ between the user-facing label, the name database (js/names-data.js) and the UEFA
 // list (js/europe-data.js). Map a creatable country to its NAMES_DATABASE key.
 const COUNTRY_NAME_KEY = {
-    'Türkiye': 'Turkey', 'Czech Republic': 'Czech Republic', 'Bosnia and Herzegovina': 'Bosnia',
-    'DRC': 'DRC', "Côte d'Ivoire": "Côte d'Ivoire", 'South Korea': 'South Korea'
+    'Türkiye': 'Türkiye', 'Czech Republic': 'Czechia', 'Ireland': 'Republic of Ireland', 'Bosnia and Herzegovina': 'Bosnia and Herzegovina',
+    'DRC': 'DR Congo', "Côte d'Ivoire": "Côte d'Ivoire", 'South Korea': 'South Korea'
 };
 // Map a creatable country to its EUROPE_DATA.associations key (for berths), where it differs.
 const COUNTRY_EURO_KEY = { 'Czech Republic': 'Czechia' };

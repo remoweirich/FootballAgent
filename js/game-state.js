@@ -35,6 +35,7 @@ const GameState = {
     clubHistory: {},     // { clubId: [{year, division, position, trophies:[compId]}] }
     lastSeasonReport: null, // snapshot of finished-season cups/play-offs/promotions     // { clubId: [{year, division, position, trophies:[compId]}] }
     attendWindow: null,  // "Attend the Final" viewing window (finals to watch this week), or null
+    intl: null,          // international football (js/internationals.js); null before 2026-27
     homeCountry: 'Netherlands', // chosen at the start: drives initial talents + domestic scouting regions
     needsSetup: false,
     databaseId: null,           // customization database this game was started on ('null' = Standard); see js/clubs.js applyDatabase
@@ -120,7 +121,7 @@ const GameState = {
         this.inbox = []; this.log = [];
         this.clubHistory = {}; this.clubEuropeBest = {};
         this.clubNames = null; this.clubLogos = null; this.compNames = null;   // a fresh game carries no imported real names/logos
-        this.lastSeasonReport = null; this.attendWindow = null; this.league = null;
+        this.lastSeasonReport = null; this.attendWindow = null; this.league = null; this.intl = null;
         this.players = PlayerGen.generatePool();
         Agency.init();
         this.agency.name = (name && name.trim()) ? name.trim() : 'Your Agency';
@@ -137,6 +138,9 @@ const GameState = {
         // never empty on week 1 (the first-run Walkthrough also shows these two).
         this.addMail({ kind: 'news', subject: I18n.t('mail.welcome.subj', { agency: this.agency.name }), body: I18n.t('mail.welcome.body', { agency: this.agency.name }), ttl: 99 });
         this.addMail({ kind: 'news', subject: I18n.t('mail.basics.subj'), body: I18n.t('mail.basics.body'), ttl: 99 });
+        // international football: nothing to play in week 1, but hosts and the starting Nations
+        // League leagues are known from day one (no-op for a game starting before 2026-27)
+        if (typeof Internationals !== 'undefined') { try { Internationals.sync({ silent: true }); } catch (e) { /* never block a new game */ } }
         this.needsSetup = false;
         this.save();
     },
@@ -199,6 +203,7 @@ const GameState = {
             players: this.players.filter(isPersistedPlayer), inbox: this.inbox, log: this.log,
             agency: this.agency, league: this.league, clubHistory: this.clubHistory,
             clubEuropeBest: this.clubEuropeBest, debug: this.debug,
+            intl: this.intl || null,   // international football (js/internationals.js)
             attendWindow: this.attendWindow,   // open "Attend the Final" viewing window, if any
             lastSeasonReport: this.lastSeasonReport, clubState,
             saveName: this.saveName || null,  // player-given name for this game (Settings > Save game)
@@ -299,6 +304,7 @@ const GameState = {
             this.log = d.log || []; this.agency = d.agency; this.league = d.league;
             this.clubHistory = d.clubHistory || {};
             this.clubEuropeBest = d.clubEuropeBest || {};
+            this.intl = d.intl || null;
             this.debug = !!d.debug;   // developer/debug mode (off by default)
             this.attendWindow = d.attendWindow || null;
             this.lastSeasonReport = d.lastSeasonReport || null;
@@ -445,13 +451,15 @@ const GameState = {
     // run() upgrades a save from the previous version to its own `to`; the pipeline runs every entry
     // newer than the loaded save, in order. A legacy save with no schemaVersion is inferred from the
     // old `worldV` marker (v2) or treated as v1 otherwise, so the very first saves still upgrade cleanly.
-    SCHEMA_VERSION: 6,
+    SCHEMA_VERSION: 8,
     MIGRATIONS: [
         { to: 2, run(gs, d) { gs._migrateWorldV2(d); } },     // frozen-NPC world model + anchor/reputation split
         { to: 3, run(gs) { gs._migrateScoutRegions(); } },    // reshaped Portugal/Belgium scouting regions
         { to: 4, run(gs) { gs._migrateScoutContracts(); } },  // scouts gained a negotiated minimum contract
         { to: 5, run(gs) { gs._migrateScoutAges(); } },       // scouts gained an age, growth and retirement
-        { to: 6, run(gs) { gs._migrateStrengthMachine(); } }  // the Strength Machine became four machines
+        { to: 6, run(gs) { gs._migrateStrengthMachine(); } }, // the Strength Machine became four machines
+        { to: 7, run(gs) { gs._migrateCalendarV2(); } },      // international breaks moved; a season under way finishes on the old calendar
+        { to: 8, run(gs) { gs._migrateInternationals(); } }  // official country spellings; international football state
     ],
     _runMigrations(d) {
         // Structural defaults, not versioned steps: they must apply on EVERY load, because a save at
@@ -565,6 +573,25 @@ const GameState = {
     // as having already spent growth he never had.
     // The Multifunctional Strength Machine was split into four machines. An owner keeps exactly
     // what he paid for and had: the Leg Curl Machine costs the same and does the same.
+    // The calendar moved for international football (docs/international-football-spec.md). Up to
+    // week 6 both calendars are identical, so only a season already past that point keeps the old
+    // one until it ends (see LEGACY_CALENDAR in league.js; the flag lives on the season's league).
+    // Five nationalities took their official spelling for international football; players keep
+    // their flag emoji (same flag). Then international football is brought up to the current week
+    // silently (Internationals.sync: nothing for a season before 2026-27, never a past season's
+    // competitions, no notifications for the weeks caught up).
+    NATIONALITY_RENAMES: { 'Turkey': 'Türkiye', 'Czech Republic': 'Czechia', 'Ireland': 'Republic of Ireland', 'Bosnia': 'Bosnia and Herzegovina', 'DRC': 'DR Congo' },
+    _migrateInternationals() {
+        const R = this.NATIONALITY_RENAMES;
+        (this.players || []).forEach(p => { if (p && R[p.nationality] && !(typeof NAMES_DATABASE !== 'undefined' && NAMES_DATABASE[p.nationality])) p.nationality = R[p.nationality]; });
+        if (typeof Internationals !== 'undefined') {
+            try { Internationals.sync({ silent: true }); }
+            catch (e) { if (typeof console !== 'undefined') console.error('[international] migration', e); }
+        }
+    },
+    _migrateCalendarV2() {
+        if (this.league && this.week >= 7 && this.week <= 47) this.league.legacyCalendar = true;
+    },
     _migrateStrengthMachine() {
         const st = this.agency && this.agency.facilities;
         if (!st || !st.items) return;
