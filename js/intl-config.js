@@ -10,10 +10,11 @@ const INTL_CONFIG = {
     // ---- calendar ----
     // A match week has two slots: A (~Thursday) and B (~Sunday). A team plays at most once per slot.
     DRAW_WEEK: 3,                                   // Nations League / qualifier draw
-    MATCHDAYS: [                                    // group matchdays 1-6 (both formats)
-        { week: 11, slot: 'A' }, { week: 11, slot: 'B' },
+    MATCHDAYS: [                                    // group matchdays 1-6 (both formats): one, then two, in each window
+        { week: 11, slot: 'A' },
         { week: 12, slot: 'A' }, { week: 12, slot: 'B' },
-        { week: 17, slot: 'A' }, { week: 18, slot: 'A' },
+        { week: 17, slot: 'A' },
+        { week: 18, slot: 'A' }, { week: 18, slot: 'B' },
     ],
     // the international breaks: no club football, "International break" on the Home week card
     BREAK_WEEKS: [11, 12, 17, 18, 36, 37],

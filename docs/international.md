@@ -79,7 +79,7 @@ it is the hook for call-ups.
 ## Nations League (even start years)
 
 Three leagues of 18 (3 groups of 6, 2 per pot), fixtures from the group-of-6 template, matchdays in
-weeks 11A, 11B, 12A, 12B, 17, 18. Week 19 draws:
+weeks 11, 12A, 12B, 17, 18A, 18B (one match in the first week of a window, two in the second). Week 19 draws:
 - **Quarter-finals** (League A): 3 winners, 3 runners-up, 2 best thirds, seeded 1–8 by group position
   then record; 1v8, 2v7, 3v6, 4v5; a same-group pairing swaps its lower seed with the next pairing's.
 - **Promotion/relegation play-offs**: the upper league's 5th-placed v the lower league's runners-up,

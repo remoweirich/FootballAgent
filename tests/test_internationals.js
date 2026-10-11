@@ -53,6 +53,8 @@ check('"International break" in weeks 11-12, 17-18, 36-37 only (not the tourname
 const NATION_SPREAD = run('return NATION_WEIGHT_SPREAD;');
 check(`World Cup draw weights use the /${NATION_SPREAD} curve`, NATION_SPREAD === 5 && run("return NATIONS_BY_ID.arg.weight;") === Math.round(Math.exp((92 - 60) / 5) * 100) / 100);
 
+check('matchdays: 1 in week 11, 2 in week 12, 1 in week 17, 2 in week 18', run(`return JSON.stringify(INTL_CONFIG.MATCHDAYS);`) === JSON.stringify([{ week: 11, slot: 'A' }, { week: 12, slot: 'A' }, { week: 12, slot: 'B' }, { week: 17, slot: 'A' }, { week: 18, slot: 'A' }, { week: 18, slot: 'B' }]));
+
 // ---------------- 22 seasons, structure checked edition by edition ----------------
 console.log('\n-- 22 seasons, every edition --');
 const STRUCT = `

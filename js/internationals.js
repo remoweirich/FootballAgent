@@ -752,8 +752,10 @@ const Internationals = {
     expectedCount(y, w, S) {
         const C = INTL_CONFIG, out = {};
         if (!S) return out;
-        const md = C.MATCHDAYS.filter(m => m.week === w);
-        md.forEach(m => { out[w + m.slot] = 27; });
+        // group matchdays: counted from the season's own fixtures (each carries its week and slot),
+        // so a season drawn under an earlier matchday layout still checks out
+        const groups = S.type === 'NATIONS_LEAGUE' ? (S.leagues ? this._nlAllGroups(S) : []) : (S.l1 ? S.l1.groups.concat(S.l2.groups) : []);
+        groups.forEach(g => g.fx.forEach(f => { if (f.w === w) out[w + f.s] = (out[w + f.s] || 0) + 1; }));
         if (S.type === 'NATIONS_LEAGUE') {
             if (w === C.LEG1_WEEK || w === C.LEG2_WEEK) out[w + 'A'] = 10;
             if (w === C.NL_FINALS_WEEK) { out[w + 'A'] = 2; out[w + 'B'] = 2; }
