@@ -13,7 +13,7 @@ const ClubScreen = {
                 const vhist = (GameState.clubHistory && GameState.clubHistory[clubId]) || [];
                 const vtitles = {}; vhist.forEach(h => (h.trophies || []).forEach(t => vtitles[t] = (vtitles[t] || 0) + 1));
                 const vhonours = Object.keys(vtitles).length
-                    ? `<div class="section-label">${I18n.t('club.euHonours')}</div><div class="chip-row" style="margin:var(--space-2) 0">${Object.entries(vtitles).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`; }).join('')}</div>` : '';
+                    ? `<div class="section-label">${I18n.t('club.euHonours')}</div><div class="chip-row" style="margin:var(--space-2) 0">${Object.entries(vtitles).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(t, `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`); }).join('')}</div>` : '';
                 el.innerHTML = `<div class="flex-row" style="margin-bottom:var(--space-4)">${UI.crest({ name: v.name, colors: { primary: '#5A626D' } }, true)}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${UI.esc(v.name)}</span></div>
                 <p class="hint" style="margin-top:-8px">${v.country || I18n.t('club.europe')} · ${I18n.t('common.reputation')} ${v.reputation}</p>
                 <p class="muted">${I18n.t('club.euGuestDesc', { country: v.country || I18n.t('club.uefaAssoc') })}</p>${vhonours}${this.europeBestHTML(clubId)}`;
@@ -25,10 +25,10 @@ const ClubScreen = {
         const titleCount = {};
         hist.forEach(h => (h.trophies || []).forEach(t => titleCount[t] = (titleCount[t] || 0) + 1));
         const honours = Object.keys(titleCount).length
-            ? `<div class="chip-row">${Object.entries(titleCount).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`; }).join('')}</div>`
+            ? `<div class="chip-row">${Object.entries(titleCount).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(t, `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`); }).join('')}</div>`
             : `<p class="muted">${I18n.t('club.noHonours')}</p>`;
         // all finishes, newest first — the container scrolls, so ~8 show and the deeper past is a scroll away
-        const finishes = hist.length ? hist.slice().reverse().map(h => `<div class="frow"><span class="frow__k">${GameState.seasonLabelFor(h.year)} · ${(COMPETITIONS[h.division] || {}).short || h.division}</span><span class="frow__v">${h.position === 1 ? '🥇 ' : ''}${UI.ordinal(h.position)}${(h.trophies || []).length ? ' · 🏆 ' + h.trophies.map(t => (COMPETITIONS[t] || {}).short || t).join(', ') : ''}</span></div>`).join('')
+        const finishes = hist.length ? hist.slice().reverse().map(h => `<div class="frow"><span class="frow__k">${GameState.seasonLabelFor(h.year)} · ${(COMPETITIONS[h.division] || {}).short || h.division}</span><span class="frow__v">${h.position === 1 ? '🥇 ' : ''}${UI.ordinal(h.position)}${(h.trophies || []).length ? ' · 🏆 ' + h.trophies.map(t => (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(t, (COMPETITIONS[t] || {}).short || t)).join(', ') : ''}</span></div>`).join('')
             : `<p class="muted">${I18n.t('club.noSeasons')}</p>`;
         const euBestHTML = this.europeBestHTML(clubId);
 

@@ -33,7 +33,7 @@ const LeaguesScreen = {
             tabs = [['tables', I18n.t('leagues.tables')], ...cups, ['po', I18n.t('leagues.playoffs')]];
             if (!tabs.some(([k]) => k === this.state.tab)) this.state.tab = 'tables';
         }
-        const countryOpts = order.map(c => `<option value="${c}" ${country === c ? 'selected' : ''}>${c === 'Europe' ? '🇪🇺 ' + I18n.t('leagues.europe') : c === 'International' ? '🌍 ' + I18n.t('intl.country') : c}</option>`).join('');
+        const countryOpts = order.map(c => `<option value="${c}" ${country === c ? 'selected' : ''}>${c === 'Europe' ? '🇪🇺 ' + I18n.t('leagues.europe') : c === 'International' ? '🌍 ' + I18n.t('intl.country') : ((UI.flagEmoji && UI.flagEmoji(c)) ? UI.flagEmoji(c) + ' ' : '') + c}</option>`).join('');
         el.innerHTML = `
         <div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4)">
             <span class="hint">${GameState.league && GameState.league.finished ? I18n.t('leagues.seasonComplete') : I18n.t('leagues.seasonN', { label: GameState.seasonLabel() })}</span>

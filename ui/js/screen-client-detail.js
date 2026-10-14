@@ -40,7 +40,7 @@ const ClientDetail = {
         <div class="flex-row" style="align-items:flex-start;justify-content:space-between;margin-bottom:var(--space-4)">
             <div style="flex:1;min-width:0">
                 <div class="flex-row" style="gap:8px"><span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${UI.esc(p.name)}</span>${p.retired ? `<span class="pill" style="padding:2px 8px">${I18n.t('cd.retiredText')}</span>` : p.retiringThisSeason ? `<span class="pill pill--gold" style="padding:2px 8px">${I18n.t('cd.retiringText')}</span>` : ''}</div>
-                <div class="cl-sub" style="margin-top:5px">${UI.flag(p.nationality)} ${p.nationality} <span style="color:var(--text-chevron)">·</span> ${p.position} <span style="color:var(--text-chevron)">·</span> ${p.age}y</div>
+                <div class="cl-sub" style="margin-top:5px">${this.nationLink(p)} <span style="color:var(--text-chevron)">·</span> ${p.position} <span style="color:var(--text-chevron)">·</span> ${p.age}y${this.capsText(p)}</div>
                 <div class="cl-sub" style="margin-top:4px">${curr ? `${curr.club ? UI.crest(curr.club) : ''}${curr.club ? `<a href="${Router.link('clubs', curr.club.id)}" style="color:${curr.tag ? 'var(--info-text)' : 'var(--text-secondary)'}">${UI.esc(curr.name)}</a>` : `<span style="color:var(--info-text)">${UI.esc(curr.name)}</span>`}${curr.tag ? ` <span style="color:var(--info-text)">(${curr.tag})</span>` : ''} <span style="color:var(--text-chevron)">·</span> ${curr.club ? `<a href="#" onclick="event.preventDefault();LeaguesScreen.openFor('${curr.club.division}')" style="color:var(--text-secondary)">${curr.club.divisionName}</a>` : ''}${curr.parent ? ` <span style="color:var(--text-chevron)">·</span> <span style="color:var(--text-muted)">${I18n.t('cd.onLoanFrom', { parent: UI.esc(curr.parent) })}</span>` : ''}` : (p.freeAgent ? I18n.t('common.freeAgent') : (p.joiningClubId ? I18n.t('cd.joining', { club: UI.clubName(p.joiningClubId) }) : '—'))}</div>
             </div>
             ${UI.abilityBadge(p.ability, true)}
@@ -96,7 +96,7 @@ const ClientDetail = {
                 <div class="info"><span>${I18n.t('cd.wage')}</span><b>${this.wageText(p)}</b></div>
                 <div class="info"><span>${I18n.t('cd.role')}</span><b>${roleName(p)}</b></div>
                 <div class="info"><span>${I18n.t('cd.contract')}</span><b>${this.contractText(p)}</b></div>
-                <div class="info"><span>${I18n.t('cd.status')}</span><b>${p.injury ? I18n.t('cd.injured') : p.onLoanAt ? I18n.t('cd.onLoanStatus') : I18n.t('cd.available')}</b></div>
+                <div class="info"><span>${I18n.t('cd.status')}</span><b>${p.injury ? I18n.t('cd.injured') : (typeof Internationals !== 'undefined' && Internationals.withSquadNow && Internationals.withSquadNow(p)) ? I18n.t('nat.withSquad') : p.onLoanAt ? I18n.t('cd.onLoanStatus') : I18n.t('cd.available')}</b></div>
             </div>
             <div class="section-label" style="margin-top:var(--space-5)">${I18n.t('cd.thisSeason', { season: GameState.seasonLabel() })}</div>
             <div class="stat-strip fcard" style="padding:11px 4px">
@@ -631,7 +631,30 @@ const ClientDetail = {
     // nested per-competition detail get progressively lighter/darker shades of the same
     // surface tokens .screen already uses, so "which level am I looking at" is legible
     // without introducing new colours.
+    // flag + nationality, linking to the national team's page when there is one
+    nationLink(p) {
+        const nid = typeof Internationals !== 'undefined' && Internationals.nationOfPlayer ? Internationals.nationOfPlayer(p) : null;
+        const inner = `${UI.flag(p.nationality)} ${p.nationality}`;
+        return nid ? `<a href="${Router.link('nation', nid)}" style="color:inherit">${inner}</a>` : inner;
+    },
+    // caps, next to the age: "No caps" until his first call-up, then the count (0 for a squad member
+    // who has not played yet). The squad role is never shown: nobody announces that.
+    capsText(p) {
+        if (typeof Internationals === 'undefined' || !Internationals.nationOfPlayer(p)) return '';
+        if (p.agentId !== 'me' && !p.everClient) return '';   // only clients' caps are counted
+        const n = typeof NationScreen !== 'undefined' ? NationScreen.intlTotal(p).apps : 0;
+        const t = !p.intlCalled && !n ? I18n.t('nat.noCapsShort') : n === 1 ? I18n.t('nat.cap1') : I18n.t('nat.capsN', { n });
+        return ` <span style="color:var(--text-chevron)">·</span> ${t}`;
+    },
     tabHistory(p) {
+        const ctx0 = this.ctx(p.id), hasIntl = !!(p.intlStats && Object.keys(p.intlStats).length) || !!p.intlCalled;
+        if (!hasIntl) ctx0.histMode = 'club';
+        const modeBar = `<div class="chip-row" style="margin-bottom:var(--space-3)"><button class="htog ${ctx0.histMode !== 'intl' ? 'is-on' : ''}" onclick="ClientDetail.setHistMode('${p.id}','club')">${I18n.t('nat.club')}</button><button class="htog ${ctx0.histMode === 'intl' ? 'is-on' : ''}" ${hasIntl ? '' : 'disabled'} onclick="ClientDetail.setHistMode('${p.id}','intl')">${I18n.t('nat.international')}</button></div>`;
+        if (ctx0.histMode === 'intl' && typeof NationScreen !== 'undefined') return modeBar + NationScreen.playerHistoryHTML(p);
+        return modeBar + this._clubHistory(p);
+    },
+    setHistMode(id, m) { this.ctx(id).histMode = m; Router.refresh(); },
+    _clubHistory(p) {
         const years = Object.keys(p.stats || {}).map(Number).sort((a, b) => b - a);
         if (!years.length) return `<p class="muted">${I18n.t('cd.noMatches')}</p>`;
         const gk = p.position === 'GK';
@@ -667,7 +690,7 @@ const ClientDetail = {
             if (open) {
                 const comps = `<div class="stint-comps">${Object.entries(st.comps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} ${I18n.t('common.appsShort')} · ${gk ? (c.cs || 0) + ' ' + I18n.t('common.csShort') : c.goals + ' ' + I18n.t('common.goalsShort')} · ${c.assists} ${I18n.t('common.assistsShort')}</span></div>`).join('')}</div>`;
                 const trophyMark = tr => (typeof europeTrophyIcon === 'function' && europeTrophyIcon(tr.compId)) || '<span class="hist-sym">🏆</span>';
-                inner = '<div class="season-body">' + comps + (troph.length ? `<div class="comp-row" style="color:var(--gold)">${troph.map(tr => `${trophyMark(tr)} ${compName(tr.compId)}`).join(' · ')}</div>` : '') + '</div>';
+                inner = '<div class="season-body">' + comps + (troph.length ? `<div class="comp-row" style="color:var(--gold)">${troph.map(tr => (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(tr.compId, `${trophyMark(tr)} ${compName(tr.compId)}`)).join(' · ')}</div>` : '') + '</div>';
             }
             return `<div class="season-row ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','${rowKey}')">
                 <div class="season-top"><div><span class="season-name">${nameLabel}</span><div class="season-club">${seasonLine} ${troph.length ? '<span class="hist-sym">🏆</span>' : ''}</div></div><span class="season-stat">${totLine}<br><i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>${inner}</div>`;
@@ -700,7 +723,7 @@ const ClientDetail = {
         const parts = [];
         const tr = {};
         (p.trophies || []).forEach(t => tr[t.compId] = (tr[t.compId] || 0) + 1);
-        Object.keys(tr).forEach(cid => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(cid)) || '<i class="ti ti-trophy" style="font-size:12px"></i>'; parts.push(`<span class="pill pill--gold">${ic}${compName(cid)}${tr[cid] > 1 ? ' ×' + tr[cid] : ''}</span>`); });
+        Object.keys(tr).forEach(cid => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(cid)) || '<i class="ti ti-trophy" style="font-size:12px"></i>'; parts.push((typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(cid, `<span class="pill pill--gold">${ic}${compName(cid)}${tr[cid] > 1 ? ' ×' + tr[cid] : ''}</span>`)); });
         const mv = {};
         (p.movements || []).forEach(m => { const k = m.type + ':' + m.division; mv[k] = (mv[k] || 0) + 1; });
         Object.keys(mv).forEach(k => {

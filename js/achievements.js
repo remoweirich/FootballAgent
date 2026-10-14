@@ -50,7 +50,11 @@ const Achievements = {
             facilitiesFull: this._facilitiesFull(),
             leagueTiers: new Set(), cupPrimary: false, cupSecondary: false, euro: new Set(),
             maxApps: 0, maxTitles: 0, maxFee: 0, anyRetired: false,
+            maxCaps: 0, maxIntlGoals: 0, intlWC: false, intlCont: false, intlNL: false,
         };
+        // international football (js/intl-callups.js): caps and goals for country, titles won with it
+        const INTL_CONT = { INTL_EURO: 1, INTL_COPA: 1, INTL_GOLD: 1, INTL_AFCON: 1, INTL_AC: 1, INTL_ONC: 1 };
+        const INTL_NL = { INTL_NL: 1, INTL_CNL: 1, INTL_AFCNL: 1, INTL_ANL: 1 };
         clients.forEach(p => {
             let apps = 0;
             if (typeof careerByClub === 'function') careerByClub(p).forEach(c => { if (!c.youth) apps += (c.agg && c.agg.apps) || 0; });
@@ -58,6 +62,10 @@ const Achievements = {
             const trophies = p.trophies || [];
             g.maxTitles = Math.max(g.maxTitles, trophies.length);
             if (p.retired) g.anyRetired = true;
+            let caps = 0, ig = 0;
+            Object.values(p.intlStats || {}).forEach(s => Object.values(s).forEach(c => { caps += c.apps || 0; ig += c.goals || 0; }));
+            g.maxCaps = Math.max(g.maxCaps, caps); g.maxIntlGoals = Math.max(g.maxIntlGoals, ig);
+            (p.intlTrophies || []).forEach(t => { if (t.comp === 'INTL_WC') g.intlWC = true; if (INTL_CONT[t.comp]) g.intlCont = true; if (INTL_NL[t.comp]) g.intlNL = true; });
             ((p.history && p.history.fees) || []).forEach(f => { if (f && f.value) g.maxFee = Math.max(g.maxFee, f.value); });
             trophies.forEach(t => {
                 const comp = (typeof COMPETITIONS !== 'undefined') ? COMPETITIONS[t.compId] : null;
@@ -88,7 +96,7 @@ const Achievements = {
 
     // ---- definitions (flat; `group` clusters them for display, order preserved) ----
     DEFS: null,
-    GROUP_ORDER: ['signings', 'release', 'office', 'earnings', 'leagueTitles', 'cups', 'euroCups', 'transfers', 'games', 'clientTitles', 'physios', 'trainers', 'vehicles', 'properties', 'facilities', 'career', 'xi', 'reputation'],
+    GROUP_ORDER: ['signings', 'release', 'office', 'earnings', 'leagueTitles', 'cups', 'euroCups', 'transfers', 'games', 'clientTitles', 'intlCaps', 'intlGoals', 'intlTitles', 'physios', 'trainers', 'vehicles', 'properties', 'facilities', 'career', 'xi', 'reputation'],
     _buildDefs() {
         if (this.DEFS) return this.DEFS;
         const D = [];
@@ -111,6 +119,11 @@ const Achievements = {
         [[1000000, 10000], [10000000, 50000], [100000000, 1000000]].forEach(([n, r]) => add('transfer' + n, 'transfers', r, 'ach.transfer', { v: money(n) }, g => g.maxFee >= n));
         [[250, 25000], [500, 100000], [750, 500000], [1000, 2000000]].forEach(([n, r]) => add('games' + n, 'games', r, 'ach.games', { n }, g => g.maxApps >= n));
         [[5, 150000], [10, 500000], [15, 2000000]].forEach(([n, r]) => add('ctitles' + n, 'clientTitles', r, 'ach.ctitles', { n }, g => g.maxTitles >= n));
+        [[1, 10000], [50, 150000], [100, 600000], [150, 2000000]].forEach(([n, r]) => add('caps' + n, 'intlCaps', r, n === 1 ? 'ach.intl.debut' : 'ach.intl.caps', { n }, g => g.maxCaps >= n));
+        [[50, 600000], [100, 2500000]].forEach(([n, r]) => add('intlGoals' + n, 'intlGoals', r, 'ach.intl.goals', { n }, g => g.maxIntlGoals >= n));
+        add('intlNL', 'intlTitles', 400000, 'ach.intl.nl', {}, g => g.intlNL);
+        add('intlCont', 'intlTitles', 1000000, 'ach.intl.cont', {}, g => g.intlCont);
+        add('intlWC', 'intlTitles', 3000000, 'ach.euro.win', compVar('INTL_WC'), g => g.intlWC);
         [[1, 25000], [5, 250000]].forEach(([n, r]) => add('physio' + n, 'physios', r, 'ach.physios', { n }, g => g.physios >= n));
         [[1, 30000], [5, 300000]].forEach(([n, r]) => add('trainer' + n, 'trainers', r, 'ach.trainers', { n }, g => g.trainers >= n));
         add('vehicle1', 'vehicles', 1000, 'ach.vehicle.one', {}, g => g.vehicleIndex >= 0);

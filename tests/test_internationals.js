@@ -32,26 +32,33 @@ run(`Internationals.STRICT = true; Rng.seed(424242); Clubs.init(); GameState.sta
 // ---------------- basics ----------------
 console.log('-- nations and the season cycle --');
 const basics = JSON.parse(run(`
-    var u = NATIONS.filter(function (n) { return n.confederation === 'UEFA'; });
+    var u = NATIONS_UEFA, by = {};
+    NATIONS.forEach(function (n) { by[n.confederation] = (by[n.confederation] || 0) + 1; });
+    var ru = NATIONS.find(function (n) { return n.name === 'Russia'; });
     return JSON.stringify({ uefa: u.length, ids: new Set(NATIONS.map(function (n) { return n.id; })).size === NATIONS.length,
-        russia: NATIONS.some(function (n) { return /russia/i.test(n.name); }),
+        russia: u.some(function (n) { return n.name === 'Russia'; }) || !ru || !ru.suspended, by: by,
+        nonFifa: NATIONS.filter(function (n) { return n.fifaMember === false; }).map(function (n) { return n.name; }),
         types: [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033].map(function (y) { return Internationals.seasonType(y); }),
         keys: [2026, 2027, 2029, 2031, 2033].map(function (y) { return Internationals.tournamentKey(y); }),
         sizes: [2028, 2032, 2036].map(function (y) { return Internationals.euroSize(y); }),
         spelling: ['tur', 'cze', 'irl', 'bih'].map(function (id) { return NATIONS_BY_ID[id].name; }) });`));
-check('54 UEFA nations, unique ids, no Russia', basics.uefa === 54 && basics.ids && !basics.russia);
+check('54 UEFA nations play (Russia in the data, suspended), unique ids', basics.uefa === 54 && basics.ids && !basics.russia);
+check('confederation counts from the workbook: CONMEBOL 10, CONCACAF 41 (35 + 6 non-FIFA), AFC 47 (46 + 1), CAF 54, OFC 11', JSON.stringify(basics.by) === JSON.stringify({ UEFA: 55, CONMEBOL: 10, CONCACAF: 41, AFC: 47, CAF: 54, OFC: 11 }), JSON.stringify(basics.by));
+check('the non-FIFA members are flagged: six in CONCACAF, the Northern Mariana Islands in AFC', basics.nonFifa.join() === 'Martinique,Guadeloupe,French Guiana,Bonaire,Sint Maarten,Saint Martin,Northern Mariana Islands', basics.nonFifa.join());
 check('season types follow the cycle', basics.types.join() === 'NATIONS_LEAGUE,EURO,NATIONS_LEAGUE,WORLD_CUP,NATIONS_LEAGUE,EURO,NATIONS_LEAGUE,WORLD_CUP', basics.types.join());
 check('tournament keys', basics.keys.join() === ',EURO-2028,WC-2030,EURO-2032,WC-2034', basics.keys.join());
 check('EURO: 24 teams in 2028, 32 from 2032', basics.sizes.join() === '24,32,32');
 check('official spellings', basics.spelling.join() === 'Türkiye,Czechia,Republic of Ireland,Bosnia and Herzegovina');
-const start = JSON.parse(run(`var I = GameState.intl; return JSON.stringify({ has: !!I, A: I.nlLeagues.A.slice(0, 3), C: I.nlLeagues.C.slice(-2), seeding: I.seeding.length });`));
-check('a new 2026 game starts with Nations League leagues from reputation', start.has && start.A.join() === 'fra,esp,eng' && start.C.join() === 'gib,smr' && start.seeding === 54);
+const start = JSON.parse(run(`var I = GameState.intl, ok = true;
+    for (var i = 1; i < I.seeding.length; i++) if (Internationals.byStrength(I.seeding[i - 1], I.seeding[i]) > 0) ok = false;
+    return JSON.stringify({ has: !!I, ordered: ok, A: I.nlLeagues.A.slice(0, 2), seeding: I.seeding.length, ru: I.seeding.indexOf('russia') });`));
+check('a new 2026 game starts with Nations League leagues from reputation (ties by workbook rank)', start.has && start.ordered && start.A.join() === 'fra,esp' && start.seeding === 54 && start.ru < 0, JSON.stringify(start));
 
 const brk = JSON.parse(run(`return JSON.stringify({ on: [11, 12, 17, 18, 36, 37].map(function (w) { return Internationals.isBreakWeek(2027, w); }),
     off: [1, 2, 10, 13, 35, 38, 49, 50, 51, 52].map(function (w) { return Internationals.isBreakWeek(2027, w); }), pre: Internationals.isBreakWeek(2025, 11) });`));
 check('"International break" in weeks 11-12, 17-18, 36-37 only (not the tournament window), and not before 2026-27', brk.on.every(Boolean) && !brk.off.some(Boolean) && !brk.pre);
 const NATION_SPREAD = run('return NATION_WEIGHT_SPREAD;');
-check(`World Cup draw weights use the /${NATION_SPREAD} curve`, NATION_SPREAD === 5 && run("return NATIONS_BY_ID.arg.weight;") === Math.round(Math.exp((92 - 60) / 5) * 100) / 100);
+check(`World Cup draw weights use the /${NATION_SPREAD} curve`, NATION_SPREAD === 5 && run("return NATIONS_BY_ID.jpn.weight;") === Math.round(Math.exp((run("return NATIONS_BY_ID.jpn.reputation;") - 60) / 5) * 100) / 100);
 
 check('matchdays: 1 in week 11, 2 in week 12, 1 in week 17, 2 in week 18', run(`return JSON.stringify(INTL_CONFIG.MATCHDAYS);`) === JSON.stringify([{ week: 11, slot: 'A' }, { week: 12, slot: 'A' }, { week: 12, slot: 'B' }, { week: 17, slot: 'A' }, { week: 18, slot: 'A' }, { week: 18, slot: 'B' }]));
 
@@ -117,6 +124,7 @@ for (let y = 2026; y < 2048; y++) {
             var teams = S.tour.groups.reduce(function (a, g) { return a.concat(g.teams); }, []);
             out.size = teams.length; out.unique = new Set(teams).size;
             out.uefa = teams.filter(function (id) { return Internationals.conf(id) === 'UEFA'; }).length;
+            out.ineligible = teams.filter(function (id) { return !Internationals.fifaEligible(NATIONS_BY_ID[id]); });
             out.hosts = S.hosts; out.hostsIn = S.hosts.filter(function (h) { return teams.indexOf(h) >= 0; });
             out.P = S.qual.P; out.reserved = S.qual.reserved.length;
             var inPaths = []; S.po.paths.forEach(function (p) { inPaths = inPaths.concat(p.teams); });
@@ -143,6 +151,7 @@ check('...3 + 3 promoted, 3 + 3 relegated at least (plus play-off movers)', nl.e
 check(`${q.length} qualifying campaigns: League 1 teams 6 games v 6 opponents, 2 per pot, 3 home; League 2 like a Nations League group`, q.every(e => !e.bad.length), (q.find(e => e.bad.length) || { bad: [] }).bad.slice(0, 2).join(' | '));
 const wcs = q.filter(e => e.type === 'WORLD_CUP'), euros = q.filter(e => e.type === 'EURO');
 check(`${wcs.length} World Cups: 48 teams, 16 UEFA, no nation twice, 104 matches`, wcs.every(e => e.size === 48 && e.unique === 48 && e.uefa === 16 && e.matches === 104), JSON.stringify(wcs.map(e => [e.y, e.size, e.uefa, e.matches])));
+check('no non-FIFA member or suspended nation ever reaches a World Cup or EURO', q.every(e => e.ineligible.length === 0), JSON.stringify(q.filter(e => e.ineligible.length).map(e => [e.y, e.ineligible])));
 check('...draw rules: at most 2 UEFA and 1 per other confederation per group; hosts in position 1, apart', wcs.every(e => e.groupRule && e.hostsPos1));
 check(`${euros.length} EUROs: 24 teams / 51 matches in 2028, 32 / 63 from 2032, no nation twice`,
     euros.every(e => e.unique === e.size && (e.y + 1 < 2032 ? e.size === 24 && e.matches === 51 : e.size === 32 && e.matches === 63)), JSON.stringify(euros.map(e => [e.y + 1, e.size, e.matches])));
@@ -161,7 +170,7 @@ const wcByYear = Object.fromEntries(wcs.map(e => [e.y + 1, e])), euroByYear = Ob
 check('WC 2030: six hosts, 2 of them UEFA -> 2 play-off paths', wcByYear[2030].hosts.length === 6 && wcByYear[2030].P === 2);
 check('WC 2034: Saudi Arabia, no UEFA host -> 4 play-off paths', wcByYear[2034].hosts.join() === 'ksa' && wcByYear[2034].P === 4);
 check('EURO 2032: Italy and Türkiye -> 2 paths (32 teams)', euroByYear[2032].hosts.join() === 'ita,tur' && euroByYear[2032].P === 2);
-check('later tournaments get one host drawn (pots still empty)', [2036, 2040, 2044].every(y => euroByYear[y] && euroByYear[y].hosts.length === 1) && [2038, 2042, 2046].every(y => wcByYear[y] && wcByYear[y].hosts.length === 1));
+check('later tournaments draw their hosts from the pots (1-3 nations each)', [2036, 2040, 2044].every(y => euroByYear[y] && euroByYear[y].hosts.length >= 1 && euroByYear[y].hosts.length <= 3) && [2038, 2042, 2046].every(y => wcByYear[y] && wcByYear[y].hosts.length >= 1 && wcByYear[y].hosts.length <= 3));
 // force the remaining combinations: EURO with 2 hosts, WC with exactly 1 UEFA host
 const forced = JSON.parse(run(`
     var out = {};
@@ -202,7 +211,7 @@ const mid = JSON.parse(run(`
     __fresh(2027, 30); var inbox = GameState.inbox.length, log = GameState.log.length;
     GameState._migrateInternationals();
     var I = GameState.intl, S = I.seasons[2027];
-    return JSON.stringify({ has: !!I, md6: S && S.l1.groups[0].fx.every(function (f) { return f.hg != null; }), poDrawn: !!(S && S.po), sf: !!(S && S.po && S.po.paths[0].sf), prev: !!I.seasons[2026], mails: GameState.inbox.length - inbox, logs: GameState.log.length - log, last: I.last });`));
+    return JSON.stringify({ has: !!I, md6: S && S.l1.groups[0].fx.every(function (f) { return f.hg != null; }), poDrawn: !!(S && S.po), sf: !!(S && S.po && S.po.paths[0].sf && S.po.paths[0].sf.some(function (m) { return m.hg != null; })), prev: !!I.seasons[2026], mails: GameState.inbox.length - inbox, logs: GameState.log.length - log, last: I.last });`));
 check('a save at week 30 of 2027-28 gets the state, with every passed matchday and draw played', mid.has && mid.md6 && mid.poDrawn && !mid.sf, JSON.stringify(mid));
 check('...silently (no mails, no log lines) and without building last season', mid.mails === 0 && mid.logs === 0 && !mid.prev);
 const early = JSON.parse(run(`__fresh(2027, 2); GameState._migrateInternationals(); var I = GameState.intl; return JSON.stringify({ seasons: Object.keys(I.seasons), honours: I.honours.NL.length });`));
@@ -226,7 +235,7 @@ const real = JSON.parse(run(`
     GameState.addMail = function (m) { subjects.push(m.subject || ''); return am.apply(this, arguments); };
     Internationals.onInternationalMatch = function (f) { weeks[f.w] = 1; };
     for (var i = 0; i < 60; i++) Sim.advanceWeek();
-    return JSON.stringify({ weeks: Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }), warnings: GameState.intl.warnings, nl: GameState.intl.honours.NL.length, mail: subjects.filter(function (x) { return /Nations Series/.test(x); }) });`));
+    return JSON.stringify({ weeks: Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }), warnings: GameState.intl.warnings, nl: GameState.intl.honours.NL.length, mail: subjects.filter(function (x) { return / win the Nations Series$/.test(x); }) });`));
 check('international matches only in the international weeks', real.weeks.every(w => [11, 12, 17, 18, 36, 37, 49, 50, 51, 52, 1, 2].includes(w)), real.weeks.join(','));
 check('a full season of the real game: the Nations League is decided, no warnings', real.nl === 1 && real.warnings.length === 0, JSON.stringify(real.warnings));
 check(`...and the winner is announced once in the inbox ("${real.mail[0]}")`, real.mail.length === 1);

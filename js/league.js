@@ -80,7 +80,25 @@ const COMPETITIONS = {
     INTL_NL: { name: 'Nations Series', short: 'NS', type: 'intl' },
     INTL_QUAL: { name: 'European Qualifying', short: 'EQ', type: 'intl' },
     INTL_EURO: { name: 'European Nations Cup', short: 'ENC', type: 'intl' },
-    INTL_WC: { name: 'World Nations Cup', short: 'WNC', type: 'intl' }
+    INTL_WC: { name: 'World Nations Cup', short: 'WNC', type: 'intl' },
+    INTL_CMQ: { name: 'South American Qualifying', short: 'SAQ', type: 'intl' },
+    INTL_CCQ: { name: 'North American Qualifying', short: 'NAQ', type: 'intl' },
+    INTL_CNL: { name: 'North American Nations Series', short: 'NANS', type: 'intl' },
+    INTL_GOLD: { name: 'North American Cup', short: 'NAC', type: 'intl' },
+    INTL_COPA: { name: 'South American Cup', short: 'SAC', type: 'intl' },
+    INTL_FINALISSIMA: { name: 'Continental Champions Match', short: 'CCM', type: 'intl' },
+    INTL_FRIENDLY: { name: 'Friendly', short: 'F', type: 'intl' },
+    INTL_WCPO: { name: 'Intercontinental Play-off', short: 'ICP', type: 'intl' },
+    INTL_AFCONQ: { name: 'African Cup Qualifying', short: 'ACQ', type: 'intl' },
+    INTL_AFCON: { name: 'African Nations Cup', short: 'ANC', type: 'intl' },
+    INTL_ANL: { name: 'African Nations Series', short: 'ANS', type: 'intl' },
+    INTL_CAFQ: { name: 'African Qualifying', short: 'AFQ', type: 'intl' },
+    INTL_AFCNL: { name: 'Asian Nations Series', short: 'ASNS', type: 'intl' },
+    INTL_AC: { name: 'Asian Nations Cup', short: 'ASC', type: 'intl' },
+    INTL_AFCQ: { name: 'Asian Qualifying', short: 'ASQ', type: 'intl' },
+    INTL_OFCQ: { name: 'Oceania Qualifying', short: 'OCQ', type: 'intl' },
+    INTL_ONC: { name: 'Oceania Nations Cup', short: 'ONC', type: 'intl' },
+    INTL_ONCQ: { name: 'Oceania Cup Qualifying', short: 'ONCQ', type: 'intl' }
 };
 // Snapshot of the shipped generic names + shorts. COMPETITIONS is a shared global mutated in place by
 // database/import name overlays, so this lets Clubs.init() reset it each game (resetCompetitionNames)
@@ -384,6 +402,19 @@ function clientStrengthBonus(clubId, currentRep) {
     let boost = 0;
     for (const p of sq) if (p.agentId === 'me') boost += Math.max(0, p.ability - anchor) / 11;
     return Math.max(0, anchor + boost - currentRep);
+}
+
+// A client with his national team in weeks 1-2 (a summer tournament running into the European
+// qualifiers) misses his club's match: for that week only the club plays without what he adds
+// (the same max(0, ability - anchor)/11 the roster formula gives him). Nothing is stored.
+function awayClientsPenalty(clubId) {
+    if (GameState.week > 2 || typeof Internationals === 'undefined' || !Internationals.clientAway) return 0;
+    const c = Clubs.getClubById(clubId), sq = c && relevantSquads().get(clubId);
+    if (!sq) return 0;
+    const anchor = c.anchorRep != null ? c.anchorRep : c.reputation;
+    let pen = 0;
+    for (const p of sq) if (p.agentId === 'me' && Internationals.clientAway(p)) pen += Math.max(0, p.ability - anchor) / 11;
+    return pen;
 }
 
 // ---- seasonal form rolls (world model) ----
@@ -1333,6 +1364,13 @@ const League = {
         });
     },
 
+    // A play-off that produced no winner (never played, or failed): the best-placed club in `order`
+    // not already moving takes the place, so promotion and relegation stay the same size.
+    _poOr(winner, order, taken) {
+        if (winner) return winner;
+        const t = new Set([].concat(...taken.map(x => x instanceof Set ? [...x] : x)).filter(Boolean));
+        return order.find(id => !t.has(id)) || null;
+    },
     // keep a promoted set the right size while honouring a target division's reserve-team cap:
     // any reserve beyond the cap is swapped for the next eligible non-reserve in the division order
     _capReserves(promoted, order, maxRes, existingRes, excludeSet) {
@@ -1360,17 +1398,17 @@ const League = {
         const l2DownS = new Set(l2Down), psDownS = new Set(psDown), piDownS = new Set(piDown);
 
         // La Liga 2 -> La Liga: 2 auto + play-off winner, NO reserves allowed
-        const l2Promote = this._capReserves([L2[0], L2[1], poW('LaLiga2')].filter(Boolean), L2, 0, 0, l2DownS);
+        const l2Promote = this._capReserves([L2[0], L2[1], this._poOr(poW('LaLiga2'), L2, [[L2[0], L2[1]], l2DownS])].filter(Boolean), L2, 0, 0, l2DownS);
         // Primera Superior -> La Liga 2: 3 auto + play-off, max 2 reserves in La Liga 2
         const l2Stay = L2.filter(id => !l2DownS.has(id) && !l2Promote.includes(id));
         const resL2 = [...l2Stay, ...llDown].filter(isReserveClub).length;
-        const psPromote = this._capReserves([PS[0], PS[1], PS[2], poW('PrimeraSup')].filter(Boolean), PS, 2, resL2, psDownS);
+        const psPromote = this._capReserves([PS[0], PS[1], PS[2], this._poOr(poW('PrimeraSup'), PS, [PS.slice(0, 3), psDownS])].filter(Boolean), PS, 2, resL2, psDownS);
         // Primera Inferior -> Primera Superior: 3 auto + play-off, max 4 reserves in Primera Superior
         const psStay = PS.filter(id => !psDownS.has(id) && !psPromote.includes(id));
         const resPS = [...psStay, ...l2Down].filter(isReserveClub).length;
-        const piPromote = this._capReserves([PI[0], PI[1], PI[2], poW('PrimeraInf')].filter(Boolean), PI, 4, resPS, piDownS);
+        const piPromote = this._capReserves([PI[0], PI[1], PI[2], this._poOr(poW('PrimeraInf'), PI, [PI.slice(0, 3), piDownS])].filter(Boolean), PI, 4, resPS, piDownS);
         // Segunda Federación -> Primera Inferior: 3 auto + play-off, no reserve cap
-        const sgPromote = [SG[0], SG[1], SG[2], poW('Segunda')].filter(Boolean);
+        const sgPromote = [SG[0], SG[1], SG[2], this._poOr(poW('Segunda'), SG, [SG.slice(0, 3)])].filter(Boolean);
 
         const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
         move(llDown, 'LaLiga2'); move(l2Promote, 'LaLiga');
@@ -1561,14 +1599,14 @@ const League = {
         const plLeaving = new Set([...plRelegDirect, ...plToCL]);
         const plArriving = plWinsBarrage ? [] : [clB2];
         const resPLbase = [...PL.filter(id => !plLeaving.has(id)), ...plArriving].filter(isReserveClub).length;
-        const l1UpCandidates = [L1[0], L1[1], poW('1.LigaCH')].filter(Boolean);
+        const l1UpCandidates = [L1[0], L1[1], this._poOr(poW('1.LigaCH'), L1, [[L1[0], L1[1]], [L1[20], L1[21], L1[22], L1[23]]])].filter(Boolean);
         const l1Up = this._capReserves(l1UpCandidates, L1, 4, resPLbase, new Set());
 
         // 1. Liga <-> 2. Liga (max 6 reserves in 1. Liga; 2. Liga has no reserve cap and no relegation)
         const l1RelegDirect = [L1[20], L1[21], L1[22], L1[23]];
         const l1Stay = L1.filter(id => !l1RelegDirect.includes(id) && !l1Up.includes(id));
         const resL1base = [...l1Stay, ...plRelegDirect].filter(isReserveClub).length;
-        const l2UpCandidates = [L2[0], L2[1], L2[2], poW('2.LigaCH')].filter(Boolean);
+        const l2UpCandidates = [L2[0], L2[1], L2[2], this._poOr(poW('2.LigaCH'), L2, [L2.slice(0, 3)])].filter(Boolean);
         const l2Up = this._capReserves(l2UpCandidates, L2, 6, resL1base, new Set());
 
         const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
@@ -1671,13 +1709,13 @@ const League = {
         // Serie A: bottom 3 relegated directly (no Italian reserve sides exist, so no caps needed anywhere)
         const aDown = A.slice(-3);
         // Serie B: 2 auto + play-off winner up (3, matching A's 3 down); bottom 3 + play-out loser down (4)
-        const bUp = [B[0], B[1], poW('SerieB')].filter(Boolean);
-        const bDown = [...B.slice(-3), pout('SerieB')].filter(Boolean);
+        const bUp = [B[0], B[1], this._poOr(poW('SerieB'), B, [[B[0], B[1]], B.slice(-3)])].filter(Boolean);
+        const bDown = [...B.slice(-3), this._poOr(pout('SerieB'), B.slice().reverse(), [B.slice(-3), bUp])].filter(Boolean);
         // Serie C: 3 auto + play-off winner up (4, matching B's 4 down); bottom 3 + play-out loser down (4)
-        const cUp = [C[0], C[1], C[2], poW('SerieC')].filter(Boolean);
-        const cDown = [...C.slice(-3), pout('SerieC')].filter(Boolean);
+        const cUp = [C[0], C[1], C[2], this._poOr(poW('SerieC'), C, [C.slice(0, 3), C.slice(-3)])].filter(Boolean);
+        const cDown = [...C.slice(-3), this._poOr(pout('SerieC'), C.slice().reverse(), [C.slice(-3), cUp])].filter(Boolean);
         // Serie D: 3 auto + play-off winner up (4, matching C's 4 down); bottom rung — no relegation
-        const dUp = [D[0], D[1], D[2], poW('SerieD')].filter(Boolean);
+        const dUp = [D[0], D[1], D[2], this._poOr(poW('SerieD'), D, [D.slice(0, 3)])].filter(Boolean);
 
         const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
         move(aDown, 'SerieB'); move(bUp, 'SerieA');
@@ -1712,13 +1750,13 @@ const League = {
         // promotions (2/2/3 auto + 1 play-off each), honouring the destination reserve caps
         const d1Stay = T1.filter(id => !d1DownS.has(id));
         const resD1 = d1Stay.filter(isReserveClub).length;
-        const d2Up = this._capReserves([T2[0], T2[1], poW(d2)].filter(Boolean), T2, 0, resD1, d2DownS);
+        const d2Up = this._capReserves([T2[0], T2[1], this._poOr(poW(d2), T2, [[T2[0], T2[1]], d2DownS])].filter(Boolean), T2, 0, resD1, d2DownS);
         const d2Stay = T2.filter(id => !d2DownS.has(id) && !d2Up.includes(id));
         const resD2 = [...d2Stay, ...d1Down].filter(isReserveClub).length;
-        const d3Up = this._capReserves([T3[0], T3[1], poW(d3)].filter(Boolean), T3, 2, resD2, d3DownS);
+        const d3Up = this._capReserves([T3[0], T3[1], this._poOr(poW(d3), T3, [[T3[0], T3[1]], d3DownS])].filter(Boolean), T3, 2, resD2, d3DownS);
         const d3Stay = T3.filter(id => !d3DownS.has(id) && !d3Up.includes(id));
         const resD3 = [...d3Stay, ...d2Down].filter(isReserveClub).length;
-        const d4Up = this._capReserves([T4[0], T4[1], T4[2], poW(d4)].filter(Boolean), T4, 4, resD3, new Set());
+        const d4Up = this._capReserves([T4[0], T4[1], T4[2], this._poOr(poW(d4), T4, [T4.slice(0, 3)])].filter(Boolean), T4, 4, resD3, new Set());
 
         const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
         move(d1Down, d2); move(d2Up, d1);
@@ -2278,7 +2316,7 @@ const League = {
         const c = Clubs.getClubById(clubId);
         if (!c) { const v = findVirtualClub(clubId); return v ? v.reputation : 50; }
         const base = c.reputation + (c.seasonDelta || 0);
-        return base + clientStrengthBonus(clubId, base);
+        return base + clientStrengthBonus(clubId, base) - awayClientsPenalty(clubId);
     },
     teamName(id) {
         const c = Clubs.getClubById(id);
@@ -2457,7 +2495,20 @@ const League = {
         }
 
         // every promotion/relegation play-off is a do-or-die match — field the best XI (see playMatch/assignStats)
-        if (week === 46 && L.playoffs && !L.playoffs._done) { this._bigMatch = true; this.playPlayoffs(); this.playPlayoffsEngland(); this.playGermanRelegation(); this.playPlayoffsSpain(); this.playSwissBarrages(); this.playPlayoffsSwiss(); this.playPlayoffsItaly(); this.playItalianPlayouts(); this.playPlayoffsFrance(); this.playPlayoffsPortugal(); this.playPlayoffsBelgium(); this.playCustomPlayoffs(); this._bigMatch = false; L.playoffs._done = true; }
+        // Each country on its own: one that fails is logged and the rest still play (a failure used to
+        // skip every play-off after it, and promotion/relegation then drifted the league sizes).
+        if (week === 46 && L.playoffs && !L.playoffs._done) {
+            this._bigMatch = true;
+            ['playPlayoffs', 'playPlayoffsEngland', 'playGermanRelegation', 'playPlayoffsSpain', 'playSwissBarrages', 'playPlayoffsSwiss', 'playPlayoffsItaly',
+                'playItalianPlayouts', 'playPlayoffsFrance', 'playPlayoffsPortugal', 'playPlayoffsBelgium', 'playCustomPlayoffs'].forEach(fn => {
+                try { this[fn](); }
+                catch (e) {
+                    if (typeof console !== 'undefined') console.error('[play-offs] ' + fn, e);
+                    GameState.addMail({ kind: 'news', cat: 'dev', subject: 'DEV WARNING: ' + fn + ' failed', body: String(e && e.stack || e), ttl: 20 });
+                }
+            });
+            this._bigMatch = false; L.playoffs._done = true;
+        }
 
         // UEFA club competitions (UCL/UEL/UECL) run in parallel all season — qualifying wk1-6,
         // league phase wk10-31, knockouts wk34-47. Weeks in EUROPE_DATA.calendar; see js/europe.js.
@@ -2546,6 +2597,8 @@ const League = {
         // serve suspensions: a banned player sits this one out (no appearance) and his ban ticks down
         const available = [];
         squad.forEach(p => {
+            // away with his national team this week (a summer tournament running into the European qualifiers)
+            if (p.agentId === 'me' && typeof Internationals !== 'undefined' && Internationals.clientAway && Internationals.clientAway(p)) return;
             if (p._cardSeason !== year) { p._cardSeason = year; p._yellowsSeason = 0; p._suspended = 0; }
             if (p._suspended > 0) { p._suspended -= 1; return; }
             available.push(p);

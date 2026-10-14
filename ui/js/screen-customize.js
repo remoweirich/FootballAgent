@@ -1070,6 +1070,8 @@ const CustomizeScreen = {
             if (!editor) { const over = clubs.filter(c => c.reputation > spec.repCap).length; if (over) errors.push(I18n.t('customize.errRepCap', { div: cc.divNames[i], cap: spec.repCap, n: over })); }
             const res = clubs.filter(c => c.reserve).length;
             if (res > spec.resCap) errors.push(I18n.t('customize.errCap', { div: cc.divNames[i], cap: spec.resCap, act: res }));
+            // the league sizes have to hold, as for the stock countries (promotion/relegation counts on them)
+            if (clubs.length !== spec.size) errors.push(I18n.t('customize.errSize', { div: cc.divNames[i], exp: spec.size, act: clubs.length }));
         });
         if (errors.length) {
             this._overlay(I18n.t('customize.cantSaveCountry'), `<p class="cx-note cx-note--warn">${I18n.t('customize.fixFirst')}</p><ul class="cx-errlist">${errors.map(e => `<li>${e}</li>`).join('')}</ul><button class="btn btn--primary cx-wide" style="margin-top:10px" data-act="ovcancel">${I18n.t('common.ok')}</button>`);

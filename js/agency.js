@@ -381,11 +381,32 @@ const Agency = {
     // role the club will grant, by ability vs club reputation
     maxRoleAt(p, club) {
         const d = p.ability - (club ? club.reputation : 45);
+        if (d >= -1 && this._xiBlocked(p, club)) return 'rotation';   // the club's starter places for his position are taken
         if (d >= 4) return 'key';
         if (d >= -1) return 'starter';
         if (d >= -8) return 'rotation';
         if (d >= -16) return 'fringe';
         return 'youth';
+    },
+    // Starters + stars among MY clients at a club follow the national-team limits (INTL_CONFIG
+    // CALLUP_XI_*): per position (GK, RB, LB 1; ST, RW, LW, CAM, CDM 2; CM, CB 3), per line (5 defenders,
+    // 4 midfielders, 3 attackers) and 10 outfielders. A club never has two star right-backs: once the
+    // places are taken, another client can only join as rotation.
+    XI_LINE: { GK: 'GK', CB: 'D', LB: 'D', RB: 'D', CDM: 'M', CM: 'M', CAM: 'M', LW: 'A', RW: 'A', ST: 'A' },
+    _xiBlocked(p, club) {
+        if (!club || typeof INTL_CONFIG === 'undefined' || !INTL_CONFIG.CALLUP_XI_POS) return false;
+        const C = INTL_CONFIG, L = this.XI_LINE, line = L[p.position];
+        const xi = q => { const r = q.onLoanAt === club.id ? (q.loanRole || 'starter') : q.squadRole; return r === 'key' || r === 'starter'; };
+        let pos = 0, inLine = 0, outfield = 0;
+        for (const q of GameState.players) {
+            if (q.agentId !== 'me' || q === p || q.archived || (q.onLoanAt || q.clubId) !== club.id || !xi(q)) continue;
+            if (q.position === p.position) pos++;
+            if (L[q.position] === line) inLine++;
+            if (q.position !== 'GK') outfield++;
+        }
+        if (pos >= (C.CALLUP_XI_POS[p.position] || 1)) return true;
+        if (line === 'GK') return false;
+        return inLine >= C.CALLUP_XI_GROUP[line] || outfield >= C.CALLUP_XI_OUTFIELD;
     },
     rolesUpTo(role) { const i = ROLE_ORDER.indexOf(role); return ROLE_ORDER.slice(0, i + 1); },
     // Does one of MY players already play this position at this club? Without an index this scans
@@ -1168,6 +1189,8 @@ const Agency = {
         const rel = this.relationship(club ? club.id : null);
         let idx = ROLE_ORDER.indexOf(base);
         if (rel >= 80 && idx < ROLE_ORDER.length - 1) idx += 1;     // a great relationship earns a little extra
+        // ...but never past the club's starter limits (a great relationship doesn't make room for a second star RB)
+        if (idx > ROLE_ORDER.indexOf('rotation') && this._xiBlocked(p, club)) idx = ROLE_ORDER.indexOf('rotation');
         return ROLE_ORDER[idx];
     },
     roleAcceptable(p, club, role) {

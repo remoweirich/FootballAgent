@@ -1,6 +1,7 @@
 // ============================================================
 //  International football (docs/international.md): Nations League, European Qualifiers,
-//  EURO and World Cup for the 54 UEFA nations, plus placeholder pools for the World Cup.
+//  EURO and World Cup for the 54 UEFA nations. The other confederations: js/intl-americas.js,
+//  js/intl-caf.js, js/intl-afc.js (Asia and Oceania).
 //
 //  State lives in GameState.intl (saved with the game):
 //    seeding      54 UEFA ids, seeding rank order (drives NL pots and qualifier leagues)
@@ -18,7 +19,7 @@
 const Internationals = {
     STRICT: false,
     _silent: false,
-    // Hook for call-ups (not built yet): called once for every international match played.
+    // Called once for every international match played (js/intl-callups.js: results, call-ups).
     onInternationalMatch(fixture) {},
 
     // ------------------------------------------------------------ basics
@@ -38,10 +39,38 @@ const Internationals = {
     },
     euroSize(tournamentYear) { return tournamentYear >= INTL_CONFIG.EURO_32_FROM ? 32 : 24; },
     nation(id) { return NATIONS_BY_ID[id] || null; },
-    rep(id) { const n = NATIONS_BY_ID[id]; return n ? n.reputation : 50; },
+    // a nation's CURRENT reputation: its std drifting within std +- var (see repAt)
+    rep(id) { return this.repAt(id, this._year != null ? this._year : GameState.seasonStartYear); },
+    stdRep(id) { const n = NATIONS_BY_ID[id]; return n ? n.reputation : 50; },
+    // Reputation drift (golden generations): a wave of DRIFT_PERIOD years with a random phase per
+    // nation, plus a little yearly noise, kept within [std - var, min(std + var, REP_CAP)].
+    // The wave is the difference of two sines, halved: exactly 0 in DRIFT_FROM (every nation starts
+    // at the workbook's std), always within +-1, and periodic. Deterministic per save (driftSeed).
+    repAt(id, y) {
+        const n = NATIONS_BY_ID[id]; if (!n) return 50;
+        const C = INTL_CONFIG, I = this.state();
+        if (!I || I.driftSeed == null || !n.var || y <= C.DRIFT_FROM) return n.reputation;
+        const h = this._hash(I.driftSeed + ':' + id), w = 2 * Math.PI / C.DRIFT_PERIOD;
+        const phase = h * 2 * Math.PI;
+        const wave = (Math.sin(w * (y - C.DRIFT_FROM) + phase) - Math.sin(phase)) / 2;
+        const noise = (this._hash(I.driftSeed + ':' + id + ':' + y) * 2 - 1) * C.DRIFT_NOISE;
+        const lo = n.reputation - n.var, hi = Math.min(n.reputation + n.var, C.REP_CAP);
+        return Math.round(Math.max(1, Math.max(lo, Math.min(hi, n.reputation + n.var * wave + noise))) * 10) / 10;
+    },
+    // a stable number in [0, 1) from a string (FNV-1a), so the drift never touches Rng
+    _hash(str) {
+        let h = 2166136261;
+        for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+        return ((h >>> 0) % 1000003) / 1000003;
+    },
+    weightOf(id) { return Math.exp((this.rep(id) - 60) / NATION_WEIGHT_SPREAD); },
     name(id) { const n = NATIONS_BY_ID[id]; return n ? n.name : id; },
     conf(id) { const n = NATIONS_BY_ID[id]; return n ? n.confederation : null; },
-    uefaIds() { return NATIONS.filter(n => n.confederation === 'UEFA').map(n => n.id); },
+    uefaIds() { return NATIONS_UEFA.map(n => n.id); },   // 54: Russia is in the data but suspended
+    // may play FIFA competitions (World Cup + qualifiers): not suspended, and a FIFA member
+    fifaEligible(n) { return !!n && !n.suspended && n.fifaMember !== false; },
+    // reputation, then the workbook's ranking (reputations tie: France and Spain are both 85)
+    byStrength(a, b) { const x = NATIONS_BY_ID[a], y = NATIONS_BY_ID[b]; return this.rep(b) - this.rep(a) || ((x ? x.rank : 999) - (y ? y.rank : 999)) || (a < b ? -1 : 1); },
     _shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Rng.next() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; },
     _assert(ok, msg) {
         if (ok) return true;
@@ -60,10 +89,10 @@ const Internationals = {
 
     // ------------------------------------------------------------ lifecycle
     _fresh() {
-        const seeding = this.uefaIds().sort((a, b) => this.rep(b) - this.rep(a) || (a < b ? -1 : 1));
+        const seeding = this.uefaIds().sort((a, b) => this.byStrength(a, b));
         const L = INTL_CONFIG.NL_LEAGUE_SIZE;
         return {
-            v: 1, seeding,
+            v: 1, seeding, driftSeed: Math.floor(Rng.next() * 1e9),
             nlLeagues: { A: seeding.slice(0, L), B: seeding.slice(L, 2 * L), C: seeding.slice(2 * L, 3 * L) },
             prevPlayoffPairs: [], hosts: {}, seasons: {}, honours: { NL: [], EURO: [], WC: [] }, warnings: [],
             last: null,
@@ -81,6 +110,16 @@ const Internationals = {
             I = GameState.intl = this._fresh();
             I.last = { year: y, week: 0 };          // start of THIS season: weeks 1..w are caught up silently
         }
+        if (I.driftSeed == null) I.driftSeed = Math.floor(Rng.next() * 1e9);
+        // regions that joined later (the Americas, then Africa): a save that already had the European
+        // competitions catches each up for the CURRENT season only, on its own (never a past season,
+        // no friendlies, no mail)
+        const progressed = I.last && (I.last.year > y || (I.last.year === y && I.last.week > 0));
+        const upTo = Math.min(w, I.last && I.last.year === y ? I.last.week : 52);
+        if (!I.am && progressed) { this.am().last = { year: y, week: 0 }; this._catchUpRegion('am', y, upTo); }
+        if (!I.caf && progressed) { this.caf().last = { year: y, week: 0 }; this._catchUpRegion('caf', y, upTo); }
+        if (!I.ao && progressed) { this.ao().last = { year: y, week: 0 }; this._catchUpRegion('ao', y, upTo); }
+        this.am(); this.caf(); this.ao();
         let { year, week } = I.last || { year: y, week: 0 };
         // a big gap (a save that was edited, or never stepped) restarts from this season's start
         if (year < y - 1 || year > y) { year = y; week = 0; }
@@ -91,40 +130,86 @@ const Internationals = {
             const now = year === y && week === w;
             const prev = this._silent;
             this._silent = prev || !!opts.silent || !now;   // catch-up weeks never notify
+            this._live = now && !opts.silent;               // friendlies are only arranged live, never backfilled
             try { this._processWeek(year, week); }
             catch (e) { this._assert(false, `week ${week} of ${year}: ${e && e.message}`); if (this.STRICT) throw e; }
-            finally { this._silent = prev; }
+            finally { this._silent = prev; this._live = false; }
             I.last = { year, week };
+            this.am().last = { year, week }; this.caf().last = { year, week }; this.ao().last = { year, week };
         }
         return I;
     },
     // the weekly entry point (Simulation.advanceWeek, after the clubs have played)
     step() { return this.sync(); },
+    // one region only ('am' | 'caf' | 'ao'), weeks 1..w of season y, silently (a save from before it)
+    _catchUpRegion(region, y, w) {
+        const prev = this._silent; this._silent = true;
+        const holder = () => region === 'am' ? this.am() : region === 'caf' ? this.caf() : this.ao();
+        try { for (let k = 1; k <= w; k++) { this._processWeek(y, k, { only: region }); holder().last = { year: y, week: k }; } }
+        catch (e) { this._assert(false, `${region} catch-up: ${e && e.message}`); if (this.STRICT) throw e; }
+        finally { this._silent = prev; }
+    },
 
     // ------------------------------------------------------------ the weekly schedule
-    _processWeek(y, w) {
-        const C = INTL_CONFIG, I = this.state();
-        this._weekCount = {};
-        if (w === C.HOST_DRAW_WEEK) {
-            // hosts for the tournament at the end of NEXT season become known now (shown in the UI)
-            const T = y + C.HOST_DRAW_SEASONS_BEFORE;
-            if (this.tournamentKey(T)) this.hostsFor(T);
-        }
-        // weeks 1-2: the tail of the previous season's tournament
+    // One week, region by region. `o.only` ('am' | 'caf' | 'ao') processes just that region: a save from
+    // before the region existed catches it up on its own, without replaying the others.
+    _processWeek(y, w, o = {}) {
+        const C = INTL_CONFIG, I = this.state(), only = o.only || null;
+        const on = part => !only || only === part;
+        this._weekCount = {}; this._amCount = {}; this._cafCount = {}; this._aoCount = {}; this._slotTeams = {};
+        this._year = y;
+        if (w === C.HOST_DRAW_WEEK) this._hostDraws(y);   // hosts become known (and shown) seasons ahead
+        // weeks 1-2: the tail of the previous season's tournaments (they belong to that season)
         const ti = C.TOURNAMENT_WEEKS.indexOf(w);
         if (w <= 2) {
             const prev = I.seasons[y - 1];
-            if (prev && prev.tour) this._tournamentDay(prev, ti);
-            this._checkCounts(y - 1, w, prev);
+            this._year = y - 1;
+            if (on('uefa') && prev && prev.tour) this._tournamentDay(prev, ti);
+            if (on('am')) this._amTournamentDay(prev, ti);
+            if (on('caf')) this._cafTournamentDay(prev, ti);
+            if (on('ao')) this._aoTournamentDay(prev, ti);
+            if (on('uefa')) this._checkCounts(y - 1, w, prev);
+            if (on('am')) this._amCheck(y - 1, w, prev, ti);
+            if (on('caf')) this._cafCheck(y - 1, w, prev, ti);
+            if (on('ao')) this._aoCheck(y - 1, w, prev, ti);
+            if (!only && this._weekly) this._weekly(y - 1, w);
+            this._year = y;
             return;
         }
         if (!this.active(y)) return;
-        if (w === C.DRAW_WEEK) this._newSeason(y);
+        if (!only && this._callupWeek) this._callupWeek(y, w);
+        if (w === C.DRAW_WEEK) {
+            if (on('uefa')) this._newSeason(y);
+            if (on('am')) this._amDraw(I.seasons[y]);
+            if (on('caf')) this._cafDraw(I.seasons[y]);
+            if (on('ao')) this._aoDraw(I.seasons[y]);
+        }
         const S = I.seasons[y]; if (!S) return;
-        if (S.type === 'NATIONS_LEAGUE') this._nlWeek(S, w);
-        else this._qualWeek(S, w);
-        if (ti >= 0 && S.tour) this._tournamentDay(S, ti);
-        this._checkCounts(y, w, S);
+        if (on('am')) this._amWeek(S, w);
+        if (on('caf')) this._cafWeek(S, w);
+        if (on('ao')) this._aoWeek(S, w);   // before UEFA: the World Cup field is read in week 18
+        if (on('uefa')) {
+            if (S.type === 'NATIONS_LEAGUE') this._nlWeek(S, w);
+            else this._qualWeek(S, w);
+            if (ti >= 0 && S.tour) this._tournamentDay(S, ti);
+        }
+        if (on('am')) this._amTournamentDay(S, ti);
+        if (on('caf')) this._cafTournamentDay(S, ti);
+        if (on('ao')) this._aoTournamentDay(S, ti);
+        if (!only) this._friendlies(S, w);
+        if (on('uefa')) this._checkCounts(y, w, S);
+        if (on('am')) this._amCheck(y, w, S, ti);
+        if (on('caf')) this._cafCheck(y, w, S, ti);
+        if (on('ao')) this._aoCheck(y, w, S, ti);
+        if (!only && this._weekly) this._weekly(y, w);
+    },
+    // Americas match counts per slot, plus: no team plays twice in one slot (every competition)
+    _amCheck(y, w, S, ti) {
+        const want = Object.assign({}, this.amExpected(y, w, S));
+        const t = this.amTourExpected(S, ti);
+        Object.keys(t).forEach(k => { want[k] = (want[k] || 0) + t[k]; });
+        const got = this._amCount || {};
+        new Set([...Object.keys(want), ...Object.keys(got)]).forEach(k => this._assert((want[k] || 0) === (got[k] || 0), `Americas, season ${y} week ${k}: ${got[k] || 0} matches, expected ${want[k] || 0}`));
     },
     _newSeason(y) {
         const I = this.state();
@@ -143,16 +228,23 @@ const Internationals = {
     _strength(id) { return this.rep(id); },
     _play(h, a, o = {}) {
         const adv = INTL_CONFIG.HOME_ADVANTAGE;
+        this._matchWeek = o.week;   // the call-up window this match is in (js/intl-callups.js)
         const advH = o.neutral ? !!o.advH : true, advA = o.neutral ? !!o.advA : false;
-        const sh = this._strength(h) + (advH && !advA ? adv : 0);
-        const sa = this._strength(a) + (advA && !advH ? adv : 0);
+        const sh = this._strength(h) + (advH && !advA ? adv : 0) + (o.bH || 0);   // bH / bA: a host at its own tournament
+        const sa = this._strength(a) + (advA && !advH ? adv : 0) + (o.bA || 0);
         const fx = { h, a, hg: League.scoreGoals(sh, sa), ag: League.scoreGoals(sa, sh), w: o.week, s: o.slot || 'A' };
         if (o.neutral) fx.n = 1;
-        if (o.ko && fx.hg === fx.ag) this._decide(fx, sh, sa);
+        if (o.ko && fx.hg === fx.ag) this._decide(fx, sh, sa, !!o.pensOnly);
+        if (o.defer) return fx;   // the caller decides it first (a second leg), then records it
         return this._record(fx, o);
     },
     // extra time (same shape as League._extraTime) then a penalty shootout
-    _decide(fx, sh, sa) {
+    _decide(fx, sh, sa, pensOnly) {
+        if (pensOnly) {   // no extra time (the Copa América rule before its final)
+            const [w, l] = League._penScore();
+            fx.pens = Rng.next() < sh / (sh + sa) ? { h: w, a: l } : { h: l, a: w };
+            return;
+        }
         const half = (att, def) => {
             const lam = Math.max(0.06, 0.45 + (att - def) / 40);
             let g = 0, p = Math.exp(-lam), cum = p, x = Rng.next(), term = p, k = 0;
@@ -173,24 +265,32 @@ const Internationals = {
         return fx.hg > fx.ag ? fx.h : fx.ag > fx.hg ? fx.a : null;
     },
     loserOf(fx) { const w = this.winnerOf(fx); return w == null ? null : (w === fx.h ? fx.a : fx.h); },
+    UEFA_COUNTED: { INTL_NL: 1, INTL_QUAL: 1, INTL_EURO: 1, INTL_WC: 1 },
     _record(fx, o) {
         if (o.comp) fx.c = o.comp;
         if (o.stage) fx.st = o.stage;
         const key = (fx.w || 0) + fx.s;
-        this._weekCount[key] = (this._weekCount[key] || 0) + 1;
+        if (this.UEFA_COUNTED[fx.c] || !fx.c) this._weekCount[key] = (this._weekCount[key] || 0) + 1;
+        else if (this.CAF_COMPS && this.CAF_COMPS[fx.c]) this._cafCount[key] = (this._cafCount[key] || 0) + 1;
+        else if (this.AO_COMPS && this.AO_COMPS[fx.c]) this._aoCount[key] = (this._aoCount[key] || 0) + 1;
+        else if (fx.c !== 'INTL_FRIENDLY') this._amCount[key] = (this._amCount[key] || 0) + 1;
+        const set = this._slotTeams[key] || (this._slotTeams[key] = new Set());
+        [fx.h, fx.a].forEach(id => { this._assert(!set.has(id), `${id} plays twice in slot ${key} (season ${this._year})`); set.add(id); });
         try { this.onInternationalMatch(fx); } catch (e) { /* a hook must never break the week */ }
         return fx;
     },
     // A two-legged tie: `lo` hosts leg 1, `hi` hosts leg 2; aggregate, no away goals; extra time
     // and penalties in leg 2 if level.
     _leg1(tie, week, comp, stage) { tie.leg1 = this._play(tie.lo, tie.hi, { week, comp, stage }); },
-    _leg2(tie, week, comp, stage) {
-        const l2 = this._play(tie.hi, tie.lo, { week, comp, stage });
+    _leg2(tie, week, comp, stage, slot) {
+        const o = { week, slot, comp, stage, defer: true };
+        const l2 = this._play(tie.hi, tie.lo, o);
         const aggHi = tie.leg1.ag + l2.hg, aggLo = tie.leg1.hg + l2.ag;
         if (aggHi === aggLo) {
             const adv = INTL_CONFIG.HOME_ADVANTAGE;
             this._decide(l2, this._strength(tie.hi) + adv, this._strength(tie.lo));
         }
+        this._record(l2, o);   // with extra time and penalties in
         tie.leg2 = l2;
         const fh = tie.leg1.ag + l2.hg, fl = tie.leg1.hg + l2.ag;
         tie.agg = [fh, fl];
@@ -395,7 +495,7 @@ const Internationals = {
     _nlFinals(S) {
         const F = S.finals; if (!F) return;
         const C = INTL_CONFIG, w = C.NL_FINALS_WEEK;
-        const opt = (h, a, slot, stage) => ({ week: w, slot, neutral: true, advH: h === F.host, advA: a === F.host, ko: true, comp: 'INTL_NL', stage });
+        const opt = (h, a, slot, stage) => ({ week: w, slot, neutral: true, advH: false, advA: false, bH: h === F.host ? (INTL_CONFIG.TOURNAMENT_HOST_BOOST || 0) : 0, bA: a === F.host ? (INTL_CONFIG.TOURNAMENT_HOST_BOOST || 0) : 0, ko: true, comp: 'INTL_NL', stage });
         F.sf = F.sf.map(m => this._play(m.h, m.a, opt(m.h, m.a, 'A', 'sf')));
         const W = F.sf.map(m => this.winnerOf(m)), Lz = F.sf.map(m => this.loserOf(m));
         F.third = this._play(Lz[0], Lz[1], opt(Lz[0], Lz[1], 'B', 'third'));
@@ -404,6 +504,7 @@ const Internationals = {
         S.result = { winner, runnerUp: this.loserOf(F.final), third: this.winnerOf(F.third), fourth: this.loserOf(F.third) };
         this._nlPromoteAndReseed(S);
         this.state().honours.NL.push({ season: S.year, winner, runnerUp: S.result.runnerUp, third: S.result.third, host: F.host, final: this._finalRec(F.final) });
+        if (this._recordFinals4) this._recordFinals4('INTL_NL', S.year, F);
         this._notify('intl.mail.nlWinSubj', 'intl.mail.nlWinBody', { nation: this.name(winner), opp: this.name(S.result.runnerUp), score: this._score(F.final), comp: compName('INTL_NL') });
     },
     // a final as stored in the roll of honour (oriented: h / a as played)
@@ -447,27 +548,85 @@ const Internationals = {
     },
 
     // ------------------------------------------------------------ hosts
+    // Which nations each host pot may hold (INTL_CONFIG.HOST_POTS), and where an empty pot draws from.
+    HOST_POT_RULES: {
+        EURO: { confs: ['UEFA'], fifa: true }, WORLD_CUP: { confs: null, fifa: true },
+        COPA: { confs: ['CONMEBOL', 'CONCACAF'], fifa: true },
+        AFCON: { confs: ['CAF'], fifa: true }, ANL_FINALS: { confs: ['CAF'], fifa: true },
+        ASIAN_CUP: { confs: ['AFC'], fifa: false }, OFC_NATIONS_CUP: { confs: ['OFC'], fifa: false },
+    },
+    // A pot's valid entries, each an array of hosts (a single id = [id]); `bad` = skipped entries + why
+    hostPotEntries(name) {
+        const C = INTL_CONFIG, R = this.HOST_POT_RULES[name] || { confs: null, fifa: true };
+        const max = (C.HOST_GROUP_MAX || {})[name] || C.MAX_HOSTS;
+        const entries = [], bad = [];
+        (C.HOST_POTS[name] || []).forEach(e => {
+            const g = [].concat(e), why =
+                !g.length || g.length > max ? `${g.length} nations (at most ${max})`
+                : new Set(g).size !== g.length ? 'a nation twice'
+                : g.find(id => !NATIONS_BY_ID[id]) ? `unknown id '${g.find(id => !NATIONS_BY_ID[id])}'`
+                : g.find(id => R.confs && !R.confs.includes(this.conf(id))) ? `'${g.find(id => R.confs && !R.confs.includes(this.conf(id)))}' is not ${R.confs.join(' / ')}`
+                : g.find(id => NATIONS_BY_ID[id].suspended || (R.fifa && !this.fifaEligible(NATIONS_BY_ID[id]))) ? `'${g.find(id => NATIONS_BY_ID[id].suspended || (R.fifa && !this.fifaEligible(NATIONS_BY_ID[id])))}' may not host this`
+                : name === 'WORLD_CUP' && g.filter(id => this.conf(id) === 'UEFA').length > C.MAX_UEFA_HOSTS_WC ? `more than ${C.MAX_UEFA_HOSTS_WC} UEFA nations`
+                : null;
+            if (why) bad.push({ entry: e, why }); else entries.push(g);
+        });
+        return { entries, bad };
+    },
+    // does season T end with this tournament ('EURO' | 'WC' | 'COPA' | 'AFCON' | 'ANLF' | 'AC' | 'ONC')?
+    _hostsTournamentIn(type, T) {
+        const t = this.seasonType(T);
+        if (type === 'EURO' || type === 'COPA') return t === 'EURO';
+        if (type === 'WC') return t === 'WORLD_CUP';
+        if (type === 'AFCON') return !!this.cafSeason && this.cafSeason(T) === 'AFCON';
+        if (type === 'ANLF') return !!this.cafSeason && this.cafSeason(T) === 'ANL';
+        if (type === 'AC') return !!this.afcSeason && /^AC/.test(this.afcSeason(T) || '');
+        if (type === 'ONC') return !!this.ofcSeason && this.ofcSeason(T) === 'NC';
+        return false;
+    },
+    // the editions of a tournament before `year`, newest first: [{ year, hosts }] (real ones from
+    // HOST_HISTORY, then the game's own; an edition not drawn yet is drawn now, oldest first)
+    pastHostings(type, year) {
+        const C = INTL_CONFIG, out = [];
+        Object.keys(C.HOST_HISTORY || {}).forEach(k => { const [t, yy] = k.split('-'); if (t === type && +yy < year) out.push({ year: +yy, hosts: C.HOST_HISTORY[k] }); });
+        for (let T = C.FIRST_SEASON; T + 1 < year; T++) if (this._hostsTournamentIn(type, T)) out.push({ year: T + 1, hosts: this.hostsForKey(type + '-' + (T + 1)) });
+        return out.sort((a, b) => b.year - a.year);
+    },
+    // who may not host `key` under the rotation rules: { confs } for a World Cup, { nations } otherwise
+    hostRest(key) {
+        const C = INTL_CONFIG, [type, yy] = key.split('-');
+        if (type === 'WC') {
+            const past = this.pastHostings('WC', +yy).slice(0, C.HOST_REST_WC_CONFEDERATION);
+            return { confs: new Set([].concat(...past.map(p => p.hosts.map(id => this.conf(id))))), nations: new Set() };
+        }
+        const past = this.pastHostings(type, +yy).slice(0, C.HOST_REST_CONTINENTAL);
+        return { confs: new Set(), nations: new Set([].concat(...past.map(p => p.hosts))) };
+    },
+    // Draw the hosts of `key` from a pot: one entry, all equally likely, among those the rotation
+    // allows. An empty pot (or none allowed): one nation of the confederation (`fallbackConf`; any
+    // for the World Cup) the rotation allows, weighted by reputation.
+    _drawHosts(name, fallbackConf, key) {
+        const { entries, bad } = this.hostPotEntries(name);
+        bad.forEach(b => this._assert(false, `host pot ${name}: ${JSON.stringify(b.entry)} skipped (${b.why})`));
+        const rest = key ? this.hostRest(key) : { confs: new Set(), nations: new Set() };
+        const free = id => !rest.nations.has(id) && !rest.confs.has(this.conf(id));
+        const ok = entries.filter(g => g.every(free));
+        if (ok.length) return ok[Math.floor(Rng.next() * ok.length)].slice();
+        const R = this.HOST_POT_RULES[name] || {};
+        const all = NATIONS.filter(n => !n.suspended && (!R.fifa || this.fifaEligible(n)) && (!fallbackConf || n.confederation === fallbackConf));
+        let pool = all.filter(n => free(n.id));
+        if (!pool.length) { this._assert(false, `${key}: no nation may host under the rotation; rule ignored`); pool = all; }
+        return [this._weightedOrder(pool, n => this.weightOf(n.id))[0].id];
+    },
     // The hosts of the tournament at the end of season T: awarded (config), already drawn, or
-    // drawn now. Fallback until HOST_POTS is filled: one host, weighted by reputation.
+    // drawn now from the pot.
     hostsFor(T) {
         const key = this.tournamentKey(T); if (!key) return [];
         const C = INTL_CONFIG, I = this.state();
         if (C.HOSTS[key]) return C.HOSTS[key].hosts.slice();
         if (I && I.hosts[key]) return I.hosts[key].slice();
         const isEuro = key.startsWith('EURO');
-        const pot = (C.HOST_POTS[isEuro ? 'EURO' : 'WORLD_CUP'] || []).filter(id => NATIONS_BY_ID[id]);
-        let hosts;
-        if (pot.length) {
-            const n = Math.min(C.MAX_HOSTS, C.HOSTS_PER_TOURNAMENT[Math.floor(Rng.next() * C.HOSTS_PER_TOURNAMENT.length)]);
-            hosts = this._shuffle(pot.slice()).slice(0, n);
-            if (!isEuro) {   // at most MAX_UEFA_HOSTS_WC UEFA hosts at a World Cup
-                const u = hosts.filter(id => this.conf(id) === 'UEFA');
-                if (u.length > C.MAX_UEFA_HOSTS_WC) hosts = hosts.filter(id => this.conf(id) !== 'UEFA').concat(u.slice(0, C.MAX_UEFA_HOSTS_WC));
-            }
-        } else {
-            const pool = NATIONS.filter(n => !isEuro || n.confederation === 'UEFA');
-            hosts = [this._weightedOrder(pool, n => Math.exp((n.reputation - 60) / NATION_WEIGHT_SPREAD))[0].id];
-        }
+        const hosts = isEuro ? this._drawHosts('EURO', 'UEFA', key) : this._drawHosts('WORLD_CUP', null, key);
         if (I) I.hosts[key] = hosts.slice();
         return hosts;
     },
@@ -545,7 +704,9 @@ const Internationals = {
         S.l1.groups.forEach(g => this._groupOrder(g, 'l1', auto).forEach((row, i) => { if (!done.has(row.id)) l1.push({ row, pos: i + 1 }); }));
         const l1In = this._byPosThenRecord(l1).slice(0, 3 * P).map(e => e.row.id);
         // League 2: group winners ranked across groups (+ best runner-up when P = 4)
-        const orders = S.l2.groups.map(g => this._groupOrder(g, 'rr', auto));
+        // a team that already qualified (an EURO 2028 host on a reserved place can sit in League 2)
+        // gives its group's play-off place to the next team down
+        const orders = S.l2.groups.map(g => this._groupOrder(g, 'rr', auto).filter(r => !done.has(r.id)));
         let l2In = this.crossRank(orders.map(o => o[0]).filter(Boolean)).map(r => r.id);
         if (P > l2In.length) l2In = l2In.concat(this.crossRank(orders.map(o => o[1]).filter(Boolean)).slice(0, P - l2In.length).map(r => r.id));
         l2In = l2In.slice(0, P);
@@ -560,7 +721,7 @@ const Internationals = {
                 const [p1, p2, p3, p4] = p.teams;
                 p.sf = [this._play(p1, p4, { week: w, ko: true, comp: 'INTL_QUAL', stage: 'posf' }), this._play(p2, p3, { week: w, ko: true, comp: 'INTL_QUAL', stage: 'posf' })];
             } else {
-                const f = this._shuffle(p.sf.map(m => this.winnerOf(m)));
+                const f = p.final && p.final.hg == null ? [p.final.h, p.final.a] : this._shuffle(p.sf.map(m => this.winnerOf(m)));
                 p.final = this._play(f[0], f[1], { week: w, ko: true, comp: 'INTL_QUAL', stage: 'pofinal' });
                 p.winner = this.winnerOf(p.final);
             }
@@ -575,20 +736,38 @@ const Internationals = {
             }
         }
     },
-    // World Cup: the other confederations' places (placeholder until their qualifiers exist)
+    // World Cup: the other confederations' places, from their own qualifying. `result.direct`
+    // leaves the hosts out (they are added here); `result.po` = the inter-confederation entrants.
+    _wcResult(conf, wcYear) {
+        const I = this.state(), key = 'WC-' + wcYear;
+        const am = I.am && I.am.cycles[key], caf = I.caf && I.caf.cycles[key], ao = I.ao && I.ao.cycles[key];
+        const q = conf === 'CONMEBOL' ? am && am.cm : conf === 'CONCACAF' ? am && am.cc : conf === 'CAF' ? caf && caf.q
+            : conf === 'AFC' ? ao && ao.nl : conf === 'OFC' ? ao && ao.ofc : null;
+        return q && q.result ? q.result : null;
+    },
     _wcOthers(S) {
         const C = INTL_CONFIG;
         const hosts = new Set(S.hosts);
         const direct = {}, icEntrants = [];
         Object.keys(C.WC_DIRECT).forEach(conf => {
-            const pool = NATIONS.filter(n => n.confederation === conf && !hosts.has(n.id));
             const hostsHere = S.hosts.filter(id => this.conf(id) === conf);
-            const k = Math.max(0, C.WC_DIRECT[conf] - hostsHere.length);
-            const order = this._weightedOrder(pool, n => n.weight || 1).map(n => n.id);
-            direct[conf] = hostsHere.concat(order.slice(0, k));
-            icEntrants.push(...order.slice(k, k + (C.WC_IC_ENTRANTS[conf] || 0)));
+            const res = this._wcResult(conf, S.year + 1);
+            if (res) {
+                direct[conf] = hostsHere.concat(res.direct);
+                icEntrants.push(...res.po);
+            } else {
+                // only a save that joined in the middle of a qualifying cycle (its first seasons were
+                // never played): the strongest non-host nations, by reputation
+                const order = this.sortStrength(NATIONS.filter(n => n.confederation === conf && !hosts.has(n.id) && this.fifaEligible(n)).map(n => n.id));
+                const k = Math.max(0, C.WC_DIRECT[conf] - hostsHere.length);
+                direct[conf] = hostsHere.concat(order.slice(0, k));
+                icEntrants.push(...order.slice(k, k + (C.WC_IC_ENTRANTS[conf] || 0)));
+                S.wcFallback = (S.wcFallback || []).concat([conf]);
+            }
+            this._assert(direct[conf].length === C.WC_DIRECT[conf], `World Cup ${S.year + 1}: ${conf} has ${direct[conf].length} places, expected ${C.WC_DIRECT[conf]}`);
         });
-        const byRep = icEntrants.slice().sort((a, b) => this.rep(b) - this.rep(a) || (a < b ? -1 : 1));
+        this._assert(icEntrants.length === Object.values(C.WC_IC_ENTRANTS).reduce((a, b) => a + b, 0), `World Cup ${S.year + 1}: ${icEntrants.length} inter-confederation entrants`);
+        const byRep = icEntrants.slice().sort((a, b) => this.byStrength(a, b));
         S.wc = { direct, ic: { entrants: icEntrants, seeds: byRep.slice(0, 2), semis: this._shuffle(byRep.slice(2)), sf: null, finals: null, winners: null } };
     },
     // the qualified teams (after week 37)
@@ -626,7 +805,7 @@ const Internationals = {
         if (wc) this._assert(teams.filter(id => this.conf(id) === 'UEFA').length === C.WC_UEFA, `${S.key}: UEFA teams != ${C.WC_UEFA}`);
         const hosts = S.hosts.filter(id => teams.includes(id));
         const nG = size / 4;
-        const rest = teams.filter(id => !hosts.includes(id)).sort((a, b) => this.rep(b) - this.rep(a) || (a < b ? -1 : 1));
+        const rest = teams.filter(id => !hosts.includes(id)).sort((a, b) => this.byStrength(a, b));
         const ranked = hosts.concat(rest);
         const pots = [0, 1, 2, 3].map(i => ranked.slice(i * nG, (i + 1) * nG));
         const okWc = (g, id) => {
@@ -654,7 +833,8 @@ const Internationals = {
     },
     _tourOpts(T, h, a, week, slot, stage, md) {
         const adv = id => T.hosts.includes(id) && (!T.md1Only.includes(id) || md === 1);
-        return { week, slot, neutral: true, advH: adv(h), advA: adv(a), ko: stage !== 'group', comp: T.key.startsWith('WC') ? 'INTL_WC' : 'INTL_EURO', stage };
+        const B = INTL_CONFIG.TOURNAMENT_HOST_BOOST || 0;
+        return { week, slot, neutral: true, advH: false, advA: false, bH: adv(h) ? B : 0, bA: adv(a) ? B : 0, ko: stage !== 'group', comp: T.key.startsWith('WC') ? 'INTL_WC' : 'INTL_EURO', stage };
     },
     _tKo(T, h, a, week, slot, stage) { return this._play(h, a, this._tourOpts(T, h, a, week, slot, stage)); },
     _tournamentDay(S, day) {
@@ -695,6 +875,7 @@ const Internationals = {
             T.winner = W(K.final); T.runnerUp = Lo(K.final);
             const list = this.state().honours[wc ? 'WC' : 'EURO'];
             list.push({ season: S.year, year: S.year + 1, winner: T.winner, runnerUp: T.runnerUp, third: K.third ? W(K.third) : null, hosts: T.hosts.slice(), final: this._finalRec(K.final), size: T.size });
+            if (this._recordFinishes) this._recordFinishes(wc ? 'INTL_WC' : 'INTL_EURO', S.year + 1, T);
             const comp = compName(wc ? 'INTL_WC' : 'INTL_EURO') + ' ' + (S.year + 1);
             this._notify('intl.mail.tourWinSubj', 'intl.mail.tourWinBody', { nation: this.name(T.winner), opp: this.name(T.runnerUp), score: this._score(K.final), comp });
         }
@@ -800,9 +981,16 @@ const Internationals = {
         const I = this.state(); if (!I) return [];
         const y = GameState.seasonStartYear, out = [];
         for (let T = y; T <= y + 3; T++) {
-            const key = this.tournamentKey(T); if (!key) continue;
-            const hosts = INTL_CONFIG.HOSTS[key] ? INTL_CONFIG.HOSTS[key].hosts : I.hosts[key];
-            if (hosts) out.push({ key, year: T + 1, hosts: hosts.slice() });
+            const t = this.seasonType(T);
+            const caf = this.cafSeason ? this.cafSeason(T) : null;
+            const keys = [this.tournamentKey(T), t === 'EURO' ? 'COPA-' + (T + 1) : null, t === 'NATIONS_LEAGUE' ? 'GOLD-' + (T + 1) : null,
+                caf === 'AFCON' ? 'AFCON-' + (T + 1) : null, caf === 'ANL' ? 'ANLF-' + (T + 1) : null,
+                this.afcSeason && /^AC/.test(this.afcSeason(T) || '') ? 'AC-' + (T + 1) : null,
+                this.ofcSeason && this.ofcSeason(T) === 'NC' ? 'ONC-' + (T + 1) : null].filter(Boolean);
+            keys.forEach(key => {
+                const hosts = INTL_CONFIG.HOSTS[key] ? INTL_CONFIG.HOSTS[key].hosts : I.hosts[key];
+                if (hosts) out.push({ key, year: T + 1, hosts: hosts.slice() });
+            });
         }
         return out;
     },

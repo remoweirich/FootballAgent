@@ -30,6 +30,10 @@ Home.needsAttention = function () {
             if (c.dim === 'agent' && c.stage === 3 && p.repExpired) items.push({ icon: 'ti-user-x', color: 'var(--danger)', title: I18n.t('home.attn.departure'), sub: I18n.t('home.attn.departureSub', { name: p.name }), go: `client/${p.id}` });
         }
     });
+    // international call-ups (named the week before each break)
+    GameState.inbox.filter(m => !m.read && m.kind === 'news' && m.cat === 'callup').slice(0, 1).forEach(m => {
+        items.push({ icon: 'ti-flag', color: 'var(--info)', title: I18n.t('home.attn.callups'), sub: m.subject, go: `mail/${m.id}` });
+    });
     GameState.inbox.filter(m => !m.read && m.kind === 'news' && m.cat === 'injury').slice(0, 3).forEach(m => {
         items.push({ icon: 'ti-bandage', color: 'var(--danger)', title: I18n.t('home.attn.injuryNews'), sub: m.subject, go: `mail/${m.id}` });
     });

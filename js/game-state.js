@@ -451,7 +451,7 @@ const GameState = {
     // run() upgrades a save from the previous version to its own `to`; the pipeline runs every entry
     // newer than the loaded save, in order. A legacy save with no schemaVersion is inferred from the
     // old `worldV` marker (v2) or treated as v1 otherwise, so the very first saves still upgrade cleanly.
-    SCHEMA_VERSION: 8,
+    SCHEMA_VERSION: 11,
     MIGRATIONS: [
         { to: 2, run(gs, d) { gs._migrateWorldV2(d); } },     // frozen-NPC world model + anchor/reputation split
         { to: 3, run(gs) { gs._migrateScoutRegions(); } },    // reshaped Portugal/Belgium scouting regions
@@ -459,7 +459,10 @@ const GameState = {
         { to: 5, run(gs) { gs._migrateScoutAges(); } },       // scouts gained an age, growth and retirement
         { to: 6, run(gs) { gs._migrateStrengthMachine(); } }, // the Strength Machine became four machines
         { to: 7, run(gs) { gs._migrateCalendarV2(); } },      // international breaks moved; a season under way finishes on the old calendar
-        { to: 8, run(gs) { gs._migrateInternationals(); } }  // official country spellings; international football state
+        { to: 8, run(gs) { gs._migrateInternationals(); } }, // official country spellings; international football state
+        { to: 9, run(gs) { gs._migrateAmericas(); } },       // the Americas: their competitions for the current season, caught up silently
+        { to: 10, run(gs) { gs._migrateAmericas(); } },      // Africa (CAF): same mechanism - Internationals.sync catches up any region a save lacks
+        { to: 11, run(gs) { gs._migrateAmericas(); } }       // Asia and Oceania (AFC, OFC): the same
     ],
     _runMigrations(d) {
         // Structural defaults, not versioned steps: they must apply on EVERY load, because a save at
@@ -588,6 +591,14 @@ const GameState = {
             try { Internationals.sync({ silent: true }); }
             catch (e) { if (typeof console !== 'undefined') console.error('[international] migration', e); }
         }
+    },
+    // The Americas (CONMEBOL + CONCACAF competitions, friendlies, reputation drift). Internationals.sync
+    // notices the missing Americas state and plays the current season's passed weeks silently: no
+    // past season, no backfilled friendlies, no mail.
+    _migrateAmericas() {
+        if (typeof Internationals === 'undefined' || !this.intl) return;
+        try { Internationals.sync({ silent: true }); }
+        catch (e) { if (typeof console !== 'undefined') console.error('[international] Americas migration', e); }
     },
     _migrateCalendarV2() {
         if (this.league && this.week >= 7 && this.week <= 47) this.league.legacyCalendar = true;

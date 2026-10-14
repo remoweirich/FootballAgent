@@ -31,7 +31,25 @@ const NATIONALITY_ISO = {
     Venezuela: 've', 'Saudi Arabia': 'sa', Uzbekistan: 'uz', Qatar: 'qa', Jordan: 'jo', 'United Arab Emirates': 'ae',
     Oman: 'om', Bahrain: 'bh', Syria: 'sy', Palestine: 'ps', 'Burkina Faso': 'bf', Guinea: 'gn', Zambia: 'zm',
     'Equatorial Guinea': 'gq', Panama: 'pa', 'Costa Rica': 'cr', Honduras: 'hn', 'Curaçao': 'cw', Haiti: 'ht',
-    'El Salvador': 'sv', 'New Caledonia': 'nc', Fiji: 'fj', Tahiti: 'pf'
+    'El Salvador': 'sv', 'New Caledonia': 'nc', Fiji: 'fj', Tahiti: 'pf',
+    // every other FIFA nation + CONCACAF's non-FIFA members (js/nations.js, from the workbook)
+    Thailand: 'th', Vietnam: 'vn', Kyrgyzstan: 'kg', 'North Korea': 'kp', Tajikistan: 'tj', Lebanon: 'lb',
+    Malaysia: 'my', Kuwait: 'kw', Philippines: 'ph', Turkmenistan: 'tm', 'Hong Kong': 'hk', Yemen: 'ye',
+    Myanmar: 'mm', Afghanistan: 'af', Singapore: 'sg', Cambodia: 'kh', 'Chinese Taipei': 'tw', Bangladesh: 'bd',
+    Maldives: 'mv', Mongolia: 'mn', Nepal: 'np', Laos: 'la', Bhutan: 'bt', 'Sri Lanka': 'lk', Brunei: 'bn',
+    Guam: 'gu', 'Northern Mariana Islands': 'mp', 'Timor-Leste': 'tl', Macau: 'mo', Benin: 'bj', Libya: 'ly', Mauritania: 'mr', Mozambique: 'mz',
+    Comoros: 'km', Congo: 'cg', Togo: 'tg', Namibia: 'na', 'Sierra Leone': 'sl', Sudan: 'sd', Tanzania: 'tz',
+    Zimbabwe: 'zw', Niger: 'ne', Burundi: 'bi', Malawi: 'mw', Botswana: 'bw', 'Central African Republic': 'cf',
+    Liberia: 'lr', Ethiopia: 'et', Lesotho: 'ls', Eswatini: 'sz', 'South Sudan': 'ss', Chad: 'td',
+    Mauritius: 'mu', 'São Tomé and Príncipe': 'st', Djibouti: 'dj', Seychelles: 'sc', Somalia: 'so',
+    Eritrea: 'er', Guatemala: 'gt', 'Trinidad and Tobago': 'tt', Nicaragua: 'ni', 'Dominican Republic': 'do',
+    Cuba: 'cu', Guyana: 'gy', 'Puerto Rico': 'pr', Bermuda: 'bm', 'Saint Kitts and Nevis': 'kn', Grenada: 'gd',
+    'Antigua and Barbuda': 'ag', 'Saint Vincent and the Grenadines': 'vc', Belize: 'bz', 'Saint Lucia': 'lc',
+    Barbados: 'bb', Dominica: 'dm', Aruba: 'aw', Montserrat: 'ms', 'Cayman Islands': 'ky', Bahamas: 'bs',
+    'Turks and Caicos Islands': 'tc', 'British Virgin Islands': 'vg', 'US Virgin Islands': 'vi', Anguilla: 'ai',
+    Martinique: 'mq', Guadeloupe: 'gp', 'French Guiana': 'gf', Bonaire: 'bq', 'Sint Maarten': 'sx',
+    'Saint Martin': 'mf', 'Solomon Islands': 'sb', Vanuatu: 'vu', 'Papua New Guinea': 'pg', Samoa: 'ws',
+    'Cook Islands': 'ck', 'American Samoa': 'as', Tonga: 'to'
 };
 
 // External destinations shared by Settings > About and the post-season rate prompt.
@@ -117,6 +135,18 @@ const UI = {
         const code = NATIONALITY_ISO[nationality];
         if (!code) return '';
         return `<span class="fi fi-${code}" title="${UI.esc(nationality)}"></span>`;
+    },
+    // ---- a flag as an emoji, for plain-text places (a <select>'s options can't hold the SVG):
+    // regional-indicator pairs, and the tag sequences for England, Scotland and Wales ----
+    flagEmoji(country) {
+        let code = NATIONALITY_ISO[country];
+        if (!code && typeof WorldExt !== 'undefined' && WorldExt.flagIso) code = WorldExt.flagIso(country);   // a created country
+        if (!code) return '';
+        const tag = { 'gb-eng': 'eng', 'gb-sct': 'sct', 'gb-wls': 'wls' }[code];
+        if (tag) return String.fromCodePoint(0x1F3F4, ...('gb' + tag).split('').map(ch => 0xE0000 + ch.charCodeAt(0)), 0xE007F);
+        if (code === 'gb-nir') code = 'gb';
+        if (!/^[a-z]{2}$/.test(code)) return '';
+        return String.fromCodePoint(...code.toUpperCase().split('').map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65));
     },
 
     // ---- club colour chip (dense inline spots: Home client rows) ----

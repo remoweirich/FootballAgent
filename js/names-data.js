@@ -47,7 +47,7 @@ const NAMES_DATABASE = {
     "Schneuwly", "Mentzel", "Ilie", "Wehrli", "Claman", "Hamberger", "Brandenburger", "Magnini", "Merk", "Stämpfli", "Kunz", "Hinz", "Kunz", "Diezi",
     "Schneider", "Klabunde", "Sauter", "Zuber", "Grüninger", "Waser", "Guerreiro", "Roffler", "Amberg", "Stahl", "Beldi", "Veri", "Vollenweider", "Hänsli",
     "Denzler", "Geiser", "Ammann", "Barletta", "Mitteregger", "Kaiser", "Hungerbühler", "Ziebold", "Weber", "Römelin", "Winter", "Reller", "Wanner",
-    "Aliotta", "Büchel", "Büchler", "Gachnang"
+    "Aliotta", "Büchel", "Büchler", "Gachnang", "Claman"
     ]
 },
    "Brazil": {

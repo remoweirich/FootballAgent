@@ -221,6 +221,11 @@ const Sim = {
         // window (49-52) and its tail in weeks 1-2. Guarded: a fault there must never cost a week.
         if (typeof Internationals !== 'undefined') {
             try { Internationals.step(); } catch (e) { if (typeof console !== 'undefined') console.error('[international]', e); }
+            // squads named this week: in the week summary too (and the mail is under Needs attention)
+            if (Internationals._weekCallups && Internationals._weekCallups.length) {
+                events.push({ type: 'intl', text: I18n.t('intl.cu.event', { n: Internationals._weekCallups.length, list: Internationals._weekCallups.join(', ') }) });
+            }
+            Internationals._weekCallups = null;
         }
 
         // ---- matches + development (leagues, cups, play-offs run through week 47) ----
@@ -1209,6 +1214,7 @@ const Sim = {
         // promotion/relegation from the finished season (moves clubs between divisions)
         const tierBefore = {}; Clubs.allClubs.forEach(c => tierBefore[c.id] = c.tier);
         const prorel = League.applyPromotionRelegation();
+        this._repairDivisionSizes();
         this._assertDivisionSizes();
         // fade departed-star auras and re-derive every club's moving reputation from its anchor
         League.normalizeReputations();
@@ -1348,6 +1354,34 @@ const Sim = {
     // it immediately (console + a dev-visible inbox mail) instead of it silently compounding
     // season after season. Italy has no promotion/relegation wired up yet (COUNTRY_DIVS
     // doesn't include it), so it's naturally excluded from both checks below. ----
+    // A division the wrong size after promotion/relegation (a play-off that never happened, a save from
+    // an older build, a created country edited after the game began) is evened out with the tier
+    // below, top to bottom: the weakest clubs of a division that is too big go down, the strongest of
+    // the next one come up to fill a gap (a reserve side only when nothing else is left). The country's
+    // bottom tier takes what is left over. Reported once as a dev mail; the guardrail below then checks.
+    _repairDivisionSizes() {
+        const fixed = [];
+        Object.values(COUNTRY_DIVS).forEach(divs => {
+            for (let i = 0; i < divs.length - 1; i++) {
+                const div = divs[i], below = divs[i + 1], want = Clubs.staticDivSize(div);
+                if (want == null) continue;
+                const here = Clubs.getClubsByDivision(div), n = here.length;
+                if (n > want) {
+                    here.slice().sort((a, b) => a.reputation - b.reputation).slice(0, n - want).forEach(c => Clubs.setDivision(c.id, below));
+                    fixed.push(div + ' ' + n + '→' + want);
+                } else if (n < want) {
+                    const pool = Clubs.getClubsByDivision(below).slice().sort((a, b) => (isReserveClub(a.id) - isReserveClub(b.id)) || b.reputation - a.reputation);
+                    pool.slice(0, want - n).forEach(c => Clubs.setDivision(c.id, div));
+                    fixed.push(div + ' ' + n + '→' + want);
+                }
+            }
+        });
+        if (fixed.length) {
+            if (typeof console !== 'undefined') console.warn('Division sizes repaired:', fixed);
+            GameState.addMail({ kind: 'news', cat: 'dev', subject: 'DEV NOTE: division sizes repaired', body: fixed.join('<br>'), ttl: 20 });
+        }
+        return fixed;
+    },
     _assertDivisionSizes() {
         const mismatches = [];
         Object.values(COUNTRY_DIVS).forEach(divs => divs.forEach(div => {
