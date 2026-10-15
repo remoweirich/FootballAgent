@@ -86,7 +86,7 @@ const Dialogue = {
             const rel = I18n.t('dlg.bond.rel.' + ta.toLowerCase());
             const whyTxt = why ? ' (' + this._tk('dlg.why.' + why, why) + ')' : '';
             GameState.addMail({
-                kind: 'news', cat: 'morale', subject: I18n.t('dlg.bond.subj', { name: p.name, tier: this.tierLabel(ta) }),
+                playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('dlg.bond.subj', { name: p.name, tier: this.tierLabel(ta) }),
                 body: I18n.t('dlg.bond.body', { name: p.name, rel, extra: whyTxt + vol }), ttl: 4
             });
         }
@@ -155,9 +155,13 @@ const Dialogue = {
         return String(en).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
     },
     // localized "{n} appearances" / "{n} career goals" milestone label (frozen when the moment is queued)
-    _mileText(kind, n) {
+    _mileText(kind, n, nation) {
         const pk = this._pack();
         if (pk && pk.mile && pk.mile[kind]) return pk.mile[kind].replace('{n}', n);
+        if (kind === 'caps' || kind === 'intlgoals') {
+            const lbl = pk && pk.mile && pk.mile[kind];
+            return lbl ? lbl.replace('{n}', n).replace('{nation}', nation || '') : (kind === 'caps' ? `${n} caps for ${nation}` : `${n} goals for ${nation}`);
+        }
         return kind === 'apps' ? `${n} appearances` : `${n} career goals`;
     },
     // localized display for the identifier-keyed engine values (personality poles, bond tiers, services);
@@ -614,7 +618,8 @@ const Dialogue = {
     _rollDreamLeague(p) {
         const homeDiv = this.BIG5_COUNTRY[this._homeCountryOf(p)];
         const curDiv = (Clubs.getClubById(effectiveClubId(p)) || {}).division;
-        const opts = this.LEAGUE_IDS.filter(d => d !== homeDiv && d !== curDiv);
+        const played = this._divsPlayed(p);
+        const opts = this.LEAGUE_IDS.filter(d => d !== homeDiv && d !== curDiv && !played.has(d));
         const pool = opts.length ? opts : this.LEAGUE_IDS;
         let r = Rng.next() * pool.reduce((s, d) => s + (this.LEAGUE_PULL[d] || 1), 0);
         for (const d of pool) { r -= (this.LEAGUE_PULL[d] || 1); if (r <= 0) return d; }
@@ -626,14 +631,22 @@ const Dialogue = {
         const home = this._homeCountryOf(p);
         if (p.ability >= 60) {
             if (favClubId && favClubId !== effectiveClubId(p) && !this._isPresumedRival(favClubId, p) && Rng.next() < 0.3) return favClubId;
-            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 80);
+            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 80 && c.id !== effectiveClubId(p) && !this._playedAtClub(p, c.id));
             const g = this._weightedByRep2(giants); if (g) return g;   // foreign, so never a domestic rival
         }
         // modest, home-grown dream: any top-flight side back home, linear-rep weighted so smaller names show up
-        const pool = Clubs.allClubs.filter(c => c.country === home && c.tier === 1 && c.id !== effectiveClubId(p) && !this._isPresumedRival(c.id, p));
+        const pool = Clubs.allClubs.filter(c => c.country === home && c.tier === 1 && c.id !== effectiveClubId(p) && !this._isPresumedRival(c.id, p) && !this._playedAtClub(p, c.id));
         const home1 = this._weightedByRep(pool); if (home1) return home1;
-        const abroad = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 78);
+        const abroad = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 78 && c.id !== effectiveClubId(p) && !this._playedAtClub(p, c.id));
         return this._weightedByRep2(abroad) || favClubId || null;
+    },
+    // every division he has played senior games in (an ambition is never something already done)
+    _divsPlayed(p) {
+        const out = new Set();
+        for (const y of Object.keys(p.stats || {}))
+            for (const st of Object.values(p.stats[y]))
+                for (const cid of Object.keys(st.comps || {})) if ((st.comps[cid].apps || 0) > 0) out.add(cid);
+        return out;
     },
     _hasEuropeApps(p) {
         for (const y of Object.keys(p.stats || {}))
@@ -805,7 +818,9 @@ const Dialogue = {
     // weekly detection: appearance/goal milestones and ambition fulfilment. Baselines initialise
     // silently on first sight, so a veteran loaded from an old save never gets a stale "100 apps!".
     APPS_MARKS: [500, 1000],
-    GOAL_MARKS: [50, 100, 200],
+    GOAL_MARKS: [100, 200, 300, 400, 500, 600, 700],
+    CAP_MARKS: [50, 100, 150, 200],
+    INTL_GOAL_MARKS: [50, 100],
     weeklyMoments() {
         if (!GameState.agency) return;
         const year = GameState.seasonStartYear;
@@ -826,11 +841,76 @@ const Dialogue = {
                 p._mile = { a: t.apps, g: t.goals };
             }
             this._checkAmbition(p);
+            this._intlMoments(p);
         });
+        this._trophyMoments();
+    },
+    // his whole international record (all seasons, all competitions)
+    _intlTotals(p) {
+        let apps = 0, goals = 0;
+        Object.values(p.intlStats || {}).forEach(s => Object.values(s).forEach(c => { apps += c.apps || 0; goals += c.goals || 0; }));
+        return { apps, goals };
+    },
+    _nationName(p) {
+        const nid = p.intlNation || (typeof Internationals !== 'undefined' && Internationals.nationOfPlayer ? Internationals.nationOfPlayer(p) : null);
+        const n = nid && typeof Internationals !== 'undefined' && Internationals.nation ? Internationals.nation(nid) : null;
+        return n ? n.name : (p.nationality || '');
+    },
+    // first call-up, first cap, first international goal, cap and goal milestones. Baselines start
+    // silently (an old save never gets a stale "first cap!"); one international scene a week at most.
+    _intlMoments(p) {
+        const t = this._intlTotals(p);
+        if (!p._imile) { p._imile = { called: !!p.intlCalled, a: t.apps, g: t.goals }; return; }
+        const m = p._imile, nation = this._nationName(p);
+        let best = null;
+        const offer = (pri, entry) => { if (!best || pri > best.pri) best = { pri, entry }; };
+        if (!m.called && p.intlCalled) offer(1, { type: 'intlcallup', playerId: p.id, nation });
+        if (m.a === 0 && t.apps > 0) offer(2, { type: 'intldebut', playerId: p.id, nation });
+        if (m.g === 0 && t.goals > 0) offer(3, { type: 'intlfirstgoal', playerId: p.id, nation });
+        this.CAP_MARKS.forEach((k, i) => { if (m.a < k && t.apps >= k) offer(4 + i, { type: 'milestone', playerId: p.id, milestone: this._mileText('caps', k, nation) }); });
+        this.INTL_GOAL_MARKS.forEach((k, i) => { if (m.g < k && t.goals >= k) offer(8 + i, { type: 'milestone', playerId: p.id, milestone: this._mileText('intlgoals', k, nation) }); });
+        if (best) this.queueMoment(best.entry);
+        p._imile = { called: !!p.intlCalled, a: t.apps, g: t.goals };
+    },
+    // Trophies: his FIRST EVER senior trophy, and EVERY international trophy, earn a call. A trophy
+    // won by several clients at once (one club, one national team) is ONE call: the client closest
+    // to you rings, and names the others who won it with him.
+    _trophyMoments() {
+        const events = {};   // key -> { type, compId, players: [...] }
+        Agency.clients().forEach(p => {
+            const club = (p.trophies || []).filter(t => !isYouthComp(t.compId)), intl = p.intlTrophies || [];
+            if (!p._trmile) { p._trmile = { c: club.length, i: intl.length }; return; }
+            const m = p._trmile, before = m.c + m.i;
+            intl.slice(m.i).forEach(t => {
+                const k = 'i:' + t.comp + ':' + t.year + ':' + t.nation;
+                (events[k] = events[k] || { type: 'intltrophy', compId: t.comp, nation: t.nation, year: t.year, players: [] }).players.push(p);
+            });
+            if (before === 0 && intl.length === m.i) club.slice(m.c, m.c + 1).forEach(t => {
+                const k = 'c:' + t.compId + ':' + t.year + ':' + t.clubId;
+                (events[k] = events[k] || { type: 'firsttrophy', compId: t.compId, clubId: t.clubId, year: t.year, players: [] }).players.push(p);
+            });
+            p._trmile = { c: club.length, i: intl.length };
+        });
+        Object.values(events).forEach(ev => {
+            const speaker = ev.players.slice().sort((a, b) => this.bondOf(b) - this.bondOf(a))[0];
+            // everyone of yours who won it with him, whether or not it was their first
+            const others = Agency.clients().filter(q => q !== speaker && (ev.type === 'intltrophy'
+                ? (q.intlTrophies || []).some(t => t.comp === ev.compId && t.nation === ev.nation && t.year === ev.year)
+                : (q.trophies || []).some(t => t.compId === ev.compId && t.clubId === ev.clubId && t.year === ev.year)));
+            const nat = ev.nation && typeof Internationals !== 'undefined' && Internationals.nation ? Internationals.nation(ev.nation) : null;
+            this.queueMoment({ type: ev.type, playerId: speaker.id, compId: ev.compId, nation: nat ? nat.name : this._nationName(speaker), others: others.map(q => q.id) });
+        });
+    },
+    // "Anna" / "Anna, Ben" / "Anna, Ben, Carl": every line closes the list itself ("... and I")
+    _nameList(ids) {
+        return ids.map(id => GameState.getPlayer(id)).filter(Boolean).map(q => q.name).join(', ');
     },
     _checkAmbition(p) {
         const f = this.ensureFacts(p), a = f.ambition;
-        if (!a.discovered || a.fulfilled || a.type === 'boyhood') return;   // boyhood settles at retirement
+        // checked whether you have asked about it or not (boyhood settles at retirement). One reached
+        // before you ever asked earns you nothing (you never knew), and he moves on to a new dream:
+        // asking him later reveals what he still wants, never the goal he has already reached
+        if (a.fulfilled || a.type === 'boyhood') return;
         const club = Clubs.getClubById(effectiveClubId(p));
         const hasType = t => (p.trophies || []).some(tr => COMPETITIONS[tr.compId] && COMPETITIONS[tr.compId].type === t);
         let done = false;
@@ -843,6 +923,11 @@ const Dialogue = {
         // legacy ambition types from older saves
         else if (a.type === 'topflight') done = !!(club && this.TOP5_DIVS.includes(club.division));
         else if (a.type === 'abroad') done = !!(club && club.country !== (f.home || this._homeCountryOf(p)));
+        if (done && !a.discovered) {
+            f.pastAmbitions = (f.pastAmbitions || []).concat([{ type: a.type, div: a.div, clubId: a.clubId, target: a.target, year: GameState.seasonStartYear }]);
+            f.ambition = { ...this._rollAmbition(p, f.favClub.clubId), discovered: false, fulfilled: false };
+            return;
+        }
         if (done) {
             a.fulfilled = true; a.year = GameState.seasonStartYear;
             this.queueMoment({ type: 'ambition', playerId: p.id });
@@ -881,7 +966,9 @@ const Dialogue = {
     // called when a long injury lands (see Sim._injuries)
     onInjury(p, weeks) {
         if (p.agentId !== 'me' || weeks < 6) return;
-        this.queueMoment({ type: 'injury', playerId: p.id, weeks });
+        // the third long layoff of his career (or later): "not again"
+        const before = (p.injuryHistory || []).filter(h => (h.weeks || 0) >= 6).length;
+        this.queueMoment({ type: 'injury', playerId: p.id, weeks, again: before >= 2 });
     },
 
     buildMomentScene(entry) {
@@ -892,6 +979,10 @@ const Dialogue = {
         if (entry.clubId) extra.newclub = (Clubs.getClubById(entry.clubId) || {}).name || 'his new club';
         if (entry.weeks) extra.weeks = String(entry.weeks);
         if (entry.occasion) extra.occasion = entry.occasion;
+        if (entry.nation) extra.nation = entry.nation;
+        if (entry.compId) extra.trophy = (typeof compName === 'function' && compName(entry.compId)) || entry.compId;
+        const group = !!(entry.others && entry.others.length);
+        if (group) extra.others = this._nameList(entry.others);
         if (entry.type === 'ambition') extra.ambition = this.ambitionText(p);
         // the big ones pay out on arrival, so the numbers are right even if the scene is skipped
         if (entry.type === 'dreammove' && !entry._paid) { this.addBond(p, 8, 'dreamMove'); entry._paid = true; }
@@ -912,7 +1003,10 @@ const Dialogue = {
             }
         }
         if (entry.type === 'thanks') extra.thing = extra.thing || entry.thing || 'a gift';
-        const open = this._pick(DIALOGUE_DATA.moments.filter(r => r.kind === entry.type && r.beat === 'open'), p, extra);
+        // a long injury for the third time or more opens with "not again"; a shared trophy names the others
+        const openKind = (entry.type === 'injury' && entry.again) ? 'injuryagain'
+            : (group && (entry.type === 'firsttrophy' || entry.type === 'intltrophy')) ? entry.type + 'grp' : entry.type;
+        const open = this._pick(DIALOGUE_DATA.moments.filter(r => r.kind === openKind && r.beat === 'open'), p, extra);
         // an invite line can open with the occasion itself (e.g. "the little one's christening. It's…"),
         // which starts a sentence lowercase — capitalise the first letter so it reads as a message.
         if (entry.type === 'invite' && open && open.text) open.text = open.text.charAt(0).toUpperCase() + open.text.slice(1);
@@ -1029,7 +1123,7 @@ const Dialogue = {
         p._tipSeason = year; p._tipUntil = aw + 2;
         const what = { time: I18n.t('dlg.tip.time'), club: I18n.t('dlg.tip.club'), wage: I18n.t('dlg.tip.wage'), agent: I18n.t('dlg.tip.agent') }[dim] || I18n.t('dlg.tip.something');
         GameState.addMail({
-            kind: 'news', cat: 'morale', subject: I18n.t('dlg.tip.subj', { name: p.name }),
+            playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('dlg.tip.subj', { name: p.name }),
             body: I18n.t('dlg.tip.body', { name: p.name, what: what.charAt(0).toUpperCase() + what.slice(1) }), ttl: 4
         });
         GameState.addLog(I18n.t('dlg.tip.log', { name: p.name }), 'morale');
@@ -1044,7 +1138,7 @@ const Dialogue = {
             // a financial-advisor contract that has just run out: remind the agent to renew it
             if (p._finAdvisorUntil != null && year >= p._finAdvisorUntil) {
                 delete p._finAdvisorUntil;
-                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('dlg.adv.expiredSubj', { name: p.name }), body: I18n.t('dlg.adv.expiredBody', { name: p.name }), ttl: 6 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('dlg.adv.expiredSubj', { name: p.name }), body: I18n.t('dlg.adv.expiredBody', { name: p.name }), ttl: 6 });
             }
             if (bond >= 50 && f.family.discovered) {
                 if (f.family.status === 'partner' && !p._evWedding && Rng.next() < 0.25) {
@@ -1099,7 +1193,7 @@ const Dialogue = {
         if (opts.loan) weeks = Math.max(1, Math.round(weeks * 0.5));       // a loan is temporary — he knows he'll be off again soon
         p.settling = { weeksLeft: weeks, morale: !knowsLang, knowsLang, lang: this.LANGS[club.country][0], services: {}, loan: !!opts.loan };
         GameState.addMail({
-            kind: 'news', cat: 'general', subject: I18n.t('dlg.settle.subj', { name: p.name }),
+            playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('dlg.settle.subj', { name: p.name }),
             body: knowsLang
                 ? I18n.t('dlg.settle.bodyKnows', { name: p.name, weeks })
                 : I18n.t('dlg.settle.bodyNo', { name: p.name, weeks }), ttl: 5
@@ -1112,7 +1206,7 @@ const Dialogue = {
         if (s.weeksLeft <= 0) {
             p._langs = (p._langs || []).concat(s.lang);   // he leaves the period with the language
             delete p.settling;
-            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('dlg.settle.doneSubj', { name: p.name }), body: I18n.t('dlg.settle.doneBody', { name: p.name }), ttl: 3 });
+            GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('dlg.settle.doneSubj', { name: p.name }), body: I18n.t('dlg.settle.doneBody', { name: p.name }), ttl: 3 });
         }
     },
     // Only certain temperaments are loose with money: the flashy showman and the impulsive hothead.
@@ -1133,7 +1227,7 @@ const Dialogue = {
         if (Rng.next() > this.MONEY_TROUBLE_WEEKLY) return;
         if (this.advisorEngaged(p)) {
             if (Rng.next() < 0.5) {
-                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('dlg.adv.earnsSubj', { name: p.name }), body: I18n.t('dlg.adv.earnsBody', { name: p.name }), ttl: 3 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('dlg.adv.earnsSubj', { name: p.name }), body: I18n.t('dlg.adv.earnsBody', { name: p.name }), ttl: 3 });
                 this.addBond(p, 1);
             }
             return;
@@ -1141,7 +1235,7 @@ const Dialogue = {
         p.morale.wage = Math.max(0, p.morale.wage - 12);
         p.morale.agent = Math.max(0, p.morale.agent - 4);
         const flavour = this.hasTrait(p, 'showman') ? I18n.t('dlg.money.flavourShowman') : I18n.t('dlg.money.flavourImpulse');
-        GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('dlg.money.badSubj', { name: p.name }), body: I18n.t('dlg.money.badBody', { name: p.name, flavour }), ttl: 5 });
+        GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('dlg.money.badSubj', { name: p.name }), body: I18n.t('dlg.money.badBody', { name: p.name, flavour }), ttl: 5 });
         this._maybeReveal(p, this._moneyRiskPole(p));   // the incident lays his reckless streak bare
     },
     // the concierge menu (client page): each purchase is the agent doing his real job

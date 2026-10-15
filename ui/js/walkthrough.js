@@ -259,7 +259,7 @@ const Walkthrough = {
     _settleBooks(events) {
         const G = GameState, ag = G.agency;
         const scoutCost = (ag.scouts || []).reduce((n, s) => n + (s.weeklyCost || 0), 0);
-        const office = (typeof Upgrades !== 'undefined' && Upgrades.office()) ? Upgrades.office().weekly : 0;
+        const office = (typeof Upgrades !== 'undefined' && Upgrades.office()) ? Upgrades.weeklyOfficeCost() : 0;
         // wageCommission is a PERCENTAGE — the real books divide by 100 (Agency.weeklyBreakdown).
         // Without it the tutorial paid 100x: Johan on 250k at 8% read as €2,000,000 a week.
         const commission = (typeof Agency !== 'undefined' ? Agency.clients() : []).reduce(
@@ -296,7 +296,7 @@ const Walkthrough = {
                 { company: 'Nordwelle Bank', weekly: 12500, annual: 120000, termSeasons: 1 },
             ],
         };
-        GameState.addMail({ kind: 'sponsor', subject: I18n.t('sim.sponsorOffersSubj', { name: p.name }), offer, persistence: 0, ttl: 6 });
+        GameState.addMail({ playerId: p.id, kind: 'sponsor', subject: I18n.t('sim.sponsorOffersSubj', { name: p.name }), offer, persistence: 0, ttl: 6 });
         events.push({ type: 'offer', text: I18n.t('wt.ev.sponsor', { name: p.name }) });
     },
 
@@ -309,6 +309,7 @@ const Walkthrough = {
         GameState.addMail({
             kind: 'news',
             subject: I18n.t('wt.mail.scout.subj', { scout: who }),
+            playerId: wayne.id,
             body: I18n.t('wt.mail.scout.body', { scout: who, name: wayne.name, age: wayne.age, pos: wayne.position, club: UI.clubName(wayne.clubId) }),
             ttl: 6,
         });

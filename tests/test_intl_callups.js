@@ -31,9 +31,9 @@ run(`Internationals.STRICT = true; Rng.seed(12); Clubs.init(); GameState.startNe
 console.log('-- bands --');
 const B = JSON.parse(run(`return JSON.stringify(['isl', 'ger', 'usa', 'sco', 'ned', 'fra'].map(function (id) { var b = Internationals.callupBands(id, 2026); return [id, b.skill, b.star, b.starter, b.rotation, b.reserve]; }));`));
 const b = Object.fromEntries(B.map(r => [r[0], r.slice(1)]));
-check('Iceland (rep 69, 0.4m): skill 71; star 74+, starter 68-73, rotation 62-67, reserve 55-61', b.isl.join() === '71,74,68,62,55', JSON.stringify(b.isl));
-check('100m+ (USA, rep 77): rotation -4/-5, reserve -6/-9', b.usa.join() === [79, 82, 76, 74, 70].join(), JSON.stringify(b.usa));
-check('the bands narrow with population: Germany (84m) and the Netherlands (18m) between them', b.ger[3] === b.ger[0] - 5 && b.ned[3] === b.ned[0] - 6 && b.sco[3] >= b.sco[0] - 8, JSON.stringify(b));
+check('Iceland (rep 69, 0.4m): skill 71; star 74+, starter 68-73, rotation 64-67, reserve 59-63', b.isl.join() === '71,74,68,64,59', JSON.stringify(b.isl));
+check('56m+ (USA, rep 77): rotation -4/-5, reserve -6/-7', b.usa.join() === [79, 82, 76, 74, 72].join(), JSON.stringify(b.usa));
+check('the bands narrow with population: Germany (84m) -5/-7, the Netherlands (18m) -5/-8, Scotland (5.5m) -6/-9', b.ger[3] === b.ger[0] - 5 && b.ger[4] === b.ger[0] - 7 && b.ned[3] === b.ned[0] - 5 && b.ned[4] === b.ned[0] - 8 && b.sco[3] === b.sco[0] - 6 && b.sco[4] === b.sco[0] - 9, JSON.stringify(b));
 check('reputation is capped at 86: France (86) skill 88, star 91', b.fra[0] === 88 && b.fra[1] === 91);
 
 // ---------------- squad rules ----------------
@@ -67,11 +67,11 @@ check('at most 4 strikers; below the reserve band nobody is called up; under-16s
 
 // reserves: one per line, and only by chance when rated in the reserve band
 const rv = JSON.parse(run(`
-    var two = [58, 57].map(function (a) { return __mk('Iceland', 'CB', a, 20); }), mid = __mk('Iceland', 'CM', 59, 20);
+    var two = [61, 60].map(function (a) { return __mk('Iceland', 'CB', a, 20); }), mid = __mk('Iceland', 'CM', 62, 20);
     var lines = { cb: 0, both: 0, mid: 0 }, N = 400;
     for (var i = 0; i < N; i++) { var sq = Internationals.pickSquad('isl', two.concat([mid]), 2026), ids = sq.map(function (e) { return e.id; });
         var n = two.filter(function (p) { return ids.indexOf(p.id) >= 0; }).length; if (n) lines.cb++; if (n === 2) lines.both++; if (ids.indexOf(mid.id) >= 0) lines.mid++; }
-    var chance = function (age, called) { var p = __mk('Iceland', 'ST', 58, age); p.intlCalled = called; var k = 0;
+    var chance = function (age, called) { var p = __mk('Iceland', 'ST', 61, age); p.intlCalled = called; var k = 0;
         for (var i = 0; i < 4000; i++) if (Internationals.pickSquad('isl', [p], 2026).length) k++; return Math.round(k / 40 * 10) / 10; };
     return JSON.stringify({ both: lines.both, cb: Math.round(lines.cb / N * 100), mid: Math.round(lines.mid / N * 100),
         young: chance(21, false), olderCapped: chance(27, true), olderNever: chance(27, false) });`));

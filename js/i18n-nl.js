@@ -150,6 +150,7 @@ I18n.register('nl', {
     // --- agency: renewals ---
     'ag.renew.cooldown': '{club} heeft u deze week al antwoord gegeven over een nieuw contract — wacht tot volgende week voordat u er weer over begint.',
     'ag.renew.open': '{club} staat open voor gesprekken — voorstel in uw postvak.',
+    'ag.renew.noPlans': '{club} is niet van plan het contract van {name} te verlengen.',
     'ag.renew.movingAway': '{name} heeft al een vertrek afgesproken — een verlenging is niet meer aan de orde.',
     'ag.renew.alreadyDone': 'Het contract van {name} is dit seizoen al heronderhandeld — volgend seizoen kunt u er weer op terugkomen.',
     'ag.renew.done': 'Verlengd: €{wage}/wk als {role} tot het einde van {until}.',
@@ -482,6 +483,10 @@ I18n.register('nl', {
     'sim.clubGiveUpSubj': '{club} beëindigt de gesprekken met {name}',
     'sim.clubGiveUpBody': 'Na meerdere afwijzingen heeft {club} besloten te stoppen met het najagen van een nieuw contract voor {name}. Als er niets verandert, loopt hij zijn contract uit en vertrekt hij transfervrij.',
     'sim.clubGiveUpEvent': '{club} heeft het verlengen van {name} opgegeven.',
+    'sim.clubLetRunSubj': '{club} laat het contract van {name} aflopen',
+    'sim.clubLetRunBody': '{club} heeft besloten {name} geen nieuw contract aan te bieden. Als er niets verandert, vertrekt hij aan het eind van het seizoen transfervrij.',
+    'sim.clubLetRunEvent': '{club} laat het contract van {name} aflopen.',
+    'sim.clubRenewHoldBody': '{name} zit in het laatste jaar van zijn contract. {club} wil verlengen, maar niet boven €{wage}/wk. Open zijn verlenging in het postvak om te onderhandelen, of wijs het af.',
     'sim.freeAgentSubj': '{name} is transfervrij',
     'sim.freeAgentBody': 'Het contract van {name} bij {club} is verlopen — hij is nu transfervrij. Elke club kan hem zonder transfersom vastleggen, maar hij is onrustig (zijn moreel is gezakt). Geïnteresseerde clubs zouden binnenkort contractvoorstellen moeten doen.',
     'sim.freeAgentLog': '{name} is nu transfervrij.',

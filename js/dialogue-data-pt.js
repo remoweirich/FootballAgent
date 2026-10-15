@@ -255,6 +255,29 @@ const DIALOGUE_PT = {
         M043: "A sério? Eu… obrigado. Não seria o mesmo sem ti.",
         M044: "Não podes vir? Que pena. Mas é muito generoso, obrigado.",
         M045: "Pois. Agenda cheia, eu entendo. … Eu entendo.",
+        M046: "{weeks} semanas de fora. Estou aqui deitado a olhar para o teto, {agent}.",
+        M047: "O médico disse {weeks} semanas. Ouvi o número e deixei de ouvir.",
+        M048: "{weeks} semanas fora. Desculpa, {agent}. Sei que é a pior altura.",
+        M049: "Outra vez não, {agent}. Mais {weeks} semanas. Começo a achar que o meu corpo me odeia.",
+        M050: "Porquê sempre eu? Mais {weeks} semanas fora. A sério, já não aguento mais.",
+        M051: "OUTRA VEZ?! {weeks} semanas! Juro, não consigo passar por isto mais uma vez.",
+        M052: "Mais uma longa. {weeks} semanas. Vou fazer a recuperação como sempre, mas estou farto de recomeçar.",
+        M053: "Estou na convocatória de {nation}, {agent}! O telemóvel não pára de vibrar. A minha mãe chorou.",
+        M054: "Convocaram-me para {nation}. A mim! Li a lista três vezes para ter a certeza.",
+        M055: "Seleção, {agent}! {nation} finalmente reparou. Já não era sem tempo, se queres saber.",
+        M056: "Joguei por {nation}, {agent}! O hino, a camisola, tudo. Pele de galinha o jogo inteiro.",
+        M057: "A minha primeira internacionalização por {nation}. Pensei em todos os que me trouxeram até aqui. Tu estás nessa lista.",
+        M058: "Marquei por {nation}! Acho que não parei de sorrir desde o apito final.",
+        M059: "Primeiro golo por {nation}. Hoje à noite vão cantar o meu nome lá em casa.",
+        M060: "O meu primeiro troféu, {agent}! {trophy}! Tenho a medalha na mão agora mesmo. Pesa mais do que parece.",
+        M061: "Ganhei mesmo alguma coisa. {trophy}. Não paro de olhar para a medalha para ter a certeza de que é real.",
+        M062: "Vencedor: {trophy}! O primeiro de muitos, {agent}. Começa a arranjar espaço na prateleira.",
+        M063: "Ganhámos, {agent}! {trophy}! {others} e eu estamos radiantes. O meu primeiro troféu de sempre!",
+        M064: "{others} e eu estamos a dançar no balneário há uma hora. {trophy}! O meu primeiro de sempre!",
+        M065: "Ganhámos com {nation}, {agent}! {trophy}! O país inteiro está na rua!",
+        M066: "{trophy} com {nation}. Pela minha família, por todos lá em casa. E por ti.",
+        M067: "{trophy}! {others} e eu estamos radiantes. {nation} nunca vai esquecer esta equipa.",
+        M068: "{nation} ganhou: {trophy}. E {others} e eu estivemos mesmo no meio de tudo. Hoje à noite é festa.",
     },
 
     // --- what the AGENT says when you pick a choice (Dialogue.SAY, keyed "scene:choice") ---
@@ -383,6 +406,8 @@ const DIALOGUE_PT = {
     mile: {
         apps: "{n} jogos",
         goals: "{n} golos na carreira",
+        caps: "{n} internacionalizações por {nation}",
+        intlgoals: "{n} golos por {nation}",
     },
 
     // --- the cash thank-you gift, filled into {thing} ---

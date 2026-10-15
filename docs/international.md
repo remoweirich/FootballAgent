@@ -372,10 +372,18 @@ Only the agent's clients are modelled; every other player of a national team is 
 reputation. Numbers are in the `CALLUP_*` block of `js/intl-config.js`.
 
 **Bands.** Skill level **S = min(reputation, 86) + 2** (the drifting current reputation). Star:
-S+3 and up. Starter: S−3 to S+2. Rotation: S−4 down to S − round(9 − 4t). Reserve: the next
-round(7 − 3t) points. Below that: not called up. `t = clamp(log10(population in m) / 2, 0, 1)`,
-so 0 at 1m and below, 1 at 100m and above. Iceland (rep 69, 0.4m): star 74+, starter 68–73,
-rotation 62–67, reserve 55–61. 100m+: rotation S−4/−5, reserve S−6 to −9.
+S+3 and up. Starter: S−3 to S+2. Rotation and reserve reach down by population
+(`CALLUP_BANDS_BY_POP`); below the reserve floor nobody is called up:
+
+| Population | Rotation | Reserve |
+|---|---|---|
+| under 1.8m | S−7 to S−4 | S−12 to S−8 |
+| 1.8m – 2.1m | S−7 to S−4 | S−10 to S−8 |
+| 2.1m – 5.6m | S−6 to S−4 | S−9 to S−7 |
+| 5.6m – 46m | S−5 to S−4 | S−8 to S−6 |
+| 46m and up | S−5 to S−4 | S−7 to S−6 |
+
+Iceland (rep 69, 0.4m): star 74+, starter 68–73, rotation 64–67, reserve 59–63.
 
 **Caps (clients only).** Per position the first `CALLUP_XI_POS` (GK, RB, LB 1; ST, RW, LW, CAM,
 CDM 2; CM, CB 3) keep their role, the next is rotation at best, the one after reserve at best,

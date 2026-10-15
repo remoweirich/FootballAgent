@@ -146,6 +146,7 @@ I18n.register('fr', {
     // --- agency: renewals ---
     'ag.renew.cooldown': '{club} vous a déjà répondu au sujet d\'un nouveau contrat cette semaine : attendez la semaine prochaine avant d\'en reparler.',
     'ag.renew.open': '{club} est ouvert à la discussion : proposition dans votre boîte de réception.',
+    'ag.renew.noPlans': '{club} ne prévoit pas de prolonger le contrat de {name}.',
     'ag.renew.movingAway': '{name} a déjà accepté un départ : une prolongation n\'est plus envisageable.',
     'ag.renew.alreadyDone': 'Le contrat de {name} a déjà été renégocié cette saison : vous pourrez y revenir la saison prochaine.',
     'ag.renew.done': 'Prolongé : €{wage}/sem comme {role} jusqu\'à la fin de {until}.',
@@ -478,6 +479,10 @@ I18n.register('fr', {
     'sim.clubGiveUpSubj': '{club} met fin aux discussions avec {name}',
     'sim.clubGiveUpBody': 'Après plusieurs refus, {club} a décidé de renoncer à un nouveau contrat pour {name}. Si rien ne change, il ira au bout de son contrat et partira libre.',
     'sim.clubGiveUpEvent': '{club} a renoncé à prolonger {name}.',
+    'sim.clubLetRunSubj': '{club} laissera le contrat de {name} arriver à son terme',
+    'sim.clubLetRunBody': '{club} a décidé de ne pas proposer de nouveau contrat à {name}. Si rien ne change, il partira libre en fin de saison.',
+    'sim.clubLetRunEvent': '{club} laissera le contrat de {name} arriver à son terme.',
+    'sim.clubRenewHoldBody': '{name} entre dans la dernière année de son contrat. {club} prolongerait, mais pas au-delà de €{wage}/sem. Ouvrez sa prolongation dans la boîte de réception pour négocier, ou refusez.',
     'sim.freeAgentSubj': '{name} est agent libre',
     'sim.freeAgentBody': 'Le contrat de {name} à {club} a expiré : il est désormais agent libre. N\'importe quel club peut le signer sans indemnité, mais il est déstabilisé (son moral a baissé). Les clubs intéressés devraient présenter des offres de contrat prochainement.',
     'sim.freeAgentLog': '{name} est désormais agent libre.',

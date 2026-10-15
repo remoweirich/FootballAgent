@@ -87,7 +87,7 @@ const AgencyScreen = {
 
         <div class="section-label">${I18n.t('agency.upgrades')}</div>
         ${this.upgradeRow('office', I18n.t('agency.office'), `<div class="pic pic--current"><i class="ti ${this.iconFor('office', Upgrades.state().officeIndex)}"></i></div>`,
-            UI.esc(Upgrades.itemName(off)), `${I18n.t('agency.repShort')} ${off.repLimit} · ${I18n.t('agency.scoutsN', { n: off.maxScouts })} · ${sl} · ${UI.euro(off.weekly)}/wk`, true)}
+            UI.esc(Upgrades.itemName(off)), `${I18n.t('agency.repShort')} ${off.repLimit} · ${I18n.t('agency.scoutsN', { n: off.maxScouts })} · ${sl} · ${UI.euro(Upgrades.officeRent(off))}/wk`, true)}
         ${this.upgradeRow('vehicle', I18n.t('agency.vehicles'), `<div class="pic ${vNext ? 'pic--locked' : 'pic--current'}">${this.picInner('vehicle', vNext ? Upgrades.state().vehicleIndex + 1 : Upgrades.state().vehicleIndex, !vNext)}</div>`,
             I18n.t('agency.ownedN', { n: Upgrades.ownedVehicles().length }), vNext ? I18n.t('agency.next', { name: Upgrades.itemName(vNext), price: UI.euro(vNext.price) }) : I18n.t('agency.fullGarage'), !vNext)}
         ${this.upgradeRow('property', I18n.t('agency.properties'), `<div class="pic ${pNext ? 'pic--locked' : 'pic--current'}">${this.picInner('property', pNext ? Upgrades.state().propertyIndex + 1 : Upgrades.state().propertyIndex, !pNext)}</div>`,
@@ -186,9 +186,9 @@ const AgencyScreen = {
         const idx = kind === 'office' ? Upgrades.state().officeIndex : kind === 'vehicle' ? Upgrades.state().vehicleIndex : Upgrades.state().propertyIndex;
         const rows = LIST.map((item, i) => {
             const state = i < idx ? 'owned' : i === idx ? 'current' : i === idx + 1 ? 'buyable' : 'locked';
-            const price = kind === 'office' ? item.weekly * 4 : item.price;
-            const meta = kind === 'office' ? `${I18n.t('agency.repShort')} ${item.repLimit} · ${I18n.t('agency.scoutsN', { n: item.maxScouts })} · ${SPONSOR_LABEL[item.sponsor]} · ${UI.euro(item.weekly)}/wk`
-                : `+${item.repLimit} ${I18n.t('agency.eff.rep')} · +${item.players} ${I18n.t('agency.clientsShort')}${item.scoutDiscount ? ` · −${Math.round(item.scoutDiscount * 100)}% ${I18n.t('agency.scoutingShort')}` : ''}`;
+            const price = kind === 'office' ? Upgrades.officeRent(item) * 4 : item.price;
+            const meta = kind === 'office' ? `${I18n.t('agency.repShort')} ${item.repLimit} · ${I18n.t('agency.scoutsN', { n: item.maxScouts })} · ${SPONSOR_LABEL[item.sponsor]} · ${UI.euro(Upgrades.officeRent(item))}/wk`
+                : `+${item.repLimit} ${I18n.t('agency.eff.rep')} · +${item.players} ${I18n.t('agency.clientsShort')}${item.scoutDiscount ? ` · −${Math.round(item.scoutDiscount * 100)}% ${I18n.t('agency.scoutingShort')}` : ''}${item.rentCut ? ` · −${Math.round(item.rentCut * 100)}% ${I18n.t('agency.rentShort')}` : ''}`;
             const cls = state === 'current' ? 'tier__body--current' : state === 'locked' ? 'tier__body--locked' : '';
             const pic = state === 'owned' ? 'pic--owned' : state === 'current' ? 'pic--current' : state === 'locked' ? 'pic--locked' : '';
             const action = state === 'buyable' ? `<button class="btn btn--primary btn--sm" style="width:auto" onclick="AgencyScreen.buy('${kind}')">${kind === 'office' ? I18n.t('agency.moveIn') : I18n.t('agency.buyPrefix')}${UI.euro(price)}</button>`

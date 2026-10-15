@@ -232,7 +232,7 @@ for (const v of ['single', 'partner', 'kids', 'hobby', 'nothing'])
         problems.push(`no 'any' q-life reply for variant=${v}`);
 
 // ---- Moments (Phase 3: career-moment scenes)
-const MOMENT_KINDS = ['debut', 'firstgoal', 'hattrick', 'milestone', 'procontract', 'transfer', 'dreammove', 'ambition', 'injury', 'thanks', 'invite', 'any'];
+const MOMENT_KINDS = ['debut', 'firstgoal', 'hattrick', 'milestone', 'procontract', 'transfer', 'dreammove', 'ambition', 'injury', 'injuryagain', 'intlcallup', 'intldebut', 'intlfirstgoal', 'firsttrophy', 'firsttrophygrp', 'intltrophy', 'intltrophygrp', 'thanks', 'invite', 'any'];
 const moments = readTable(sheetByName('Moments'), ['id', 'kind', 'beat', 'choice', 'personality', 'text']);
 moments.forEach(r => {
     checkId(r.id, 'Moments');

@@ -246,6 +246,29 @@ const DIALOGUE_DE = {
         M043: "Wirklich? Ich... danke. Es wäre nicht dasselbe ohne dich.",
         M044: "Du schaffst es nicht? Schade. Aber das ist sehr grosszügig, danke.",
         M045: "Klar. Voller Terminkalender, ich versteh's. ...Ich versteh's.",
+        M046: "{weeks} Wochen Pause. Ich liege nur hier und starre an die Decke, {agent}.",
+        M047: "Der Arzt hat {weeks} Wochen gesagt. Ich habe die Zahl gehört und dann nicht mehr zugehört.",
+        M048: "{weeks} Wochen raus. Tut mir leid, {agent}. Ich weiss, der Zeitpunkt ist furchtbar.",
+        M049: "Nicht schon wieder, {agent}. Wieder {weeks} Wochen. Langsam glaube ich, mein Körper hasst mich.",
+        M050: "Warum immer ich? Noch einmal {weeks} Wochen raus. Ich halte das wirklich nicht mehr aus.",
+        M051: "SCHON WIEDER?! {weeks} Wochen! Ich schwöre, so etwas mache ich nicht noch einmal durch.",
+        M052: "Wieder eine lange. {weeks} Wochen. Ich ziehe die Reha durch wie immer, aber ich bin es leid, ständig von vorne anzufangen.",
+        M053: "Ich bin im Kader von {nation}, {agent}! Mein Handy vibriert ununterbrochen. Meine Mutter hat geweint.",
+        M054: "Sie haben mich für {nation} nominiert. Mich! Ich habe die Liste dreimal gelesen, um sicher zu sein.",
+        M055: "Nationalmannschaft, {agent}! {nation} hat es endlich gemerkt. Wurde auch Zeit, wenn du mich fragst.",
+        M056: "Ich habe für {nation} gespielt, {agent}! Die Hymne, das Trikot, alles. Gänsehaut das ganze Spiel lang.",
+        M057: "Mein erstes Länderspiel für {nation}. Ich habe an alle gedacht, die mich hierher gebracht haben. Du gehörst dazu.",
+        M058: "Ich habe für {nation} getroffen! Ich glaube, ich habe seit dem Abpfiff nicht aufgehört zu grinsen.",
+        M059: "Erstes Tor für {nation}. Zu Hause singen sie heute Abend meinen Namen.",
+        M060: "Mein erster Titel, {agent}! {trophy}! Ich halte gerade die Medaille in der Hand. Die ist schwerer, als sie aussieht.",
+        M061: "Ich habe tatsächlich etwas gewonnen. {trophy}. Ich schaue ständig auf die Medaille, ob sie echt ist.",
+        M062: "{trophy}-Sieger! Der erste von vielen, {agent}. Mach schon mal Platz im Regal.",
+        M063: "Wir haben es geschafft, {agent}! {trophy}! {others} und ich sind einfach überglücklich. Mein allererster Titel!",
+        M064: "{others} und ich tanzen seit einer Stunde in der Kabine. {trophy}! Mein allererster!",
+        M065: "Wir haben mit {nation} gewonnen, {agent}! {trophy}! Das ganze Land ist auf den Strassen!",
+        M066: "{trophy} mit {nation}. Für meine Familie, für alle zu Hause. Und für dich.",
+        M067: "{trophy}! {others} und ich sind einfach überglücklich. {nation} wird diese Mannschaft nie vergessen.",
+        M068: "{nation} hat gewonnen, {trophy}, und {others} und ich waren mittendrin. Heute Abend wird gefeiert.",
     },
     // --- what the AGENT says when you pick a choice (Dialogue.SAY, by "scene:choice") ---
     say: {
@@ -356,7 +379,7 @@ const DIALOGUE_DE = {
         clubFallback: "einem grossen Klub",
     },
     // --- milestone labels (Dialogue._mileText); {n} filled by the engine ---
-    mile: { apps: "{n} Einsätze", goals: "{n} Karrieretore" },
+    mile: { apps: "{n} Einsätze", goals: "{n} Karrieretore", caps: "{n} Länderspiele für {nation}", intlgoals: "{n} Tore für {nation}" },
     // --- the "envelope of cash" thank-you gift (Dialogue moment 'thanks'); {amt} filled by the engine ---
     envelope: "ein Umschlag. Darin: €{amt} für die Agentur",
 };

@@ -136,6 +136,7 @@ I18n.register('en', {
     // --- agency: renewals ---
     'ag.renew.cooldown': '{club} already gave you an answer on a new deal this week — wait until next week before raising it again.',
     'ag.renew.open': '{club} are open to talks — proposal in your inbox.',
+    'ag.renew.noPlans': '{club} aren\'t planning to extend {name}\'s contract.',
     'ag.renew.movingAway': '{name} has already agreed a move away — a renewal is off the table.',
     'ag.renew.alreadyDone': "{name}'s deal has already been renegotiated this season — you can revisit it next season.",
     'ag.renew.done': 'Renewed: €{wage}/wk as {role} until end of {until}.',
@@ -468,6 +469,10 @@ I18n.register('en', {
     'sim.clubGiveUpSubj': '{club} end contract talks with {name}',
     'sim.clubGiveUpBody': "After being turned down repeatedly, {club} have decided to stop chasing a new deal for {name}. If nothing changes he'll run down his contract and leave on a free.",
     'sim.clubGiveUpEvent': '{club} gave up on renewing {name}.',
+    'sim.clubLetRunSubj': '{club} will let {name}\'s contract run out',
+    'sim.clubLetRunBody': '{club} have decided not to offer {name} a new contract. Unless something changes, he leaves on a free at the end of the season.',
+    'sim.clubLetRunEvent': '{club} will let {name}\'s contract run out.',
+    'sim.clubRenewHoldBody': '{name} is in the final year of his deal. {club} would extend it, but they won\'t go above €{wage}/wk. Open his renewal in the inbox to negotiate, or turn it down.',
     'sim.freeAgentSubj': '{name} is a free agent',
     'sim.freeAgentBody': "{name}'s contract at {club} has expired — he's now a free agent. Any club can sign him without a fee, but he's unsettled (morale has dropped). Interested clubs should table contract offers soon.",
     'sim.freeAgentLog': '{name} is now a free agent.',

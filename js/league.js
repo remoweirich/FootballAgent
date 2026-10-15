@@ -916,17 +916,12 @@ const League = {
             const blue = this.promoStructure(div).blue;
             if (blue.length < 4) { L.playoffs[div] = null; return; }
             const [b1, b2, b3, b4] = blue;   // ordered by league finish (best seed first)
-            const sf1 = this.playMatch(b1, b4, 'PO', true);
-            const sf2 = this.playMatch(b2, b3, 'PO', true);
+            const sf1 = this._poMatch(b1, b4), sf2 = this._poMatch(b2, b3);
             const t = this.sortedTable(div); const seed = id => t.findIndex(r => r.clubId === id);
             const home = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
             const away = home === sf1.winner ? sf2.winner : sf1.winner;
-            const fin = this.playMatch(home, away, 'PO', true);
-            L.playoffs[div] = {
-                sf: [{ h: b1, a: b4, hg: sf1.hg, ag: sf1.ag, winner: sf1.winner }, { h: b2, a: b3, hg: sf2.hg, ag: sf2.ag, winner: sf2.winner }],
-                final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner, _attendId: this._captureSinglePoFinal(home, away, fin) },
-                winner: fin.winner
-            };
+            const final = this._poFinalRec(home, away);
+            L.playoffs[div] = { sf: [sf1, sf2], final, winner: final.winner };
         });
     },
 
@@ -1050,15 +1045,12 @@ const League = {
     // ---------------- England: play-offs + promotion/relegation ----------------
     _poSeries(seeds, div) {
         // 4-team play-off (seeds = [s1,s2,s3,s4] by league finish): SF s1vs4 (3v6) & s2vs3 (4v5), then final
-        const sf1r = this.playMatch(seeds[0], seeds[3], 'PO', true);
-        const sf2r = this.playMatch(seeds[1], seeds[2], 'PO', true);
-        const sf1 = { h: seeds[0], a: seeds[3], hg: sf1r.hg, ag: sf1r.ag, winner: sf1r.winner };
-        const sf2 = { h: seeds[1], a: seeds[2], hg: sf2r.hg, ag: sf2r.ag, winner: sf2r.winner };
+        const sf1 = this._poMatch(seeds[0], seeds[3]), sf2 = this._poMatch(seeds[1], seeds[2]);
         const order = this.sortedTable(div).map(r => r.clubId); const seed = id => order.indexOf(id);
         const home = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
         const away = home === sf1.winner ? sf2.winner : sf1.winner;
-        const fin = this.playMatch(home, away, 'PO', true);
-        return { sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner, _attendId: this._captureSinglePoFinal(home, away, fin) }, winner: fin.winner };
+        const final = this._poFinalRec(home, away);
+        return { sf: [sf1, sf2], final, winner: final.winner };
     },
     playPlayoffsEngland() {
         const L = GameState.league;
@@ -1070,19 +1062,13 @@ const League = {
         // National League: places 2-7. Eliminators 4v7 and 5v6; winners meet 3 and 2 in the semis.
         const div = 'Natleague', t = this.sortedTable(div).map(r => r.clubId);
         if (t.length >= 7) {
-            const e1r = this.playMatch(t[3], t[6], 'PO', true);   // 4 v 7
-            const e2r = this.playMatch(t[4], t[5], 'PO', true);   // 5 v 6
-            const e1 = { h: t[3], a: t[6], hg: e1r.hg, ag: e1r.ag, winner: e1r.winner };
-            const e2 = { h: t[4], a: t[5], hg: e2r.hg, ag: e2r.ag, winner: e2r.winner };
-            const sf1r = this.playMatch(t[2], e1.winner, 'PO', true);   // 3 v winner(4v7)
-            const sf2r = this.playMatch(t[1], e2.winner, 'PO', true);   // 2 v winner(5v6)
-            const sf1 = { h: t[2], a: e1.winner, hg: sf1r.hg, ag: sf1r.ag, winner: sf1r.winner };
-            const sf2 = { h: t[1], a: e2.winner, hg: sf2r.hg, ag: sf2r.ag, winner: sf2r.winner };
+            const e1 = this._poMatch(t[3], t[6]), e2 = this._poMatch(t[4], t[5]);   // 4 v 7, 5 v 6
+            const sf1 = this._poMatch(t[2], e1.winner), sf2 = this._poMatch(t[1], e2.winner);   // 3 v winner(4v7), 2 v winner(5v6)
             const seed = id => t.indexOf(id);
             const home = seed(sf1.winner) <= seed(sf2.winner) ? sf1.winner : sf2.winner;
             const away = home === sf1.winner ? sf2.winner : sf1.winner;
-            const fin = this.playMatch(home, away, 'PO', true);
-            L.playoffs[div] = { elim: [e1, e2], sf: [sf1, sf2], final: { h: home, a: away, hg: fin.hg, ag: fin.ag, winner: fin.winner, _attendId: this._captureSinglePoFinal(home, away, fin) }, winner: fin.winner };
+            const final = this._poFinalRec(home, away);
+            L.playoffs[div] = { elim: [e1, e2], sf: [sf1, sf2], final, winner: final.winner };
         } else L.playoffs[div] = null;
     },
     applyPromotionRelegationEngland() {
@@ -1224,9 +1210,36 @@ const League = {
         return tie;
     },
     // Capture a SINGLE-MATCH promotion play-off final; returns the attend id to stamp on the tie.
-    _captureSinglePoFinal(home, away, r) {
+    // A single-match play-off game (semi-final, eliminator, final) can't end level: a final plays extra
+    // time, then (or straight away for any other round) penalties, like a cup tie. The score includes
+    // extra-time goals; `pens` / `et` are what the play-off views show next to it. `_r` is the raw
+    // match (its appearances) for an attended final.
+    _poMatch(home, away, isFinal) {
+        const r = this.playMatch(home, away, 'PO', true, !!isFinal);
+        const t = { h: home, a: away, hg: r.hg, ag: r.ag, winner: r.winner };
+        if (r.hg === r.ag) {
+            const et = isFinal ? this._extraTime(home, away) : { hg: 0, ag: 0 };
+            if (et.hg !== et.ag) { t.hg += et.hg; t.ag += et.ag; t.et = true; t.winner = et.hg > et.ag ? home : away; }
+            else { const [w, l] = this._penScore(); t.pens = (r.winner === home) ? { h: w, a: l } : { h: l, a: w }; }
+        }
+        Object.defineProperty(t, '_r', { value: r, enumerable: false });   // never saved
+        return t;
+    },
+    // a single-match play-off FINAL as stored: its result (with ET / pens) and the attend id
+    _poFinalRec(home, away) {
+        const f = this._poMatch(home, away, true);
+        const rec = { h: home, a: away, hg: f.hg, ag: f.ag, winner: f.winner };
+        if (f.pens) rec.pens = f.pens;
+        if (f.et) rec.et = true;
+        rec._attendId = this._captureSinglePoFinal(home, away, f._r, f);
+        return rec;
+    },
+    _captureSinglePoFinal(home, away, r, tie) {
         if (typeof Attend === 'undefined') return undefined;
-        const m = Attend.consider('playoff-final', 'PO', home, away, r, { minutes: 90 });
+        const long = tie && (tie.pens || tie.et);
+        const m = Attend.consider('playoff-final', 'PO', home, away, r, tie
+            ? { minutes: long ? 120 : 90, et: !!long, pens: tie.pens || null, winner: tie.winner, score: { hg: tie.hg, ag: tie.ag }, regScore: { hg: r.hg, ag: r.ag } }
+            : { minutes: 90 });
         return m ? m.id : undefined;
     },
     playGermanRelegation() {
@@ -1660,7 +1673,7 @@ const League = {
         const order = this.sortedTable(div).map(r => r.clubId);
         const need = Math.max(cfg.sf1, cfg.sf2, cfg.qf1[0], cfg.qf1[1], cfg.qf2[0], cfg.qf2[1]) + 1;
         if (order.length < need) return null;
-        const qf = (a, b) => { const r = this.playMatch(order[a], order[b], 'PO', true); return { h: order[a], a: order[b], hg: r.hg, ag: r.ag, winner: r.winner }; };   // higher seed hosts the single leg
+        const qf = (a, b) => this._poMatch(order[a], order[b]);   // higher seed hosts the single leg
         const qf1 = qf(cfg.qf1[0], cfg.qf1[1]);
         const qf2 = qf(cfg.qf2[0], cfg.qf2[1]);
         const sf1 = this._twoLeggedTie(order[cfg.sf1], qf1.winner, 'PO');   // seeded finisher hosts leg 2
@@ -1966,7 +1979,7 @@ const League = {
         const order = this.sortedTable(div).map(r => r.clubId);
         const need = Math.max(cfg.g1[0], cfg.g1[1], cfg.seed) + 1;
         if (order.length < need) return null;
-        const leg = (homeId, awayId) => { const r = this.playMatch(homeId, awayId, 'PO', true); return { h: homeId, a: awayId, hg: r.hg, ag: r.ag, winner: r.winner }; };
+        const leg = (homeId, awayId) => this._poMatch(homeId, awayId);
         const g1 = leg(order[cfg.g1[0]], order[cfg.g1[1]]);
         const g2 = leg(order[cfg.seed], g1.winner);
         return { g1, g2, winner: g2.winner };

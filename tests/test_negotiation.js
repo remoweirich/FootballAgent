@@ -226,9 +226,14 @@ const t9 = JSON.parse(runv(`
     p.stats = {}; [y - 3, y - 2, y - 1].forEach(yr => { p.stats[yr] = { k: { clubId: club.id, loan: false, youth: false, comps: {} } }; });
     GameState.players.push(p);
     const max = Agency.maxClubWage(p, club);
-    return JSON.stringify({ wage: p.wage, max });
+    // the same loyal player on a modest wage, in a season his club wants to give him a raise
+    p.wage = 3000; p._renewStance = { y, c: club.id, s: 'raise' };
+    const maxLow = Agency.maxClubWage(p, club);
+    return JSON.stringify({ wage: 120000, max, maxLow });
 `));
-check('a loyal player can negotiate a renewal ABOVE his current wage (' + t9.max + ' > ' + t9.wage + ')', t9.max > t9.wage);
+// renewals no longer guarantee a raise on top of the current wage (short deals used to compound it)
+check('a loyal player paid far above his worth gets no raise on renewal (' + t9.max + ' <= ' + t9.wage + ')', t9.max <= t9.wage);
+check('a loyal player below his worth can still negotiate a raise (' + t9.maxLow + ' > 3000)', t9.maxLow > 3000);
 
 // ================= 10. hidden-max bargaining: open low, inch up, never reveal on a greedy ask (1b) =================
 const t10 = JSON.parse(runv(`

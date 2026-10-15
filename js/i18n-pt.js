@@ -153,6 +153,7 @@ I18n.register('pt', {
     // --- agency: renewals ---
     'ag.renew.cooldown': 'O {club} já lhe deu uma resposta sobre um novo contrato esta semana — aguarde pela próxima antes de voltar ao assunto.',
     'ag.renew.open': 'O {club} está aberto a conversas — proposta na sua caixa de entrada.',
+    'ag.renew.noPlans': 'O {club} não pretende renovar o contrato do {name}.',
     'ag.renew.movingAway': 'O {name} já acertou uma saída — a renovação está fora de questão.',
     'ag.renew.alreadyDone': 'O contrato do {name} já foi renegociado esta época — pode voltar ao assunto na próxima.',
     'ag.renew.done': 'Renovado: €{wage}/sem como {role} até ao final de {until}.',
@@ -485,6 +486,10 @@ I18n.register('pt', {
     'sim.clubGiveUpSubj': 'O {club} encerra as conversas com o {name}',
     'sim.clubGiveUpBody': 'Depois de várias recusas, o {club} decidiu deixar de insistir num novo contrato para o {name}. Se nada mudar, vai cumprir o contrato até ao fim e sair a custo zero.',
     'sim.clubGiveUpEvent': 'O {club} desistiu de renovar com o {name}.',
+    'sim.clubLetRunSubj': 'O {club} vai deixar o contrato do {name} terminar',
+    'sim.clubLetRunBody': 'O {club} decidiu não oferecer um novo contrato ao {name}. Se nada mudar, ele sai a custo zero no fim da época.',
+    'sim.clubLetRunEvent': 'O {club} vai deixar o contrato do {name} terminar.',
+    'sim.clubRenewHoldBody': 'O {name} está no último ano de contrato. O {club} renovaria, mas não acima de €{wage}/sem. Abra a renovação na caixa de entrada para negociar, ou recuse.',
     'sim.freeAgentSubj': 'O {name} é agente livre',
     'sim.freeAgentBody': 'O contrato do {name} no {club} expirou — é agora agente livre. Qualquer clube o pode assinar sem verba, mas está desestabilizado (o moral caiu). Os clubes interessados devem apresentar propostas em breve.',
     'sim.freeAgentLog': 'O {name} é agora agente livre.',

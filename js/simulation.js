@@ -198,7 +198,7 @@ const Sim = {
             GameState.players.forEach(p => {
                 if (p.onLoanAt && !isU21Loan(p) && p.loanMid && p.loanUntilSeason === GameState.seasonStartYear) {
                     const back = Clubs.getClubById(p.clubId);
-                    if (p.agentId === 'me') GameState.addMail({ kind: 'news', subject: I18n.t('sim.loanOverSubj', { name: p.name }), body: I18n.t('sim.loanOverBody', { name: p.name, club: back ? back.name : I18n.t('co.hisClubLc') }), ttl: 3 });
+                    if (p.agentId === 'me') GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('sim.loanOverSubj', { name: p.name }), body: I18n.t('sim.loanOverBody', { name: p.name, club: back ? back.name : I18n.t('co.hisClubLc') }), ttl: 3 });
                     p.onLoanAt = null; p.loanRole = null; p.loanMid = false; p.loanUntilSeason = null;
                 }
             });
@@ -212,7 +212,7 @@ const Sim = {
                     p.onLoanAt = null; p.loanRole = null; p.loanMid = false;
                     p.squadRole = 'fringe';   // eased back in — occasional minutes, not a guaranteed starter
                     GameState.addLog(I18n.t('sim.recallLog', { club: back ? back.name : I18n.t('ag.hisClub'), name: p.name }), 'info');
-                    GameState.addMail({ kind: 'news', subject: I18n.t('sim.recallSubj', { club: back ? back.name : I18n.t('co.club'), name: p.name }), body: I18n.t('sim.recallBody', { club: back ? back.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 4 });
+                    GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('sim.recallSubj', { club: back ? back.name : I18n.t('co.club'), name: p.name }), body: I18n.t('sim.recallBody', { club: back ? back.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 4 });
                 }
             });
         }
@@ -311,7 +311,7 @@ const Sim = {
                 star.morale.agent = Math.max(0, (star.morale.agent || 0) - 1);
                 if (!GameState.agency._redMoaned) {
                     GameState.agency._redMoaned = true;
-                    GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.redMoanSubj', { name: star.name }), body: I18n.t('sim.redMoanBody', { name: star.name }), ttl: 6 });
+                    GameState.addMail({ playerId: star.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.redMoanSubj', { name: star.name }), body: I18n.t('sim.redMoanBody', { name: star.name }), ttl: 6 });
                     events.push({ type: 'warn', text: I18n.t('sim.redEvent', { name: star.name }) });
                 }
             }
@@ -385,13 +385,13 @@ const Sim = {
                 p.injury.weeksOut -= 1;
                 if (p.injury.weeksOut <= 0) {
                     p.injuryHistory.push({ id: p.injury.id, type: p.injury.type, weeks: p.injury.total, season: GameState.seasonLabel() });
-                    if (p.agentId === 'me') { const t = I18n.t('ag.log.recovered', { name: p.name, type: (typeof injuryName === 'function' ? injuryName(p.injury) : (p.injury).type) }); GameState.addLog(t, 'info'); GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 }); }
+                    if (p.agentId === 'me') { const t = I18n.t('ag.log.recovered', { name: p.name, type: (typeof injuryName === 'function' ? injuryName(p.injury) : (p.injury).type) }); GameState.addLog(t, 'info'); GameState.addMail({ playerId: p.id, kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 }); }
                     p.injury = null;
                 }
                 return;
             }
             // small weekly injury chance, a touch higher for outfield
-            if (Rng.next() < 0.0055 * ((typeof Upgrades !== 'undefined') ? Upgrades.injuryRiskMult() : 1)) {
+            if (Rng.next() < 0.0055 * ((typeof Upgrades !== 'undefined') ? Upgrades.injuryRiskMult() : 1) * injuryProneMult(p)) {
                 const inj = this._rollInjury();
                 p.injury = { type: inj.type, weeksOut: inj.weeks, total: inj.weeks };
                 // an injury HALTS the playing-time streak — it's frozen (not reset) while he's out, and
@@ -400,7 +400,7 @@ const Sim = {
                 if (p.agentId === 'me') {
                     const t = I18n.t('sim.injuredLog', { name: p.name, type: (typeof injuryName === 'function' ? injuryName(p.injury) : (p.injury).type), weeks: inj.weeks });
                     GameState.addLog(t, 'warn'); events.push({ type: 'warn', text: t });
-                    GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('sim.injurySubj', { name: p.name }), body: t, ttl: 4 });
+                    GameState.addMail({ playerId: p.id, kind: 'news', cat: 'injury', subject: I18n.t('sim.injurySubj', { name: p.name }), body: t, ttl: 4 });
                     if (typeof Dialogue !== 'undefined') Dialogue.onInjury(p, inj.weeks);   // a long layoff earns a visit
                 }
             }
@@ -487,7 +487,7 @@ const Sim = {
                 p.morale.agent = Math.max(0, p.morale.agent - rate);
                 if (before >= MORALE.BAND_GOOD && p.morale.agent < MORALE.BAND_GOOD && !p._neglectWarned) {
                     p._neglectWarned = true;
-                    GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.neglectSubj', { name: p.name }), body: I18n.t('sim.neglectBody', { name: p.name }), ttl: 6 });
+                    GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.neglectSubj', { name: p.name }), body: I18n.t('sim.neglectBody', { name: p.name }), ttl: 6 });
                     events.push({ type: 'morale', text: I18n.t('sim.neglectEvent', { name: p.name }) });
                 }
             } else {
@@ -523,7 +523,7 @@ const Sim = {
         // Confidant+ perk: he warns you privately first — a short grace before the case opens
         if (typeof Dialogue !== 'undefined' && Dialogue.tipOff(p, dim)) return;
         p.moraleCase = { dim, stage: 1, sinceAbsWeek: GameState.absWeek(), promise: null };
-        GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.caseSubj', { name: p.name, dim: DIM_LABEL[dim] }), body: I18n.t('sim.caseBody', { name: p.name, body: DIM_BODY[dim] }), ttl: 6 });
+        GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.caseSubj', { name: p.name, dim: DIM_LABEL[dim] }), body: I18n.t('sim.caseBody', { name: p.name, body: DIM_BODY[dim] }), ttl: 6 });
         events.push({ type: 'morale', text: I18n.t('sim.caseEvent', { name: p.name, dim: DIM_LABEL[dim] }) });
     },
 
@@ -534,7 +534,7 @@ const Sim = {
             const c = p.moraleCase; if (!c) return;
             // resolved: the underlying dimension recovered to GOOD -> close with thanks, any stage
             if (p.morale[c.dim] >= MORALE.BAND_GOOD) {
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.thankSubj', { name: p.name }), body: I18n.t('sim.thankBody', { name: p.name }), ttl: 4 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.thankSubj', { name: p.name }), body: I18n.t('sim.thankBody', { name: p.name }), ttl: 4 });
                 events.push({ type: 'morale', text: I18n.t('sim.resolvedEvent', { name: p.name }) });
                 p.moraleCase = null;
                 return;
@@ -551,7 +551,7 @@ const Sim = {
                         ? I18n.t('sim.partingAgent', { name: p.name })
                         : I18n.t('sim.partingOther', { name: p.name });
                     p.agentId = null; p.moraleCase = null;
-                    GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.leftSubj', { name: p.name }), body: parting, ttl: 6 });
+                    GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.leftSubj', { name: p.name }), body: parting, ttl: 6 });
                     Agency.bumpRep(MORALE.DEPARTURE_AGENCY_REP);
                     events.push({ type: 'morale', text: I18n.t('sim.leftEvent', { name: p.name }) });
                     return;
@@ -563,7 +563,7 @@ const Sim = {
                 p.morale.agent = Math.max(0, p.morale.agent + MORALE.PROMISE_BROKEN_AGENT);
                 Agency.bumpRep(MORALE.PROMISE_BROKEN_REP);
                 if (typeof Dialogue !== 'undefined') Dialogue.addBond(p, -8);   // broken word cuts deep, and stays cut
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.brokenSubj', { name: p.name }), body: I18n.t('sim.brokenBody', { name: p.name }), ttl: 6 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.brokenSubj', { name: p.name }), body: I18n.t('sim.brokenBody', { name: p.name }), ttl: 6 });
                 events.push({ type: 'morale', text: I18n.t('sim.brokenEvent', { name: p.name }) });
                 this._escalateMoraleCase(p, events);
                 return;
@@ -620,26 +620,26 @@ const Sim = {
         if (c.stage === 2) {
             if (c.dim === 'time') {
                 c.agitating = true;
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.timeSubj', { name: p.name }), body: I18n.t('sim.esc.timeBody', { name: p.name }), ttl: 8 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.timeSubj', { name: p.name }), body: I18n.t('sim.esc.timeBody', { name: p.name }), ttl: 8 });
             } else if (c.dim === 'wage') {
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.wageSubj', { name: p.name }), body: I18n.t('sim.esc.wageBody', { name: p.name, club: club ? club.name : I18n.t('co.hisClubLc') }), ttl: 8 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.wageSubj', { name: p.name }), body: I18n.t('sim.esc.wageBody', { name: p.name, club: club ? club.name : I18n.t('co.hisClubLc') }), ttl: 8 });
             } else if (c.dim === 'club') {
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.clubSubj', { name: p.name }), body: I18n.t('sim.esc.clubBody', { name: p.name }), ttl: 8 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.clubSubj', { name: p.name }), body: I18n.t('sim.esc.clubBody', { name: p.name }), ttl: 8 });
                 GameState.addLog(I18n.t('sim.esc.clubLog', { name: p.name }), 'morale');
             } else if (c.dim === 'agent') {
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.agentSubj', { name: p.name }), body: I18n.t('sim.esc.agentBody', { name: p.name }), ttl: 8 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.agentSubj', { name: p.name }), body: I18n.t('sim.esc.agentBody', { name: p.name }), ttl: 8 });
             }
             events.push({ type: 'morale', text: I18n.t('sim.esc.event2', { name: p.name }) });
         } else if (c.stage === 3) {
             if (c.dim === 'time' || c.dim === 'club') {
                 c.forcedMove = true;
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.acceptSubj', { name: p.name }), body: I18n.t('sim.esc.acceptBody', { name: p.name }), ttl: 10 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.acceptSubj', { name: p.name }), body: I18n.t('sim.esc.acceptBody', { name: p.name }), ttl: 10 });
             } else if (c.dim === 'wage') {
                 // converts to a club-style case at stage-2 rules (hands in a transfer request over money)
                 c.dim = 'club'; c.stage = 2;
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.wageToClubSubj', { name: p.name }), body: I18n.t('sim.esc.wageToClubBody', { name: p.name }), ttl: 8 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.wageToClubSubj', { name: p.name }), body: I18n.t('sim.esc.wageToClubBody', { name: p.name }), ttl: 8 });
             } else if (c.dim === 'agent') {
-                GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.finalSubj', { name: p.name }), body: I18n.t('sim.esc.finalBody', { name: p.name }), ttl: 8 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.finalSubj', { name: p.name }), body: I18n.t('sim.esc.finalBody', { name: p.name }), ttl: 8 });
             }
             events.push({ type: 'morale', text: I18n.t('sim.esc.event3', { name: p.name }) });
         }
@@ -674,7 +674,7 @@ const Sim = {
             const mail = { offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, transferFee: fee } };
             Agency.acceptTransfer(mail, wage, role, term, 0, { forced: true });
             posIdx = Agency.myPosIndex();   // he may have changed club: re-index before the next client
-            GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.forcedSubj', { name: p.name, dest: dest.name }), body: I18n.t('sim.forcedBody', { name: p.name, dest: dest.name, fee: UI.money(fee) }), ttl: 6 });
+            GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.forcedSubj', { name: p.name, dest: dest.name }), body: I18n.t('sim.forcedBody', { name: p.name, dest: dest.name, fee: UI.money(fee) }), ttl: 6 });
             if (typeof Dialogue !== 'undefined') Dialogue.addBond(p, -6);   // it came to this because you didn't fix it
             events.push({ type: 'morale', text: I18n.t('sim.forcedEvent', { name: p.name, dest: dest.name }) });
             if (homeClub) Agency.changeRelationship(homeClub.id, -2);
@@ -692,7 +692,7 @@ const Sim = {
                         if (Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id)) return;
                         if (GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id && m.offer.toClubId === c.id)) return;
                         const role = Agency.maxRoleAt(p, c);
-                        GameState.addMail({ kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: c.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: c.id, role }, persistence: 0, ttl: 4 });
+                        GameState.addMail({ playerId: p.id, kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: c.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: c.id, role }, persistence: 0, ttl: 4 });
                         n++;
                     });
                     if (n) events.push({ type: 'offer', text: I18n.t('sim.ev.loanIn', { n, name: p.name }) });
@@ -731,7 +731,7 @@ const Sim = {
                     if (cands.length) {
                         const club = Agency.pickBuyer(cands, p); if (!club) return;
                         const offer = Agency._offerObj(p, null, club.id, 0, { initiatedByAgent: false });
-                        GameState.addMail({ kind: 'transfer', subject: I18n.t('ag.mail.offerContractSubj', { target: club.name, name: p.name }), offer, persistence: 0, ttl: 3 });
+                        GameState.addMail({ playerId: p.id, kind: 'transfer', subject: I18n.t('ag.mail.offerContractSubj', { target: club.name, name: p.name }), offer, persistence: 0, ttl: 3 });
                         events.push({ type: 'offer', text: I18n.t('sim.ev.freeAgentWant', { club: club.name, name: p.name }) });
                     }
                 }
@@ -742,7 +742,7 @@ const Sim = {
             const homeClub = Clubs.getClubById(p.clubId);
             if (homeClub && !p.transferListed && ['youth', 'fringe'].includes(p.squadRole) && p.ability < homeClub.reputation - 6 && Rng.next() < 0.015) {
                 p.transferListed = true;
-                GameState.addMail({ kind: 'news', subject: I18n.t('sim.aiListSubj', { club: homeClub.name, name: p.name }), body: I18n.t('sim.aiListBody', { club: homeClub.name, name: p.name }), ttl: 4 });
+                GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('sim.aiListSubj', { club: homeClub.name, name: p.name }), body: I18n.t('sim.aiListBody', { club: homeClub.name, name: p.name }), ttl: 4 });
                 events.push({ type: 'offer', text: I18n.t('sim.ev.listed', { club: homeClub.name, name: p.name }) });
             }
             if (pending < 3 && !p.pendingTransfer && !(p._txOffersFrom && GameState.absWeek() < p._txOffersFrom)) {
@@ -793,7 +793,7 @@ const Sim = {
                         if (buyers.length === 1) {
                             const fee = Agency.estimateFee(p, buyers[0]);
                             const offer = Agency._offerObj(p, p.clubId, buyers[0].id, fee, { initiatedByAgent: false });
-                            GameState.addMail({ kind: 'transfer', subject: I18n.t('sim.bidSubj', { club: buyers[0].name, name: p.name }), offer, persistence: Rng.next() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Rng.next() * 3) });
+                            GameState.addMail({ playerId: p.id, kind: 'transfer', subject: I18n.t('sim.bidSubj', { club: buyers[0].name, name: p.name }), offer, persistence: Rng.next() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Rng.next() * 3) });
                             const feeClause = fee > 0 ? I18n.t('sim.ev.bidClause', { fee: UI.money(fee), name: p.name }) : I18n.t('sim.ev.freeClause', { name: p.name });
                             events.push({ type: 'offer', text: I18n.t('sim.ev.bid1', { club: buyers[0].name, clause: feeClause, role: roleLabel(offer.role, p.age) }) });
                         } else if (buyers.length > 1) {
@@ -801,7 +801,7 @@ const Sim = {
                             buyers.forEach(buyer => {
                                 const fee = Agency.estimateFee(p, buyer);
                                 const offer = Agency._offerObj(p, p.clubId, buyer.id, fee, { initiatedByAgent: false });
-                                GameState.addMail({ kind: 'transfer', subject: I18n.t('sim.bidSubj', { club: buyer.name, name: p.name }), offer, persistence: Rng.next() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Rng.next() * 3) });
+                                GameState.addMail({ playerId: p.id, kind: 'transfer', subject: I18n.t('sim.bidSubj', { club: buyer.name, name: p.name }), offer, persistence: Rng.next() < 0.5 ? 1 : 0, ttl: 1 + Math.floor(Rng.next() * 3) });
                                 names.push(`${buyer.name} (${fee > 0 ? `€${UI.money(fee)}` : I18n.t('sim.ev.free')})`);
                             });
                             events.push({ type: 'offer', text: I18n.t('sim.ev.bidMany', { n: buyers.length, name: p.name, names: names.join(', ') }) });
@@ -823,7 +823,7 @@ const Sim = {
                     const club = Clubs.getClubById(p.clubId);
                     const dest = Agency._findLoanClub(p, club || Clubs.allClubs[0]);
                     if (dest && !Agency.clubHasMyPlayerAtPos(dest.id, p.position, p.id, posIdx)) {
-                        GameState.addMail({ kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: dest.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, role: Agency.maxRoleAt(p, dest) }, persistence: 0, ttl: 3 });
+                        GameState.addMail({ playerId: p.id, kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: dest.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: dest.id, role: Agency.maxRoleAt(p, dest) }, persistence: 0, ttl: 3 });
                         events.push({ type: 'offer', text: I18n.t('sim.ev.loanWant', { club: dest.name, name: p.name }) });
                     }
                     p._loanOffersFrom = GameState.absWeek() + 3 + Math.floor(Rng.next() * 5);
@@ -934,7 +934,7 @@ const Sim = {
                 standout = true;
             }
             const offer = { playerId: p.id, level, options: opts, legend: loyal, hot, standout };
-            GameState.addMail({ kind: 'sponsor', subject: I18n.t('sim.sponsorOffersSubj', { name: p.name }), offer, persistence: 0, ttl: 6 });
+            GameState.addMail({ playerId: p.id, kind: 'sponsor', subject: I18n.t('sim.sponsorOffersSubj', { name: p.name }), offer, persistence: 0, ttl: 6 });
             events.push({ type: 'offer', text: I18n.t('sim.ev.sponsor', { tier: SPONSOR_LABEL[level], name: p.name, tag: loyal ? I18n.t('sim.ev.loyalTag') : hot ? I18n.t('sim.ev.hotTag') : '', offers: opts.length === 1 ? I18n.t('sim.ev.oneOffer') : I18n.t('sim.ev.nOffers', { n: opts.length }) }) });
         });
     },
@@ -962,20 +962,29 @@ const Sim = {
             if (p._renewSeason === GameState.seasonStartYear) return;   // already re-signed this season
             const club = Clubs.getClubById(p.clubId); if (!club) return;
             if (p.squadRole === 'fringe' && p.ability < club.reputation - 8) return;   // a body they'd happily let go
+            // some clubs are happy to let a deal run out (see Agency.renewalStance): you hear it once
+            if (Agency.renewalStance(p, club) === 'release') {
+                if (p._clubRenewGaveUp) return;
+                p._clubRenewGaveUp = true;
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('sim.clubLetRunSubj', { name: p.name, club: club.name }), body: I18n.t('sim.clubLetRunBody', { name: p.name, club: club.name }), ttl: 6 });
+                events.push({ type: 'offer', text: I18n.t('sim.clubLetRunEvent', { name: p.name, club: club.name }) });
+                return;
+            }
             // one live offer at a time — wait for the current one to be answered or to lapse
             if (GameState.inbox.some(m => m.kind === 'renewal' && m.offer && m.offer.playerId === p.id)) return;
             if (p._clubRenewNext != null && GameState.absWeek() < p._clubRenewNext) return;
             const tries = p._clubRenewTries || 0;
             if (tries >= 3 && Rng.next() < 0.5) {
                 p._clubRenewGaveUp = true;
-                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.clubGiveUpSubj', { name: p.name }), body: I18n.t('sim.clubGiveUpBody', { name: p.name, club: club.name }), ttl: 6 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('sim.clubGiveUpSubj', { name: p.name }), body: I18n.t('sim.clubGiveUpBody', { name: p.name, club: club.name }), ttl: 6 });
                 events.push({ type: 'offer', text: I18n.t('sim.clubGiveUpEvent', { name: p.name, club: club.name }) });
                 return;
             }
             const bump = 1 + Math.min(0.15, tries * 0.05);   // each knock-back sweetens the next approach
-            const proposedWage = Math.round(Math.max(p.wage + 10, Agency.offeredWage(p, club, { loyalty: true, jitter: false }) * bump) / 10) * 10;
+            const proposedWage = Agency.renewalWage(p, club, bump);
+            const hold = Agency.renewalStance(p, club) !== 'raise';
             const proposedTermSeasons = Math.min(2 + Math.floor(Rng.next() * 2), Agency.maxContractTerm(p, club));
-            GameState.addMail({ kind: 'renewal', subject: I18n.t('sim.clubRenewSubj', { name: p.name, club: club.name }), body: I18n.t('sim.clubRenewBody', { name: p.name, club: club.name, wage: UI.money(proposedWage) }), offer: { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons, clubInitiated: true }, ttl: 4 });
+            GameState.addMail({ playerId: p.id, kind: 'renewal', subject: I18n.t('sim.clubRenewSubj', { name: p.name, club: club.name }), body: I18n.t(hold ? 'sim.clubRenewHoldBody' : 'sim.clubRenewBody', { name: p.name, club: club.name, wage: UI.money(proposedWage) }), offer: { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons, clubInitiated: true }, ttl: 4 });
             events.push({ type: 'offer', text: I18n.t('sim.clubRenewEvent', { name: p.name, club: club.name }) });
             p._clubRenewTries = tries + 1;
             p._clubRenewNext = GameState.absWeek() + 3 + Math.floor(Rng.next() * 3);
@@ -1050,7 +1059,7 @@ const Sim = {
             // the "season to remember" note is reserved for a genuine FULL season of top form — a
             // handful of brilliant games (10+ apps) still lifts his morale, but doesn't earn the message
             if (tot.apps < MORALE.HOT_FORM_MSG_MIN_APPS) return;
-            GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('sim.hotSubj', { name: p.name }), body: I18n.t('sim.hotBody', { name: p.name, avg: tot.avg.toFixed(2), apps: tot.apps }), ttl: 6 });
+            GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.hotSubj', { name: p.name }), body: I18n.t('sim.hotBody', { name: p.name, avg: tot.avg.toFixed(2), apps: tot.apps }), ttl: 6 });
             events.push({ type: 'morale', text: I18n.t('sim.hotEvent', { name: p.name }) });
         });
         // resolve retirements: games played this "final" season buys a graduated chance of one more year (max 3 stays)
@@ -1062,7 +1071,7 @@ const Sim = {
                 p.retireDelays += 1; p.retireAge = p.age + 1; p.retiringThisSeason = false;
                 if (p.agentId === 'me') {
                     const body = I18n.t('sim.playsOnBody', { apps, name: p.name });
-                    GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.playsOnSubj', { name: p.name }), body, ttl: 6 });
+                    GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('sim.playsOnSubj', { name: p.name }), body, ttl: 6 });
                     GameState.addLog(I18n.t('sim.playsOnLog', { name: p.name }), 'contract');
                     if (spotlights) spotlights.push({ icon: '💪', title: I18n.t('sim.playsOnSubj', { name: p.name }), quote: body, playerId: p.id });
                 }
@@ -1076,7 +1085,7 @@ const Sim = {
                     if (!GameState.agency.pendingFarewells) GameState.agency.pendingFarewells = [];
                     GameState.agency.pendingFarewells.push(p.id);
                 }
-                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.retireSubj', { name: p.name }), body, ttl: 6 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('sim.retireSubj', { name: p.name }), body, ttl: 6 });
                 GameState.addLog(I18n.t('sim.retireLog', { name: p.name }), 'contract');
                 p.archived = true; p.retired = true; p.agentId = null; p.clubId = null; p.onLoanAt = null; p.transferListed = false;
             }
@@ -1277,7 +1286,8 @@ const Sim = {
         }
         GameState.players.forEach(p => {
             if (p.onLoanAt && (p.loanUntilSeason == null || p.loanUntilSeason <= year)) { p.onLoanAt = null; p.loanRole = null; p.loanMid = false; }
-            if (p.agentId !== 'me' && p.stats) {
+            // only strangers lose old seasons: a client or former client keeps his whole career
+            if (p.agentId !== 'me' && !p.everClient && p.stats) {
                 Object.keys(p.stats).forEach(y => { if (+y < year - 3) delete p.stats[y]; });
             }
         });
@@ -1292,7 +1302,7 @@ const Sim = {
                 p.retiringThisSeason = true;
                 if (p.agentId === 'me') {
                     const body = I18n.t('sim.retirePlanBody', { reason: RETIRE_REASONS[Math.floor(Rng.next() * RETIRE_REASONS.length)] });
-                    GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.retirePlanSubj', { name: p.name }), body, ttl: 6 });
+                    GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('sim.retirePlanSubj', { name: p.name }), body, ttl: 6 });
                     GameState.addLog(I18n.t('sim.retirePlanLog', { name: p.name }), 'contract');
                     if (spotlights) spotlights.push({ icon: '🕰️', title: I18n.t('sim.retirePlanSubj', { name: p.name }), quote: body, playerId: p.id });
                 }
@@ -1308,7 +1318,7 @@ const Sim = {
                 p.freeAgent = true; p.clubId = null; p.onLoanAt = null; p.loanRole = null; p.squadRole = 'fringe';
                 Agency.bumpRep(MORALE.CONTRACT_LAPSED_REP);
                 p.morale.club = Math.max(0, p.morale.club - 25);
-                GameState.addMail({ kind: 'news', subject: I18n.t('sim.freeAgentSubj', { name: p.name }), body: I18n.t('sim.freeAgentBody', { name: p.name, club: old ? old.name : I18n.t('co.hisClubLc') }), ttl: 6 });
+                GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('sim.freeAgentSubj', { name: p.name }), body: I18n.t('sim.freeAgentBody', { name: p.name, club: old ? old.name : I18n.t('co.hisClubLc') }), ttl: 6 });
                 GameState.addLog(I18n.t('sim.freeAgentLog', { name: p.name }), 'contract');
             }
         });
@@ -1336,7 +1346,7 @@ const Sim = {
         GameState.players.forEach(p => {
             if (p.agentId === 'me' && p.repUntilSeason != null && p.repUntilSeason < GameState.seasonStartYear && !p.repExpired) {
                 p.repExpired = true;
-                GameState.addMail({ kind: 'news', subject: I18n.t('sim.repTermSubj', { name: p.name }), body: I18n.t('sim.repTermBody', { name: p.name }), ttl: 6 });
+                GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('sim.repTermSubj', { name: p.name }), body: I18n.t('sim.repTermBody', { name: p.name }), ttl: 6 });
             }
         });
         League.setupSeason();

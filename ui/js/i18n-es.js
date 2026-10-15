@@ -471,7 +471,7 @@ I18n.register('es', {
     'records.mostAssists': 'Más asistencias',
     'records.mostApps': 'Más partidos',
     'records.mostCS': 'Más porterías a cero',
-    'records.highestAvg': 'Mejor nota media',
+    'records.highestAvg': 'Mejor nota media en una temporada',
     'records.mostYellow': 'Más tarjetas amarillas',
 });
 
@@ -589,6 +589,7 @@ I18n.register('es', {
     'agency.eff.dev': 'desarr.',
     'agency.eff.injury': 'lesiones',
     'agency.eff.rep': 'rep',
+    'agency.rentShort': 'alquiler de oficina',
     'agency.eff.expiresIn': 'quedan {w} sem.',
     'agency.eff.lastsWeeks': 'dura {w} sem.',
     'agency.eff.restocks': 'repone {name}/año',
@@ -1282,6 +1283,12 @@ I18n.register('es', {
     'cd.insights': 'Análisis avanzado',
     'cd.currentAbility': 'Nivel actual',
     'cd.roomToGrow': 'Margen de mejora',
+    'cd.col.season': 'Temp.',
+    'cd.col.avg': 'Nota',
+    'cd.col.loan': 'cedido',
+    'cd.histTapHint': 'Toca una temporada para ver sus competiciones.',
+    'cd.injuryProne': 'Propensión a lesiones',
+    'cd.injuryProneRange': '-10 a +10',
     'cd.ageSet': 'Edad de {name} fijada en {n}.',
     // morale
     'cd.dim.club': 'Club',

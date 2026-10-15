@@ -502,13 +502,13 @@ const Agency = {
         // the tutorial leans on the club saying yes; outside it the roll stands
         if (!GameState.demoMode && Rng.next() > sanction) {
             this.changeRelationship(p.clubId, -1);
-            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.loanRefusedSubj', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), body: I18n.t('ag.mail.loanRefusedBody', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 4 });
+            GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('ag.mail.loanRefusedSubj', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), body: I18n.t('ag.mail.loanRefusedBody', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 4 });
             return { ok: false, message: I18n.t('ag.loan.refused', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }) };
         }
         p._pendingLoan = { from: GameState.absWeek() + 1, picks };
         p._loanOk = true;   // the club has sanctioned a loan — you can now also shop him out on loan to clubs of your choosing
         p.loanListed = true; // reflected as a read-only "Loan-listed" indicator on his page
-        GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.loanOpenSubj', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), body: I18n.t('ag.mail.loanOpenBody', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 5 });
+        GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('ag.mail.loanOpenSubj', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), body: I18n.t('ag.mail.loanOpenBody', { club: parent ? parent.name : I18n.t('ag.hisClub'), name: p.name }), ttl: 5 });
         return { ok: true, message: I18n.t('ag.loan.sanctioned', { club: parent ? parent.name : I18n.t('ag.hisClub') }) };
     },
     _u21ClubReaction(p, clubName, dest) {
@@ -519,7 +519,7 @@ const Agency = {
             I18n.t('ag.mail.u21ok4', { name: p.name, dest }),
             I18n.t('ag.mail.u21ok5', { name: p.name })
         ];
-        GameState.addMail({ kind: 'news', subject: I18n.t('ag.mail.onSubj', { club: clubName, name: p.name }), body: lines[Math.floor(Rng.next() * lines.length)], ttl: 3 });
+        GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('ag.mail.onSubj', { club: clubName, name: p.name }), body: lines[Math.floor(Rng.next() * lines.length)], ttl: 3 });
     },
     _u21Consent(p) {
         const rel = this.relationship(p.clubId);
@@ -548,7 +548,7 @@ const Agency = {
                 I18n.t('ag.mail.u21no2', { name: p.name }),
                 I18n.t('ag.mail.u21no3', { name: p.name })
             ];
-            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.onSubj', { club: seniorName, name: p.name }), body: no[Math.floor(Rng.next() * no.length)], ttl: 4 });
+            GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('ag.mail.onSubj', { club: seniorName, name: p.name }), body: no[Math.floor(Rng.next() * no.length)], ttl: 4 });
             return { ok: false, message: I18n.t('ag.u21.refused', { club: seniorName, name: p.name }) };
         }
         if (reserve) {
@@ -594,7 +594,7 @@ const Agency = {
         const res = this._promoteToSenior(p, parent);
         GameState.addLog(I18n.t('ag.log.promoted', { name: p.name, club: parent.name, pro: res.pro ? I18n.t('ag.log.promotedPro', { wage: UI.money(res.wage) }) : '' }), 'sign');
         GameState.addMail({
-            kind: 'news', cat: 'general', subject: I18n.t('ag.mail.promoteSubj', { club: parent.name, name: p.name }),
+            playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('ag.mail.promoteSubj', { club: parent.name, name: p.name }),
             body: res.pro
                 ? I18n.t('ag.mail.promoteBodyPro', { club: parent.name, name: p.name, wage: UI.money(res.wage) })
                 : I18n.t('ag.mail.promoteBodyNoPro', { club: parent.name, name: p.name }), ttl: 4
@@ -632,7 +632,7 @@ const Agency = {
                 proNote = I18n.t('ag.recall.proNote', { amt: UI.money(pro) });
             }
             GameState.addLog(I18n.t('ag.log.recalled', { club: clubName, name: p.name, dest: destName, pro: proNote }), 'info');
-            GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.recallSubj', { club: clubName, name: p.name }), body: I18n.t('ag.mail.recallBody', { club: clubName, name: p.name, dest: destName, pro: proNote }), ttl: 4 });
+            GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('ag.mail.recallSubj', { club: clubName, name: p.name }), body: I18n.t('ag.mail.recallBody', { club: clubName, name: p.name, dest: destName, pro: proNote }), ttl: 4 });
             return { ok: true, message: I18n.t('ag.recall.done', { club: clubName, name: p.name, dest: destName, pro: proNote }) };
         }
         this.changeRelationship(p.clubId, -1);
@@ -747,7 +747,7 @@ const Agency = {
         const offer = this._offerObj(p, parent ? parent.id : null, target.id, fee, { initiatedByAgent: true });
         // a wage-tight club that still bites offers what it CAN pay — a low-wage contract
         if (wageTight) offer.proposedWage = Math.max(30, Math.round(this.maxClubWage(p, target) * (0.85 + Rng.next() * 0.1) / 10) * 10);
-        GameState.addMail({ kind: 'transfer', subject: free ? I18n.t('ag.mail.offerContractSubj', { target: target.name, name: p.name }) : I18n.t('ag.mail.offerWantSubj', { target: target.name, name: p.name }), offer, persistence: 1, ttl: 2 });
+        GameState.addMail({ playerId: p.id, kind: 'transfer', subject: free ? I18n.t('ag.mail.offerContractSubj', { target: target.name, name: p.name }) : I18n.t('ag.mail.offerWantSubj', { target: target.name, name: p.name }), offer, persistence: 1, ttl: 2 });
         GameState.addLog(free ? I18n.t('ag.log.offerFree', { target: target.name, name: p.name, wage: UI.money(offer.proposedWage) }) : I18n.t('ag.log.offerFee', { target: target.name, fee: UI.money(fee), name: p.name }), 'offer');
         const tail = free ? `offering €${UI.money(offer.proposedWage)}/wk${wageTight ? ' (a reduced deal — his usual wages are a stretch for them)' : ''}` : `offer in your inbox (€${UI.money(fee)})`;
         return { ok: true, interested: true, message: msg + `${target.name} are interested — ${tail}.` };
@@ -778,7 +778,7 @@ const Agency = {
         if (!GameState.demoMode && Rng.next() >= 0.42) return { ok: true, interested: false, message: I18n.t('ag.loanShop.passed', { target: target.name, name: p.name }) };
         if (GameState.inbox.find(m => m.kind === 'loan' && m.offer.playerId === p.id && m.offer.toClubId === target.id))
             return { ok: true, interested: false, message: I18n.t('ag.loanShop.existing', { target: target.name, name: p.name }) };
-        GameState.addMail({ kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: target.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: target.id, role }, persistence: 0, ttl: 3 });
+        GameState.addMail({ playerId: p.id, kind: 'loan', subject: I18n.t('ag.mail.loanWantSubj', { target: target.name, name: p.name }), offer: { playerId: p.id, fromClubId: p.clubId, toClubId: target.id, role }, persistence: 0, ttl: 3 });
         GameState.addLog(I18n.t('ag.log.loanEnquiry', { target: target.name, name: p.name }), 'offer');
         return { ok: true, interested: true, message: I18n.t('ag.loanShop.want', { target: target.name, name: p.name }) };
     },
@@ -797,12 +797,12 @@ const Agency = {
         const seasonsLeft = (p.contractUntilSeason ?? GameState.seasonStartYear) - GameState.seasonStartYear;
         if (seasonsLeft > 2 && Rng.next() < 0.7) return refuse(`${club.name} won't talk — plenty of contract left.`);
         if (p.squadRole === 'fringe' && Rng.next() < 0.5) return refuse(`${club.name} aren't planning with ${p.name}.`);
-        // a renewal reflects loyalty and recent form, not just the ability bracket — a long-serving,
-        // in-form player is due a real bump, not the +€10 the flat bracket used to hand back
-        const proposedWage = Math.max(p.wage + 10, this.offeredWage(p, club, { loyalty: true, jitter: false }));
+        if (this.renewalStance(p, club) === 'release') return refuse(I18n.t('ag.renew.noPlans', { club: club.name, name: p.name }));
+        // a renewal reflects loyalty and recent form (and the club's stance and budget)
+        const proposedWage = this.renewalWage(p, club);
         const proposedTermSeasons = Math.min(2 + Math.floor(Rng.next() * 2), this.maxContractTerm(p, club));
         const offer = { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons };
-        GameState.addMail({ kind: 'renewal', subject: I18n.t('ag.mail.renewalSubj', { name: p.name, club: club.name }), offer, persistence: 0, ttl: 3 });
+        GameState.addMail({ playerId: p.id, kind: 'renewal', subject: I18n.t('ag.mail.renewalSubj', { name: p.name, club: club.name }), offer, persistence: 0, ttl: 3 });
         return { ok: true, message: I18n.t('ag.renew.open', { club: club.name }) };
     },
 
@@ -912,7 +912,61 @@ const Agency = {
         w *= this.perfWageMult(p);
         if (opts.loyalty && club && p.clubId === club.id) w *= this.loyaltyMult(p);
         w = PlayerGen.capYouthWage(w, p.age, rep, p.potential);
+        w = Math.min(w, this.clubWageCap(club));
         return Math.max(30, Math.round(w / 10) * 10);
+    },
+    // A club's wage budget for ONE player: what its reputation (and its league's money) can pay,
+    // however good he becomes. A level-wage multiple: 2x below rep 70 (squads top out at ~1.4x),
+    // climbing to 3.5x at 80 and 4.5x at 90, so the elite clubs have far deeper pockets. It follows
+    // the club's CURRENT reputation, so a club lifted by a squad of good players can pay more.
+    clubWageCap(club) {
+        if (!club) return Infinity;
+        const r = club.reputation;
+        const m = r < 70 ? 2.0 : r < 80 ? 2.0 + (r - 70) * 0.15 : Math.min(4.5, 3.5 + (r - 80) * 0.1);
+        return Math.max(500, Math.round(PlayerGen.wageFor(r, r) * m * clubWageMult(club) / 10) * 10);
+    },
+    // How far below the club's level he may still be, by age, before they stop believing he'll make
+    // it there (18 and under: always given time; 23+: 10 points)
+    RENEW_BELIEF_GAP: { 19: 30, 20: 25, 21: 20, 22: 15 },
+    lostBelief(p, club) {
+        if (!club || p.age <= 18) return false;
+        if (p.squadRole === 'key' || p.squadRole === 'starter') return false;   // he plays: they clearly still rate him
+        const allowed = p.age >= 23 ? 10 : this.RENEW_BELIEF_GAP[p.age];
+        return club.reputation - p.ability > allowed;
+    },
+    // What his OWN club makes of a new deal, decided once a season (so asking again changes nothing):
+    //   'release' - they let the contract run out: they no longer believe in him, or he costs far more
+    //               than he is worth to them, or (sometimes) they simply don't need to
+    //   'hold'    - they'd extend, but not spend a cent more than he already earns
+    //   'cut'     - a key man paid far over his worth: they'd keep him on what he is worth now
+    //   'raise'   - a normal renewal on the market rate
+    // `worth` is the market wage there (loyalty and form included), never above the club's budget.
+    // A wage only rises while it is below his worth, so renewing on short deals every year can't
+    // ratchet it up for ever.
+    renewalStance(p, club) {
+        if (!club) return 'release';
+        const y = GameState.seasonStartYear, st = p._renewStance;
+        if (st && st.y === y && st.c === club.id) return st.s;
+        const worth = this.offeredWage(p, club, { loyalty: true, jitter: false });
+        const role = p.squadRole;
+        let s;
+        if (this.lostBelief(p, club)) s = 'release';
+        else if (p.wage > worth * 1.6) s = (role === 'key' || role === 'starter') ? 'cut' : 'release';
+        else if (p.wage >= worth) s = 'hold';
+        else {
+            const r = Rng.next(), drop = { key: 0.03, starter: 0.10, rotation: 0.25, youth: 0.15 }[role] ?? 0.45;
+            s = r < drop ? 'release' : r < drop + 0.25 ? 'hold' : 'raise';
+        }
+        p._renewStance = { y, c: club.id, s };
+        return s;
+    },
+    // the wage a club opens a renewal at, by its stance
+    renewalWage(p, club, bump = 1) {
+        const s = this.renewalStance(p, club), cap = this.clubWageCap(club);
+        const worth = this.offeredWage(p, club, { loyalty: true, jitter: false });
+        if (s === 'hold') return Math.min(p.wage, cap);
+        if (s === 'cut') return worth;
+        return Math.min(cap, Math.round(Math.max(p.wage + 10, worth * bump) / 10) * 10);
     },
     // club willingness to pay wage (for renewal/transfer negotiation)
     maxClubWage(p, club) {
@@ -922,15 +976,15 @@ const Agency = {
         if (club && p.clubId === club.id) base *= this.loyaltyMult(p);                      // long service pays, when he stays
         base *= 1 + Math.max(-0.08, Math.min(0.25, (this.relationship(club ? club.id : null) - 55) / 220));
         base = PlayerGen.capYouthWage(base, p.age, rep, p.potential);
-        let max = Math.round(base / 10) * 10;
-        // At his OWN club, loyalty and recent form guarantee at least a real raise on his current wage —
-        // a long-serving, in-form player is due a bump even if the abstract market bracket sits at or below
-        // what he's already earning (the reason a well-paid star at a modest club used to be stuck flat).
+        const cap = this.clubWageCap(club);
+        let max = Math.min(cap, Math.round(base / 10) * 10);
+        // At his OWN club the renewal stance rules: no raise when they'd only hold his wage, his worth
+        // when they'd cut it. (There used to be a guaranteed raise on his current wage here, which let a
+        // string of one-season deals compound the wage without limit.)
         if (club && p.clubId === club.id) {
-            const loyaltyRaise = Math.min(0.20, this.loyaltyMult(p) - 1);
-            const perfRaise = this.perfWageMult(p) - 1;
-            const raise = Math.min(0.35, loyaltyRaise + perfRaise);
-            if (raise > 0) max = Math.max(max, Math.round(p.wage * (1 + raise) / 10) * 10);
+            const s = this.renewalStance(p, club);
+            if (s === 'hold') max = Math.min(p.wage, cap);
+            else if (s === 'cut') max = this.offeredWage(p, club, { loyalty: true, jitter: false });
         }
         return max;
     },
@@ -1177,7 +1231,7 @@ const Agency = {
             p.transferListed = true;
             p._txOffersFrom = GameState.absWeek() + 1;
             GameState.addLog(I18n.t('ag.log.txlistAgreed', { club: club.name, name: p.name }), 'info');
-            GameState.addMail({ kind: 'news', subject: I18n.t('ag.mail.txlistSubj', { name: p.name }), body: I18n.t('ag.mail.txlistBody', { club: club.name, name: p.name }), ttl: 5 });
+            GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('ag.mail.txlistSubj', { name: p.name }), body: I18n.t('ag.mail.txlistBody', { club: club.name, name: p.name }), ttl: 5 });
             return { ok: true, message: I18n.t('ag.txlist.agreed', { club: club.name, name: p.name }) };
         }
         this.changeRelationship(club.id, -1);
@@ -1302,7 +1356,7 @@ const Agency = {
         if (!c || !c.promise || !fulfillTypes.includes(c.promise.type)) return;
         p.morale[c.dim] = Math.min(100, p.morale[c.dim] + MORALE.PROMISE_KEPT_DIM);
         p.morale.agent = Math.min(100, p.morale.agent + MORALE.PROMISE_KEPT_AGENT);
-        GameState.addMail({ kind: 'news', cat: 'morale', subject: I18n.t('ag.mail.promiseKeptSubj', { name: p.name }), body: I18n.t('ag.mail.promiseKeptBody', { name: p.name }), ttl: 4 });
+        GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('ag.mail.promiseKeptSubj', { name: p.name }), body: I18n.t('ag.mail.promiseKeptBody', { name: p.name }), ttl: 4 });
         p.moraleCase = null;
         this._checkPromiseKeptBondHook(p);
     },
@@ -1472,7 +1526,7 @@ const Agency = {
             const toClub = Clubs.getClubById(pkg.toClubId);
             const r = this._finalizeTransfer(p, pkg);
             if (r.ok && p.agentId === 'me') {
-                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('ag.mail.moveDoneSubj', { name: p.name }), body: I18n.t('ag.mail.moveDoneBody', { name: p.name, msg: r.message }), ttl: 4 });
+                GameState.addMail({ playerId: p.id, kind: 'news', cat: 'general', subject: I18n.t('ag.mail.moveDoneSubj', { name: p.name }), body: I18n.t('ag.mail.moveDoneBody', { name: p.name, msg: r.message }), ttl: 4 });
                 if (events) events.push({ type: 'transfer', text: `${p.name}'s move to ${toClub ? toClub.name : 'his new club'} is complete.` });
             }
         });
@@ -1581,7 +1635,7 @@ const Agency = {
         if (!p.injury) return;
         p.injuryHistory.push({ id: p.injury.id, type: p.injury.type, weeks: p.injury.total, season: GameState.seasonLabel() });
         const t = I18n.t('ag.log.recovered', { name: p.name, type: (typeof injuryName === 'function' ? injuryName(p.injury) : (p.injury).type) });
-        GameState.addLog(t, 'info'); GameState.addMail({ kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 });
+        GameState.addLog(t, 'info'); GameState.addMail({ playerId: p.id, kind: 'news', cat: 'injury', subject: I18n.t('ag.mail.fitSubj', { name: p.name }), body: t, ttl: 2 });
         p.injury = null;
     },
     treatPhysio(p) {

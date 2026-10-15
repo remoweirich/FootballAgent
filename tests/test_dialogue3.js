@@ -153,11 +153,14 @@ check('ambition: goals target fulfils and queues, +6 bond +1 rep on scene build'
   return queued && scene && P.bond === 36 && GameState.agency.reputation === repBefore + 1
     && scene.extra.ambition.includes('50');
 `));
-check('ambition: undiscovered ambitions never fulfil silently', runv(`
+// reached before you ever asked: no reward (you never asked), and he moves on to a new, unreached dream
+check('ambition: an undiscovered ambition reached pays nothing and is replaced by a new hidden one', runv(`
   P.facts.ambition = { type: 'goals', target: 50, discovered: false, fulfilled: false };
   GameState.agency.pendingScenes = [];
   Dialogue.weeklyMoments();
-  return GameState.agency.pendingScenes.length === 0 && !P.facts.ambition.fulfilled;
+  const a = P.facts.ambition;
+  return GameState.agency.pendingScenes.length === 0 && !a.fulfilled && !a.discovered
+    && !(a.type === 'goals' && a.target === 50) && P.facts.pastAmbitions.length === 1;
 `));
 check('ambition: abroad fulfils when playing outside his homeland', runv(`
   P.facts.ambition = { type: 'abroad', discovered: true, fulfilled: false };

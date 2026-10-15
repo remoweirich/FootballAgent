@@ -27,11 +27,9 @@ Object.assign(Internationals, {
     // the bands for a nation: { star, starter, rotation, reserve } = the lowest rating of each
     callupBands(nid, y) {
         const C = INTL_CONFIG, n = NATIONS_BY_ID[nid], S = this.skillLevel(nid, y);
-        const [lo, hi] = C.CALLUP_POP_LOG;
-        const t = Math.max(0, Math.min(1, Math.log10(Math.max(lo, (n && n.population) || lo) / lo) / Math.log10(hi / lo)));
-        const rot = Math.round(C.CALLUP_ROT_DEPTH[0] - (C.CALLUP_ROT_DEPTH[0] - C.CALLUP_ROT_DEPTH[1]) * t);
-        const res = Math.round(C.CALLUP_RES_DEPTH[0] - (C.CALLUP_RES_DEPTH[0] - C.CALLUP_RES_DEPTH[1]) * t);
-        return { skill: S, star: S + C.CALLUP_STAR_FROM, starter: S + C.CALLUP_STARTER_FROM, rotation: S - rot, reserve: S - rot - res };
+        const pop = (n && n.population) || 0;
+        const [, rot, res] = C.CALLUP_BANDS_BY_POP.find(b => pop < b[0]) || C.CALLUP_BANDS_BY_POP[C.CALLUP_BANDS_BY_POP.length - 1];
+        return { skill: S, star: S + C.CALLUP_STAR_FROM, starter: S + C.CALLUP_STARTER_FROM, rotation: S - rot, reserve: S - res };
     },
     _naturalRole(ability, B) {
         return ability >= B.star ? 'star' : ability >= B.starter ? 'starter' : ability >= B.rotation ? 'rotation' : ability >= B.reserve ? 'reserve' : null;
@@ -205,7 +203,7 @@ Object.assign(Internationals, {
         });
         members.filter(m => m.p.position !== 'GK').forEach(m => {
             if (Rng.next() >= (C.CALLUP_PLAY[m.e.role] || 0)) return;
-            appear.push({ p: m.p, full: m.e.role === 'star' || m.e.role === 'starter' || Rng.next() < 0.4, g: 0, a: 0 });
+            appear.push({ p: m.p, full: Rng.next() < (C.CALLUP_START[m.e.role] ?? 0.4), g: 0, a: 0 });
         });
         // the whole squad is with its national team this week, playing or not: not available to his club (the European qualifiers
         // in weeks 1-2 run while the summer tournaments finish)

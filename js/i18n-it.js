@@ -149,6 +149,7 @@ I18n.register('it', {
     // --- agency: renewals ---
     'ag.renew.cooldown': 'Il {club} Le ha già risposto su un nuovo contratto questa settimana — aspetti la prossima prima di tornare sull\'argomento.',
     'ag.renew.open': 'Il {club} è aperto al dialogo — proposta nella Sua casella di posta.',
+    'ag.renew.noPlans': 'Il {club} non intende rinnovare il contratto di {name}.',
     'ag.renew.movingAway': '{name} ha già concordato una partenza — il rinnovo non è più in discussione.',
     'ag.renew.alreadyDone': 'Il contratto di {name} è già stato rinegoziato questa stagione — potrà riparlarne la prossima.',
     'ag.renew.done': 'Rinnovato: €{wage}/sett come {role} fino alla fine di {until}.',
@@ -481,6 +482,10 @@ I18n.register('it', {
     'sim.clubGiveUpSubj': 'Il {club} chiude le trattative con {name}',
     'sim.clubGiveUpBody': 'Dopo vari rifiuti, il {club} ha deciso di non inseguire più un nuovo contratto per {name}. Se non cambia nulla, arriverà a scadenza e partirà a parametro zero.',
     'sim.clubGiveUpEvent': 'Il {club} ha rinunciato a rinnovare con {name}.',
+    'sim.clubLetRunSubj': 'Il {club} lascerà scadere il contratto di {name}',
+    'sim.clubLetRunBody': 'Il {club} ha deciso di non offrire un nuovo contratto a {name}. Se non cambia nulla, a fine stagione partirà a parametro zero.',
+    'sim.clubLetRunEvent': 'Il {club} lascerà scadere il contratto di {name}.',
+    'sim.clubRenewHoldBody': '{name} è nell\'ultimo anno di contratto. Il {club} rinnoverebbe, ma non oltre €{wage}/sett. Apra il rinnovo nella casella di posta per negoziare, oppure rifiuti.',
     'sim.freeAgentSubj': '{name} è svincolato',
     'sim.freeAgentBody': 'Il contratto di {name} con il {club} è scaduto — ora è svincolato. Qualsiasi club può ingaggiarlo senza cifre, ma è destabilizzato (il morale è calato). I club interessati dovrebbero presentare offerte contrattuali a breve.',
     'sim.freeAgentLog': '{name} è ora svincolato.',

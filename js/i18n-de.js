@@ -132,6 +132,7 @@ I18n.register('de', {
     // --- Agentur: Verlängerungen ---
     'ag.renew.cooldown': '{club} hat Ihnen diese Woche bereits zu einem neuen Vertrag geantwortet. Warten Sie bis nächste Woche, bevor Sie es erneut ansprechen.',
     'ag.renew.open': '{club} ist gesprächsbereit; Vorschlag in Ihrem Postfach.',
+    'ag.renew.noPlans': '{club} plant nicht, den Vertrag von {name} zu verlängern.',
     'ag.renew.movingAway': '{name} hat bereits einem Wechsel zugestimmt; eine Verlängerung ist vom Tisch.',
     'ag.renew.alreadyDone': 'Der Vertrag von {name} wurde diese Saison bereits neu verhandelt. Sie können nächste Saison wieder neu verhandeln.',
     'ag.renew.done': 'Verlängert: €{wage}/Wo. als {role} bis Ende {until}.',
@@ -464,6 +465,10 @@ I18n.register('de', {
     'sim.clubGiveUpSubj': '{club} beendet die Gespräche mit {name}',
     'sim.clubGiveUpBody': 'Nach mehreren Absagen hat {club} beschlossen, keinen neuen Vertrag für {name} mehr anzustreben. Ändert sich nichts, läuft sein Vertrag aus und er geht ablösefrei.',
     'sim.clubGiveUpEvent': '{club} hat die Verlängerung mit {name} aufgegeben.',
+    'sim.clubLetRunSubj': '{club} lässt den Vertrag von {name} auslaufen',
+    'sim.clubLetRunBody': '{club} hat entschieden, {name} keinen neuen Vertrag anzubieten. Wenn sich nichts ändert, geht er am Saisonende ablösefrei.',
+    'sim.clubLetRunEvent': '{club} lässt den Vertrag von {name} auslaufen.',
+    'sim.clubRenewHoldBody': '{name} ist im letzten Vertragsjahr. {club} würde verlängern, aber nicht über €{wage}/Wo. hinaus. Öffnen Sie die Verlängerung im Posteingang, um zu verhandeln, oder lehnen Sie ab.',
     'sim.freeAgentSubj': '{name} ist vereinslos',
     'sim.freeAgentBody': 'Der Vertrag von {name} bei {club} ist ausgelaufen, und er ist jetzt vereinslos. Jeder Klub kann ihn ablösefrei verpflichten, aber er ist verunsichert (die Moral ist gesunken). Interessierte Klubs sollten bald Vertragsangebote vorlegen.',
     'sim.freeAgentLog': '{name} ist jetzt vereinslos.',

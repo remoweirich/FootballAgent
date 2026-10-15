@@ -313,6 +313,7 @@ const ClientDetail = {
                 <div class="frow"><span class="frow__k">${I18n.t('cd.truePotential')} <span class="muted">${I18n.t('cd.abilityCap')}</span></span><span class="frow__v" style="color:var(--state-good)">${p.potential}</span></div>
                 <div class="frow"><span class="frow__k">${I18n.t('cd.currentAbility')}</span><span class="frow__v">${p.ability}</span></div>
                 <div class="frow"><span class="frow__k">${I18n.t('cd.roomToGrow')}</span><span class="frow__v" style="color:var(--accent)">+${Math.max(0, p.potential - p.ability)}</span></div>
+                <div class="frow"><span class="frow__k">${I18n.t('cd.injuryProne')} <span class="muted">${I18n.t('cd.injuryProneRange')}</span></span><span class="frow__v" style="color:${injuryProneness(p) > 0 ? 'var(--danger)' : injuryProneness(p) < 0 ? 'var(--state-good)' : 'var(--text)'}">${injuryProneness(p) > 0 ? '+' : ''}${injuryProneness(p)}</span></div>
             </div>` : '';
         return `<h3 style="margin-top:0">${I18n.t('cd.scoutingReport')}</h3>
             ${insights}
@@ -669,51 +670,60 @@ const ClientDetail = {
         const rows = [];
         years.forEach(y => { seasonStints(p, y).forEach(st => rows.push({ y, st })); });
         rows.sort((a, b) => b.y - a.y || (b.st.order || 0) - (a.st.order || 0));
+        // A real table: fixed columns (season · club · apps · goals or clean sheets · assists · cards ·
+        // rating), the header once, every row exactly two lines (club / division, both cut with "…"
+        // rather than wrapping), digits right-aligned so seasons compare at a glance.
+        const num = v => `<span class="ht-n">${v || 0}</span>`;
+        const statCells = o => num(o.apps) + num(gk ? o.cs : o.goals) + num(o.assists)
+            + `<span class="ht-n ht-y">${o.yellow || 0}</span><span class="ht-n ht-r">${o.red || 0}</span>`
+            + `<span class="ht-n ht-avg">${o.apps ? UI.ratingText(o.avg) : '<span class="muted">—</span>'}</span>`;
+        const head = `<div class="ht-row ht-head"><span>${I18n.t('cd.col.season')}</span><span>${I18n.t('nat.club')}</span><span class="ht-n">${I18n.t('common.appsShort')}</span><span class="ht-n">${gk ? I18n.t('common.csShort') : I18n.t('common.goalsShort')}</span><span class="ht-n">${I18n.t('common.assistsShort')}</span><span class="ht-n"><span class="card-chip card-chip--yellow"></span></span><span class="ht-n"><span class="card-chip card-chip--red"></span></span><span class="ht-n">${I18n.t('cd.col.avg')}</span></div>`;
+        const moved = (y, type) => (p.movements || []).some(m => m.year === y && m.type === type);
+        let lastY = null;
         const seasonBlocks = rows.map(({ y, st }) => {
             const rowKey = `${y}:${st.clubId}${st.loan ? '#L' : ''}`;
             const open = ctx.expanded[rowKey];
-            // trophies carry a clubId, so a title is only shown on the stint that
-            // actually earned it, not just whichever stint happens to end the season
+            // trophies carry a clubId, so a title is only shown on the stint that earned it
             const troph = (p.trophies || []).filter(tr => tr.year === y && tr.clubId === st.clubId);
-            const t = st.totals;
-            const cards = `<span class="card-chip card-chip--yellow"></span>${t.yellow} <span class="card-chip card-chip--red"></span>${t.red}`;
-            const totLine = `${t.apps} ${I18n.t('common.appsShort')} · ${gOrCs(t)} · ${t.assists} ${I18n.t('common.assistsShort')} · ${cards} · ${UI.ratingText(t.avg)}`;
-            // the division shown must be where the club played THAT season, not its current one:
-            // derive it from the league competition recorded in this stint (a club plays a single
-            // division per season, so there's exactly one league comp among a stint's comps)
+            // the division shown is where the club played THAT season (its league comp in this stint)
             const leagueCid = Object.keys(st.comps).find(cid => _isLeagueComp(cid));
             const divLabel = leagueCid ? compName(leagueCid) : '';
-            // club name stands alone on its own line; the league moves down next to the season
-            const nameLabel = this.clubLink(st.clubId, UI.clubLabel(st.clubId, st.loan, st.youth));
-            const seasonLine = `${GameState.seasonLabelFor(y)}${divLabel ? ' · ' + divLabel : ''}`;
+            const last = !rows.some(r => r.y === y && (r.st.order || 0) > (st.order || 0));   // the stint that ends his season
+            const marks = (troph.length ? '<span class="hist-sym">🏆</span>' : '')
+                + (last && moved(y, 'promo') ? '<i class="ti ti-arrow-up-right ht-up"></i>' : '')
+                + (last && moved(y, 'releg') ? '<i class="ti ti-arrow-down-right ht-down"></i>' : '')
+                + (st.loan ? '<i class="ti ti-arrows-exchange ht-loan"></i>' : '');
+            const club = this.clubLink(st.clubId, UI.esc(UI.clubName(st.clubId)));
+            const sub = [divLabel, st.loan ? I18n.t('cd.col.loan') : ''].filter(Boolean).join(' · ');
+            const seasonCell = y !== lastY ? GameState.seasonLabelFor(y) : '';
+            lastY = y;
             let inner = '';
             if (open) {
-                const comps = `<div class="stint-comps">${Object.entries(st.comps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${c.apps} ${I18n.t('common.appsShort')} · ${gk ? (c.cs || 0) + ' ' + I18n.t('common.csShort') : c.goals + ' ' + I18n.t('common.goalsShort')} · ${c.assists} ${I18n.t('common.assistsShort')}</span></div>`).join('')}</div>`;
+                const comps = Object.entries(st.comps).map(([cid, c]) => {
+                    const cc = Object.assign({ yellow: 0, red: 0, avg: c.apps ? (c.ratingSum || 0) / c.apps : 0 }, c);
+                    return `<div class="ht-row ht-comp"><span></span><span class="ht-club"><span class="ht-line">${compName(cid)}</span></span>${statCells(cc)}</div>`;
+                }).join('');
                 const trophyMark = tr => (typeof europeTrophyIcon === 'function' && europeTrophyIcon(tr.compId)) || '<span class="hist-sym">🏆</span>';
-                inner = '<div class="season-body">' + comps + (troph.length ? `<div class="comp-row" style="color:var(--gold)">${troph.map(tr => (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(tr.compId, `${trophyMark(tr)} ${compName(tr.compId)}`)).join(' · ')}</div>` : '') + '</div>';
+                inner = '<div class="ht-body">' + comps + (troph.length ? `<div class="ht-trophies">${troph.map(tr => (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(tr.compId, `${trophyMark(tr)} ${compName(tr.compId)}`)).join(' · ')}</div>` : '') + '</div>';
             }
-            return `<div class="season-row ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','${rowKey}')">
-                <div class="season-top"><div><span class="season-name">${nameLabel}</span><div class="season-club">${seasonLine} ${troph.length ? '<span class="hist-sym">🏆</span>' : ''}</div></div><span class="season-stat">${totLine}<br><i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>${inner}</div>`;
+            return `<div class="ht-stint ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','${rowKey}')">
+                <div class="ht-row"><span class="ht-season">${seasonCell}</span><span class="ht-club"><span class="ht-line ht-name">${club}${marks ? ' ' + marks : ''}</span><span class="ht-line ht-sub">${sub || '&nbsp;'}</span></span>${statCells(st.totals)}</div>${inner}</div>`;
         }).join('');
 
         const ct = careerTotal(p), careerOpen = ctx.careerOpen, mode = ctx.careerMode;
         let careerInner = '';
         if (careerOpen) {
-            const toggle = `<div class="chip-row" style="margin-bottom:var(--space-3)"><button class="htog ${mode === 'club' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','club')">${I18n.t('cd.byClub')}</button><button class="htog ${mode === 'comp' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','comp')">${I18n.t('cd.byComp')}</button></div>`;
-            let rows;
-            if (mode === 'club') {
-                rows = careerByClub(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m =>
-                    `<div class="comp-row"><span>${this.clubLink(m.clubId, UI.clubLabel(m.clubId, m.loanEver, m.youth))}</span><span>${m.agg.apps} ${I18n.t('common.appsShort')} · ${gOrCs(m.agg)} · ${m.agg.assists} ${I18n.t('common.assistsShort')}</span></div>`).join('');
-            } else {
-                rows = careerByComp(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m =>
-                    `<div class="comp-row"><span>${compName(m.compId)}${m.youth ? ` <span class="muted">${I18n.t('cd.youthMuted')}</span>` : ''}</span><span>${m.agg.apps} ${I18n.t('common.appsShort')} · ${gOrCs(m.agg)} · ${m.agg.assists} ${I18n.t('common.assistsShort')}</span></div>`).join('');
-            }
-            careerInner = toggle + rows;
+            const toggle = `<div class="chip-row" style="margin:var(--space-2) 0 var(--space-2)"><button class="htog ${mode === 'club' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','club')">${I18n.t('cd.byClub')}</button><button class="htog ${mode === 'comp' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','comp')">${I18n.t('cd.byComp')}</button></div>`;
+            const line = (label, agg) => `<div class="ht-row ht-comp"><span></span><span class="ht-club"><span class="ht-line">${label}</span></span>${statCells(agg)}</div>`;
+            const list = mode === 'club'
+                ? careerByClub(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => line(this.clubLink(m.clubId, UI.esc(UI.clubName(m.clubId))) + (m.loanEver ? ' <i class="ti ti-arrows-exchange ht-loan"></i>' : ''), m.agg))
+                : careerByComp(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => line(compName(m.compId) + (m.youth ? ` <span class="muted">${I18n.t('cd.youthMuted')}</span>` : ''), m.agg));
+            careerInner = toggle + list.join('');
         }
-        const careerBlock = `<div class="season-row ${careerOpen ? 'is-open' : ''}" onclick="ClientDetail.toggleCareer('${p.id}')">
-            <div class="season-top"><span class="season-name">${I18n.t('cd.careerTotal')} <span class="muted">${I18n.t('cd.senior')}</span></span><span class="season-stat">${ct.apps} ${I18n.t('common.appsShort')} · ${gOrCs(ct)} · ${ct.assists} ${I18n.t('common.assistsShort')}<br><i class="ti ${careerOpen ? 'ti-chevron-up' : 'ti-chevron-down'}"></i></span></div>
-            ${careerOpen ? `<div class="season-body">${careerInner}</div>` : ''}</div>`;
-        return honours + `<div class="fcard hist-list">${seasonBlocks}${careerBlock}</div><p class="hint">${I18n.t('cd.youthNote')}</p>`;
+        const careerBlock = `<div class="ht-stint ht-total ${careerOpen ? 'is-open' : ''}" onclick="ClientDetail.toggleCareer('${p.id}')">
+            <div class="ht-row"><span class="ht-club" style="grid-column:1 / span 2"><span class="ht-line ht-name">${I18n.t('cd.careerTotal')} <i class="ti ${careerOpen ? 'ti-chevron-up' : 'ti-chevron-down'}" style="font-size:12px"></i></span><span class="ht-line ht-sub">${I18n.t('cd.senior')}</span></span>${statCells(ct)}</div>
+            ${careerOpen ? `<div class="ht-body" onclick="event.stopPropagation()">${careerInner}</div>` : ''}</div>`;
+        return honours + `<div class="fcard hist-list hist-table">${head}${seasonBlocks}${careerBlock}</div><p class="hint">${I18n.t('cd.histTapHint')} ${I18n.t('cd.youthNote')}</p>`;
     },
     clubLink(clubId, html) {
         if (!Clubs.getClubById(clubId)) return html;

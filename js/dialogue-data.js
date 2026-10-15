@@ -2001,6 +2001,190 @@ const DIALOGUE_DATA = {
    "choice": "decline",
    "personality": "any",
    "text": "Right. Busy schedule, I get it. ...I get it."
+  },
+  {
+   "id": "M046",
+   "kind": "injury",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "{weeks} weeks on the sidelines. I just lie here staring at the ceiling, {agent}."
+  },
+  {
+   "id": "M047",
+   "kind": "injury",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "The doctor said {weeks} weeks. I heard the number and stopped listening."
+  },
+  {
+   "id": "M048",
+   "kind": "injury",
+   "beat": "open",
+   "choice": "",
+   "personality": "humble",
+   "text": "{weeks} weeks out. Sorry, {agent}. I know the timing is terrible."
+  },
+  {
+   "id": "M049",
+   "kind": "injuryagain",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "Not again, {agent}. Another {weeks} weeks. I'm starting to think my body hates me."
+  },
+  {
+   "id": "M050",
+   "kind": "injuryagain",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "Why always me? {weeks} more weeks out. I really can't take this anymore."
+  },
+  {
+   "id": "M051",
+   "kind": "injuryagain",
+   "beat": "open",
+   "choice": "",
+   "personality": "hothead",
+   "text": "AGAIN?! {weeks} weeks! I swear, I can't go through another one of these."
+  },
+  {
+   "id": "M052",
+   "kind": "injuryagain",
+   "beat": "open",
+   "choice": "",
+   "personality": "professional",
+   "text": "Another long one. {weeks} weeks. I'll do the rehab like always, but I'm tired of starting over."
+  },
+  {
+   "id": "M053",
+   "kind": "intlcallup",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "I'm in the {nation} squad, {agent}! My phone hasn't stopped buzzing. My mum cried."
+  },
+  {
+   "id": "M054",
+   "kind": "intlcallup",
+   "beat": "open",
+   "choice": "",
+   "personality": "humble",
+   "text": "They called me up for {nation}. Me! I read the list three times to be sure."
+  },
+  {
+   "id": "M055",
+   "kind": "intlcallup",
+   "beat": "open",
+   "choice": "",
+   "personality": "showman",
+   "text": "National team, {agent}! {nation} finally noticed. About time, if you ask me."
+  },
+  {
+   "id": "M056",
+   "kind": "intldebut",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "I played for {nation}, {agent}! The anthem, the shirt, all of it. Goosebumps the whole match."
+  },
+  {
+   "id": "M057",
+   "kind": "intldebut",
+   "beat": "open",
+   "choice": "",
+   "personality": "loyal",
+   "text": "My first cap for {nation}. I thought about everyone who got me here. You're on that list."
+  },
+  {
+   "id": "M058",
+   "kind": "intlfirstgoal",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "I scored for {nation}! I don't think I've stopped smiling since the final whistle."
+  },
+  {
+   "id": "M059",
+   "kind": "intlfirstgoal",
+   "beat": "open",
+   "choice": "",
+   "personality": "showman",
+   "text": "First goal for {nation}. They'll be singing my name back home tonight."
+  },
+  {
+   "id": "M060",
+   "kind": "firsttrophy",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "My first trophy, {agent}! {trophy}! I'm holding the medal right now. It's heavier than it looks."
+  },
+  {
+   "id": "M061",
+   "kind": "firsttrophy",
+   "beat": "open",
+   "choice": "",
+   "personality": "humble",
+   "text": "I've actually won something. {trophy}. I keep checking the medal to make sure it's real."
+  },
+  {
+   "id": "M062",
+   "kind": "firsttrophy",
+   "beat": "open",
+   "choice": "",
+   "personality": "showman",
+   "text": "{trophy} winner! The first of many, {agent}. Start clearing some shelf space."
+  },
+  {
+   "id": "M063",
+   "kind": "firsttrophygrp",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "We won it, {agent}! {trophy}! {others} and I are just so ecstatic. My first ever trophy!"
+  },
+  {
+   "id": "M064",
+   "kind": "firsttrophygrp",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "{others} and I have been dancing in the dressing room for an hour. {trophy}! My very first!"
+  },
+  {
+   "id": "M065",
+   "kind": "intltrophy",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "We won {trophy} with {nation}, {agent}! The whole country is out in the streets!"
+  },
+  {
+   "id": "M066",
+   "kind": "intltrophy",
+   "beat": "open",
+   "choice": "",
+   "personality": "loyal",
+   "text": "{trophy} with {nation}. For my family, for everyone back home. And for you."
+  },
+  {
+   "id": "M067",
+   "kind": "intltrophygrp",
+   "beat": "open",
+   "choice": "",
+   "personality": "any",
+   "text": "{trophy}! {others} and I are just so ecstatic. {nation} will never forget this team."
+  },
+  {
+   "id": "M068",
+   "kind": "intltrophygrp",
+   "beat": "open",
+   "choice": "",
+   "personality": "showman",
+   "text": "{nation} won {trophy}, and {others} and I were right in the middle of it. Tonight we party."
   }
  ],
  "choices": [

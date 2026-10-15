@@ -123,7 +123,22 @@ Router.register('mail', {
     }
 });
 // which player a message concerns (offers carry it directly; some news mail names him explicitly)
-Nego.playerIdOf = function (m) { return (m && ((m.offer && m.offer.playerId) || m.playerId)) || null; };
+// Mail sent before every player message carried `playerId` falls back to the (longest) name of one
+// of your current or former clients in its subject, remembered on the mail once found.
+Nego.playerIdOf = function (m) {
+    if (!m) return null;
+    const direct = (m.offer && m.offer.playerId) || m.playerId;
+    if (direct) return direct;
+    if (m._pidChecked || !m.subject || m.kind === 'attend') return null;
+    m._pidChecked = true;
+    let best = null;
+    GameState.players.forEach(p => {
+        if (!(p.agentId === 'me' || p.everClient || p.archived) || !p.name) return;
+        if (m.subject.indexOf(p.name) >= 0 && (!best || p.name.length > best.name.length)) best = p;
+    });
+    if (best) m.playerId = best.id;
+    return best ? best.id : null;
+};
 // A tappable player header on top of any message about a player, so you can always jump to his page.
 Nego.prependPlayerLink = function (el, m) {
     const pid = this.playerIdOf(m), p = pid && GameState.getPlayer(pid);
@@ -175,7 +190,7 @@ Nego.transfer = function (el, m) {
     if (!o.agreed) this.agree(m, c);   // the club's opening offer is the first thing it has agreed to
     const wageMax = Math.max(o.proposedWage * 3, p.wage * 3, 3000);
     const cut = w => Math.round(w * p.wageCommission / 100);
-    const fromLeague = Agency.isFreeAgent(p) || !from ? I18n.t('nego.freeAgentNoClub') : `${UI.esc(from.name)}, ${from.divisionName}`;
+    const fromLeague = Agency.isFreeAgent(p) || !from ? I18n.t('nego.freeAgentNoClub') : this.clubLine(from);   // with its reputation, like the bidder
     const feeLine = Agency.isFreeAgent(p) ? I18n.t('nego.freeTransfer') : I18n.t('nego.agreedFee', { fee: UI.euro(o.transferFee) });
     const others = GameState.inbox.filter(x => x.kind === 'transfer' && x.offer.playerId === p.id && x.id !== m.id);
 
@@ -183,7 +198,7 @@ Nego.transfer = function (el, m) {
         <div style="margin:6px 0 var(--space-3)">${UI.relBadge(to.id)}</div>
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.playersWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
-            <div class="frow"><span class="frow__k">${I18n.t('nego.currentClub')}</span><span class="frow__v">${fromLeague}${this.clubPosLine(o.fromClubId)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.currentClub')}</span><span class="frow__v">${fromLeague}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentRole')}</span><span class="frow__v">${Agency.isFreeAgent(p) ? '\u2014' : roleName(p)}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.biddingClub')}</span><span class="frow__v">${this.clubLine(to)}</span></div>
         </div>
@@ -384,7 +399,7 @@ Nego.renewal = function (el, m) {
         <div style="margin:6px 0 var(--space-3)">${UI.relBadge(club.id)}</div>
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
-            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${UI.esc(club.name)}, ${club.divisionName}${this.clubPosLine(club.id)}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${this.clubLine(club)}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.roleUntil')}</span><span class="frow__v">${roleName(p)} · ${GameState.seasonLabelFor(p.contractUntilSeason)}</span></div>
         </div>
         <label class="field-label">${I18n.t('nego.wage')} <span id="negoWageVal" class="editable-val">${UI.euro(c.wage)}</span>/wk <span class="muted">${I18n.t('nego.yourCutPct', { cut: `<span id="negoCutVal">${UI.euro(cut(c.wage))}</span>`, pct: p.wageCommission })}</span></label>
@@ -437,7 +452,7 @@ Nego.loan = function (el, m) {
         <div style="margin:6px 0 var(--space-3)">${UI.relBadge(to.id)}</div>
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${this.clubLine(to)}</span></div>
-            <div class="frow"><span class="frow__k">${I18n.t('nego.from')}</span><span class="frow__v">${p.clubId ? (Clubs.getClubById(p.clubId) ? Clubs.getClubById(p.clubId).name : '') : ''}</span></div>
+            <div class="frow"><span class="frow__k">${I18n.t('nego.from')}</span><span class="frow__v">${p.clubId && Clubs.getClubById(p.clubId) ? this.clubLine(Clubs.getClubById(p.clubId)) : ''}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.theyPropose')}</span><span class="frow__v">${roleLabel(o.role || 'starter', p.age, p.position)}</span></div>
         </div>
         <p style="color:var(--text-secondary);font-size:var(--fs-sm)">${I18n.t('nego.loanIntro')}</p>

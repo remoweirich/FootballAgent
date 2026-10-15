@@ -251,6 +251,31 @@ button { font-family: inherit; }
 .stint-comps .comp-row { padding-left: var(--space-5); }
 .hist-sym { font-size: 10px; }
 .hist-link { color: var(--text-bright); text-decoration: none; }
+/* Career table (player card > History): fixed columns, the header once, every row two lines tall */
+.hist-table { padding: var(--space-2) var(--space-3); }
+.ht-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 26px 22px 22px 15px 15px 32px; column-gap: 4px; align-items: center; font-size: var(--fs-sm); color: var(--text-secondary); }
+.ht-head { font-size: var(--fs-xs); color: var(--text-faint); padding: 4px 0 6px; border-bottom: .5px solid var(--line-strong); }
+.ht-stint { padding: 7px 0; border-bottom: .5px solid var(--line-faint); cursor: pointer; }
+.ht-stint:last-child { border-bottom: none; }
+.ht-stint.is-open { background: var(--surface); border-radius: var(--radius-sm); }
+.ht-season { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ht-club { display: flex; flex-direction: column; min-width: 0; }
+.ht-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ht-name { font-size: var(--fs-md); font-weight: var(--weight-semibold); color: var(--text-bright); }
+.ht-sub { font-size: var(--fs-xs); color: var(--text-faint); margin-top: 1px; }
+.ht-n { text-align: right; font-variant-numeric: tabular-nums; }
+.ht-head .ht-n { display: flex; justify-content: flex-end; align-items: center; }
+.ht-y, .ht-r { color: var(--text-faint); }
+.ht-avg { font-size: var(--fs-xs); }
+.ht-up { color: var(--state-good); font-size: 12px; }
+.ht-down { color: var(--danger); font-size: 12px; }
+.ht-loan { color: var(--text-faint); font-size: 12px; }
+.ht-body { margin-top: 6px; padding: 2px 0; border-top: 1px dashed var(--line-strong); }
+.ht-comp { padding: 5px 0; font-size: var(--fs-xs); }
+.ht-comp .ht-line { color: var(--text-muted); }
+.ht-trophies { font-size: var(--fs-xs); color: var(--gold); padding: 5px 0 2px 42px; }
+.ht-total { border-top: 1px solid var(--line-strong); margin-top: 2px; }
+.ht-total > .ht-row { color: var(--text); font-weight: var(--weight-semibold); }
 /* small rectangular card indicators (mirroring a real football card's proportions),
    replacing the old square-emoji stand-ins */
 .card-chip { display: inline-block; width: 7px; height: 10px; border-radius: 1.5px; vertical-align: -1px; margin-right: 1px; }

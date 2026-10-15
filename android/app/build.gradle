@@ -25,8 +25,8 @@ android {
         applicationId "ch.jens.footballagent"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 32
-        versionName "1.0.30"
+        versionCode 33
+        versionName "1.0.31"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders = [admobAppId: LIVE_ADMOB_APP_ID]
         aaptOptions {

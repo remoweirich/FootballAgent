@@ -259,7 +259,8 @@ const ClientRecords = {
             }));
             return byClub;
         };
-        const num = v => UI.money(v), euro = v => UI.euro(v), yrs = v => v + I18n.t('common.yearsShort');
+        // counts are plain numbers: never through UI.money, which converts currency and rounds to tens
+        const num = v => Math.round(v).toLocaleString('en-US'), euro = v => UI.euro(v), yrs = v => v + I18n.t('common.yearsShort');
         return [
             mk(I18n.t('records.mostGoalsSeason'), seasonMax('goals'), num),
             mk(I18n.t('records.mostAssistsSeason'), seasonMax('assists'), num),
@@ -269,7 +270,8 @@ const ClientRecords = {
             mk(I18n.t('records.mostAssists'), careerKey('assists'), num),
             mk(I18n.t('records.mostApps'), careerKey('apps'), num),
             mk(I18n.t('records.mostCS'), careerKey('cs'), num),
-            mk(I18n.t('records.highestAvg'), p => { const t = careerTotal(p); return t.apps >= 20 ? { val: Math.round(t.avg * 100) / 100, extra: t.apps + ' ' + I18n.t('common.appsShort') } : null; }, v => v.toFixed(2)),
+            // the best single season (at least 15 senior games), not the career average
+            mk(I18n.t('records.highestAvg'), p => { let v = 0, y = null, n = 0; Object.keys(p.stats || {}).forEach(yy => { const t = seasonTotals(p, +yy); if (t.apps >= 15 && t.avg > v) { v = t.avg; y = +yy; n = t.apps; } }); return v > 0 ? { val: Math.round(v * 100) / 100, extra: GameState.seasonLabelFor(y) + ' · ' + n + ' ' + I18n.t('common.appsShort') } : null; }, v => v.toFixed(2)),
             mk(I18n.t('records.mostYellow'), careerKey('yellow'), num),
             mk(I18n.t('records.mostRed'), careerKey('red'), num),
             mk(I18n.t('records.mostCaps'), p => { const t = typeof NationScreen !== 'undefined' ? NationScreen.intlTotal(p) : null; return t && t.apps > 0 ? { val: t.apps } : null; }, num),

@@ -288,13 +288,25 @@ Object.assign(INTL_CONFIG, {
     CALLUP_STAR_FROM: 3,                             // star: skill + 3 and above
     CALLUP_STARTER_FROM: -3,                         // starter: skill - 3 to skill + 2
     CALLUP_ROTATION_TOP: -4,                         // rotation: skill - 4 down to the population floor
-    // the population floor (log scale): t = clamp(log10(population in millions) / 2, 0, 1), so 0 at
-    // 1m and below, 1 at 100m and above. Rotation reaches down to skill - round(9 - 4t); the reserve
-    // band is the next round(7 - 3t) points below it.
-    CALLUP_ROT_DEPTH: [9, 5], CALLUP_RES_DEPTH: [7, 4], CALLUP_POP_LOG: [1, 100],
+    // How far down rotation and reserve reach, by population (millions): [up to, rotation floor,
+    // reserve floor], both as points below the skill level. A small country digs deeper into its
+    // pool than a big one. Anything below the reserve floor is not called up.
+    CALLUP_BANDS_BY_POP: [
+        [1.8, 7, 12],        // under 1.8m:    rotation S-7..S-4, reserve S-12..S-8
+        [2.1, 7, 10],        // 1.8m - 2.1m:   rotation S-7..S-4, reserve S-10..S-8
+        [5.6, 6, 9],         // 2.1m - 5.6m:   rotation S-6..S-4, reserve S-9..S-7
+        [10, 5, 8],          // 5.6m - 10m:    rotation S-5..S-4, reserve S-8..S-6
+        [18, 5, 8],          // 10m - 18m
+        [46, 5, 8],          // 18m - 46m
+        [56, 5, 7],          // 46m - 56m:     rotation S-5..S-4, reserve S-7..S-6
+        [Infinity, 5, 7],    // 56m and up
+    ],
     // share of the national team's matches each role plays in
     CALLUP_PLAY: { star: 1.0, starter: 0.9, rotation: 0.5, reserve: 0.1 },
     CALLUP_PLAY_GK: { star: 1.0, starter: 0.9, rotation: 0.1, reserve: 0.001 },   // first choice, back-up, third keeper
+    // of the games he plays, how often he STARTS (the rest are sub appearances). A reserve only ever
+    // starts in an injury crisis; a third keeper only plays at all in one, so he always starts.
+    CALLUP_START: { star: 1, starter: 1, rotation: 0.4, reserve: 0.005 },
     // squad limits (they only bind clients: the rest of a squad is virtual)
     CALLUP_SQUAD_MAX: 23,
     CALLUP_POS_MAX: { GK: 3, RB: 3, CB: 6, LB: 3, CDM: 5, CM: 5, CAM: 5, RW: 3, ST: 4, LW: 3 },

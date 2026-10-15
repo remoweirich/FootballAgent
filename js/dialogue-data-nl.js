@@ -255,6 +255,29 @@ const DIALOGUE_NL = {
         M043: "Echt? Ik… bedankt. Het zou niet hetzelfde zijn zonder jou.",
         M044: "Kun je niet? Jammer. Maar dat is heel royaal, bedankt.",
         M045: "Juist. Volle agenda, ik snap het. … Ik snap het.",
+        M046: "{weeks} weken aan de kant. Ik lig hier maar naar het plafond te staren, {agent}.",
+        M047: "De dokter zei {weeks} weken. Ik hoorde het getal en luisterde niet meer.",
+        M048: "{weeks} weken eruit. Sorry, {agent}. Ik weet dat het slecht uitkomt.",
+        M049: "Niet weer, {agent}. Weer {weeks} weken. Ik begin te denken dat mijn lichaam me haat.",
+        M050: "Waarom altijd ik? Weer {weeks} weken eruit. Ik kan dit echt niet meer hebben.",
+        M051: "ALWEER?! {weeks} weken! Ik zweer het, zoiets kan ik niet nog een keer doormaken.",
+        M052: "Weer een lange. {weeks} weken. Ik doe de revalidatie zoals altijd, maar ik ben het opnieuw beginnen zat.",
+        M053: "Ik zit in de selectie van {nation}, {agent}! Mijn telefoon blijft maar trillen. Mijn moeder moest huilen.",
+        M054: "Ze hebben me opgeroepen voor {nation}. Mij! Ik heb de lijst drie keer gelezen om het zeker te weten.",
+        M055: "Het nationale elftal, {agent}! {nation} heeft het eindelijk door. Werd tijd, als je het mij vraagt.",
+        M056: "Ik heb voor {nation} gespeeld, {agent}! Het volkslied, het shirt, alles. Kippenvel de hele wedstrijd.",
+        M057: "Mijn eerste interland voor {nation}. Ik dacht aan iedereen die me hier heeft gebracht. Jij hoort daarbij.",
+        M058: "Ik heb gescoord voor {nation}! Ik geloof dat ik sinds het eindsignaal niet meer ben gestopt met lachen.",
+        M059: "Eerste goal voor {nation}. Thuis zingen ze vanavond mijn naam.",
+        M060: "Mijn eerste prijs, {agent}! {trophy}! Ik heb de medaille nu in mijn hand. Hij is zwaarder dan hij eruitziet.",
+        M061: "Ik heb echt iets gewonnen. {trophy}. Ik blijf naar de medaille kijken om zeker te weten dat hij echt is.",
+        M062: "Winnaar: {trophy}! De eerste van vele, {agent}. Maak alvast wat ruimte op de plank.",
+        M063: "We hebben hem, {agent}! {trophy}! {others} en ik zijn gewoon dolgelukkig. Mijn allereerste prijs!",
+        M064: "{others} en ik dansen al een uur in de kleedkamer. {trophy}! Mijn allereerste!",
+        M065: "We hebben gewonnen met {nation}, {agent}! {trophy}! Het hele land staat op straat!",
+        M066: "{trophy} met {nation}. Voor mijn familie, voor iedereen thuis. En voor jou.",
+        M067: "{trophy}! {others} en ik zijn gewoon dolgelukkig. {nation} vergeet dit team nooit meer.",
+        M068: "{nation} heeft gewonnen: {trophy}. En {others} en ik stonden er middenin. Vanavond is het feest.",
     },
 
     // --- what the AGENT says when you pick a choice (Dialogue.SAY, keyed "scene:choice") ---
@@ -385,6 +408,8 @@ const DIALOGUE_NL = {
     mile: {
         apps: "{n} wedstrijden",
         goals: "{n} goals in mijn carrière",
+        caps: "{n} interlands voor {nation}",
+        intlgoals: "{n} doelpunten voor {nation}",
     },
 
     // --- the cash thank-you gift, filled into {thing} ---

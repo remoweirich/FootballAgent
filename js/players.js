@@ -416,6 +416,22 @@ function effectiveClubId(p) { return p.onLoanAt || p.clubId; }
 // World model: only players the user can ever see or interact with are simulated individually
 // (aging, development, injuries, match stats). Everyone else is a frozen background extra —
 // club results come from the club's own reputation/seasonDelta, not from squad averages.
+// Hidden injury proneness: a normal roll (mean 0, SD 3) kept to -10..+10, rolled the first time it is
+// needed. The weekly injury chance is multiplied by 1 + x²/20 when prone (+5 → 2.25×, +10 → 6×) and
+// divided by the same factor when robust (-5 → 0.44×, -10 → 1/6), so the two sides mirror each other
+// and the risk can never go negative. Shown only through Enhanced Insights (Potential tab).
+function injuryProneness(p) {
+    if (p.injProne == null) {
+        // Box-Muller, written out so a stubbed or zero draw can never loop (gaussN retries on 0)
+        const u = Math.max(1e-9, Rng.next()), v = Rng.next();
+        p.injProne = Math.max(-10, Math.min(10, Math.round(Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) * 3)));
+    }
+    return p.injProne;
+}
+function injuryProneMult(p) {
+    const x = injuryProneness(p), f = 1 + x * x / 20;
+    return x >= 0 ? f : 1 / f;
+}
 function isSimRelevant(p) { return !p.archived && (p.agentId === 'me' || p.everClient === true || p.knownToAgent === true); }
 // Which players are worth SAVING. Only the ones the user can ever see: current/ex clients, scouted
 // prospects, and archived retirees (Client History). The anonymous background squads (~14k players,

@@ -469,6 +469,7 @@ const GameState = {
         // the current version can still lack a lazily-added field (see the corresponding weekly ensure
         // helpers). Both are idempotent and self-guarding.
         this._migrateMoraleFields();
+        this._repairSponsorNames();
         this._restoreClubState(d.clubState);
         // versioned pipeline: infer the starting version, then run each newer migration in order
         let from = d.schemaVersion != null ? d.schemaVersion : (d.worldV >= 2 ? 2 : 1);
@@ -512,6 +513,18 @@ const GameState = {
     // see js/main.js / ui/js/main.js), so this only overlays the mutable fields on top of a
     // fresh static club list. Idempotent: re-running it (e.g. a second load in the same
     // session) just reapplies the same values.
+    // A sponsor name stored with an unfilled token ("{regio} à jour", a typo in the Swiss list):
+    // fill it now, in signed deals and in pending offers. Every load; a no-op once clean.
+    _repairSponsorNames() {
+        if (typeof Upgrades === 'undefined' || !Upgrades._fill) return;
+        const fix = n => (typeof n === 'string' && n.includes('{')) ? Upgrades._fill(n, this.homeCountry || 'Netherlands') : n;
+        (this.players || []).forEach(p => (p.sponsorDeals || []).forEach(d => { d.company = fix(d.company); }));
+        (this.inbox || []).forEach(m => {
+            const o = m && m.offer; if (!o) return;
+            if (o.sponsorName) o.sponsorName = fix(o.sponsorName);
+            (o.options || []).forEach(x => { x.company = fix(x.company); });
+        });
+    },
     _restoreClubState(clubState) {
         if (clubState) {
             Object.entries(clubState).forEach(([id, s]) => {

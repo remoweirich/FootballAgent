@@ -12,13 +12,14 @@ const VEHICLES = [
 ];
 
 // ---- Properties (bought in order) ----
+// rentCut: each property takes this share off the office rent, and they add up (all six: 23%)
 const PROPERTIES = [
-    { id: 'caravan', name: 'Caravan', price: 18000, repLimit: 4, players: 2 },
-    { id: 'apartment', name: 'Apartment', price: 350000, repLimit: 4, players: 3 },
-    { id: 'house', name: 'House', price: 1000000, repLimit: 4, players: 3 },
-    { id: 'penthouse', name: 'Luxury Penthouse', price: 3000000, repLimit: 4, players: 4 },
-    { id: 'mansion', name: 'Mansion', price: 8000000, repLimit: 4, players: 5 },
-    { id: 'skyscraper', name: 'Skyscraper', price: 25000000, repLimit: 5, players: 6 },
+    { id: 'caravan', name: 'Caravan', price: 18000, repLimit: 4, players: 2, rentCut: 0.02 },
+    { id: 'apartment', name: 'Apartment', price: 350000, repLimit: 4, players: 3, rentCut: 0.03 },
+    { id: 'house', name: 'House', price: 1000000, repLimit: 4, players: 3, rentCut: 0.03 },
+    { id: 'penthouse', name: 'Luxury Penthouse', price: 3000000, repLimit: 4, players: 4, rentCut: 0.04 },
+    { id: 'mansion', name: 'Mansion', price: 8000000, repLimit: 4, players: 5, rentCut: 0.05 },
+    { id: 'skyscraper', name: 'Skyscraper', price: 25000000, repLimit: 5, players: 6, rentCut: 0.06 },
 ];
 
 // ---- Offices (sequential levels; repLimit is the TOTAL base limit this office grants) ----
@@ -67,7 +68,7 @@ const SPONSOR_COMPANIES = {
     CH: {
         local: ['Bäckerei Müller', 'Schreinerei Baumann', 'Ristorante Rössli', 'Gasthaus zum Ochsen', 'Praxis Auwies', 'Tante Anna Laden',
             'Doktor Bührer', 'Fahrschule Avdija', 'La Boulangerie Prox', 'Ristorante Amore', 'La Boutique Quotidien', 'Casa Maria', 'Les Menuisiers du Ville'],
-        regional: ['TV {region}', 'Radio {region}', 'La Nouvelle', '{regio} à jour', 'Getränkemarkt Mo', 'Bio-Dschungel', 'Schneider, Schneiter & Leu Anwälte',
+        regional: ['TV {region}', 'Radio {region}', 'La Nouvelle', '{region} à jour', 'Getränkemarkt Mo', 'Bio-Dschungel', 'Schneider, Schneiter & Leu Anwälte',
             'MegaDürüm', 'FalafElDorado', 'Bière Artisane', 'Pane e Acqua', 'MediaMakler', 'Tourismus {region}', 'Folg', 'Rolandi'],
         national: ['Tourismus Schweiz', 'Kohp', 'Mygro', 'LaPoste', 'eSBeBe', 'SwissNet', 'derLöwe.ch', 'primamode.ch', 'Nudel.ch', 'Pepper', 'Krasiqi Consulting'],
         international: ['Purello Tires', 'Carwindow', 'WMB', 'Skybus', 'Monohebel', 'SkyFranz', 'Alliance', 'Mercury-Bans', 'Loco Choco', ],
@@ -161,7 +162,10 @@ const Upgrades = {
     },
     maxScouts() { return this.office().maxScouts; },
     sponsorLevel() { return this.office().sponsor; },
-    weeklyOfficeCost() { return this.office().weekly; },
+    // the share your properties take off the office rent
+    rentCut() { return this.ownedProperties().reduce((s, p) => s + (p.rentCut || 0), 0); },
+    officeRent(o) { return Math.round((o || this.office()).weekly * (1 - this.rentCut())); },
+    weeklyOfficeCost() { return this.officeRent(); },
 
     // ---- purchases ----
     buyVehicle() {
@@ -181,16 +185,17 @@ const Upgrades = {
     upgradeOffice() {
         const o = this.nextOffice(); if (!o) return { ok: false, message: this._t('upg.err.topOffice', null, 'You already run the very best office there is.') };
         // a fit-out costs four weeks of the new running cost up front
-        const fitOut = o.weekly * 4;
+        const fitOut = this.officeRent(o) * 4;
         if (GameState.agency.balance < fitOut) return { ok: false, message: this._t('upg.err.fitOut', { price: UI.money(fitOut) }, "Moving in costs €{price} (4 weeks' rent up front) — you can't cover it yet.") };
         GameState.agency.balance -= fitOut; GameState.addFinance('Upgrades', -fitOut); this.state().officeIndex++;
-        GameState.addLog(this._t('upg.log.movedOffice', { name: this.itemName(o), fitOut: UI.money(fitOut), weekly: UI.money(o.weekly) }, 'Moved to {name} (fit-out €{fitOut}, €{weekly}/wk).'), 'money');
-        return { ok: true, message: this._t('upg.ok.office', { name: this.itemName(o), rep: this.repLimit(), scouts: o.maxScouts, sponsors: SPONSOR_LABEL[o.sponsor], weekly: UI.money(o.weekly) }, 'Welcome to your {name}. Rep limit {rep}, up to {scouts} scout(s), {sponsors} sponsors, +1 client limit. Running cost €{weekly}/wk.') };
+        GameState.addLog(this._t('upg.log.movedOffice', { name: this.itemName(o), fitOut: UI.money(fitOut), weekly: UI.money(this.officeRent(o)) }, 'Moved to {name} (fit-out €{fitOut}, €{weekly}/wk).'), 'money');
+        return { ok: true, message: this._t('upg.ok.office', { name: this.itemName(o), rep: this.repLimit(), scouts: o.maxScouts, sponsors: SPONSOR_LABEL[o.sponsor], weekly: UI.money(this.officeRent(o)) }, 'Welcome to your {name}. Rep limit {rep}, up to {scouts} scout(s), {sponsors} sponsors, +1 client limit. Running cost €{weekly}/wk.') };
     },
 
     // ---- sponsor company picker ----
     // country is the full home-country name (e.g. 'England'); tokens fill from that country's own towns/regions
     _fill(name, country = 'Netherlands') {
+        name = String(name).replace(/\{regio\}/g, '{region}');   // a typo shipped in the Swiss list (saves still carry it)
         if (name.includes('{place}')) {
             let places = [];
             try { if (typeof Clubs !== 'undefined') places = Clubs.getClubsByCountry(country).map(c => c.city); } catch (e) { }
@@ -329,7 +334,12 @@ Object.assign(Upgrades, {
     releaseStaff(id) {
         const st = this.facState(); const key = id === 'physio' ? 'physios' : 'trainers';
         if (st[key] <= 0) return { ok: false, message: this._t('upg.err.noneEmployed', null, 'None employed.') };
+        const limBefore = this.repLimit();
         st[key] -= 1;
+        // a trainer's +1 rep limit leaves with him, and so does the reputation he earned you: otherwise
+        // you could hire one, grow past your cap, release him and keep the extra point
+        const lost = limBefore - this.repLimit(), a = GameState.agency;
+        if (lost > 0 && a && a.reputation > this.repLimit()) a.reputation = Math.max(this.repLimit(), a.reputation - lost);
         GameState.addLog(this._t('upg.log.releasedStaff', { name: this.itemName(this.staffById(id)) }, 'Released a {name}.'), 'info');
         return { ok: true, message: this._t('upg.ok.released', { name: this.itemName(this.staffById(id)) }, '{name} released.') };
     },
