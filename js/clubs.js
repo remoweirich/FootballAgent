@@ -1453,6 +1453,7 @@ const Clubs = {
         // drop any created-country injections from a previous game this session, so we rebuild a clean
         // stock world before the current database's overlay (incl. its created countries) is applied
         if (typeof WorldExt !== 'undefined' && WorldExt.reset) WorldExt.reset();
+        this._compOverlay = null;
 
         // Generate all clubs from league data
         for (const [country, leagueSystem] of Object.entries(LEAGUES_DATA)) {
@@ -1558,16 +1559,24 @@ const Clubs = {
     // BEFORE GameState._restoreClubState (so a save's drifted division/reputation still wins over the
     // db's day-one values). Every field is set to an absolute value, so re-applying the same db is a
     // no-op. `division` moves are swaps validated in the editor; sizes are re-checked at rollover.
+    // a database's competition renames; a name may be one per language, so a language change re-runs this
+    applyCompOverlay() {
+        const ovs = this._compOverlay;
+        if (!ovs || typeof COMPETITIONS === 'undefined') return;
+        Object.entries(ovs).forEach(([cid, ov]) => {
+            const c = COMPETITIONS[cid]; if (!c || !ov) return;
+            const nm = typeof localCompName === 'function' ? localCompName(ov.name) : ov.name;
+            if (nm) c.name = nm;
+            if (ov.short) c.short = typeof localCompName === 'function' ? localCompName(ov.short) : ov.short;
+        });
+    },
     applyDatabase(db) {
         if (!db) return;
         // created countries (Customize Part 2): inject their leagues/clubs/regions/names into the world
         if (db.countries && typeof WorldExt !== 'undefined') Object.values(db.countries).forEach(cc => WorldExt.registerCountry(cc));
         // competition-name overrides (rename a league or cup — featured or created)
-        if (db.competitions && typeof COMPETITIONS !== 'undefined') Object.entries(db.competitions).forEach(([cid, ov]) => {
-            const c = COMPETITIONS[cid]; if (!c || !ov) return;
-            if (ov.name) c.name = ov.name;
-            if (ov.short) c.short = ov.short;
-        });
+        this._compOverlay = db.competitions || null;
+        this.applyCompOverlay();
         if (!db.overrides) return;
         Object.entries(db.overrides).forEach(([id, ov]) => {
             const c = this.getClubById(id); if (!c || !ov) return;

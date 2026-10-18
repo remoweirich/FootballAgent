@@ -102,6 +102,15 @@ function build() {
         fs.writeFileSync(mp, src.replace('DEV_UNLOCK_ALL: false,', 'DEV_UNLOCK_ALL: true,'));
         console.log('DEV_UNLOCK: every shop item unlocked in this build (test build only)');
     }
+    // Google TEST ads for a sideloaded test build: ADS_TEST=1 npm run build:mobile (implied by
+    // DEV_UNLOCK=1). Every ad unit is swapped for Google's public test unit, so tapping ads on your own
+    // phone can never count as invalid traffic against the live AdMob account. Only the dist/ copy changes.
+    if (process.env.ADS_TEST === '1' || process.env.DEV_UNLOCK === '1') {
+        const ap = path.join(OUT, 'js', 'ads.js'), src = fs.readFileSync(ap, 'utf8');
+        if (!/testing: false,/.test(src)) throw new Error('ADS_TEST: AD_CONFIG.testing not found');
+        fs.writeFileSync(ap, src.replace('testing: false,', 'testing: true,'));
+        console.log('ADS_TEST: Google test ads only in this build (test build only)');
+    }
     for (const f of CSS_FILES) copy(path.join(ROOT, 'ui', f), path.join(OUT, f));
     for (const d of VENDOR_DIRS) copyDir(path.join(ROOT, 'ui', 'vendor', d), path.join(OUT, 'vendor', d));
     // static assets (audio, and anything else under ui/assets) — optional; the app runs without them

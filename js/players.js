@@ -438,7 +438,7 @@ function isSimRelevant(p) { return !p.archived && (p.agentId === 'me' || p.everC
 // ~95% of the old save) are NOT saved — they're frozen and regenerable from each club's reputation,
 // so they're rebuilt on load (League.regenerateBackgroundSquads), exactly as a fresh game or the V2
 // migration already does. This is undetectable in play and shrinks the save from ~13 MB to <1 MB.
-function isPersistedPlayer(p) { return p.agentId === 'me' || p.everClient === true || p.knownToAgent === true || p.archived === true; }
+function isPersistedPlayer(p) { return p.agentId === 'me' || p.everClient === true || p.knownToAgent === true || p.archived === true || p.insightAd === true; }
 function isU21Loan(p) { return typeof p.onLoanAt === 'string' && p.onLoanAt.indexOf('u21') === 0; }
 function u21ParentId(idOrPlayer) { const v = typeof idOrPlayer === 'string' ? idOrPlayer : idOrPlayer.onLoanAt; return (v && v.indexOf('u21') === 0) ? (v.split(':')[1] || null) : null; }
 

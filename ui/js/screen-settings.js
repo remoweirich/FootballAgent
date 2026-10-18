@@ -125,6 +125,7 @@ const SettingsScreen = {
                 <div class="set-group">
                     ${row(ic('ti-star'), I18n.t('settings.rateApp'), '', 'SettingsScreen.rateApp()')}
                     ${row(ic('ti-mail'), I18n.t('settings.feedback'), '', 'SettingsScreen.feedback()')}
+                    ${row(ic('ti-brand-reddit'), I18n.t('settings.reddit'), '', 'SettingsScreen.reddit()')}
                     ${row(MUSIC, I18n.t('settings.credits'), '', "SettingsScreen.credits()")}
                     ${row(ic('ti-license'), I18n.t('settings.copyright'), '', "SettingsScreen.legal('copyright')")}
                     ${row(ic('ti-lock'), I18n.t('settings.privacy'), '', "SettingsScreen.legal('privacy')")}
@@ -248,6 +249,7 @@ const SettingsScreen = {
     // Rate: the Play listing (the rating widget lives there). Feedback: a pre-addressed, pre-subjected mail.
     rateApp() { UI.openExternal(APP_LINKS.playStore); },
     feedback() { UI.openExternal(APP_LINKS.feedbackMail); },
+    reddit() { UI.openExternal(APP_LINKS.reddit); },
     legal(which) {
         // pre-line: the copyright text carries an "Open source" sub-block on its own lines
         const body = which === 'privacy'

@@ -11,7 +11,7 @@ const INTL_HISTORY = {
     WC: [[1930, 'uru', 'arg'], [1934, 'ita', 'cze'], [1938, 'ita', 'hun'], [1950, 'uru', 'bra'], [1954, 'ger', 'hun'], [1958, 'bra', 'swe'],
         [1962, 'bra', 'cze'], [1966, 'eng', 'ger'], [1970, 'bra', 'ita'], [1974, 'ger', 'ned'], [1978, 'arg', 'ned'], [1982, 'ita', 'ger'],
         [1986, 'arg', 'ger'], [1990, 'ger', 'arg'], [1994, 'bra', 'ita'], [1998, 'fra', 'bra'], [2002, 'bra', 'ger'], [2006, 'ita', 'fra'],
-        [2010, 'esp', 'ned'], [2014, 'ger', 'arg'], [2018, 'fra', 'cro'], [2022, 'arg', 'fra']],
+        [2010, 'esp', 'ned'], [2014, 'ger', 'arg'], [2018, 'fra', 'cro'], [2022, 'arg', 'fra'], [2026, 'esp', 'arg']],
     EURO: [[1960, 'russia', 'srb'], [1964, 'esp', 'russia'], [1968, 'ita', 'srb'], [1972, 'ger', 'russia'], [1976, 'cze', 'ger'], [1980, 'ger', 'bel'],
         [1984, 'fra', 'esp'], [1988, 'ned', 'russia'], [1992, 'den', 'ger'], [1996, 'ger', 'cze'], [2000, 'fra', 'ita'], [2004, 'gre', 'por'],
         [2008, 'esp', 'ger'], [2012, 'esp', 'ita'], [2016, 'por', 'fra'], [2020, 'ita', 'eng'], [2024, 'esp', 'eng']],

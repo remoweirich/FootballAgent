@@ -56,6 +56,7 @@ const NATIONALITY_ISO = {
 const APP_LINKS = {
     playStore: 'https://play.google.com/store/apps/details?id=ch.jens.footballagent',
     feedbackMail: 'mailto:jwp.pastimes@proton.me?subject=' + encodeURIComponent('My feedback and Ideas'),
+    reddit: 'https://www.reddit.com/r/football_agency_sim/',
 };
 
 const UI = {

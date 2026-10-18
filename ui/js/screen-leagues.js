@@ -253,7 +253,7 @@ const LeaguesScreen = {
         const blurb = this.cupBlurb(key);
         if (!C || !C.results || !C.results.length) return `${blurb}<p class="hint">${I18n.t('leagues.notKickedOff', { label })}</p>`;
         const winner = (C.winner && !(typeof Attend !== 'undefined' && Attend.cupWinnerHidden(C))) ? `<div class="result ok" style="text-align:center">${I18n.t('leagues.winnerLine', { club: UI.clubName(C.winner) })}</div>` : '';
-        const rounds = C.results.slice().reverse().map(r => `<div class="section-label">${r.round} <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
+        const rounds = C.results.slice().reverse().map(r => `<div class="section-label">${r.roundKey ? I18n.t(r.roundKey) : r.round} <span class="muted" style="font-weight:400">· ${I18n.t('leagues.wkShort')} ${r.week}</span></div><div class="fcard">${r.ties.map(t => this.tie(t)).join('')}</div>`).join('');
         return `${blurb}${winner}${rounds}`;
     },
     groupCup(key, label) {

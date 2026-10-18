@@ -56,6 +56,7 @@ const I18n = {
     _applyNativeComps() {
         try {
             if (typeof applyNativeCompNames === 'function') applyNativeCompNames();
+            if (typeof Clubs !== 'undefined' && Clubs.applyCompOverlay) Clubs.applyCompOverlay();
             if (typeof GameState !== 'undefined' && GameState._applyCompNames) GameState._applyCompNames();
         } catch (e) { /* engine not loaded (tests, boot order) */ }
     },

@@ -35,6 +35,7 @@ const ClientDetail = {
         else if (ctx.tab === 'contract') body = this.tabContract(p);
         else if (ctx.tab === 'development') body = this.tabDevelopment(p);
         else if (ctx.tab === 'history') body = this.tabHistory(p);
+        const seeBtn = ctx.tab === 'potential' && this.canAdReveal(p);
 
         el.innerHTML = `
         <div class="flex-row" style="align-items:flex-start;justify-content:space-between;margin-bottom:var(--space-4)">
@@ -48,6 +49,16 @@ const ClientDetail = {
         <div class="tab-bar tab-bar--sticky" style="margin:0 0 var(--space-4)">${tabs.map(t => `<button class="tab ${ctx.tab === t ? 'is-active' : ''}" onclick="ClientDetail.setTab('${id}','${t}')">${labels[t]}</button>`).join('')}</div>
         <div>${body}</div>
         <div id="actionResult"></div>`;
+        // "See potential": a rewarded ad reveals this one player's Enhanced Insights. Same look, height
+        // and position as the Advance button (where the bottom nav would be, on every screen shape)
+        if (seeBtn) {
+            if (el.parentElement) el.parentElement.classList.add('screen--has-cta');
+            const dock = document.createElement('div');
+            dock.className = 'cta-dock cta-dock--ad';
+            dock.innerHTML = `<button class="btn btn--primary"><span class="btn__stack">${I18n.t('cd.seePotential')}<small>${I18n.t('cd.seePotentialSub')}</small></span><i class="ti ti-ad" style="font-size:22px"></i></button>`;
+            dock.querySelector('button').onclick = () => ClientDetail.adReveal(id);
+            el.appendChild(dock);
+        }
     },
     setTab(id, tab) { this.ctx(id).tab = tab; Router.refresh(); },
 
@@ -303,11 +314,26 @@ const ClientDetail = {
     },
 
     // ---------------- Potential ----------------
+    // Enhanced Insights for ONE player: bought (all players) or unlocked for him by watching an ad
+    insightVisible(p) { return (typeof Monetization !== 'undefined' && Monetization.insightsOn()) || p.insightAd === true; },
+    // the "See potential" ad button: gone for good once Enhanced Insights is owned, and for this
+    // player once he has been revealed
+    canAdReveal(p) { return typeof Ads !== 'undefined' && typeof Monetization !== 'undefined' && !Monetization.owns('insights') && p.insightAd !== true; },
+    async adReveal(id) {
+        const p = GameState.getPlayer(id), btn = document.querySelector('.cta-dock--ad button');
+        if (!p || !this.canAdReveal(p) || this._adBusy) return;
+        this._adBusy = true; if (btn) btn.disabled = true;
+        let r = 'unavailable';
+        try { r = await Ads.showRewarded('insight'); } finally { this._adBusy = false; }
+        if (r === 'earned') { p.insightAd = true; GameState.save(); Router.refresh(); return; }
+        if (btn) btn.disabled = false;
+        Router.result(I18n.t(r === 'closed' ? 'cd.adClosed' : 'cd.adUnavailable'), 'bad');
+    },
     tabPotential(p) {
         const r = Scouting.ensureReport(p);
         // Enhanced Insights (owned + toggled on): reveal the exact true potential instead of only the
         // scout's fuzzy ceiling/floor range. The scouting report stays below for flavour.
-        const insights = (typeof Monetization !== 'undefined' && Monetization.insightsOn())
+        const insights = this.insightVisible(p)
             ? `<div class="fcard" style="border:1px solid var(--accent);margin-bottom:var(--space-4)">
                 <div class="section-label" style="margin-top:0"><i class="ti ti-eye" style="margin-right:4px"></i>${I18n.t('cd.insights')}</div>
                 <div class="frow"><span class="frow__k">${I18n.t('cd.truePotential')} <span class="muted">${I18n.t('cd.abilityCap')}</span></span><span class="frow__v" style="color:var(--state-good)">${p.potential}</span></div>

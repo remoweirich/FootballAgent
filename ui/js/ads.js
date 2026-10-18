@@ -16,6 +16,12 @@ const AD_CONFIG = {
     // Google's public test ids and avoid invalid-activity strikes; test id kept below for reference.
     testing: false,
     interstitial: 'ca-app-pub-9156400497236757/6996258921',   // live Android interstitial (test: ca-app-pub-3940256099942544/1033173712)
+    // Rewarded ad unit for "See potential" (one player's Enhanced Insights). Paste the live id from
+    // AdMob > Apps > Ad units > Rewarded here. While it is empty the button still works on the web
+    // build (dev provider), and on a device it uses Google's public rewarded TEST unit, so it never
+    // serves live ads from an unconfigured slot.
+    rewarded: 'ca-app-pub-9156400497236757/5027230775',
+    rewardedTest: 'ca-app-pub-3940256099942544/5224354917',
 };
 
 const Ads = {
@@ -75,6 +81,18 @@ const Ads = {
         try { if (typeof GameState.save === 'function') GameState.save(); }
         catch (e) { /* an ad must never surface a save hiccup */ }
     },
+    // A REWARDED ad the player chose to watch (e.g. "See potential"). Outside the interstitial policy:
+    // it is opt-in, so neither the one-per-season cap nor Remove Ads applies. Resolves to
+    // 'earned' (watched to the end), 'closed' (closed early: no reward) or 'unavailable' (no fill,
+    // offline, no SDK). Only 'earned' may grant the reward.
+    async showRewarded(placement) {
+        if (!this._ready) { try { await this.init(); } catch (e) { /* the provider reports below */ } }
+        try {
+            const r = await this._provider.showRewarded(placement);
+            if (r === 'earned' && typeof Prefs !== 'undefined') Prefs.set(this.KEY_LAST, Date.now());   // no interstitial right after
+            return r === 'earned' || r === 'closed' ? r : 'unavailable';
+        } catch (e) { return 'unavailable'; }
+    },
     async maybeShowInterstitial(placement) {
         if (!this.canShow()) return false;
         if (!this._ready) { try { await this.init(); } catch (e) { /* keep going with whatever we have */ } }
@@ -95,6 +113,7 @@ const Ads = {
 const DevAdsProvider = {
     async init() { return true; },
     async showInterstitial() { return true; },
+    async showRewarded() { return 'earned'; },
 };
 
 // Real provider — @capacitor-community/admob. Lives here inert until the plugin is installed and
@@ -118,6 +137,34 @@ const CapAdMobProvider = {
         await AdMob.prepareInterstitial({ adId: AD_CONFIG.interstitial, isTesting: AD_CONFIG.testing });
         await AdMob.showInterstitial();
         return true;
+    },
+    // Two signals say the reward was earned: the plugin's showRewardVideoAd() promise (it resolves on
+    // the reward and never settles if the viewer closes early, so it is not awaited) and the Rewarded
+    // event. Dismissed ends the ad, but on Android the reward can arrive just AFTER it (the SDK may
+    // report it late, and the WebView is paused while the ad is full screen, so queued events land
+    // together), so a dismissal waits a short grace period for a late reward before it says 'closed'.
+    REWARD_GRACE_MS: 2000,
+    async showRewarded() {
+        const AdMob = window.Capacitor.Plugins.AdMob;
+        const test = AD_CONFIG.testing || !AD_CONFIG.rewarded;
+        let earned = false, finish = null;
+        const handles = [];
+        const done = new Promise(resolve => { finish = resolve; });
+        const on = async (ev, fn) => { try { handles.push(await AdMob.addListener(ev, fn)); } catch (e) { /* older plugin */ } };
+        const reward = () => { earned = true; finish('earned'); };
+        // listeners are in place BEFORE the ad is loaded or shown
+        await on('onRewardedVideoAdReward', reward);
+        await on('onRewardedVideoAdDismissed', () => setTimeout(() => finish(earned ? 'earned' : 'closed'), this.REWARD_GRACE_MS));
+        await on('onRewardedVideoAdFailedToShow', () => finish(earned ? 'earned' : 'unavailable'));
+        const guard = setTimeout(() => finish(earned ? 'earned' : 'unavailable'), 5 * 60 * 1000);   // never hang the button
+        try {
+            await AdMob.prepareRewardVideoAd({ adId: test ? AD_CONFIG.rewardedTest : AD_CONFIG.rewarded, isTesting: test });
+            AdMob.showRewardVideoAd().then(item => { if (item) reward(); }).catch(() => {});
+        } catch (e) { finish('unavailable'); }
+        const r = await done;
+        clearTimeout(guard);
+        handles.forEach(h => { try { h.remove(); } catch (e) { /* already gone */ } });
+        return r;
     },
 };
 

@@ -65,6 +65,11 @@ button { font-family: inherit; }
 }
 .cta-dock .btn--primary { border-radius: var(--radius-lg); }
 .screen--has-cta { padding-bottom: calc(var(--nav-clear) + var(--cta-dock-h) + env(safe-area-inset-bottom)); }
+/* the same dock on a screen WITHOUT a bottom nav (player card "See potential"): the button keeps the
+   Advance button's exact position, and the background runs on down to the edge so nothing scrolls
+   through the empty strip where the nav would be */
+.cta-dock--ad { bottom: 0; padding-bottom: calc(var(--space-4) + var(--nav-h) + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 88%, transparent); }
+.cta-dock .btn--primary:disabled { opacity: .55; cursor: default; }
 .btn__stack { flex: 1; text-align: left; }
 .btn__stack small { display: block; font-weight: var(--weight-semibold); font-size: var(--fs-sm); opacity: .72; margin-top: 1px; }
 

@@ -37,13 +37,17 @@ const WORLD_COUNTRIES = {
     'Algeria': { iso2: 'dz' }, 'Angola': { iso2: 'ao' }, 'Argentina': { iso2: 'ar' }, 'Australia': { iso2: 'au' }, 'Bolivia': { iso2: 'bo' }, 'Brazil': { iso2: 'br' }, 'Burkina Faso': { iso2: 'bf' }, 'Cameroon': { iso2: 'cm' }, 'Canada': { iso2: 'ca' }, 'Cape Verde': { iso2: 'cv' }, 'Chile': { iso2: 'cl' }, 'China': { iso2: 'cn' }, 'Colombia': { iso2: 'co' }, 'Costa Rica': { iso2: 'cr' }, "Côte d'Ivoire": { iso2: 'ci' }, 'DRC': { iso2: 'cd' }, 'Ecuador': { iso2: 'ec' }, 'Egypt': { iso2: 'eg' }, 'El Salvador': { iso2: 'sv' }, 'Gabon': { iso2: 'ga' }, 'Gambia': { iso2: 'gm' }, 'Ghana': { iso2: 'gh' }, 'Guinea': { iso2: 'gn' }, 'Honduras': { iso2: 'hn' }, 'India': { iso2: 'in' }, 'Indonesia': { iso2: 'id' }, 'Iran': { iso2: 'ir' }, 'Iraq': { iso2: 'iq' }, 'Jamaica': { iso2: 'jm' }, 'Japan': { iso2: 'jp' }, 'Jordan': { iso2: 'jo' }, 'Kenya': { iso2: 'ke' }, 'Kuwait': { iso2: 'kw' }, 'Madagascar': { iso2: 'mg' }, 'Mali': { iso2: 'ml' }, 'Mexico': { iso2: 'mx' }, 'Morocco': { iso2: 'ma' }, 'Mozambique': { iso2: 'mz' }, 'New Zealand': { iso2: 'nz' }, 'Nigeria': { iso2: 'ng' }, 'Palestine': { iso2: 'ps' }, 'Panama': { iso2: 'pa' }, 'Paraguay': { iso2: 'py' }, 'Peru': { iso2: 'pe' }, 'Qatar': { iso2: 'qa' }, 'Rwanda': { iso2: 'rw' }, 'Saudi Arabia': { iso2: 'sa' }, 'Senegal': { iso2: 'sn' }, 'South Africa': { iso2: 'za' }, 'South Korea': { iso2: 'kr' }, 'Tunisia': { iso2: 'tn' }, 'Uganda': { iso2: 'ug' }, 'United Arab Emirates': { iso2: 'ae' }, 'Uruguay': { iso2: 'uy' }, 'USA': { iso2: 'us' }, 'Uzbekistan': { iso2: 'uz' }, 'Venezuela': { iso2: 've' }, 'Zambia': { iso2: 'zm' }, 'Zimbabwe': { iso2: 'zw' }
 };
 
-// Per-division: [team count, reputation cap, reserve cap]. Matches the plan's Italian-style skeleton.
+// Per-division: [team count, reputation cap, youth-side cap]. Youth sides (a senior club's reserve
+// team) only ever play in divisions 3 and 4. The cap of 6 limits the layout a country is CREATED with;
+// once a game runs, promotion and relegation may put any number of them in either division.
 const CUSTOM_DIV_SPEC = [
     { size: 20, repCap: 82, resCap: 0 },
-    { size: 20, repCap: 65, resCap: 2 },
-    { size: 24, repCap: 50, resCap: 4 },
-    { size: 20, repCap: 35, resCap: 4 }
+    { size: 20, repCap: 65, resCap: 0 },
+    { size: 24, repCap: 50, resCap: 6 },
+    { size: 20, repCap: 35, resCap: 6 }
 ];
+// the lowest division index a youth side may play in (0-based: division 3)
+const CUSTOM_YOUTH_FROM = 2;
 
 const WorldExt = {
     created: {},            // country name -> CreatedCountry currently registered
@@ -116,13 +120,30 @@ const WorldExt = {
             name: country, european: !!european, nameDb: this.nameTier(country),
             names: this.seedNames(country),
             divIds, divNames,
-            cups: { higher: { id: this.cupId(country, 'higher'), name: 'Higher Cup' }, lower: { id: this.cupId(country, 'lower'), name: 'Lower Cup' } },
+            // the fixed two-cup template (see League.buildCustomCups); only the names can be changed
+            cups: { higher: { id: this.cupId(country, 'higher'), name: country + ' Cup' }, lower: { id: this.cupId(country, 'lower'), name: country + ' Challenge Cup' } },
             clubs, regions: []
         };
     },
     divSpec() { return CUSTOM_DIV_SPEC; },
     repCapFor(cc, divId) { const i = cc.divIds.indexOf(divId); return i >= 0 ? CUSTOM_DIV_SPEC[i].repCap : 99; },
     reserveCapFor(cc, divId) { const i = cc.divIds.indexOf(divId); return i >= 0 ? CUSTOM_DIV_SPEC[i].resCap : Infinity; },
+    youthFrom() { return CUSTOM_YOUTH_FROM; },
+    // The day-one rules for a created country's youth sides, as a list of problems (empty = fine):
+    // only in divisions 3-4, at most 6 per division, a parent that exists, is a senior club, plays in a
+    // HIGHER division, and has only this one youth side.
+    youthProblems(cc) {
+        const out = [], byParent = {};
+        (cc.clubs || []).filter(c => c.reserve).forEach(c => {
+            const i = cc.divIds.indexOf(c.division), par = (cc.clubs || []).find(x => x.id === c.parentId);
+            if (i < CUSTOM_YOUTH_FROM) out.push({ code: 'div', club: c });
+            if (!par || par.reserve) out.push({ code: 'noParent', club: c });
+            else if (cc.divIds.indexOf(par.division) >= i) out.push({ code: 'parentBelow', club: c, parent: par });
+            if (c.parentId) (byParent[c.parentId] = byParent[c.parentId] || []).push(c);
+        });
+        Object.values(byParent).forEach(list => { if (list.length > 1) out.push({ code: 'twoYouth', club: list[1], parent: (cc.clubs || []).find(x => x.id === list[1].parentId) }); });
+        return out;
+    },
 
     // ---- scouting region cost (the user's formula) ----
     // Returns { regionId: reportCost } for a country whose regions are populated.
@@ -205,6 +226,9 @@ const WorldExt = {
         if (!cc || !cc.name || !cc.divIds) return;
         this.created[cc.name] = cc;
         this._registered[cc.name] = true;
+        // countries made before the cup template carry the old placeholder names: give them the new ones
+        if (cc.cups && cc.cups.higher.name === 'Higher Cup') cc.cups.higher.name = cc.name + ' Cup';
+        if (cc.cups && cc.cups.lower.name === 'Lower Cup') cc.cups.lower.name = cc.name + ' Challenge Cup';
 
         // competitions (4 leagues + 2 cups)
         cc.divIds.forEach((id, i) => { COMPETITIONS[id] = { name: cc.divNames[i], short: cc.divNames[i], type: 'league', custom: true, country: cc.name }; });

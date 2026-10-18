@@ -232,7 +232,7 @@ const CustomizeScreen = {
             if (cu && cu.lower.id === divId) return cu.lower.name;
         }
         const ov = this.db.competitions && this.db.competitions[divId];
-        if (ov && ov.name) return ov.name;
+        if (ov && ov.name) return localCompName(ov.name);
         return (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[divId] && COMPETITIONS[divId].name) || (Clubs.DIV_NAMES && Clubs.DIV_NAMES[divId]) || divId;
     },
     _refreshTable() {
@@ -271,7 +271,7 @@ const CustomizeScreen = {
             : '';
         const head = `<div class="cx-count${sizeClass}">${I18n.t('customize.sizeLabel', { n: list.length, exp: (expected != null ? expected : '?') })}${capNote}</div>${reviewNote}`;
         const divIdx = created ? created.divIds.indexOf(divId) : -1;
-        const canReserve = created && divIdx >= 1;   // D2-D4 may hold B-teams
+        const canReserve = created && divIdx >= WorldExt.youthFrom();   // youth sides: divisions 3-4 only
         const rows = list.map(v => {
             const featuredLock = (!created && gate) ? ' cx-locked' : '';
             const bBtn = canReserve ? `<button class="cx-bbtn${v.reserve ? ' cx-bbtn--on' : ''}" data-act="ccreserve" data-cid="${UI.esc(v.id)}" title="${I18n.t('customize.bTeam')}">B</button>` : '';
@@ -385,7 +385,12 @@ const CustomizeScreen = {
         const cap = WorldExt.reserveCapFor(cc, c.division);
         const cur = cc.clubs.filter(x => x.division === c.division && x.reserve).length;
         if (cur >= cap) { this._toast(I18n.t('customize.reserveCapHit', { cap })); return; }
-        const parents = cc.clubs.filter(x => (x.division === cc.divIds[0] || x.division === cc.divIds[1]) && !x.reserve);
+        // a parent is a senior club in a HIGHER division that has no youth side yet
+        const myIdx = cc.divIds.indexOf(c.division);
+        const taken = new Set(cc.clubs.filter(x => x.reserve && x.parentId).map(x => x.parentId));
+        const parents = cc.clubs.filter(x => !x.reserve && !taken.has(x.id) && cc.divIds.indexOf(x.division) < myIdx)
+            .sort((a, b) => cc.divIds.indexOf(a.division) - cc.divIds.indexOf(b.division) || a.name.localeCompare(b.name));
+        if (!parents.length) { this._toast(I18n.t('customize.youthNoParents')); return; }
         const opts = parents.map(p => `<option value="${UI.esc(p.id)}">${UI.esc(p.name)}</option>`).join('');
         this._overlay(I18n.t('customize.bTeam'), `
             <p class="cx-note">${I18n.t('customize.pickParentNote')}</p>
@@ -555,6 +560,15 @@ const CustomizeScreen = {
         inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; if (f) this._readNames(f); });
         inp.click();
     },
+    // A names-pack value as stored: a string, or for a competition one name per language (each capped)
+    _packName(v, perLanguage) {
+        if (v && typeof v === 'object') {
+            if (!perLanguage) return String(v.en || Object.values(v).find(Boolean) || '').slice(0, 40);
+            const out = {}; Object.entries(v).forEach(([k, s]) => { if (s) out[k] = String(s).slice(0, 40); });
+            return Object.keys(out).length ? out : null;
+        }
+        return v ? String(v).slice(0, 40) : null;
+    },
     // Parse a names file — JSON ({id:name} or [{id,name}]) or CSV (id,name) — into an {id:name} map.
     _parseNamesText(text) {
         const map = {};
@@ -580,9 +594,8 @@ const CustomizeScreen = {
             let n = 0;
             Object.entries(map).forEach(([id, nm]) => {
                 if (!nm) return;
-                const name = String(nm).slice(0, 40);
-                if (Clubs.getClubById(id)) { this._setOverride(id, { name }); n++; }
-                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { if (!this.db.competitions) this.db.competitions = {}; this.db.competitions[id] = { name }; n++; }
+                if (Clubs.getClubById(id)) { const name = this._packName(nm, false); if (name) { this._setOverride(id, { name }); n++; } }
+                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { const name = this._packName(nm, true); if (name) { if (!this.db.competitions) this.db.competitions = {}; this.db.competitions[id] = { name }; n++; } }
             });
             this._snapshot = JSON.stringify(this.db.overrides);   // fold imports into the cancel baseline
             this._refreshTable();
@@ -790,10 +803,10 @@ const CustomizeScreen = {
             let n = 0;
             Object.entries(map).forEach(([id, nm]) => {
                 if (!nm || typeof GameState === 'undefined') return;
-                const name = String(nm).slice(0, 40);
                 // the same file carries both clubs and competitions — route each id to the right one
-                if (typeof Clubs !== 'undefined' && Clubs.getClubById(id)) { GameState.setClubName(id, name); n++; }
-                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { GameState.setCompName(id, name); n++; }
+                // (a competition may name itself once per language; a club has one name)
+                if (typeof Clubs !== 'undefined' && Clubs.getClubById(id)) { const name = this._packName(nm, false); if (name) { GameState.setClubName(id, name); n++; } }
+                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { const name = this._packName(nm, true); if (name) { GameState.setCompName(id, name); n++; } }
             });
             if (typeof GameState !== 'undefined' && GameState.save) GameState.save();
             if (typeof Router !== 'undefined' && Router.refresh) Router.refresh();
@@ -1073,6 +1086,8 @@ const CustomizeScreen = {
             // the league sizes have to hold, as for the stock countries (promotion/relegation counts on them)
             if (clubs.length !== spec.size) errors.push(I18n.t('customize.errSize', { div: cc.divNames[i], exp: spec.size, act: clubs.length }));
         });
+        // youth sides: where they play and who they belong to (see WorldExt.youthProblems)
+        WorldExt.youthProblems(cc).forEach(pr => errors.push(I18n.t('customize.youthErr.' + pr.code, { club: pr.club.name, parent: pr.parent ? pr.parent.name : '' })));
         if (errors.length) {
             this._overlay(I18n.t('customize.cantSaveCountry'), `<p class="cx-note cx-note--warn">${I18n.t('customize.fixFirst')}</p><ul class="cx-errlist">${errors.map(e => `<li>${e}</li>`).join('')}</ul><button class="btn btn--primary cx-wide" style="margin-top:10px" data-act="ovcancel">${I18n.t('common.ok')}</button>`);
             this._delegate(this._ov());
@@ -1124,7 +1139,7 @@ const CustomizeScreen = {
     competitionNames() {
         const comps = this._countryComps(this.country);
         const rows = comps.map(c => `<div class="cx-item" data-act="renameone" data-id="${UI.esc(c.id)}"><div class="cx-item__main"><span class="cx-item__name">${UI.esc(c.name)}</span><span class="cx-item__sub">${c.kind}</span></div><span class="cx-item__go">✎</span></div>`).join('');
-        this._overlay(I18n.t('customize.competitionNames'), `<p class="cx-note">${I18n.t('customize.compNamesNote')}</p><div class="cx-list">${rows}</div><button class="btn btn--ghost cx-wide" style="margin-top:10px" data-act="ovcancel">${I18n.t('common.close')}</button>`);
+        this._overlay(I18n.t('customize.competitionNames'), `<p class="cx-note">${I18n.t('customize.compNamesNote')}${this._created ? ' ' + I18n.t('customize.cupTemplateNote') : ''}</p><div class="cx-list">${rows}</div><button class="btn btn--ghost cx-wide" style="margin-top:10px" data-act="ovcancel">${I18n.t('common.close')}</button>`);
         this._delegate(this._ov());
     },
     _countryComps(country) {

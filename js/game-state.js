@@ -273,15 +273,18 @@ const GameState = {
     // the real league/cup/European names on top of the shipped generics). Stored per-save; re-applied on
     // load AFTER any database overlay so the import wins. COMPETITIONS is reset to generics in Clubs.init.
     setCompName(id, name) {
-        if (!id || !name) return;
+        if (!id || !name || !localCompName(name)) return;
         if (!this.compNames) this.compNames = {};
-        this.compNames[id] = name;
-        if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) COMPETITIONS[id].name = name;
+        this.compNames[id] = name;   // a string, or one name per language (see localCompName)
+        if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) COMPETITIONS[id].name = localCompName(name);
         if (typeof Clubs !== 'undefined' && Clubs.refreshDivisionNames) Clubs.refreshDivisionNames();
     },
     _applyCompNames() {
         if (!this.compNames || typeof COMPETITIONS === 'undefined') return;
-        Object.entries(this.compNames).forEach(([id, name]) => { if (COMPETITIONS[id] && name) COMPETITIONS[id].name = name; });
+        // drop names a pre-language build mangled to "[object Object]" (the generic name shows again,
+        // and importing the pack once more restores the real one)
+        Object.keys(this.compNames).forEach(id => { if (!localCompName(this.compNames[id])) delete this.compNames[id]; });
+        Object.entries(this.compNames).forEach(([id, name]) => { const nm = localCompName(name); if (COMPETITIONS[id] && nm) COMPETITIONS[id].name = nm; });
         if (typeof Clubs !== 'undefined' && Clubs.refreshDivisionNames) Clubs.refreshDivisionNames();
     },
     _applyClubLogos() {

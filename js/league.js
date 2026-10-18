@@ -203,6 +203,16 @@ function applyNativeCompNames() {
     if (typeof Clubs !== 'undefined' && Clubs.refreshDivisionNames) Clubs.refreshDivisionNames();
 }
 
+// A competition name from a names pack is either one string, or one per language
+// ({ "en": "World Cup", "de": "Weltmeisterschaft", ... }): the current language wins, then English,
+// then whichever the pack has.
+function localCompName(v) {
+    // a per-language entry imported by a build that predates them was stored as this text: no name
+    if (v === '[object Object]') return null;
+    if (v == null || typeof v === 'string') return v;
+    const loc = (typeof I18n !== 'undefined' && I18n.locale) || 'en';
+    return v[loc] || v.en || Object.values(v).find(Boolean) || null;
+}
 function compName(id) { return COMPETITIONS[id] ? COMPETITIONS[id].name : (Clubs.DIV_NAMES && Clubs.DIV_NAMES[id]) || id; }
 
 const DIV_ORDER = ['ERE', 'EED', 'TWD', 'DRD'];
@@ -1747,6 +1757,27 @@ const League = {
     // exactly (3↔3 between D1/D2, 4↔4 between D3/D4), so _assertDivisionSizes stays quiet.
     _customCountries() { return (typeof WorldExt !== 'undefined' && WorldExt.created) ? Object.values(WorldExt.created) : []; },
 
+    // ---- youth sides (a senior club's reserve team): divisions 3-4 only (at most 6 in each when the
+    // country is created; any number once the game runs), never in their parent's division or above it. The one exception: a parent that falls into division 4
+    // shares it with its youth side (there is nowhere lower to send the youth side).
+    _divIdx(cc, clubId) { const c = Clubs.getClubById(clubId); return c ? cc.divIds.indexOf(c.division) : -1; },
+    // can this youth side go up into division `destIdx` (0-based)? Judged on where its parent will be
+    // next season: division 1 stays, division 2 drops only if it finishes in the bottom 3 (direct
+    // relegation, known as soon as the league ends, so the play-offs can use it too)
+    _customYouthCanJoin(cc, id, destIdx) {
+        if (!isReserveClub(id)) return true;
+        if (destIdx < WorldExt.youthFrom()) return false;
+        const par = parentClubForReserve(id); if (!par) return true;
+        let pIdx = cc.divIds.indexOf(par.division);
+        if (pIdx === 1 && this.sortedTable(cc.divIds[1]).map(r => r.clubId).slice(-3).includes(par.id)) pIdx = 2;
+        if (pIdx < 0) return true;
+        return pIdx < destIdx;
+    },
+    // a division's table with the clubs that cannot go up into division `destIdx` taken out
+    _customPromoOrder(cc, divIdx) {
+        return this.sortedTable(cc.divIds[divIdx]).map(r => r.clubId).filter(id => this._customYouthCanJoin(cc, id, divIdx - 1));
+    },
+
     applyPromotionRelegationCustom(cc) {
         const L = GameState.league;
         const [d1, d2, d3, d4] = cc.divIds;
@@ -1754,37 +1785,62 @@ const League = {
         const ord = d => this.sortedTable(d).map(r => r.clubId);
         const T1 = ord(d1), T2 = ord(d2), T3 = ord(d3), T4 = ord(d4);
         const poW = d => (L.playoffs && L.playoffs[d]) ? L.playoffs[d].winner : null;
+        // in the game, divisions 3-4 take any number of youth sides (the 6 per division only limits the
+        // day-one layout, see WorldExt.youthProblems); divisions 1-2 never take one
+        const cap = d => cc.divIds.indexOf(d) >= WorldExt.youthFrom() ? Infinity : 0;
 
         const d1Down = T1.slice(-3);          // D1: last 3 relegate directly
         const d2Down = T2.slice(-3);          // D2: last 3 relegate directly
         const d3Down = T3.slice(-4);          // D3: last 4 relegate directly (D4 has no relegation)
         const d1DownS = new Set(d1Down), d2DownS = new Set(d2Down), d3DownS = new Set(d3Down);
 
-        // promotions (2/2/3 auto + 1 play-off each), honouring the destination reserve caps
+        // promotions (2/2/3 auto + 1 play-off each) from the tables WITHOUT the youth sides that may
+        // not go up, then the destination's youth cap (a youth side over it is swapped for the next senior)
+        const E2 = this._customPromoOrder(cc, 1), E3 = this._customPromoOrder(cc, 2), E4 = this._customPromoOrder(cc, 3);
         const d1Stay = T1.filter(id => !d1DownS.has(id));
         const resD1 = d1Stay.filter(isReserveClub).length;
-        const d2Up = this._capReserves([T2[0], T2[1], this._poOr(poW(d2), T2, [[T2[0], T2[1]], d2DownS])].filter(Boolean), T2, 0, resD1, d2DownS);
+        const d2Up = this._capReserves([E2[0], E2[1], this._poOr(poW(d2), E2, [[E2[0], E2[1]], d2DownS])].filter(Boolean), E2, cap(d1), resD1, d2DownS);
         const d2Stay = T2.filter(id => !d2DownS.has(id) && !d2Up.includes(id));
         const resD2 = [...d2Stay, ...d1Down].filter(isReserveClub).length;
-        const d3Up = this._capReserves([T3[0], T3[1], this._poOr(poW(d3), T3, [[T3[0], T3[1]], d3DownS])].filter(Boolean), T3, 2, resD2, d3DownS);
+        const d3Up = this._capReserves([E3[0], E3[1], this._poOr(poW(d3), E3, [[E3[0], E3[1]], d3DownS])].filter(Boolean), E3, cap(d2), resD2, d3DownS);
         const d3Stay = T3.filter(id => !d3DownS.has(id) && !d3Up.includes(id));
         const resD3 = [...d3Stay, ...d2Down].filter(isReserveClub).length;
-        const d4Up = this._capReserves([T4[0], T4[1], T4[2], this._poOr(poW(d4), T4, [T4.slice(0, 3)])].filter(Boolean), T4, 4, resD3, new Set());
+        const d4Up = this._capReserves([E4[0], E4[1], E4[2], this._poOr(poW(d4), E4, [E4.slice(0, 3)])].filter(Boolean), E4, cap(d3), resD3, new Set());
 
         const move = (arr, div) => arr.forEach(id => id != null && Clubs.setDivision(id, div));
         move(d1Down, d2); move(d2Up, d1);
         move(d2Down, d3); move(d3Up, d2);
         move(d3Down, d4); move(d4Up, d3);
-        this._repDrift([...d2Up, ...d3Up, ...d4Up], [...d1Down, ...d2Down, ...d3Down]);
+
+        // A youth side out of place moves down, swapping with the best senior club of the division it
+        // drops into that is not already going up (so every league keeps its size):
+        //  - above division 3 (a country built when division 2 still allowed youth sides) -> division 3
+        //  - in its parent's division or above it (the parent fell past it) -> division 4
+        const youthDown = [], seniorUp = [], goingUp = new Set([...d2Up, ...d3Up, ...d4Up]);
+        const tableOf = { 2: T3, 3: T4 };
+        (Clubs.allClubs || []).filter(c => c.country === cc.name && isReserveClub(c.id))
+            .sort((a, b) => cc.divIds.indexOf(a.division) - cc.divIds.indexOf(b.division))
+            .forEach(c => {
+                const yi = cc.divIds.indexOf(c.division), par = parentClubForReserve(c.id);
+                const pi = par ? cc.divIds.indexOf(par.division) : -1;
+                let to = null;
+                if (yi >= 0 && yi < WorldExt.youthFrom()) to = WorldExt.youthFrom();
+                if (pi >= 0 && pi >= Math.max(yi, to || 0) && Math.max(yi, to || 0) < 3) to = 3;
+                if (to == null) return;
+                const repl = (tableOf[to] || []).find(id => !goingUp.has(id) && !seniorUp.includes(id) && !isReserveClub(id) && this._divIdx(cc, id) === to);
+                Clubs.setDivision(c.id, cc.divIds[to]); youthDown.push(c.id);
+                if (repl) { Clubs.setDivision(repl, cc.divIds[yi]); seniorUp.push(repl); }
+            });
+        this._repDrift([...d2Up, ...d3Up, ...d4Up, ...seniorUp], [...d1Down, ...d2Down, ...d3Down, ...youthDown]);
 
         if (!L.prorelCustom) L.prorelCustom = {};
-        L.prorelCustom[cc.name] = { d1Down, d2Up, d2Down, d3Up, d3Down, d4Up };
+        L.prorelCustom[cc.name] = { d1Down, d2Up, d2Down, d3Up, d3Down, d4Up, youthDown, seniorUp };
         return L.prorelCustom[cc.name];
     },
     // two two-legged ties (higher seed hosts leg 2) feeding a two-legged final; aggregate draws go to
-    // penalties (no extra time) via _twoLeggedTie/_twoLeggedFinal. `pairs` are 0-indexed [hi, lo] seeds.
-    _customPromoSeries(div, pairs) {
-        const order = this.sortedTable(div).map(r => r.clubId);
+    // penalties (no extra time) via _twoLeggedTie/_twoLeggedFinal. `pairs` are 0-indexed [hi, lo] seeds
+    // into `order` (the table without the youth sides that may not go up).
+    _customPromoSeries(order, pairs) {
         const need = Math.max.apply(null, pairs.reduce((a, p) => a.concat(p), [])) + 1;
         if (order.length < need) return null;
         const sf1 = this._twoLeggedTie(order[pairs[0][0]], order[pairs[0][1]], 'PO');
@@ -1800,21 +1856,48 @@ const League = {
         this._customCountries().forEach(cc => {
             const [, d2, d3, d4] = cc.divIds;
             if (!L.tables[d2]) return;
-            L.playoffs[d2] = this._customPromoSeries(d2, [[2, 5], [3, 4]]);   // D2: 3v6, 4v5
-            L.playoffs[d3] = this._customPromoSeries(d3, [[2, 5], [3, 4]]);   // D3: 3v6, 4v5
-            L.playoffs[d4] = this._customPromoSeries(d4, [[3, 6], [4, 5]]);   // D4: 4v7, 5v6
+            L.playoffs[d2] = this._customPromoSeries(this._customPromoOrder(cc, 1), [[2, 5], [3, 4]]);   // D2: 3v6, 4v5
+            L.playoffs[d3] = this._customPromoSeries(this._customPromoOrder(cc, 2), [[2, 5], [3, 4]]);   // D3: 3v6, 4v5 (no youth sides)
+            L.playoffs[d4] = this._customPromoSeries(this._customPromoOrder(cc, 3), [[3, 6], [4, 5]]);   // D4: 4v7, 5v6
         });
     },
-    // higher cup = D1 seeded + D2/D3; lower cup = D2 seeded + D3/D4 — each a clean 64-team seeded
-    // knockout on the Spanish/Italian calendar (64 clubs, so no QF round week 32).
+    // The fixed two-cup template every created country gets (only the names are editable):
+    //   National Cup  (higher): all of D1 (seeded) + all of D2 + D3's senior clubs, topped up to 64 with
+    //                           D4's best senior clubs by last season's finish. No youth sides.
+    //   Challenge Cup (lower):  all of D2 (seeded) + all of D3 + all of D4 = 64, youth sides included.
+    // Six single-match rounds (weeks 4, 8, 15, 26, 38, final 46 / 47); the lower-division side is at
+    // home, a draw goes to extra time and penalties, and the final is on neutral ground.
+    CUSTOM_CUP_SIZE: 64,
     buildCustomCups() {
         const out = {};
         this._customCountries().forEach(cc => {
             const [d1, d2, d3, d4] = cc.divIds;
-            out[cc.name] = { higher: this._buildSpanishCup([d1], [d2, d3]), lower: this._buildSpanishCup([d2], [d3, d4]) };
+            const ids = d => Clubs.getClubsByDivision(d).map(c => c.id);
+            const senior = d => ids(d).filter(id => !isReserveClub(id));
+            const lower = [...ids(d2), ...senior(d3)];
+            const fill = this.CUSTOM_CUP_SIZE - ids(d1).length - lower.length;
+            if (fill > 0) lower.push(...this._lastSeasonOrder(senior(d4)).slice(0, fill));
+            out[cc.name] = {
+                higher: { seeded: ids(d1), lower, remaining: null, results: [], winner: null },
+                lower: this._buildSpanishCup([d2], [d3, d4])
+            };
         });
         return out;
     },
+    // clubs ranked by last season's finish (higher division first, then position); clubs with no
+    // history yet (the first season) fall back to reputation
+    _lastSeasonOrder(clubIds) {
+        const y = GameState.seasonStartYear - 1;
+        const key = id => {
+            const h = (GameState.clubHistory && GameState.clubHistory[id]) || [];
+            const e = h.filter(x => x.year === y).pop();
+            const c = Clubs.getClubById(id);
+            return e ? [Clubs.DIV_TIERS[e.division] || 9, e.position] : [99, -(c ? c.reputation : 0)];
+        };
+        return clubIds.slice().sort((a, b) => { const ka = key(a), kb = key(b); return ka[0] - kb[0] || ka[1] - kb[1]; });
+    },
+    // keyed by ROUND week (cupRoundWeek: real week 8 is round week 7, every final is round week 47)
+    CUSTOM_CUP_ROUNDS: { 4: ['r64', 'Round of 64'], 7: ['r32', 'Round of 32'], 15: ['r16', 'Round of 16'], 26: ['qf', 'Quarter-finals'], 38: ['sf', 'Semi-finals'], 47: ['final', 'Final'] },
     _customCupStep(C, comp, week) {
         if (!C || C.winner) return;
         let pairs;
@@ -1834,7 +1917,8 @@ const League = {
             ties.push(t); winners.push(t.winner);
         });
         C.remaining = winners;
-        C.results.push({ week, round: this._spanishCupRoundName(week), ties });
+        const rn = this.CUSTOM_CUP_ROUNDS[week] || ['round', 'Round'];
+        C.results.push({ week, round: rn[1], roundKey: 'cup.round.' + rn[0], ties });
         if (week === 47 || C.remaining.length <= 1) C.winner = C.remaining[0];
     },
 

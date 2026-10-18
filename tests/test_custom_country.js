@@ -21,12 +21,12 @@ run(`
     // 6 regions, all 84 clubs distributed round-robin (>=2 each)
     cc.regions = [0,1,2,3,4,5].map(function(i){ return { id:'CUS:Nigeria:r'+(i+1), name:'Region '+(i+1), clubIds:[] }; });
     cc.clubs.forEach(function(c,i){ cc.regions[i % 6].clubIds.push(c.id); });
-    // reserves: 2 in D2, 4 in D3 (exactly the caps), each linked to a D1 senior
+    // youth sides: 6 in D3 and 6 in D4 (exactly the caps), each linked to its own D1 senior club
     var d1 = cc.clubs.filter(function(c){return c.division===cc.divIds[0];});
-    var d2 = cc.clubs.filter(function(c){return c.division===cc.divIds[1];});
     var d3 = cc.clubs.filter(function(c){return c.division===cc.divIds[2];});
-    d2.slice(0,2).forEach(function(c,i){ c.reserve=true; c.parentId=d1[i].id; });
-    d3.slice(0,4).forEach(function(c,i){ c.reserve=true; c.parentId=d1[i].id; });
+    var d4 = cc.clubs.filter(function(c){return c.division===cc.divIds[3];});
+    d3.slice(0,6).forEach(function(c,i){ c.reserve=true; c.parentId=d1[i].id; });
+    d4.slice(0,6).forEach(function(c,i){ c.reserve=true; c.parentId=d1[6 + i].id; });
     globalThis.__cc = cc;
     var db = { id:'dbNG', name:'NG', overrides:{}, competitions:{}, countries:{ 'Nigeria': cc } };
     GameState.startNewGame('Nigeria', 'Test FC', 'Me', db);
@@ -65,9 +65,9 @@ check('sizes stable after rollover: ' + sizes(), sizes() === JSON.stringify([20,
 check('no DEV WARNING inbox mail', runv(`return GameState.inbox.filter(function(m){return m.subject&&m.subject.indexOf('DEV WARNING')>=0;}).length`) === 0);
 check('no engine errors across the season, got ' + JSON.stringify(errors.slice(0, 3)), errors.length === 0);
 
-// reserve caps (0/2/4/4) respected after prom/rel
+// youth sides stay out of divisions 1-2 after prom/rel (divisions 3-4 take any number in the game)
 check('reserve counts within caps after rollover', runv(`
-    var cc=WorldExt.created['Nigeria']; var caps=[0,2,4,4];
+    var cc=WorldExt.created['Nigeria']; var caps=[0,0,Infinity,Infinity];
     return cc.divIds.every(function(d,i){
         var res = Clubs.getClubsByDivision(d).filter(function(c){return isReserveClub(c.id);}).length;
         return res <= caps[i];
