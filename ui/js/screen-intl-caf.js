@@ -15,7 +15,7 @@ Object.assign(IntlScreen, {
         if (S && S.caf && S.caf.afq) t.push(['afcon', compName('INTL_AFCON') + ' ' + (S.year + 1)]);
         if (S && S.caf && S.caf.anl) t.push(['anl', compName('INTL_ANL')]);
         if (cyc && cyc.q) t.push(['cafq', I18n.t('intl.tab.wcq')]);
-        if (S && S.type === 'WORLD_CUP' && S.tour) t.push(['tour', this.tourName(S)]);
+        // the World Cup tournament itself is shown under World (IntlScreen.worldTabs)
         t.push(['teams', I18n.t('intl.tab.teams')]);
         t.push(['info', I18n.t('intl.tab.info')]);
         return t;

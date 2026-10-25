@@ -28,7 +28,7 @@ run(`
     const p = PlayerGen.makePlayer(club, { ability: 65, age: 24, position: 'CM' });
     p.agentId = 'me'; p.everClient = true; p.clubId = club.id; p.wage = 1000;
     p.morale = { club: 10, time: 70, wage: 70, agent: 70 };
-    p.moraleCase = { dim: 'club', stage: 3, sinceAbsWeek: GameState.absWeek() - 12, promise: null, forcedMove: true };
+    p.moraleCase = { dim: 'club', stage: 3, sinceAbsWeek: GameState.absWeek() - 12, stage3Abs: GameState.absWeek() - 40, promise: null, forcedMove: true };
     p._lastAgentActionAbs = GameState.absWeek() - 300;
     GameState.players.push(p);
     window.__pid = p.id;

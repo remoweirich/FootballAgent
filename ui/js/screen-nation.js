@@ -114,7 +114,7 @@ const NationScreen = {
         const up = Internationals.nationSchedule ? Internationals.nationSchedule(nid) : [];
         const list = Internationals.nationResults(nid);
         if (!list.length && !up.length) return `<p class="muted">${I18n.t('nat.noMatches')}</p>`;
-        const meta = r => `<span class="muted" style="font-size:var(--fs-xs)">${GameState.seasonLabelFor(r.season)} · ${I18n.t('leagues.wkShort')} ${r.week} · ${(COMPETITIONS[r.comp] || {}).short || compName(r.comp)} · ${I18n.t('nat.venue.' + r.venue)}</span>`;
+        const meta = r => `<span class="muted" style="font-size:var(--fs-xs)">${GameState.seasonLabelFor(r.season)} · ${I18n.t('leagues.wkShort')} ${r.week} · <a href="#leagues" onclick="event.stopPropagation();IntlScreen.openComp('${r.comp}');return false" style="color:var(--info-text);text-decoration:underline;text-underline-offset:2px">${(COMPETITIONS[r.comp] || {}).short || compName(r.comp)}</a> · ${I18n.t('nat.venue.' + r.venue)}</span>`;
         let html = '';
         if (up.length) html += `<div class="section-label">${I18n.t('nat.upcoming')}</div><div class="fcard">${up.map(r => `<div class="frow" style="gap:8px"><span class="frow__k" style="min-width:0">${meta(r)}<br>${IntlScreen.nation(r.opp)}</span><span class="frow__v muted" style="white-space:nowrap">${I18n.t('leagues.toCome')}</span></div>`).join('')}</div>`;
         let lastSeason = null;
@@ -162,23 +162,25 @@ const NationScreen = {
         const tr = {}; (p.intlTrophies || []).forEach(t => { tr[t.comp] = (tr[t.comp] || 0) + 1; });
         if (Object.keys(tr).length) html += `<div class="chip-row" style="margin-bottom:var(--space-3)">${Object.entries(tr).map(([c, n]) => trophyLink(c, `<span class="pill pill--gold"><i class="ti ti-trophy" style="font-size:12px"></i>${compName(c)}${n > 1 ? ' ×' + n : ''}</span>`)).join('')}</div>`;
         if (!years.length) return html + `<p class="muted">${I18n.t('nat.noCaps')}</p>`;
-        const career = blankComp(), byComp = {};
-        const row = (key, top, body) => {
-            const open = !!ex[key];
-            return `<div class="season-row ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','${key}')"><div class="season-top">${top}<i class="ti ${open ? 'ti-chevron-up' : 'ti-chevron-down'}" style="margin-left:6px"></i></div>${open ? `<div class="season-body">${body}</div>` : ''}</div>`;
-        };
-        html += `<div class="fcard hist-list">` + years.map(y => {
-            const t = blankComp();
+        // the same table as the Club tab (ClientDetail.htHead / htStats / htSub): season · nation (the
+        // competitions played underneath) · apps · goals · assists · cards · rating
+        const CD = ClientDetail, career = blankComp(), byComp = {};
+        const natLink = p.intlNation ? `<a href="${Router.link('nation', p.intlNation)}" onclick="event.stopPropagation()" class="hist-link">${UI.esc(Internationals.name(p.intlNation))}</a>` : UI.esc(nat || '');
+        const rows = years.map(y => {
+            const key = 'i:' + y, open = !!ex[key], t = blankComp();
             Object.entries(p.intlStats[y]).forEach(([cid, c]) => { addComp(t, c); addComp(career, c); byComp[cid] = addComp(byComp[cid] || blankComp(), c); });
-            t.avg = t.apps ? t.ratingSum / t.apps : 0;
             const won = (p.intlTrophies || []).filter(x => x.season != null ? x.season === y : x.year === y + 1);
-            const comps = Object.entries(p.intlStats[y]).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${line(c)}</span></div>`).join('')
-                + (won.length ? `<div class="comp-row" style="color:var(--gold)">${won.map(x => trophyLink(x.comp, '🏆 ' + compName(x.comp))).join(' · ')}</div>` : '');
-            return row('i:' + y, `<div><span class="season-name">${nat}</span><div class="season-club">${GameState.seasonLabelFor(y)}${won.length ? ' <span class="hist-sym">🏆</span>' : ''}</div></div><span class="season-stat">${line(t)} · ${UI.ratingText(t.avg)}</span>`, `<div class="stint-comps">${comps}</div>`);
+            const sub = Object.keys(p.intlStats[y]).map(cid => compName(cid)).join(' · ');
+            const inner = open ? '<div class="ht-body">' + Object.entries(p.intlStats[y]).map(([cid, c]) => CD.htSub(compName(cid), c, gk)).join('')
+                + (won.length ? `<div class="ht-trophies">${won.map(x => trophyLink(x.comp, '🏆 ' + compName(x.comp))).join(' · ')}</div>` : '') + '</div>' : '';
+            return `<div class="ht-stint ${open ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','${key}')">
+                <div class="ht-row"><span class="ht-season">${GameState.seasonLabelFor(y)}</span><span class="ht-club"><span class="ht-line ht-name">${natLink}${won.length ? ' <span class="hist-sym">🏆</span>' : ''}</span><span class="ht-line ht-sub">${sub || '&nbsp;'}</span></span>${CD.htStats(t, gk)}</div>${inner}</div>`;
         }).join('');
-        career.avg = career.apps ? career.ratingSum / career.apps : 0;
-        html += row('i:career', `<span class="season-name">${I18n.t('cd.careerTotal')}</span><span class="season-stat">${line(career)} · ${UI.ratingText(career.avg)}</span>`,
-            Object.entries(byComp).sort((a, b) => b[1].apps - a[1].apps).map(([cid, c]) => `<div class="comp-row"><span>${compName(cid)}</span><span>${line(c)}</span></div>`).join('')) + `</div>`;
+        const cOpen = !!ex['i:career'];
+        const careerRow = `<div class="ht-stint ht-total ${cOpen ? 'is-open' : ''}" onclick="ClientDetail.toggleSeason('${p.id}','i:career')">
+            <div class="ht-row"><span class="ht-club" style="grid-column:1 / span 2"><span class="ht-line ht-name">${I18n.t('cd.careerTotal')} <i class="ti ${cOpen ? 'ti-chevron-up' : 'ti-chevron-down'}" style="font-size:12px"></i></span><span class="ht-line ht-sub">${I18n.t('nat.international')}</span></span>${CD.htStats(career, gk)}</div>
+            ${cOpen ? '<div class="ht-body">' + Object.entries(byComp).sort((a, b) => b[1].apps - a[1].apps).map(([cid, c]) => CD.htSub(compName(cid), c, gk)).join('') + '</div>' : ''}</div>`;
+        html += `<div class="fcard hist-list hist-table">${CD.htHead(gk, I18n.t('cd.col.nation'))}${rows}${careerRow}</div><p class="hint">${I18n.t('cd.histTapHint')}</p>`;
         return html;
     },
     // total caps etc. of a client (records)

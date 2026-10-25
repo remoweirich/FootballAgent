@@ -46,7 +46,7 @@ const r = JSON.parse(run(`Rng.seed(5); Clubs.init(); GameState.startNewGame('Eng
     return JSON.stringify({ capsLine: hp.indexOf(caps.apps + ' caps') >= 0, noCaps: /No caps/.test(hqq), zero: /0 caps/.test(hr), noRole: !/Not called up|National team/.test(ov + hp) && !/Star Player|Starter|Rotation|Reserve|First Choice|Back Up|Third Keeper/.test(hi + nat),
         intl: /Iceland/.test(hi) && /Nations Series/.test(hi) && /Career total/.test(hi), club: /htog/.test(hc) && !/Nations Series/.test(hc), qDisabled: /disabled/.test(hq),
         nat: nat.indexOf(p.name) >= 0 && /With national squad/.test(nat) && !/Skill level/.test(nat), caps: caps.apps,
-        status: /With national squad/.test(ov), collapsed: !/Nations Series/.test(hiClosed) && /season-row/.test(hiClosed) && !/is-open/.test(hiClosed),
+        status: /With national squad/.test(ov), collapsed: /ht-stint/.test(hiClosed) && /ht-head/.test(hiClosed) && !/is-open/.test(hiClosed) && !/ht-body/.test(hiClosed),
         natLink: hp.indexOf('href="#nation/isl"') >= 0, stranger: (function () { var s = GameState.players.find(function (x) { return !x.agentId && !x.everClient && x.nationality === 'Germany'; }); return s ? !/caps|No caps/.test(head(s)) : true; })(),
         off: (function () { GameState.week = 20; var o = ClientDetail.tabOverview(p, true); NationScreen.render(el, 'isl'); var n2 = el.innerHTML; GameState.week = 17; return !/With national squad/.test(o + n2); })(), raw: [ov, hi, nat].some(function (h) { return /undefined|NaN/.test(h); }),
         rec: rec ? rec.filter(Boolean).map(function (x) { return x.label; }).filter(function (l) { return /international/i.test(l); }) : 'n/a' });`));
@@ -56,7 +56,14 @@ check('History: International shows the caps by season and competition plus the 
 check('the International toggle is disabled for a client with no caps', r.qDisabled);
 check("the nation's page lists the client; during a break he is 'With national squad' (also the card's status), in between nothing", r.nat && r.status && r.off, JSON.stringify([r.nat, r.status, r.off]));
 check('caps are only shown for clients (nobody else\'s are counted)', r.stranger);
-check('the international history: rows closed by default, opening like the club history', r.collapsed && r.intl, JSON.stringify([r.collapsed, r.intl]));
+check('the international history: the same table as the club history, rows closed by default and opening the same way', r.collapsed && r.intl, JSON.stringify([r.collapsed, r.intl]));
+const cols = JSON.parse(run(`var p = GameState.players.find(function (x) { return x.agentId === 'me' && x.intlStats && Object.keys(x.intlStats).length; });
+    var c = ClientDetail.ctx(p.id); c.histMode = 'intl'; Object.keys(p.intlStats).forEach(function (y) { c.expanded['i:' + y] = true; }); c.expanded['i:career'] = true;
+    var h = ClientDetail.tabHistory(p);
+    var subs = h.split('ht-row ht-comp').slice(1), rows = h.split('<div class="ht-row').slice(1);
+    var cells = function (r) { return (r.split('</div>')[0].match(/class="ht-n/g) || []).length; };
+    return JSON.stringify({ subs: subs.length, rated: subs.filter(function (r) { return /ht-avg"><span style="color/.test(r); }).length, cellsOk: rows.every(function (r) { return cells(r) === 6; }) });`));
+check('opened international seasons show their competitions in the same 6 stat columns, each with a rating', cols.subs > 0 && cols.rated === cols.subs && cols.cellsOk, JSON.stringify(cols));
 check("the player card's nationality links to the nation page", r.natLink);
 // a match a client played in: marked on the nation page, and it opens his stats in that game
 const m = JSON.parse(run(`var p = GameState.players.find(function (x) { return x.agentId === 'me' && x.intlStats && x.ability === 80; });

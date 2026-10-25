@@ -113,6 +113,7 @@ const PlayerGen = {
     // the very biggest clubs (rep 82+), who really do throw money at prospects, and for the rare
     // generational talent (potential above 90), where the caps lift. Non-teenagers are untouched.
     YOUTH_WAGE_CAP: { 15: 7500, 16: 15000, 17: 30000 },
+    YOUTH_CONTRACT_SHARE: 0.4,   // a scouted youth talent's wage: this share of a senior wage at his level
     capYouthWage(wage, age, reputation, potential) {
         const cap = this.YOUTH_WAGE_CAP[age];
         if (cap == null) return wage;
@@ -255,6 +256,10 @@ const PlayerGen = {
         p.potential = Math.max(ability, Math.min(99, pot));   // potential never below current ability
         p.squadRole = 'youth';
         p.sponsorIncome = 0;
+        // a youth contract: well below a senior wage for his level, so a renewal or a promotion to the
+        // first team is a real step up (it used to be paid like a senior player and then "renewed" lower)
+        p.wage = Math.max(30, Math.round(p.wage * this.YOUTH_CONTRACT_SHARE / 10) * 10);
+        p._youthDeal = true;
         if (opts.name) p.name = opts.name;
         return p;
     },

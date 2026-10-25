@@ -183,13 +183,13 @@ check('ClientRecords includes the newly-added records', runv(`
   p.stats[yr2][p.clubId].comps = {}; p.stats[yr2][p.clubId].comps[window.__div] = { apps:20, goals:5, assists:3, cs:0, yellow:1, red:0, ratingSum:140 };
   const recs = ClientRecords.compute(GameState.players.filter(pp => pp.everClient));
   const L = recs.map(r => r.label);
-  const need = ['Most goal involvements','Youngest goalscorer','Oldest goalscorer','Most clubs played for','Longest spell at one club','Highest sponsor income','Most promotions','Most relegations'];
+  const need = ['Most goal involvements','Most clubs played for','Longest spell at one club','Highest sponsor income','Most promotions','Most relegations'];
   const missing = need.filter(n => !L.includes(n));
   if (missing.length) { console.log('   missing:', missing.join(', ')); return false; }
-  // sanity: youngest/oldest are ages, sponsor income is €/wk, promotions/relegations are counts
-  const yg = recs.find(r=>r.label==='Youngest goalscorer'), sp = recs.find(r=>r.label==='Highest sponsor income');
+  // sanity: sponsor income is €/wk, a spell is in seasons (youngest/oldest scorer were dropped: goal dates are per season only)
+  const sp = recs.find(r=>r.label==='Highest sponsor income');
   const spell = recs.find(r=>r.label==='Longest spell at one club');
-  return /y$/.test(yg.value) && /\\/wk$/.test(sp.value) && /season/.test(spell.value);
+  return /\\/wk$/.test(sp.value) && /season/.test(spell.value);
 `));
 check('ClientRecords renders without throwing', runv(`const el={innerHTML:''}; ClientRecords.render(el); return el.innerHTML.includes('record') || el.innerHTML.includes('Highest') || el.innerHTML.includes('Most');`));
 

@@ -364,7 +364,7 @@ Nego.suggestTransfer = function (mailId) {
     const c = this.ctxFor(mailId);
     const pkg = { wage: c.wage, role: c.role, term: c.term, bonus: c.bonus, fee: o.transferFee };
     if (!o.neg) o.neg = Agency.initNeg(null, club, o.proposedWage);
-    const r = Agency.evaluateTransfer(p, club, pkg, o.neg);
+    const r = Agency.evaluateTransfer(p, club, pkg, o.neg, o.proposedWage);
     o.neg = r.neg;
     if (r.status === 'walkout') return this.walkout(m, r.message);
     const cc = r.counter; c.wage = cc.wage; c.role = cc.role; c.term = cc.term; c.bonus = cc.bonus;

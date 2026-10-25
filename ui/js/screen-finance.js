@@ -3,7 +3,7 @@
 //  weekly run-rate, and debug controls (money, reputation).
 // ============================================================
 const FinanceScreen = {
-    ORDER: ['Wage commission', 'Sponsoring', 'Transfer & loan bonuses', 'Scout wages', 'Scout reports', 'Office', 'Facilities & staff', 'Physio treatments', 'Specialists', 'Gifts & relationships', 'Release pay-outs', 'Upgrades'],
+    ORDER: ['Wage commission', 'Sponsoring', 'Media day', 'Kit sale', 'Transfer & loan bonuses', 'Scout wages', 'Scout reports', 'Office', 'Facilities & staff', 'Physio treatments', 'Specialists', 'Gifts & relationships', 'Release pay-outs', 'Upgrades'],
 
     // The ledger keys stay English (they're data); this maps a category to its localized label,
     // falling back to the raw key for any category not in the finance.cat.* set.

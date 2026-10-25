@@ -139,7 +139,7 @@ check('a walkout costs -5', M.DEPARTURE_AGENCY_REP === -5);
 check('a broken promise costs -1', M.PROMISE_BROKEN_REP === -1);
 check('a lapsed contract costs -0.5', M.CONTRACT_LAPSED_REP === -0.5);
 check('seeing a client into retirement pays +3',
-    /Agency\.bumpRep\(3\)/.test(fs.readFileSync(path.join(base, 'dialogue.js'), 'utf8')));
+    /Agency\.bumpRep\(3[,)]/.test(fs.readFileSync(path.join(base, 'dialogue.js'), 'utf8')));
 check('and the note tells the player the same number',
     /\+3/.test(vm.runInContext("I18n.packs.en['dlg.note.farewellRep']", sb)));
 

@@ -171,12 +171,163 @@ const Agency = {
     // is reachable in the real game (downgrade an office) and it broke the tutorial outright, where
     // an established agency on 80 collapsed to its office cap the moment the player accepted a
     // sponsor, and could then no longer sign the prospect the tour hands him.
-    bumpRep(d) {
+    // `src` names what earned it; only PRESTIGE_SOURCES feed Prestige (see below).
+    bumpRep(d, src) {
         const a = GameState.agency, lim = this.repLimit();
         const next = d >= 0 ? Math.min(Math.max(a.reputation, lim), a.reputation + d) : a.reputation + d;
+        if (d > 0 && src && this.PRESTIGE_SOURCES.includes(src)) this._addPrestige(a.reputation + d - next);
         a.reputation = Math.max(0, next);
         return a.reputation;
     },
+
+    // ================= Prestige =================
+    // What transfers, retirements and trophies would have added to a reputation already at its limit
+    // is kept as Prestige, up to 5. It never turns back into reputation (an office upgrade does not
+    // absorb it) and it never fades: it is spent in the Prestige shop on the Reputation screen.
+    PRESTIGE_CAP: 5,
+    // A client's trophy reflects on his agent: per client who won it. Youth titles count for nothing.
+    TROPHY_REP: { leagueTop: 0.5, league: 0.25, cup: 0.25, cont: 1, intl: 1 },
+    trophyRep(compId) {
+        const c = typeof COMPETITIONS !== 'undefined' ? COMPETITIONS[compId] : null;
+        if (!c || (typeof isYouthComp === 'function' && isYouthComp(compId))) return 0;
+        if (c.type === 'league') return (Clubs.DIV_TIERS && Clubs.DIV_TIERS[compId] === 1) ? this.TROPHY_REP.leagueTop : this.TROPHY_REP.league;
+        if (c.type === 'cup') return this.TROPHY_REP.cup;
+        if (c.type === 'cont') return this.TROPHY_REP.cont;
+        return 0;
+    },
+    PRESTIGE_SOURCES: ['transfer', 'retirement', 'trophy'],
+    PRESTIGE_ITEM_MAX: 2,   // stored items (insider tips, network bonuses, instant reports): at most 2 of each
+    PRESTIGE_SHOP: {
+        mediaDay: { cost: 2 },          // used at once: 3 clients, 0.5-2 weeks of office rent each (max 4)
+        kitSale: { cost: 1 },           // used at once: 1 client, 0.5-3 weeks of office rent; fewer bids for a year
+        favour: { cost: 1 },            // used at once: +10 relationship with one club
+        insider: { cost: 5, item: true },   // stored: reveals one player's potential and injury proneness
+        network: { cost: 5, item: true },   // stored: a guaranteed offer from a club at 100 relationship
+        instant: { cost: 1, item: true },   // stored: one scout delivers his next report now
+    },
+    prestige() { return (GameState.agency && GameState.agency.prestige) || 0; },
+    _addPrestige(x) {
+        const a = GameState.agency; if (!a || !(x > 0)) return 0;
+        const before = a.prestige || 0;
+        a.prestige = Math.round(Math.min(this.PRESTIGE_CAP, before + x) * 100) / 100;
+        return a.prestige - before;
+    },
+    prestigeItems() { const a = GameState.agency; if (!a.prestigeItems) a.prestigeItems = { insider: 0, network: 0, instant: 0 }; return a.prestigeItems; },
+    prestigeItem(k) { return (GameState.agency && GameState.agency.prestigeItems && GameState.agency.prestigeItems[k]) || 0; },
+    _spendPrestige(cost) {
+        const a = GameState.agency;
+        if ((a.prestige || 0) + 1e-9 < cost) return false;
+        a.prestige = Math.max(0, Math.round(((a.prestige || 0) - cost) * 100) / 100);
+        return true;
+    },
+    // why a shop entry can't be bought right now (null = it can)
+    prestigeBlock(key) {
+        const e = this.PRESTIGE_SHOP[key]; if (!e) return 'unknown';
+        if (this.prestige() + 1e-9 < e.cost) return 'cost';
+        if (e.item && this.prestigeItem(key) >= this.PRESTIGE_ITEM_MAX) return 'full';
+        if (key === 'mediaDay' && this.clients().length < 3) return 'clients';
+        if (key === 'kitSale' && !this.clients().length) return 'noClient';
+        return null;
+    },
+    buyPrestigeItem(key) {
+        const e = this.PRESTIGE_SHOP[key];
+        if (!e || !e.item || this.prestigeBlock(key)) return { ok: false };
+        this._spendPrestige(e.cost);
+        this.prestigeItems()[key] += 1;
+        return { ok: true };
+    },
+    _takeItem(key) { const it = this.prestigeItems(); if (!(it[key] > 0)) return false; it[key] -= 1; return true; },
+
+    // ---- Media day: three clients face the press; each brings in office-rent weeks by how he ranks
+    // among YOUR clients (top 25%: 2 weeks, top half: 1, the rest: 0.5), at most 4 weeks in all. They
+    // would rather not: each one's opinion of you drops by 15.
+    MEDIA_DAY_WEEKS: [[0.25, 2], [0.5, 1], [1, 0.5]],
+    MEDIA_DAY_MAX_WEEKS: 4,
+    MEDIA_DAY_MORALE: 15,
+    mediaDayWeeks(p) {
+        const list = this.clients().slice().sort((a, b) => b.ability - a.ability || (a.id < b.id ? -1 : 1));
+        const i = list.indexOf(p); if (i < 0) return 0;
+        const frac = i / list.length;
+        return (this.MEDIA_DAY_WEEKS.find(([f]) => frac < f) || [0, 0.5])[1];
+    },
+    // the money a share of the office's rent is worth (the player only ever sees the amount)
+    _rentWeeks(weeks) { return Math.round(weeks * Upgrades.office().weekly / 10) * 10; },
+    mediaDayValue(p) { return this._rentWeeks(this.mediaDayWeeks(p)); },
+    mediaDayQuote(ids) {
+        const ps = ids.map(id => GameState.getPlayer(id)).filter(p => p && p.agentId === 'me');
+        const weeks = Math.min(this.MEDIA_DAY_MAX_WEEKS, ps.reduce((s, p) => s + this.mediaDayWeeks(p), 0));
+        return { weeks, amount: this._rentWeeks(weeks) };
+    },
+    // ---- Kit sale: one client's shirts sell; top 25% of your clients: 3 weeks of rent, top half 2,
+    // the rest 0.5. The flip side: clubs see him as the shirt-seller, and bid half as often for 52 weeks.
+    KIT_SALE_WEEKS: [[0.25, 3], [0.5, 2], [1, 0.5]],
+    KIT_SALE_BID_MULT: 0.5,
+    KIT_SALE_WEEKS_LEN: 52,
+    kitSaleValue(p) {
+        const list = this.clients().slice().sort((a, b) => b.ability - a.ability || (a.id < b.id ? -1 : 1));
+        const i = list.indexOf(p); if (i < 0) return 0;
+        const frac = i / list.length;
+        return this._rentWeeks((this.KIT_SALE_WEEKS.find(([f]) => frac < f) || [0, 0.5])[1]);
+    },
+    kitSaleActive(p) { return !!(p && p._kitSaleUntil != null && GameState.absWeek() < p._kitSaleUntil); },
+    holdKitSale(id) {
+        const p = GameState.getPlayer(id);
+        if (!p || p.agentId !== 'me') return { ok: false, message: I18n.t('pr.kit.pick') };
+        if (this.prestigeBlock('kitSale')) return { ok: false, message: I18n.t('pr.err.cost') };
+        const amount = this.kitSaleValue(p);
+        this._spendPrestige(this.PRESTIGE_SHOP.kitSale.cost);
+        GameState.agency.balance += amount;
+        GameState.addFinance('Kit sale', amount);
+        p._kitSaleUntil = GameState.absWeek() + this.KIT_SALE_WEEKS_LEN;
+        GameState.addLog(I18n.t('pr.kit.log', { name: p.name, amt: UI.money(amount) }), 'money');
+        return { ok: true, amount, message: I18n.t('pr.kit.done', { name: p.name, amt: UI.money(amount) }) };
+    },
+    holdMediaDay(ids) {
+        const uniq = Array.from(new Set(ids || []));
+        if (uniq.length !== 3 || uniq.some(id => { const p = GameState.getPlayer(id); return !p || p.agentId !== 'me'; })) return { ok: false, message: I18n.t('pr.media.pick3') };
+        if (this.prestigeBlock('mediaDay')) return { ok: false, message: I18n.t('pr.err.cost') };
+        const q = this.mediaDayQuote(uniq);
+        this._spendPrestige(this.PRESTIGE_SHOP.mediaDay.cost);
+        GameState.agency.balance += q.amount;
+        GameState.addFinance('Media day', q.amount);
+        uniq.forEach(id => { const p = GameState.getPlayer(id); if (p.morale) p.morale.agent = Math.max(0, p.morale.agent - this.MEDIA_DAY_MORALE); });
+        GameState.addLog(I18n.t('pr.media.log', { amt: UI.money(q.amount) }), 'money');
+        return { ok: true, amount: q.amount, weeks: q.weeks, message: I18n.t('pr.media.done', { amt: UI.money(q.amount) }) };
+    },
+    // ---- Call in a favour: +10 relationship with one club
+    FAVOUR_REL: 10,
+    callInFavour(clubId) {
+        const club = Clubs.getClubById(clubId);
+        if (!club || this.prestigeBlock('favour')) return { ok: false, message: I18n.t('pr.err.cost') };
+        if (this.relationship(clubId) >= 100) return { ok: false, message: I18n.t('pr.favour.maxed', { club: club.name }) };
+        this._spendPrestige(this.PRESTIGE_SHOP.favour.cost);
+        this.changeRelationship(clubId, this.FAVOUR_REL);
+        return { ok: true, message: I18n.t('pr.favour.done', { club: club.name, rel: Math.round(this.relationship(clubId)) }) };
+    },
+    // ---- Insider tip: reveals one player for the rest of the game (the same reveal a watched ad gives)
+    useInsiderTip(p) {
+        if (!p || p.insightAd === true || !this._takeItem('insider')) return { ok: false };
+        p.insightAd = true;   // "revealed": shared with the rewarded-ad reveal
+        return { ok: true };
+    },
+    // ---- Network bonus: a club where your relationship is 100 makes an offer, guaranteed. The role is
+    // still what he'd honestly get there (a 40-rated player at a giant only ever gets a squad place).
+    NETWORK_REL: 100,
+    canUseNetwork(p, clubId) {
+        const club = Clubs.getClubById(clubId);
+        return !!(club && this.isClient(p) && !p.onLoanAt && club.id !== p.clubId && this.prestigeItem('network') > 0 && this.relationship(clubId) >= this.NETWORK_REL);
+    },
+    useNetworkBonus(p, clubId) {
+        if (!this.canUseNetwork(p, clubId) || !this._takeItem('network')) return { ok: false, message: I18n.t('pr.network.cant') };
+        const target = Clubs.getClubById(clubId), parent = Clubs.getClubById(p.clubId), free = this.isFreeAgent(p);
+        const fee = free ? 0 : this.estimateFee(p, target, { skipCaseDiscount: true });
+        const offer = this._offerObj(p, parent ? parent.id : null, target.id, fee, { initiatedByAgent: true });
+        offer.network = true;
+        GameState.addMail({ playerId: p.id, kind: 'transfer', subject: free ? I18n.t('ag.mail.offerContractSubj', { target: target.name, name: p.name }) : I18n.t('ag.mail.offerWantSubj', { target: target.name, name: p.name }), offer, persistence: 1, ttl: 4 });
+        GameState.addLog(I18n.t('pr.network.log', { target: target.name, name: p.name }), 'offer');
+        return { ok: true, interested: true, message: I18n.t('pr.network.done', { target: target.name, name: p.name }) };
+    },
+
     atCapacity() { return this.clients().length >= this.capacity(); },
 
     relationship(clubId) { const r = GameState.agency.relationships; if (r[clubId] == null) r[clubId] = 55; return r[clubId]; },
@@ -436,6 +587,7 @@ const Agency = {
         p.agentId = 'me'; p.wageCommission = wage; p.sponsorCommission = sponsor;
         p.repUntilSeason = GameState.seasonStartYear + term; p.repExpired = false;
         p.knownToAgent = true; p.everClient = true; p.dismissedTalent = false;
+        p._signedAbs = GameState.absWeek();   // his first 52 weeks with you: wage morale never dips (see Sim._morale)
         if (!p.history) p.history = { ability: [], wage: [], fees: [] };
         recordAbilityPoint(p); recordWagePoint(p);
         Agency.bumpRep(0.3);
@@ -910,10 +1062,26 @@ const Agency = {
         let w = PlayerGen.wageFor(p.ability, rep) * this.wagePotentialFactor(p);
         w *= this.countryWageMult(club, opts.jitter !== false);
         w *= this.perfWageMult(p);
+        w *= this.intlBoost(p);   // a current international
         if (opts.loyalty && club && p.clubId === club.id) w *= this.loyaltyMult(p);
         w = PlayerGen.capYouthWage(w, p.age, rep, p.potential);
-        w = Math.min(w, this.clubWageCap(club));
+        // a club never OPENS at its whole wage budget: it keeps room to be haggled up (see maxClubWage)
+        // the teenage hard cap (PlayerGen.YOUTH_WAGE_CAP) is a ceiling too: open below it as well
+        const teenCap = PlayerGen.capYouthWage(Infinity, p.age, rep, p.potential);
+        w = Math.min(w, Math.min(this.clubWageCap(club), teenCap) * (opts.full ? 1 : this.OPENING_SHARE));   // opts.full: his worth to them, not an opening offer
         return Math.max(30, Math.round(w / 10) * 10);
+    },
+    // the most of its per-player wage budget a club puts in its OPENING offer; the rest is haggling room
+    OPENING_SHARE: 0.8,
+    // What a player thinks he is worth (wage morale): what a club at HIS level in his own league would
+    // pay, so a strong player at a weak club still knows he is underpaid. It includes the league's wage
+    // level (a Swiss player does not measure himself against English wages) and never exceeds what
+    // such a club can afford (its wage budget), so it lines up with the offers clubs actually make.
+    marketWage(p, club) {
+        const lvl = Math.max(club ? club.reputation : 0, p.ability);
+        const like = { id: '', reputation: lvl, country: club ? club.country : GameState.homeCountry };
+        const w = PlayerGen.wageFor(p.ability, lvl) * clubWageMult(like);
+        return Math.max(30, Math.min(w, this.clubWageCap(like)));
     },
     // A club's wage budget for ONE player: what its reputation (and its league's money) can pay,
     // however good he becomes. A level-wage multiple: 2x below rep 70 (squads top out at ~1.4x),
@@ -928,6 +1096,7 @@ const Agency = {
     // How far below the club's level he may still be, by age, before they stop believing he'll make
     // it there (18 and under: always given time; 23+: 10 points)
     RENEW_BELIEF_GAP: { 19: 30, 20: 25, 21: 20, 22: 15 },
+    RENEW_HOLD_CHANCE: 0.15,   // a club that could give a raise but would rather just extend on the same wage
     lostBelief(p, club) {
         if (!club || p.age <= 18) return false;
         if (p.squadRole === 'key' || p.squadRole === 'starter') return false;   // he plays: they clearly still rate him
@@ -947,15 +1116,15 @@ const Agency = {
         if (!club) return 'release';
         const y = GameState.seasonStartYear, st = p._renewStance;
         if (st && st.y === y && st.c === club.id) return st.s;
-        const worth = this.offeredWage(p, club, { loyalty: true, jitter: false });
+        const worth = this.offeredWage(p, club, { loyalty: true, jitter: false, full: true });
         const role = p.squadRole;
         let s;
         if (this.lostBelief(p, club)) s = 'release';
         else if (p.wage > worth * 1.6) s = (role === 'key' || role === 'starter') ? 'cut' : 'release';
-        else if (p.wage >= worth) s = 'hold';
+        else if (p.wage > worth * 1.01) s = 'hold';   // already paid above what he is worth to them
         else {
             const r = Rng.next(), drop = { key: 0.03, starter: 0.10, rotation: 0.25, youth: 0.15 }[role] ?? 0.45;
-            s = r < drop ? 'release' : r < drop + 0.25 ? 'hold' : 'raise';
+            s = r < drop ? 'release' : r < drop + this.RENEW_HOLD_CHANCE ? 'hold' : 'raise';
         }
         p._renewStance = { y, c: club.id, s };
         return s;
@@ -963,7 +1132,7 @@ const Agency = {
     // the wage a club opens a renewal at, by its stance
     renewalWage(p, club, bump = 1) {
         const s = this.renewalStance(p, club), cap = this.clubWageCap(club);
-        const worth = this.offeredWage(p, club, { loyalty: true, jitter: false });
+        const worth = this.offeredWage(p, club, { loyalty: true, jitter: false, full: true });
         if (s === 'hold') return Math.min(p.wage, cap);
         if (s === 'cut') return worth;
         return Math.min(cap, Math.round(Math.max(p.wage + 10, worth * bump) / 10) * 10);
@@ -972,7 +1141,7 @@ const Agency = {
     maxClubWage(p, club) {
         const rep = club ? club.reputation : 45;
         let base = PlayerGen.wageFor(p.ability, rep) * 1.6 * this.wagePotentialFactor(p);   // clear room to push the wage up
-        base *= this.countryWageMult(club, false) * this.perfWageMult(p);                   // country tendency + recent form
+        base *= this.countryWageMult(club, false) * this.perfWageMult(p) * this.intlBoost(p);   // country tendency + recent form + international
         if (club && p.clubId === club.id) base *= this.loyaltyMult(p);                      // long service pays, when he stays
         base *= 1 + Math.max(-0.08, Math.min(0.25, (this.relationship(club ? club.id : null) - 55) / 220));
         base = PlayerGen.capYouthWage(base, p.age, rep, p.potential);
@@ -1059,6 +1228,14 @@ const Agency = {
         const hit = (p.movements || []).filter(m => m.type === 'releg' && this._boostFresh(m) && this.playedRegularly(p, m.year));
         return hit.length ? hit[hit.length - 1].division : null;
     },
+    // A current international (in his nation's latest squad) is worth more: higher wage offers, more
+    // transfer interest and richer sponsorships, by the role he holds there.
+    INTL_BOOST: { star: 0.10, starter: 0.08, rotation: 0.06, reserve: 0.05 },
+    intlBoost(p) {
+        if (typeof Internationals === 'undefined' || !Internationals.callupOf || !p) return 1;
+        const cu = Internationals.callupOf(p);
+        return cu ? 1 + (this.INTL_BOOST[cu.role] || 0) : 1;
+    },
     // Everything that shapes WHICH club bids, resolved once per roll.
     interestWeights(p) {
         const band = this.formBand(p);
@@ -1070,7 +1247,7 @@ const Agency = {
             down: band.down,
             widen: band.widen,
             relegDiv,
-            boost: relegDiv ? this.RELEG_INTEREST : 1,   // straight onto the chance of any bid
+            boost: (relegDiv ? this.RELEG_INTEREST : 1) * this.intlBoost(p) * (this.kitSaleActive(p) ? this.KIT_SALE_BID_MULT : 1),   // straight onto the chance of any bid
             cool: band.cool,
         };
     },
@@ -1276,7 +1453,8 @@ const Agency = {
     // commission is FIXED at what you originally negotiated. You agree wage, role, term and your signing bonus.
     // the club weighs the WHOLE package (wage, role, term, signing bonus) at once and answers with one improved counter.
     // `neg` is the persisted patience/threat state (see initNeg); it is created lazily and mutated in place.
-    evaluateTransfer(p, club, pkg, neg) {
+    // `floor` is the club's own opening wage (the offer's proposedWage): a counter never goes below it.
+    evaluateTransfer(p, club, pkg, neg, floor) {
         const term = Math.max(1, Math.min(6, pkg.term || 3));
         const termFactor = 1 + (3 - term) * 0.05;                 // a shorter deal -> they'll stretch the wage
         const baseMaxWage = Math.round(this.maxClubWage(p, club) * termFactor / 10) * 10;
@@ -1300,12 +1478,18 @@ const Agency = {
         // sane minimum — the club's real ceiling (maxWage, from its reputation) governs from there.
         const wageFloor = 30;
         const effMaxWage = Math.round(Math.max(wageFloor, maxWage - NEGO.FEE_TO_WAGE * feeAnnual / 52) / 10) * 10;
-        const wageOk = pkg.wage <= effMaxWage, bonusOk = (pkg.bonus || 0) <= feeCeil;
+        // A wage the club has already countered with stands for the rest of the talks (so long as you
+        // don't ask a bigger fee than you did then): coming down towards it must never make it drop.
+        // Its own opening wage is always a yes.
+        const st = neg.standing, held = st && (pkg.bonus || 0) <= st.bonus ? st.wage : 0;
+        const floorNow = Math.max(floor || 0, held);
+        const wageOk = pkg.wage <= Math.max(effMaxWage, floorNow), bonusOk = (pkg.bonus || 0) <= feeCeil;
         // The counter is a package the club will sign, so its fee must also clear the club's
         // willingness AT THE COUNTERED WAGE (what acceptTransfer checks), not only at the wage
         // asked: a big fee ask can drag the countered wage down, and the fee room with it.
-        const counterWage = Math.min(pkg.wage, effMaxWage);
+        const counterWage = Math.max(floorNow, Math.min(pkg.wage, effMaxWage));   // never below its opening offer or an earlier counter
         const counter = { wage: counterWage, role: roleOk ? pkg.role : roleCeil, term, bonus: Math.min(pkg.bonus || 0, feeCeil, this.clubBonusWillingness(p, club, counterWage, pkg.fee)) };
+        if (!st || counterWage > st.wage) neg.standing = { wage: counterWage, bonus: pkg.bonus || 0 };
 
         if (wageOk && roleOk && bonusOk) {
             const lines = [I18n.t('nego.tr.accept1', { name: p.name }), I18n.t('nego.tr.accept2', { name: p.name }), I18n.t('nego.tr.accept3')];
@@ -1432,9 +1616,9 @@ const Agency = {
             // agreed outside a window: park the package, complete it when the window opens
             p.pendingTransfer = pkg;
             p.joiningClubId = toClub.id;   // shows the "Joining X" tag in the UI
-            // agreeing a move ahead of the window settles his wage worries in the meantime (+10); it's
-            // fully resolved (→ 100) when the transfer actually completes in _finalizeTransfer
-            if (p.morale) p.morale.wage = Math.min(100, (p.morale.wage || 0) + 10);
+            // agreeing a move ahead of the window: his wage and club morale are frozen where they are now
+            // and he stops complaining about either until the move (see Sim._morale). Wage morale is fully
+            // resolved (-> 100) when the transfer completes in _finalizeTransfer.
             // the season the move actually completes in (winter window = this season; otherwise next) —
             // used to label "Joining 26/27" instead of the old undefined -> "NaN/NaN"
             p._joinSeason = (GameState.week >= 7 && GameState.week <= 27) ? GameState.seasonStartYear : GameState.seasonStartYear + 1;
@@ -1477,7 +1661,7 @@ const Agency = {
         // reputation for the move — see Agency.transferRepGain / docs/reputation-design.md
         {
             const rep = Agency.transferRepGain(fromClub, toClub, p, fromClub ? null : Clubs.getClubById(p.lastClubId));
-            Agency.bumpRep(rep.total);
+            Agency.bumpRep(rep.total, 'transfer');
             if (rep.parts.some(x => x.why === 'topFive')) p.topFiveBonusPaid = true;
         }
         // Where he is moving FROM, captured before lastClubId is overwritten below. Settling in is

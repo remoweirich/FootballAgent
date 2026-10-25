@@ -4,7 +4,7 @@
 // ============================================================
 const ClientsScreen = {
     state: { filter: 'all', sort: 'ability', dir: 'desc', positions: [] },
-    SORTS: [['ability', 'Ability'], ['age', 'Age'], ['apps', 'Appearances'], ['avg', 'Avg rating'], ['contract', 'Contract left'], ['morale', 'Morale'], ['wage', 'Wage'], ['repterm', 'Rep. term left']],
+    SORTS: [['ability', 'Ability'], ['potential', 'Scouted potential'], ['age', 'Age'], ['apps', 'Appearances'], ['avg', 'Avg rating'], ['contract', 'Contract left'], ['morale', 'Morale'], ['wage', 'Wage'], ['repterm', 'Rep. term left']],
     POSITIONS: ['GK', 'LB', 'CB', 'RB', 'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'],
 
     rows() {
@@ -34,6 +34,13 @@ const ClientsScreen = {
     },
     sorted() {
         const rows = this.filtered(), key = this.state.sort, dir = this.state.dir === 'asc' ? 1 : -1;
+        // scouted potential: by the scout's ceiling verdict (its tier's range: top end, then bottom end),
+        // then alphabetically, so the sort never leaks who is really better within the same verdict
+        if (key === 'potential') {
+            const rng = r => { if (typeof Scouting === 'undefined') return { upper: -1, lower: -1 }; Scouting.ensureReport(r.p); return Scouting.ceilingRange(r.p) || { upper: -1, lower: -1 }; };
+            const ks = new Map(rows.map(r => [r, rng(r)]));
+            return rows.sort((a, b) => { const x = ks.get(a), y = ks.get(b); return ((x.upper - y.upper) || (x.lower - y.lower)) * dir || String(a.p.name).localeCompare(String(b.p.name)); });
+        }
         const val = r => ({ ability: r.p.ability, age: r.p.age, apps: r.tot.apps, avg: r.tot.avg, contract: r.contractLeft, wage: r.p.wage, repterm: r.repLeft, morale: r.mor })[key];
         return rows.sort((a, b) => (val(a) - val(b)) * dir);
     },
@@ -78,6 +85,7 @@ const ClientsScreen = {
                         ${p.retiringThisSeason ? `<span class="pill pill--gold" style="padding:1px 7px;font-size:10px">${I18n.t('clients.retiring')}</span>` : ''}
                     </div>
                     <div class="cl-sub"><span class="flex-row" style="gap:5px">${UI.crest(info ? info.club : club)}${teamHTML}</span><span style="color:var(--text-chevron)">·</span><span>${p.position}</span><span style="color:var(--text-chevron)">·</span><span>${roleName(p)}</span></div>
+                    ${this.state.sort === 'potential' && typeof Scouting !== 'undefined' ? `<div class="cl-sub" style="color:var(--state-good)"><i class="ti ti-zoom-scan" style="font-size:12px"></i>${UI.esc(Scouting.ceilingFor(p))}</div>` : ''}
                 </div>
                 <div class="flex-row" style="gap:3px;margin-right:9px" data-wt="cl-morale">${this.moraleDots(p)}</div>
                 ${UI.abilityBadge(p.ability)}
@@ -148,7 +156,7 @@ Router.register('clients', { isMain: true, title: () => I18n.t('nav.clients'), r
 const ClientHistory = {
     state: { pos: 'all', sort: 'apps', dir: 'desc' },
     POSGROUP: { GK: 'GK', CB: 'DEF', LB: 'DEF', RB: 'DEF', CDM: 'MID', CM: 'MID', CAM: 'MID', LW: 'ATT', RW: 'ATT', ST: 'ATT' },
-    SORTS: [['apps', 'Games'], ['goals', 'Goals'], ['assists', 'Assists'], ['avg', 'Avg rating'], ['seasons', 'Seasons'], ['titles', 'Titles'], ['yellow', 'Yellow cards'], ['red', 'Red cards']],
+    SORTS: [['apps', 'Games'], ['goals', 'Goals'], ['cs', 'Clean sheets'], ['assists', 'Assists'], ['avg', 'Avg rating'], ['seasons', 'Seasons'], ['titles', 'Titles'], ['yellow', 'Yellow cards'], ['red', 'Red cards']],
     rows() {
         return GameState.players.filter(p => p.everClient).map(p => {
             const c = careerLeagueTotal(p);
@@ -222,21 +230,33 @@ const ClientRecords = {
             <div style="display:grid;grid-template-columns:1fr;gap:var(--space-2)">${recs.map(r => this.card(r)).join('')}</div>`;
     },
     card(r) {
+        // shared records: every holder named and linked (a card can't be one link then)
+        if (r.ps && r.ps.length > 1) {
+            const names = r.ps.map(q => `<a href="${Router.link('client', q.id)}" style="color:var(--text)">${UI.flag(q.nationality)} ${UI.esc(q.name)}</a>`).join(', ');
+            return `<div class="fcard" style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px">
+            <div style="min-width:0"><div style="font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-secondary)">${r.label} <span class="muted" style="text-transform:none">· ${I18n.t('records.sharedN', { n: r.ps.length })}</span></div><div style="font-size:var(--fs-md);line-height:1.5">${names}</div></div>
+            <div style="font-size:var(--fs-xl);font-weight:var(--weight-semibold);color:var(--gold);flex:none;margin-left:12px">${r.value}</div></div>`;
+        }
         return `<a href="${Router.link('client', r.p.id)}" class="fcard" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:11px 14px">
             <div style="min-width:0"><div style="font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:var(--tracking-caps);color:var(--text-secondary)">${r.label}</div><div style="font-size:var(--fs-lg);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.flag(r.p.nationality)} ${UI.esc(r.p.name)}${r.sub ? ` <span class="muted">· ${r.sub}</span>` : ''}</div></div>
             <div style="font-size:var(--fs-xl);font-weight:var(--weight-semibold);color:var(--gold);flex:none;margin-left:12px">${r.value}</div></a>`;
     },
     compute(players) {
-        const mk = (label, valFn, fmt) => {   // record held by the player with the LARGEST value
-            let bp = null, bv = -Infinity, bex = null;
-            players.forEach(p => { const r = valFn(p); if (r && r.val > bv) { bv = r.val; bp = p; bex = r.extra || null; } });
-            return bp ? { label, p: bp, value: fmt(bv), sub: bex } : null;
+        // a record is held by EVERY player sharing the best value (ps); `p` is the first of them. The
+        // extra line (a season, a club...) only shows when one player holds it alone.
+        const best = (label, valFn, fmt, better) => {
+            let bv = null, holders = [];
+            players.forEach(p => {
+                const r = valFn(p); if (!r) return;
+                if (bv === null || better(r.val, bv)) { bv = r.val; holders = [{ p, ex: r.extra || null }]; }
+                else if (r.val === bv) holders.push({ p, ex: r.extra || null });
+            });
+            if (!holders.length) return null;
+            holders.sort((a, b) => String(a.p.name).localeCompare(String(b.p.name)));
+            return { label, p: holders[0].p, ps: holders.map(h => h.p), value: fmt(bv), sub: holders.length === 1 ? holders[0].ex : null };
         };
-        const mkMin = (label, valFn, fmt) => {   // record held by the player with the SMALLEST value (e.g. youngest)
-            let bp = null, bv = Infinity, bex = null;
-            players.forEach(p => { const r = valFn(p); if (r && r.val < bv) { bv = r.val; bp = p; bex = r.extra || null; } });
-            return bp ? { label, p: bp, value: fmt(bv), sub: bex } : null;
-        };
+        const mk = (label, valFn, fmt) => best(label, valFn, fmt, (a, b) => a > b);   // the LARGEST value
+        const mkMin = (label, valFn, fmt) => best(label, valFn, fmt, (a, b) => a < b); // the SMALLEST value
         const seasonMax = key => p => { let v = 0, y = null; Object.keys(p.stats || {}).forEach(yy => { const t = seasonTotals(p, +yy); if (t[key] > v) { v = t[key]; y = +yy; } }); return v > 0 ? { val: v, extra: y != null ? GameState.seasonLabelFor(y) : null } : null; };
         const careerKey = key => p => { const t = careerTotal(p); return t[key] > 0 ? { val: t[key] } : null; };
         const moves = (p, type) => { const n = (p.movements || []).filter(m => m.type === type).length; return n > 0 ? { val: n } : null; };
@@ -298,8 +318,6 @@ const ClientRecords = {
             }, v => I18n.t('records.spanN', { n: v })),
             mk(I18n.t('records.mostPromotions'), p => { const n = promoCount(p); return n > 0 ? { val: n } : null; }, num),
             mk(I18n.t('records.mostRelegations'), p => moves(p, 'releg'), num),
-            mkMin(I18n.t('records.youngestScorer'), p => { const ys = scoringYears(p); if (!ys.length) return null; let by = ys[0], ba = ageIn(p, ys[0]); ys.forEach(y => { const a = ageIn(p, y); if (a < ba) { ba = a; by = y; } }); return { val: ba, extra: GameState.seasonLabelFor(by) }; }, yrs),
-            mk(I18n.t('records.oldestScorer'), p => { const ys = scoringYears(p); if (!ys.length) return null; let by = ys[0], ba = ageIn(p, ys[0]); ys.forEach(y => { const a = ageIn(p, y); if (a > ba) { ba = a; by = y; } }); return { val: ba, extra: GameState.seasonLabelFor(by) }; }, yrs),
         ].filter(Boolean);
     }
 };

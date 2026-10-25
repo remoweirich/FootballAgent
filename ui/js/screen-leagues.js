@@ -154,7 +154,7 @@ const LeaguesScreen = {
             const zoneCls = euInfo ? '' : (this.ZONE_MAP[zoneKey] || '');   // European left-bar replaces the promo/releg bar on that row
             // European place shown as a colour strip on the leading edge (left of the position number), like promo/relegation
             const firstTd = euInfo ? `<td style="border-left-color:${euInfo.color}">${i + 1}</td>` : `<td>${i + 1}</td>`;
-            return `<tr class="${zoneCls}" onclick="location.hash='clubs/${encodeURIComponent(r.clubId)}'" style="cursor:pointer">
+            return `<tr class="${zoneCls}" onclick="location.hash='${Router.link('clubs', r.clubId).slice(1)}'" style="cursor:pointer">
                 ${firstTd}<td class="club-cell">${UI.crest(c)}${c ? c.name : r.clubId}${myCount ? ` <span class="pill pill--accent" style="padding:1px 6px">${myCount}</span>` : ''}${champ === r.clubId ? ' 🏆' : ''}</td>
                 <td class="num">${r.P}</td><td class="num">${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA}</td><td class="num" style="color:var(--text)">${r.Pts}</td></tr>`;
         }).join('');
@@ -578,7 +578,7 @@ const LeaguesScreen = {
         const body = rows.map((r, i) => {
             const bar = i < 8 ? '#16A34A' : i < 24 ? '#2563EB' : '';   // qualification shown as a left-edge strip, like league tables
             const firstTd = bar ? `<td style="border-left-color:${bar}">${i + 1}</td>` : `<td>${i + 1}</td>`;
-            return `<tr onclick="location.hash='clubs/${encodeURIComponent(r.clubId)}'" style="cursor:pointer">
+            return `<tr onclick="location.hash='${Router.link('clubs', r.clubId).slice(1)}'" style="cursor:pointer">
                 ${firstTd}<td class="club-cell">${this.euClubCell(r.clubId)}</td><td class="num">${r.P}</td><td class="num">${r.GF - r.GA > 0 ? '+' : ''}${r.GF - r.GA}</td><td class="num" style="color:var(--text)">${r.Pts}</td></tr>`;
         }).join('');
         const dot = col => `<span style="display:inline-block;width:4px;height:14px;border-radius:1px;background:${col}"></span>`;
@@ -637,18 +637,19 @@ const CompHistory = {
         if (!comp) { el.innerHTML = `<div class="empty"><div class="empty__title">${I18n.t('leagues.unknownComp')}</div></div>`; return; }
         const ctx = this.ctx(compId);
         if (!['winners', 'players'].includes(ctx.tab)) ctx.tab = 'winners';
-        const isCont = comp.type === 'cont';
-        const icon = (isCont && typeof europeTrophyIcon === 'function' && europeTrophyIcon(compId)) || '<i class="ti ti-trophy" style="color:var(--gold);font-size:20px"></i>';
+        const isCont = comp.type === 'cont', isIntl = comp.type === 'intl';
+        const icon = (isCont && typeof europeTrophyIcon === 'function' && europeTrophyIcon(compId)) || `<i class="ti ${isIntl ? 'ti-world' : 'ti-trophy'}" style="color:var(--gold);font-size:20px"></i>`;
         const tabs = [['winners', I18n.t('leagues.winnersTab')], ['players', I18n.t('nav.clients')]];
         el.innerHTML = `
         <div class="flex-row" style="gap:8px;margin-bottom:var(--space-2)">${icon}<span style="font-size:var(--fs-2xl);font-weight:var(--weight-semibold)">${UI.esc(comp.name)}</span></div>
         <p class="hint" style="margin-bottom:var(--space-4)">${this.subtitle(comp.type)}</p>
         <div class="tab-bar tab-bar--sticky" style="margin-bottom:var(--space-4)">${tabs.map(([k, l]) => `<button class="tab ${ctx.tab === k ? 'is-active' : ''}" onclick="CompHistory.setTab('${compId}','${k}')">${l}</button>`).join('')}</div>
-        <div id="comphistBody">${ctx.tab === 'winners' ? this.winnersHTML(compId) : this.playersHTML(compId)}</div>`;
+        <div id="comphistBody">${ctx.tab === 'winners' ? (isIntl ? this.intlWinnersHTML(compId) : this.winnersHTML(compId)) : this.playersHTML(compId)}</div>`;
     },
     setTab(compId, t) { this.ctx(compId).tab = t; Router.refresh(); },
     subtitle(type) {
-        return type === 'cont' ? I18n.t('leagues.subCont')
+        return type === 'intl' ? I18n.t('leagues.subIntl')
+            : type === 'cont' ? I18n.t('leagues.subCont')
             : type === 'cup' ? I18n.t('leagues.subCup')
                 : I18n.t('leagues.subLeague');
     },
@@ -679,8 +680,48 @@ const CompHistory = {
             <div class="section-label" style="margin-top:var(--space-4)">${I18n.t('leagues.rollOfHonour')}</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${roll}</div>`;
     },
 
+    // ---- international competitions: their roll of honour (the real one from before 2026, then the
+    // game's own, see js/intl-history.js and GameState.intl.honours) ----
+    // compId -> [honours key, dated by season rather than by year]
+    INTL_HONOURS: {
+        INTL_WC: ['WC'], INTL_EURO: ['EURO'], INTL_NL: ['NL', true], INTL_COPA: ['COPA'], INTL_GOLD: ['GOLD'],
+        INTL_CNL: ['CNL_A', true], INTL_AFCON: ['AFCON'], INTL_ANL: ['ANL', true], INTL_AC: ['AC'],
+        INTL_AFCNL: ['AFCNL', true], INTL_ONC: ['ONC'], INTL_FINALISSIMA: ['FINALISSIMA'],
+    },
+    intlWinnersOf(compId) {
+        const h = this.INTL_HONOURS[compId]; if (!h) return null;
+        const real = typeof intlHistoryHonours === 'function' ? intlHistoryHonours(h[0]) : [];
+        const game = (GameState.intl && GameState.intl.honours && GameState.intl.honours[h[0]]) || [];
+        return real.concat(game).filter(r => r && r.winner).map(r => ({ r, label: h[1] ? GameState.seasonLabelFor(r.season != null ? r.season : r.year) : String(r.year) })).reverse();
+    },
+    intlWinnersHTML(compId) {
+        const w = this.intlWinnersOf(compId);
+        if (!w) return `<p class="hint">${I18n.t('leagues.noTrophyComp')}</p>`;
+        if (!w.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-trophy"></i></div><div class="empty__title">${I18n.t('leagues.noWinners')}</div><div class="empty__hint">${I18n.t('leagues.noWinnersSub')}</div></div>`;
+        const nat = id => typeof IntlScreen !== 'undefined' ? IntlScreen.nation(id) : UI.esc(id);
+        const tally = {}; w.forEach(x => tally[x.r.winner] = (tally[x.r.winner] || 0) + 1);
+        const name = id => (typeof NATIONS_BY_ID !== 'undefined' && NATIONS_BY_ID[id] && NATIONS_BY_ID[id].name) || id;
+        const most = Object.entries(tally).sort((a, b) => b[1] - a[1] || name(a[0]).localeCompare(name(b[0])))
+            .map(([id, n]) => `<div class="frow"><span class="frow__k">${nat(id)}</span><span class="frow__v">${I18n.t('leagues.titlesN', { n })}</span></div>`).join('');
+        const fin = r => r.final && r.final.hg != null ? `<br><span class="muted" style="font-size:var(--fs-xs)">${nat(r.final.h)} ${r.final.hg}–${r.final.ag} ${nat(r.final.a)}</span>`
+            : r.runnerUp ? `<br><span class="muted" style="font-size:var(--fs-xs)">${I18n.t('leagues.runnerUpX', { x: name(r.runnerUp) })}</span>` : '';
+        const roll = w.map(x => `<div class="frow" style="flex-wrap:wrap;gap:4px"><span class="frow__k">${x.label}</span><span class="frow__v" style="text-align:right">🏆 ${nat(x.r.winner)}${fin(x.r)}</span></div>`).join('');
+        return `<div class="section-label">${I18n.t('leagues.mostTitles')}</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${most}</div>
+            <div class="section-label" style="margin-top:var(--space-4)">${I18n.t('leagues.rollOfHonour')}</div><div class="fcard" style="margin-top:var(--space-2);max-height:420px;overflow-y:auto">${roll}</div>`;
+    },
+
     // ---- clients who featured ----
     playerRows(compId) {
+        // international: what each client did in it for his country, and the times he won it
+        if ((COMPETITIONS[compId] || {}).type === 'intl') {
+            return GameState.players.filter(p => p.everClient && p.intlStats).map(p => {
+                const a = blankComp();
+                Object.values(p.intlStats).forEach(s => { if (s[compId]) addComp(a, s[compId]); });
+                if (!a.apps) return null;
+                a.avg = a.apps ? a.ratingSum / a.apps : 0;
+                return { p, name: p.name, apps: a.apps, goals: a.goals, assists: a.assists, cs: a.cs || 0, yellow: a.yellow, red: a.red, avg: a.avg, titles: (p.intlTrophies || []).filter(t => t.comp === compId).length };
+            }).filter(Boolean);
+        }
         return GameState.players.filter(p => p.everClient).map(p => {
             const m = careerByComp(p).find(x => x.compId === compId);
             if (!m || !m.agg.apps) return null;

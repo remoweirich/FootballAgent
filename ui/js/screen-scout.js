@@ -107,6 +107,8 @@ const ScoutCard = {
 
         return `<div class="info-grid">${boxes}${nextReport}</div>${shortNote}
             <div class="gap-2" style="display:flex;flex-direction:column;margin-top:var(--space-4)">
+                ${on && typeof Agency !== 'undefined' && Agency.prestigeItem('instant') > 0
+                ? `<button class="btn btn--primary" onclick="ScoutCard.instant('${s.id}')"><i class="ti ti-bolt"></i>${I18n.t('sc.instantReport', { n: Agency.prestigeItem('instant') })}</button>` : ''}
                 ${on
                 ? `<button class="btn btn--accent-outline" onclick="ScoutCard.recall('${s.id}')"><i class="ti ti-x"></i>${I18n.t('sc.recall')}</button>`
                 : `<button class="btn btn--accent-outline" onclick="ScoutCard.setTab('${s.id}','assignment')"><i class="ti ti-map-2"></i>${I18n.t('sc.createAssignment')}</button>`}
@@ -268,6 +270,14 @@ const ScoutCard = {
         }
         GameState.save(); Router.refresh();
         Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
+    // an instant report (Prestige shop): this scout's next report, now, at the usual price
+    instant(id) {
+        const f = Scouts.instantReport(id);
+        if (!f) return;
+        Sim.deliverScoutFinds([f], []);
+        GameState.save(); Router.refresh();
+        Router.result(f.none ? I18n.t('sc.instantNone') : I18n.t('sc.instantDone', { n: f.players.length }), f.none ? 'bad' : 'ok');
     },
     recall(id) {
         const r = Scouts.setIdle(id);

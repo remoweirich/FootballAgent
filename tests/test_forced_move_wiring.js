@@ -34,7 +34,7 @@ check('advanceWeek executes a pending forced move (club changes)', runv(`
   p.agentId = 'me'; p.everClient = true; p.clubId = club.id; p.wage = 2000;
   p.repUntilSeason = GameState.seasonStartYear + 3; p.repExpired = false;   // still under contract: he moves, not fires
   p.morale = { club: 8, time: 70, wage: 70, agent: 70 };
-  p.moraleCase = { dim: 'club', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, promise: null, forcedMove: true };
+  p.moraleCase = { dim: 'club', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, stage3Abs: GameState.absWeek() - 40, promise: null, forcedMove: true };
   GameState.players.push(p);
   const before = p.clubId;
   Sim._forcedMoves([]);   // the exact call advanceWeek now makes; run directly for determinism
@@ -46,7 +46,7 @@ check('stage-3 WAGE case + rep expired -> he fires the agency (grace elapsed)', 
   const p = GameState.players.find(x => x.agentId === 'me') || (() => { const c = Clubs.allClubs[0]; const q = PlayerGen.makePlayer(c, { ability: 60, age: 26, position: 'ST' }); q.agentId='me'; q.everClient=true; q.clubId=c.id; GameState.players.push(q); return q; })();
   p.repExpired = true;
   p.morale = { club: 70, time: 70, wage: 10, agent: 70 };   // wage stays BAD so the case can't resolve
-  p.moraleCase = { dim: 'wage', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, promise: null, leaveAtAbsWeek: GameState.absWeek() - 1 };
+  p.moraleCase = { dim: 'wage', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, stage3Abs: GameState.absWeek() - 40, promise: null, leaveAtAbsWeek: GameState.absWeek() - 1 };
   Sim._moraleCases([]);
   return p.agentId === null && p.moraleCase === null;
 `));
@@ -57,7 +57,7 @@ check('stage-3 case while STILL under a rep term does NOT fire (he cannot just w
   p.agentId = 'me'; p.everClient = true; p.clubId = c.id;
   p.repExpired = false; p.repUntilSeason = GameState.seasonStartYear + 2;
   p.morale = { club: 70, time: 70, wage: 8, agent: 70 };
-  p.moraleCase = { dim: 'wage', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, promise: null };
+  p.moraleCase = { dim: 'wage', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, stage3Abs: GameState.absWeek() - 40, promise: null };
   GameState.players.push(p);
   Sim._moraleCases([]);
   return p.agentId === 'me' && p.moraleCase != null;   // stays a client, case intact
@@ -68,7 +68,7 @@ check('the agent-dimension firing (original behaviour) still works', runv(`
   const p = PlayerGen.makePlayer(c, { ability: 61, age: 28, position: 'CM' });
   p.agentId = 'me'; p.everClient = true; p.clubId = c.id; p.repExpired = true;
   p.morale = { club: 70, time: 70, wage: 70, agent: 8 };
-  p.moraleCase = { dim: 'agent', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, promise: null, leaveAtAbsWeek: GameState.absWeek() - 1 };
+  p.moraleCase = { dim: 'agent', stage: 3, sinceAbsWeek: GameState.absWeek() - 20, stage3Abs: GameState.absWeek() - 40, promise: null, leaveAtAbsWeek: GameState.absWeek() - 1 };
   GameState.players.push(p);
   Sim._moraleCases([]);
   return p.agentId === null;

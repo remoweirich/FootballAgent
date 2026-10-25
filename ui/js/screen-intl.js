@@ -16,14 +16,31 @@ if (typeof window !== 'undefined') window.trophyLink = trophyLink;
 const IntlScreen = {
     state: { nlLeague: 'A', qLeague: 1, conf: 'UEFA' },
     // confederations, shown under generic names (intl.conf.*); only UEFA has its own competitions yet
-    CONFS: ['UEFA', 'AFC', 'CAF', 'CONMEBOL', 'CONCACAF', 'OFC'],
+    // WORLD is not a confederation: it holds the World Cup itself (tournament, inter-confederation
+    // play-off, world ranking, roll of honour); the confederations keep their own qualifying
+    CONFS: ['WORLD', 'UEFA', 'AFC', 'CAF', 'CONMEBOL', 'CONCACAF', 'OFC'],
     confName(c) { return I18n.t('intl.conf.' + c); },
     conf() { return this.CONFS.includes(this.state.conf) ? this.state.conf : 'UEFA'; },
     setConf(c) { this.state.conf = c; LeaguesScreen.state.intlAutoTab = true; Router.refresh(); },
     // open an international competition: its confederation and tab, else that confederation's roll of honour
-    COMP_TAB: { INTL_WC: ['UEFA', 'tour'], INTL_EURO: ['UEFA', 'tour'], INTL_NL: ['UEFA', 'nlko'], INTL_FINALISSIMA: ['UEFA', 'info'],
+    COMP_TAB: { INTL_WC: ['WORLD', 'tour'], INTL_EURO: ['UEFA', 'tour'], INTL_NL: ['UEFA', 'nlko'], INTL_FINALISSIMA: ['UEFA', 'info'],
         INTL_COPA: ['CONMEBOL', 'copa'], INTL_GOLD: ['CONCACAF', 'gold'], INTL_CNL: ['CONCACAF', 'cnl'], INTL_AFCON: ['CAF', 'afcon'], INTL_ANL: ['CAF', 'anl'],
-        INTL_AC: ['AFC', 'ac'], INTL_AFCNL: ['AFC', 'afcnl'], INTL_ONC: ['OFC', 'onc'] },
+        INTL_AC: ['AFC', 'ac'], INTL_AFCNL: ['AFC', 'afcnl'], INTL_ONC: ['OFC', 'onc'],
+        INTL_QUAL: ['UEFA', 'qual'], INTL_CMQ: ['CONMEBOL', 'cmq'], INTL_CCQ: ['CONCACAF', 'ccq'], INTL_CAFQ: ['CAF', 'cafq'], INTL_AFCONQ: ['CAF', 'afcon'],
+        INTL_AFCQ: ['AFC', 'afcnl'], INTL_OFCQ: ['OFC', 'ofcq'], INTL_ONCQ: ['OFC', 'onc'], INTL_WCPO: ['WORLD', 'icpo'] },
+    // the competition a tab shows (for its "History & records" link)
+    TAB_COMP: { nl: 'INTL_NL', nlko: 'INTL_NL', qual: 'INTL_QUAL', po: 'INTL_QUAL', copa: 'INTL_COPA', gold: 'INTL_GOLD', cnl: 'INTL_CNL',
+        afcon: 'INTL_AFCON', anl: 'INTL_ANL', ac: 'INTL_AC', afcnl: 'INTL_AFCNL', onc: 'INTL_ONC', cmq: 'INTL_CMQ', ccq: 'INTL_CCQ',
+        cafq: 'INTL_CAFQ', ofcq: 'INTL_OFCQ', icpo: 'INTL_WCPO' },
+    tabComp(tab) {
+        if (tab === 'tour') { const S = this.season(); return S && S.type === 'WORLD_CUP' ? 'INTL_WC' : 'INTL_EURO'; }
+        if (tab === 'wcq') return { CONMEBOL: 'INTL_CMQ', CONCACAF: 'INTL_CCQ', CAF: 'INTL_CAFQ', AFC: 'INTL_AFCQ', OFC: 'INTL_OFCQ' }[this.conf()] || null;
+        return this.TAB_COMP[tab] || null;
+    },
+    historyLink(tab) {
+        const c = this.tabComp(tab); if (!c || !COMPETITIONS[c]) return '';
+        return `<p style="margin:0 0 var(--space-3);text-align:right"><a href="${Router.link('comphist', c)}" style="color:var(--info-text);font-size:var(--fs-sm)"><i class="ti ti-history" style="font-size:13px"></i> ${I18n.t('intl.historyLink', { comp: compName(c) })}</a></p>`;
+    },
     openComp(compId) {
         const [conf, tab] = this.COMP_TAB[compId] || ['UEFA', 'info'];
         this.state.conf = conf;
@@ -52,13 +69,13 @@ const IntlScreen = {
     // ---------------- tabs ----------------
     tabs() {
         const S = this.season(), t = [];
+        if (this.conf() === 'WORLD') return this.worldTabs();
         if (this.isAm && this.isAm(this.conf())) return this.amTabs(this.conf());
         if (this.cafTabs && this.conf() === 'CAF' && GameState.intl) return this.cafTabs();
         if (this.isAo && this.isAo(this.conf()) && GameState.intl) return this.aoTabs(this.conf());
         if (this.conf() !== 'UEFA') {
             const wc = S && S.type === 'WORLD_CUP';
             if (wc) t.push(['wcq', I18n.t('intl.tab.wcq')]);
-            if (wc && S.tour) t.push(['tour', this.tourName(S)]);
             t.push(['teams', I18n.t('intl.tab.teams')]);
             t.push(['info', I18n.t('intl.tab.info')]);
             return t;
@@ -69,7 +86,7 @@ const IntlScreen = {
         } else if (S) {
             t.push(['qual', compName('INTL_QUAL')]);
             if (S.po) t.push(['po', I18n.t('leagues.playoffs')]);
-            if (S.tour) t.push(['tour', this.tourName(S)]);
+            if (S.tour && S.type !== 'WORLD_CUP') t.push(['tour', this.tourName(S)]);   // the World Cup lives under World
         }
         t.push(['teams', I18n.t('intl.tab.teams')]);
         t.push(['info', I18n.t('intl.tab.info')]);
@@ -77,13 +94,14 @@ const IntlScreen = {
     },
     defaultTab() {
         const S = this.season();
+        if (this.conf() === 'WORLD') { const k = this.worldTabs().map(t => t[0]); return k.includes('tour') ? 'tour' : k.includes('icpo') ? 'icpo' : 'teams'; }
         if (this.isAm && this.isAm(this.conf())) return this.amDefault(this.conf());
         if (this.cafTabs && this.conf() === 'CAF' && GameState.intl) return this.cafDefault();
         if (this.isAo && this.isAo(this.conf()) && GameState.intl) return this.aoDefault(this.conf());
-        if (this.conf() !== 'UEFA') return !S || S.type !== 'WORLD_CUP' ? 'teams' : S.tour ? 'tour' : 'wcq';
+        if (this.conf() !== 'UEFA') return !S || S.type !== 'WORLD_CUP' ? 'teams' : 'wcq';
         if (!S) return 'info';
         if (S.type === 'NATIONS_LEAGUE') return (S.qf && GameState.week >= INTL_CONFIG.LEG1_WEEK) || (S.finals && S.finals.final) ? 'nlko' : 'nl';
-        if (S.tour) return 'tour';
+        if (S.tour && S.type !== 'WORLD_CUP') return 'tour';
         if (S.po && GameState.week >= INTL_CONFIG.ROUND_DRAW_WEEK) return 'po';
         return 'qual';
     },
@@ -93,10 +111,11 @@ const IntlScreen = {
 
     section(tab) {
         if (typeof Internationals === 'undefined') return '';
-        return this.confPicker() + this._section(tab);
+        return this.confPicker() + this.historyLink(tab) + this._section(tab);
     },
     _section(tab) {
         const S = this.season(), conf = this.conf();
+        if (conf === 'WORLD') return this.worldSection(tab);
         if (GameState.intl && this.isAm && this.isAm(conf)) return this.amSection(conf, tab);
         if (GameState.intl && this.cafSection && conf === 'CAF') return this.cafSection(tab);
         if (GameState.intl && this.isAo && this.isAo(conf)) return this.aoSection(conf, tab);
@@ -351,7 +370,7 @@ const IntlScreen = {
     },
     confTeams(conf) {
         const I = GameState.intl;
-        const list = Internationals.sortStrength(NATIONS.filter(n => n.confederation === conf && !n.suspended).map(n => n.id)).map(id => NATIONS_BY_ID[id]);
+        const list = Internationals.sortStrength(NATIONS.filter(n => (conf === 'WORLD' || n.confederation === conf) && !n.suspended).map(n => n.id)).map(id => NATIONS_BY_ID[id]);
         const titles = id => typeof NationScreen !== 'undefined' ? NationScreen.titles(id).reduce((s, t) => s + t.n, 0) : ((I && I.honours.WC) || []).filter(h => h.winner === id).length;
         const trend = n => { const d = Math.round(Internationals.rep(n.id)) - n.reputation; return d > 0 ? ` <span style="color:#16A34A;font-size:10px">▲${d}</span>` : d < 0 ? ` <span style="color:var(--danger);font-size:10px">▼${-d}</span>` : ''; };
         const rows = list.map((n, i) => `<tr onclick="IntlScreen.openNation('${n.id}')" style="cursor:pointer"><td>${i + 1}</td><td class="club-cell">${this.nation(n.id)}${n.fifaMember === false ? ' <span class="muted" style="font-size:10px">*</span>' : ''}</td><td class="num">${Math.round(Internationals.rep(n.id))}${trend(n)}</td><td class="num" style="color:var(--text)">${titles(n.id) || ''}</td></tr>`).join('');
@@ -374,7 +393,7 @@ const IntlScreen = {
         const uefa = conf === 'UEFA';
         let html = !uefa ? '' : `<div class="section-label">${I18n.t('intl.calendar')} <span class="muted" style="font-weight:400">· ${GameState.seasonLabel()}</span></div>
             <div class="fcard">${rows.map(([w, t]) => `<div class="frow"><span class="frow__k">${I18n.t('leagues.wkShort')} ${w}</span><span class="frow__v" style="text-align:right">${t}</span></div>`).join('')}</div>`;
-        const show = { UEFA: ['WC', 'EURO'], CONMEBOL: ['WC', 'COPA'], CONCACAF: ['WC', 'GOLD'], CAF: ['WC', 'AFCON', 'ANLF'], AFC: ['WC', 'AC'], OFC: ['WC', 'ONC'] }[conf] || ['WC'];
+        const show = { WORLD: ['WC'], UEFA: ['EURO'], CONMEBOL: ['COPA'], CONCACAF: ['GOLD'], CAF: ['AFCON', 'ANLF'], AFC: ['AC'], OFC: ['ONC'] }[conf] || [];
         const ups = ((I && typeof Internationals !== 'undefined') ? Internationals.upcomingHosts() : []).filter(u => show.includes(u.key.split('-')[0]));
         if (ups.length) html += `<div class="section-label">${I18n.t('intl.hosts')}</div><div class="fcard">${ups.map(u => `<div class="frow"><span class="frow__k">${compName(({ WC: 'INTL_WC', EURO: 'INTL_EURO', COPA: 'INTL_COPA', GOLD: 'INTL_GOLD', AFCON: 'INTL_AFCON', ANLF: 'INTL_ANL', AC: 'INTL_AC', ONC: 'INTL_ONC' })[u.key.split('-')[0]])} ${u.year}</span><span class="frow__v" style="text-align:right">${u.hosts.map(id => this.nation(id)).join(', ')}</span></div>`).join('')}</div>`;
         const H = I ? I.honours : { NL: [], EURO: [], WC: [] };
@@ -383,7 +402,7 @@ const IntlScreen = {
         const hist = (key, arr) => (typeof intlHistoryHonours === 'function' ? intlHistoryHonours(key) : []).concat(arr || []);
         const list = (title, arr, label) => `<div class="section-label">${title}</div><div class="fcard" style="max-height:340px;overflow-y:auto">${arr.length ? arr.slice().reverse().map(r =>
             `<div class="frow" style="flex-wrap:wrap;gap:4px"><span class="frow__k">${label(r)}</span><span class="frow__v" style="text-align:right">🏆 ${this.nation(r.winner)}<br>${fin(r)}</span></div>`).join('') : `<p class="muted" style="padding:10px 12px;margin:0">${I18n.t('intl.noWinners')}</p>`}</div>`;
-        html += list(compName('INTL_WC'), hist('WC', H.WC), r => r.year);
+        if (conf === 'WORLD') html += list(compName('INTL_WC'), hist('WC', H.WC), r => r.year);
         const yr = r => r.year, ssn = r => GameState.seasonLabelFor(r.season);
         if (uefa) {
             html += list(compName('INTL_EURO'), hist('EURO', H.EURO), yr);
@@ -407,6 +426,35 @@ const IntlScreen = {
             html += list(compName('INTL_ANL'), H.ANL || [], ssn);
         }
         if (uefa || conf === 'CONMEBOL') html += list(compName('INTL_FINALISSIMA'), hist('FINALISSIMA', H.FINALISSIMA), yr);
+        return html;
+    },
+
+    // ---------------- World: the World Cup itself ----------------
+    worldTabs() {
+        const S = this.season(), t = [], wc = S && S.type === 'WORLD_CUP';
+        if (wc && S.tour) t.push(['tour', this.tourName(S)]);
+        const ic = wc && S.wc && S.wc.ic;
+        if (ic && (ic.sf || ic.finals || ic.semis)) t.push(['icpo', I18n.t('intl.icPlayoff')]);
+        t.push(['teams', I18n.t('intl.tab.worldRanking')]);
+        t.push(['info', I18n.t('intl.tab.info')]);
+        return t;
+    },
+    worldSection(tab) {
+        const S = this.season();
+        if (!GameState.intl) return `<div class="fcard" style="padding:16px"><p class="muted" style="margin:0">${I18n.t('intl.notYet', { season: GameState.seasonLabelFor(INTL_CONFIG.FIRST_SEASON) })}</p></div>` + this.info('WORLD');
+        if (tab === 'tour' && S && S.type === 'WORLD_CUP' && S.tour) return this.tournament(S);
+        if (tab === 'icpo' && S && S.wc && S.wc.ic) return this.icPlayoff(S.wc.ic);
+        if (tab === 'teams') return this.confTeams('WORLD');
+        return `<p class="hint" style="margin-bottom:var(--space-3)"><a href="${Router.link('comphist', 'INTL_WC')}" style="color:var(--info-text)">${I18n.t('intl.wcHistoryLink', { comp: compName('INTL_WC') })}</a></p>` + this.info('WORLD');
+    },
+    // the inter-confederation play-off: two semi-finals, then the two seeded teams host the winners
+    icPlayoff(ic) {
+        let html = `<p class="hint" style="margin-bottom:var(--space-3)">${I18n.t('intl.icHint', { comp: compName('INTL_WC') })}</p>`;
+        html += `<div class="section-label">${I18n.t('leagues.semis')}</div>`;
+        html += ic.sf ? ic.sf.map(f => this.match(f)).join('') : `<div class="fcard" style="padding:10px 12px">${(ic.semis || []).map(id => this.nation(id)).join(' · ')}</div>`;
+        html += `<div class="section-label">${I18n.t('intl.icFinals')}</div>`;
+        html += ic.finals ? ic.finals.map(f => this.match(f)).join('') : `<div class="fcard" style="padding:10px 12px">${(ic.seeds || []).map(id => this.nation(id)).join(' · ')}</div>`;
+        if (ic.winners) html += `<div class="result ok" style="margin-top:var(--space-3)">${I18n.t('intl.icQualified', { comp: compName('INTL_WC') })} ${ic.winners.map(id => this.nation(id)).join(', ')}</div>`;
         return html;
     },
 };

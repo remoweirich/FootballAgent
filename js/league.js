@@ -566,6 +566,15 @@ const NOTRECOUPE_VIRTUAL = [
     { id: 'vbe_sporting_bruxelles', name: 'Sporting Bruxelles', reputation: 18 },
 ];
 const NOTRECOUPE_VIRTUAL_MAP = NOTRECOUPE_VIRTUAL.reduce((m, c) => { m[c.id] = c; return m; }, {});
+// The share of a player's bookings that are straight reds. The hard men (card-prone roles, bias 1.7+:
+// physical defenders, destroyers) keep the old 6%; everyone else is down to ~3.3%, sliding up between
+// the two. Defenders still see the most (they are booked most: see yellowRate), then midfielders, then
+// attackers. A normal centre-back ends a 500-game career with ~2.5 reds instead of ~4.5.
+const RED_SHARE = { base: 0.033, hard: 0.06, hardFrom: 1.7 };
+function redShare(cardBias) {
+    const t = Math.max(0, Math.min(1, ((cardBias || 1) - 1) / (RED_SHARE.hardFrom - 1)));
+    return RED_SHARE.base + (RED_SHARE.hard - RED_SHARE.base) * t;
+}
 function findVirtualClub(id) { return FACUP_VIRTUAL_MAP[id] || SWISSCUP_VIRTUAL_MAP[id] || LICHCUP_VIRTUAL_MAP[id] || COUPEFR_VIRTUAL_MAP[id] || SEGTACA_VIRTUAL_MAP[id] || NOTRECOUPE_VIRTUAL_MAP[id] || (typeof EUROPE_VIRTUAL_MAP !== 'undefined' && EUROPE_VIRTUAL_MAP[id]) || null; }
 
 const League = {
@@ -598,7 +607,10 @@ const League = {
             mdIndex[div] = 0;
             tables[div] = ids.map(id => ({ clubId: id, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, Pts: 0 }));
         });
+        // the reputations as the season starts: what every result is judged against (applyHonoursRep)
+        const preRep = {}; Clubs.allClubs.forEach(c => { preRep[c.id] = c.reputation; });
         GameState.league = {
+            preRep,
             tables, schedule, mdIndex, results: {},   // results[div][md] = [[hg,ag],…] aligned to schedule[div][md]; wiped each season
 
             beker: this._buildBeker(),
@@ -1014,7 +1026,7 @@ const League = {
         };
     },
     // promoted clubs edge up in prestige, relegated clubs edge down — gently, so standings stay
-    // coherent season to season. This is the ONLY thing that moves the anchor reputation, and
+    // coherent season to season. Together with applyHonoursRep it moves the anchor reputation, and
     // total anchor drift is capped at baseRep±10 so serial yo-yo clubs can't run away from their
     // division's reputation band (runtime reputation = anchor + fading client legacy).
     _repDrift(ups, downs) {
@@ -1024,12 +1036,158 @@ const League = {
             if (c.baseRep == null) c.baseRep = c.anchorRep;
             const lo = Math.max(20, c.baseRep - 10), hi = Math.min(95, c.baseRep + 10);
             const before = c.anchorRep;
-            c.anchorRep = Math.max(lo, Math.min(hi, c.anchorRep + dir * 2));
+            c.anchorRep = Math.max(lo, Math.min(hi, c.anchorRep + dir));
             // the moving reputation shifts by the same amount, preserving any client-earned excess
             c.reputation = Math.max(20, Math.min(95, c.reputation + (c.anchorRep - before)));
         };
-        (ups || []).forEach(id => nudge(id, +1));
-        (downs || []).forEach(id => nudge(id, -1));
+        // promotion is +1 (the title's +1 comes from applyHonoursRep); a SURPRISE promotion (rated at least 4 places
+        // below the division's last promotion place) adds +1 more, temporary for 2 seasons. Relegation costs -2 for a
+        // club rated in the top half of its division before the season (a real fall), -1 for one expected down there.
+        (ups || []).forEach(id => { this._honourNudge(id, +this.HONOURS.promo); this._surprisePromo(id); });
+        (downs || []).forEach(id => { const p = this._preRank(id); nudge(id, p && p.rank <= p.size / 2 ? -2 : -1); });
+    },
+    // the lowest place that can still go up (directly or through a play-off), per division
+    PROMO_LAST: { EED: 6, TWD: 6, DRD: 6, CHAMP: 6, LEAGUE1: 6, LEAGUE2: 6, Natleague: 7, '2BUNDES': 3, '3LIGA': 3, REGIONAL1: 4, REGIONAL2: 4, REGIONAL3: 4,
+        LaLiga2: 6, PrimeraSup: 7, PrimeraInf: 7, Segunda: 7, ChallengeLeague: 2, PromotionLeague: 2, '1.LigaCH': 6, '2.LigaCH': 7,
+        SerieB: 8, SerieC: 9, SerieD: 9, Ligue2: 5, Ligue3: 5, Ligue4: 6, Ligue5: 7, LigaPortugal2: 3, Liga3: 3, Liga4: 4,
+        ChallengerProLeague: 3, BelgianDivision1: 3, BelgianDivision2: 4 },
+    _promoLast(div) {
+        if (this.PROMO_LAST[div]) return this.PROMO_LAST[div];
+        const cc = this._customCountries().find(x => x.divIds.includes(div));
+        return cc ? [0, 6, 6, 7][cc.divIds.indexOf(div)] || 6 : 4;
+    },
+    // a club's pre-season rating place in the division it just played in (the tables are still last season's)
+    _preRank(id) {
+        const L = GameState.league; if (!L || !L.tables) return null;
+        const div = Object.keys(L.tables).find(d => (L.tables[d] || []).some(r => r.clubId === id)); if (!div) return null;
+        const pre = L.preRep || {}, rep = x => pre[x] != null ? pre[x] : ((Clubs.getClubById(x) || {}).reputation || 0);
+        return { div, size: L.tables[div].length, rank: L.tables[div].filter(r => rep(r.clubId) > rep(id)).length + 1 };   // level reputations share a place
+    },
+    _surprisePromo(id) {
+        const L = GameState.league, p = this._preRank(id); if (!p) return;
+        const div = p.div, rank = p.rank;
+        if (rank >= this._promoLast(div) + 4 && this._honourNudge(id, +1, this.HONOURS.titleTempSeasons))
+            (L.honoursRepLog = L.honoursRepLog || []).push({ kind: 'promo', club: id, div, rank });
+    },
+    // ================= reputation from honours (run at the rollover, before promotion/relegation) =================
+    // Every result is judged against the pre-season reputations (GameState.league.preRep):
+    //  - league title (top divisions): the favourite winning changes nothing; anyone else +1, a champion
+    //    from outside the country's favourites (HONOURS.underdog: England 6, Germany 1, ...) +2 (the 2nd point
+    //    temporary, 2 seasons). Zero-sum: the same is taken
+    //    from the division's worst flop (furthest below its expected place).
+    //  - main national cup: a winner outside the country's 4 favourites +1 temporary (3 seasons); nobody pays.
+    //  - Europe (all three cups alike): the 36 clubs ranked by reputation; finish in the knockout
+    //    rounds more than 8 places above that seeding +1, more than 8 below it -1; the final +1 more;
+    //    winning adds +2 (Champions Cup) / +1 (the other two) on top.
+    //  - fading: a club above its starting reputation drops 1 if it finished below what its reputation
+    //    predicted; one below it climbs 1 if it finished at or above. A one-off surprise fades, a club that
+    //    keeps performing keeps it.
+    // Gains never take a club's base reputation above 90 (clients still can) and all of it stays within
+    // ±10 of where the club started.
+    // underdog: how many favourites a top-division champion must come from below to earn the +2
+    HONOURS: { titleTempSeasons: 2, cupTempSeasons: 3, euMargin: 8, euFinal: 1, euWin: { UCL: 2, UEL: 1, UECL: 1 }, ceiling: 90, window: 10,
+        promo: 1, lowerTitle: 1,
+        underdog: { England: 6, Spain: 3, Netherlands: 3, Switzerland: 3, Germany: 1, France: 1, Portugal: 3, Belgium: 4, Italy: 4 }, underdogDefault: 4 },
+    _permAnchor(c) { return (c.anchorRep != null ? c.anchorRep : c.reputation) - (c.repTemp || []).reduce((s, t) => s + t.amt, 0); },
+    // move a club's base reputation (and its live one with it), within the window and under the ceiling
+    _honourNudge(id, d, tempSeasons) {
+        const c = Clubs.getClubById(id); if (!c || !d) return 0;
+        if (c.anchorRep == null) c.anchorRep = c.reputation;
+        if (c.baseRep == null) c.baseRep = c.anchorRep;
+        const W = this.HONOURS.window, before = c.anchorRep;
+        const lo = Math.max(20, c.baseRep - W), hi = Math.min(this.HONOURS.ceiling, 95, c.baseRep + W);
+        // a gain stops at the window / the ceiling (never pulling a club already above it down); a loss at the window floor
+        c.anchorRep = d > 0 ? Math.min(before + d, Math.max(before, hi)) : Math.max(before + d, Math.min(before, lo));
+        const applied = c.anchorRep - before;
+        if (!applied) return 0;
+        c.reputation = Math.max(20, Math.min(95, c.reputation + applied));
+        if (tempSeasons) (c.repTemp = c.repTemp || []).push({ amt: applied, until: GameState.seasonStartYear + tempSeasons });
+        return applied;
+    },
+    applyHonoursRep() {
+        const L = GameState.league; if (!L || !L.tables) return null;
+        const H = this.HONOURS, year = GameState.seasonStartYear, pre = L.preRep || {};
+        const repOf = id => pre[id] != null ? pre[id] : ((Clubs.getClubById(id) || {}).reputation || (typeof findVirtualClub === 'function' && (findVirtualClub(id) || {}).reputation) || 50);
+        const log = [];
+        // a club's place in an expectation list: clubs level on reputation share a place (three clubs
+        // on 90 are all favourites), so 0 = nobody is rated above him
+        const placeIn = (id, ids) => ids.filter(x => repOf(x) > repOf(id)).length;
+        // 1) temporary bonuses that run out now
+        Clubs.allClubs.forEach(c => {
+            if (!c.repTemp || !c.repTemp.length) return;
+            const keep = [];
+            c.repTemp.forEach(t => {
+                if (t.until > year) { keep.push(t); return; }
+                const before = c.anchorRep; c.anchorRep = Math.max(20, Math.min(95, c.anchorRep - t.amt));
+                c.reputation = Math.max(20, Math.min(95, c.reputation + (c.anchorRep - before)));
+            });
+            c.repTemp = keep;
+        });
+        // 2) fading, against each division's expected order
+        const expectedOrder = div => Clubs.getClubsByDivision(div).map(c => c.id).sort((a, b) => repOf(b) - repOf(a));
+        Object.keys(L.tables).forEach(div => {
+            const exp = expectedOrder(div), act = this.sortedTable(div).map(r => r.clubId);
+            act.forEach((id, i) => {
+                const c = Clubs.getClubById(id); if (!c || c.baseRep == null) return;
+                const perm = this._permAnchor(c), e = placeIn(id, exp);
+                if (perm > c.baseRep && i > e) this._honourNudge(id, -1);
+                else if (perm < c.baseRep && i <= e) this._honourNudge(id, +1);
+            });
+        });
+        // 3) top-division titles: zero-sum, the worst flop pays
+        Object.keys(COUNTRY_DIVS || {}).forEach(country => {
+            const div = (COUNTRY_DIVS[country] || [])[0]; if (!div || !L.tables[div]) return;
+            const exp = expectedOrder(div), act = this.sortedTable(div).map(r => r.clubId);
+            const champ = act[0], rank = champ ? placeIn(champ, exp) : 0;
+            if (!champ || rank <= 0) return;   // a favourite won (or no table): nothing changes
+            const amount = rank >= (H.underdog[country] || H.underdogDefault) ? 2 : 1;
+            let flop = null, worst = 0;
+            act.forEach((id, i) => { if (id === champ) return; const gap = i - placeIn(id, exp); if (gap > worst || (gap === worst && flop && repOf(id) > repOf(flop))) { worst = gap; flop = id; } });
+            this._honourNudge(champ, +1); if (flop) this._honourNudge(flop, -1);
+            if (amount === 2) { this._honourNudge(champ, +1, H.titleTempSeasons); if (flop) this._honourNudge(flop, -1, H.titleTempSeasons); }
+            log.push({ kind: 'title', country, champ, rank: rank + 1, flop, amount });
+        });
+        // 3b) lower-division titles: +1 for every champion (promotion adds its own +1 in _repDrift)
+        const topDivs = new Set(Object.values(COUNTRY_DIVS).map(d => d[0]).concat(this._customCountries().map(cc => cc.divIds[0])));
+        Object.keys(L.tables).forEach(div => {
+            if (topDivs.has(div)) return;
+            const champ = (this.sortedTable(div)[0] || {}).clubId;
+            if (champ && this._honourNudge(champ, H.lowerTitle)) log.push({ kind: 'lowerTitle', div, champ });
+        });
+        // 4) main national cups: a surprise winner +1 for 3 seasons, nobody pays
+        const cups = [];
+        TOP_TIER_CUPS.forEach(k => { if (k !== 'lichcup' && L[k] && L[k].winner) cups.push(L[k].winner); });
+        Object.values(L.customCups || {}).forEach(cu => { if (cu && cu.higher && cu.higher.winner) cups.push(cu.higher.winner); });
+        cups.forEach(w => {
+            const c = Clubs.getClubById(w); if (!c) return;
+            const pool = Clubs.allClubs.filter(x => x.country === c.country && !isReserveClub(x.id)).map(x => x.id);
+            // not one of the 4 favourites (level reputations share a place)
+            if (placeIn(w, pool) >= 4) { this._honourNudge(w, +1, H.cupTempSeasons); log.push({ kind: 'cup', club: w }); }
+        });
+        // 5) Europe: finishing order (stage reached, then league-phase place) against the seeding
+        const ed = L.europe;
+        if (ed && ed.comps && typeof Europe !== 'undefined' && Europe.bestStages) {
+            const best = Europe.bestStages(ed);
+            ['UCL', 'UEL', 'UECL'].forEach(k => {
+                const c = ed.comps[k]; if (!c || !c.table || !c.table.length) return;
+                const lpPos = {}; (c.ranked || c.table).forEach((r, i) => { lpPos[typeof r === 'string' ? r : r.clubId] = i; });   // ranked = ids, table = rows
+                const ids = c.table.map(r => r.clubId), stage = best[k] || {};
+                const seed = ids.slice().sort((a, b) => repOf(b) - repOf(a));
+                const finish = ids.slice().sort((a, b) => (stage[b] || 0) - (stage[a] || 0) || (lpPos[a] - lpPos[b]));
+                finish.forEach((id, i) => {
+                    if (!Clubs.getClubById(id)) return;   // a pooled club from a country outside the game
+                    const f = i + 1, s = placeIn(id, seed) + 1, st = stage[id] || 0;
+                    let d = 0;
+                    if (st >= 2 && s - f > H.euMargin) d += 1;          // beat the seeding, in the knockout rounds
+                    if (f - s > H.euMargin) d -= 1;                      // fell well short of it
+                    if (st >= 6) d += H.euFinal;                         // reached the final
+                    if (st >= 7) d += H.euWin[k];                        // won it
+                    if (d) { this._honourNudge(id, d); log.push({ kind: 'europe', comp: k, club: id, seed: s, finish: f, d }); }
+                });
+            });
+        }
+        L.honoursRepLog = log;
+        return log;
     },
     applyPromotionRelegation() {
         const c = this.computeProRel();
@@ -2817,7 +2975,7 @@ const League = {
             c.apps += 1; c.goals += a.g; c.assists += a.a;
             if (p.position === 'GK' && conceded === 0) c.cs = (c.cs || 0) + 1;   // clean sheet
             p._weekApps = (p._weekApps || 0) + (a.full ? 1 : 0.5);
-            const yRate = (yellowRate[p.position] ?? 0.10) * (sBias(p).card || 1), rRate = yRate * 0.06;
+            const cb = sBias(p).card || 1, yRate = (yellowRate[p.position] ?? 0.10) * cb, rRate = yRate * redShare(cb);
             const rr = Rng.next();
             if (rr < rRate) {
                 c.red += 1; a.red = 1;
@@ -2919,6 +3077,8 @@ const League = {
             p.trophies.push({ year, compId, clubId, aw: GameState.absWeek() });
             if (p.agentId === 'me') {
                 clientWinners.push(p.id);
+                const rep = Agency.trophyRep(compId);
+                if (rep > 0) Agency.bumpRep(rep, 'trophy');
                 if (p.morale) { p.morale.club = Math.min(100, p.morale.club + MORALE.TROPHY_CLUB); p.morale.agent = Math.min(100, p.morale.agent + MORALE.TROPHY_AGENT); }
             }
         });

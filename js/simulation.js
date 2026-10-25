@@ -11,6 +11,7 @@ const INJURY_TYPES = ['Knock', 'Muscle strain', 'Ankle sprain', 'Hamstring', 'Kn
 // ============================================================
 const MORALE = {
     BAND_GOOD: 60, BAND_BAD: 35,
+    NEW_CLIENT_WAGE_WEEKS: 52,   // a new client's wage morale cannot fall for this long
 
     // ---- Phase 1: passive effects ----
     // match-rating modifier: linear from avg, kinked at the "0" point (55) —
@@ -28,9 +29,10 @@ const MORALE = {
     WAGE_UNDERPAID_DECAY: 2.2, // weekly wage-morale erosion when underpaid, scaled by how far below fair he is
     CLUB_LOCK_UNDER_AGE: 18, CLUB_LOCK_VALUE: 80,   // U18s don't resent their club yet: pinned at 80
 
-    TROPHY_CLUB: 12, TROPHY_AGENT: 8,
+    TROPHY_CLUB: 12, TROPHY_AGENT: 3,   // a trophy is his club's doing more than his agent's
     PROMOTION_CLUB: 10, RELEGATION_CLUB: -12,
-    // The season-end "what a year he's had" bonus: +15 time, +30 club, +20 agent, -10 wage. It is a
+    // The season-end "what a year he's had" bonus: +15 time, +30 club, +6 agent, -10 wage (agent was +20, but
+    // a good season is little of his agent's doing, and it kept the You bar pinned near the top). It is a
     // large injection, so what matters is how OFTEN it fires, and that depends on the SPREAD of
     // season ratings. Measured: narrowing the form swing dropped the share of seasons clearing 7.50
     // from 29.5% to 22.5%, and end-of-career morale fell nearly five points with it. Anything that
@@ -40,7 +42,7 @@ const MORALE = {
     // so the two tiers together fire about as often as 7.50 alone used to, which is what keeps the
     // morale economy where it was while leaving "season to remember" genuinely rare.
     GOOD_FORM_AVG_RATING: 7.05, GOOD_FORM_SHARE: 0.60,
-    HOT_FORM_TIME: 15, HOT_FORM_WAGE: -10, HOT_FORM_CLUB: 30, HOT_FORM_AGENT: 20,
+    HOT_FORM_TIME: 15, HOT_FORM_WAGE: -10, HOT_FORM_CLUB: 30, HOT_FORM_AGENT: 6,
 
     // playing-time weekly ticks, keyed by how many consecutive weeks he has (not) played
     PLAY_TICK: { base: 1, mid: 3, long: 5 },        // streak 1-2 / 3-5 / 6-25+ weeks played
@@ -61,10 +63,14 @@ const MORALE = {
     NEGLECT_DECAY_1: 0.25,       // per week, weeks 26-104 of neglect
     NEGLECT_DECAY_2: 0.5,        // per week, beyond 104 weeks (2 seasons)
     NEGLECT_SEASON2_WEEKS: 104,
+    // spillover: while a club/time/wage complaint is open and that bar sits in BAD, he blames his agent
+    // for not fixing it. Per week by complaint stage, weighted by how much it is the agent's job.
+    // "Listen" in the complaint talk pauses it for SPILL_LISTEN_PAUSE_WEEKS.
+    SPILL_STAGE: [0, 0.5, 1, 1.5], SPILL_WEIGHT: { wage: 1, time: 0.7, club: 0.5 }, SPILL_LISTEN_PAUSE_WEEKS: 4,
 
     // ---- Phase 3: escalation ladder ----
     CASE_OPEN_BAD_STREAK: 4,     // consecutive weeks a dimension must sit in BAD before a case opens
-    TALK_AGENT_BONUS: 6, TALK_COOLDOWN_WEEKS: 4,
+    TALK_AGENT_BONUS: 6, TALK_AGENT_REPEAT: 2, TALK_COOLDOWN_WEEKS: 4,   // "Listen": +6 the first time per complaint, +2 after
     PROMISE_EXTRA_WEEKS: 8,      // deadline for newContract/renegotiateRep (move/playingTime use next transfer window)
     PROMISE_KEPT_DIM: 20, PROMISE_KEPT_AGENT: 10,
     PROMISE_BROKEN_AGENT: -20, PROMISE_BROKEN_REP: -1,      // docs/reputation-design.md
@@ -128,6 +134,15 @@ function transferWindowPassedBetween(fromAbs, toAbs) {
     for (let y = Math.floor(fromAbs / 52) - 1; y <= Math.floor(toAbs / 52) + 1; y++) {
         for (const end of [y * 52 + 6, y * 52 + 33]) if (end > fromAbs && end <= toAbs) return true;
     }
+    return false;
+}
+// The saving grace: a WHOLE transfer window (weeks 1-6 or 28-33) opened on or after fromAbs and was
+// over by toAbs (inclusive: its last week counts as reached). Nothing drastic (a walkout, a move forced
+// over your head) happens until the agent has had a full window to move the client himself.
+function fullWindowSince(fromAbs, toAbs, inclusive) {
+    for (let y = Math.floor(fromAbs / 52) - 1; y <= Math.floor(toAbs / 52) + 1; y++)
+        for (const [s, e] of [[1, 6], [28, 33]])
+            if (y * 52 + s >= fromAbs && (inclusive ? y * 52 + e <= toAbs : y * 52 + e < toAbs)) return true;
     return false;
 }
 // promise types a "Make a promise" action can offer, by which dimension the case is about
@@ -269,26 +284,7 @@ const Sim = {
                 : I18n.t('sim.scoutRetiredBody', { name: n.name, age: n.age });
             GameState.addMail({ kind: 'news', cat: 'scout', subject: I18n.t('sim.scoutRetiredSubj', { name: n.name }), body, ttl: 6 });
         });
-        const finds = Scouts.tick();
-        finds.forEach(f => {
-            // an idle / home scout carries no region id — fall back to the found player's country,
-            // the assigned league's country, or the agency's home country so the mail never reads "null"
-            const region = (f.region && regionName(f.region))
-                || (f.players && f.players[0] && (Clubs.getClubById(f.players[0].clubId) || {}).country)
-                || f.country
-                || (f.league && (((Clubs.getClubsByDivision(f.league) || [])[0]) || {}).country)
-                || GameState.homeCountry || '';
-            if (f.none) {
-                const t = I18n.t('sim.scoutNone', { scout: f.scout, region });
-                GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
-                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.scoutNoneSubj', { region }), body: I18n.t('sim.scoutNoneBody', { t }), ttl: 3 });
-                return;
-            }
-            const names = f.players.map(pl => `${pl.name} (${pl.position}, ${pl.ability} OVR — ${Clubs.getClubById(pl.clubId)?.name})`).join('; ');
-            const t = I18n.t('sim.scoutFound', { scout: f.scout, region, n: f.players.length, cost: f.cost ? I18n.t('sim.scoutCost', { amt: UI.money(f.cost) }) : '', names });
-            GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
-            GameState.addMail({ kind: 'news', subject: I18n.t('sim.scoutFoundSubj', { region, n: f.players.length }), body: t, playerIds: f.players.map(pl => pl.id), ttl: 4 });   // ids, not names, say who the report means (see Nego.linkifyPlayers)
-        });
+        this.deliverScoutFinds(Scouts.tick(), events);
 
         // ---- finances ----
         const bd = Agency.weeklyBreakdown();
@@ -440,7 +436,7 @@ const Sim = {
             } else {
                 // he knows his market value: what he'd command at a club at HIS level, not merely his
                 // current one — so a strong player stuck on a weak club's wages knows he's underpaid.
-                const market = PlayerGen.wageFor(p.ability, Math.max(club ? club.reputation : 0, p.ability));
+                const market = Agency.marketWage(p, club);
                 payRatio = p.wage / Math.max(1, market);
                 wageTarget = payRatio >= 1
                     ? Math.min(95, 78 + (payRatio - 1) * 40)         // fairly/over-paid: high, climbs a little with surplus
@@ -454,13 +450,22 @@ const Sim = {
             };
             // U18s don't hold club grudges (a 15-year-old out on loan shouldn't be miserable
             // about his parent club) - club morale stays pinned until his 18th birthday
+            // A move agreed for the next window: wage and club morale stay frozen where they were at the
+            // handshake, and he raises no complaint about either until he moves (see the BAD streaks below).
+            const pending = !!p.pendingTransfer;
             if (p.age < MORALE.CLUB_LOCK_UNDER_AGE) p.morale.club = MORALE.CLUB_LOCK_VALUE;
-            else p.morale.club = drift(clubTarget, p.morale.club, MORALE.CLUB_DOWN_MULT);
-            p.morale.wage = drift(wageTarget, p.morale.wage);
-            // a genuine underpayment keeps nagging: a small steady erosion on top of the drift, so wage
-            // morale doesn't just settle — the more underpaid, the faster it slides (but never fast)
-            if (payRatio != null && payRatio < MORALE.WAGE_FAIR_FROM)
-                p.morale.wage = Math.max(0, p.morale.wage - MORALE.WAGE_UNDERPAID_DECAY * (MORALE.WAGE_FAIR_FROM - payRatio));
+            else if (!pending) p.morale.club = drift(clubTarget, p.morale.club, MORALE.CLUB_DOWN_MULT);
+            // a new client (his first NEW_CLIENT_WAGE_WEEKS with you, typically a young talent on a youth
+            // deal) never loses wage morale: it can rise, not fall, while he settles in
+            const fresh = p._signedAbs != null && aw - p._signedAbs < MORALE.NEW_CLIENT_WAGE_WEEKS;
+            if (fresh && !pending) p.morale.wage = Math.max(p.morale.wage, drift(wageTarget, p.morale.wage));
+            else if (!pending) {
+                p.morale.wage = drift(wageTarget, p.morale.wage);
+                // a genuine underpayment keeps nagging: a small steady erosion on top of the drift, so wage
+                // morale doesn't just settle — the more underpaid, the faster it slides (but never fast)
+                if (payRatio != null && payRatio < MORALE.WAGE_FAIR_FROM)
+                    p.morale.wage = Math.max(0, p.morale.wage - MORALE.WAGE_UNDERPAID_DECAY * (MORALE.WAGE_FAIR_FROM - payRatio));
+            }
 
             // ---- time: discrete streak-based ticks. Playing always counts in his favour;
             // NOT playing only counts against him when matches were actually possible -
@@ -494,13 +499,23 @@ const Sim = {
                 p._neglectWarned = false;   // back in good standing (a fresh action reset the clock) — rearm the one-shot warning
             }
 
+            // ---- spillover: an open, unfixed complaint about club/time/wage costs You morale ----
+            // (a wage complaint that became a transfer request still spills over the WAGE bar: that's the grievance)
+            const mc = p.moraleCase, sDim = mc ? (mc.from || mc.dim) : null;
+            if (mc && MORALE.SPILL_WEIGHT[sDim] && p.morale[sDim] < MORALE.BAND_BAD
+                && !(pending && (mc.dim === 'club' || mc.dim === 'wage'))
+                && !(p._spillPauseUntilAbs != null && aw < p._spillPauseUntilAbs))
+                p.morale.agent = Math.max(0, p.morale.agent - (MORALE.SPILL_STAGE[mc.stage] || 0) * MORALE.SPILL_WEIGHT[sDim]);
+
             // ---- history ring for the UI's trend arrows (vs 4 weeks ago) ----
             p._moraleHist.push({ club: p.morale.club, time: p.morale.time, wage: p.morale.wage, agent: p.morale.agent });
             if (p._moraleHist.length > 4) p._moraleHist.shift();
 
             // ---- per-dimension BAD streaks -> opens a case (worst dim wins; one case at a time) ----
             ['club', 'time', 'wage', 'agent'].forEach(dim => {
-                p._badStreak[dim] = p.morale[dim] < MORALE.BAND_BAD ? (p._badStreak[dim] || 0) + 1 : 0;
+                // a player with a move agreed does not complain about his club or his wage any more
+                const quiet = pending && (dim === 'club' || dim === 'wage');
+                p._badStreak[dim] = !quiet && p.morale[dim] < MORALE.BAND_BAD ? (p._badStreak[dim] || 0) + 1 : 0;
             });
             if (!p.moraleCase) {
                 const qualifying = ['club', 'time', 'wage', 'agent'].filter(d => p._badStreak[d] >= MORALE.CASE_OPEN_BAD_STREAK);
@@ -533,20 +548,26 @@ const Sim = {
         Agency.clients().forEach(p => {
             const c = p.moraleCase; if (!c) return;
             // resolved: the underlying dimension recovered to GOOD -> close with thanks, any stage
-            if (p.morale[c.dim] >= MORALE.BAND_GOOD) {
+            // (one that started over his wage is only settled once he is no longer badly underpaid as well)
+            if (p.morale[c.dim] >= MORALE.BAND_GOOD && !(c.from === 'wage' && p.morale.wage < MORALE.BAND_BAD)) {
                 GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.thankSubj', { name: p.name }), body: I18n.t('sim.thankBody', { name: p.name }), ttl: 4 });
                 events.push({ type: 'morale', text: I18n.t('sim.resolvedEvent', { name: p.name }) });
                 p.moraleCase = null;
                 return;
             }
+            // a move is agreed: his club grievance is settled by leaving; it neither escalates nor forces a move
+            if (p.pendingTransfer && (c.dim === 'club' || c.dim === 'wage')) return;
             // breaking point + free to walk: any stage-3 case fires the agent once his representation
             // term is up. A player still under a rep contract can't leave (an agent case chips at your
             // reputation instead, and a time/club case forces a club move via _forcedMoves), but once
             // that term has lapsed there's nothing holding him — he leaves after a short grace window
             // (right away if it had already lapsed by the time he reached breaking point).
+            // ...and never before a whole transfer window has come and gone since his breaking point, so
+            // you always get the chance to move him first.
+            if (c.stage === 3 && c.stage3Abs == null) c.stage3Abs = aw;   // (older saves)
             if (c.stage === 3 && p.repExpired) {
                 if (c.leaveAtAbsWeek == null) c.leaveAtAbsWeek = aw + MORALE.STAGE3_AGENT_LEAVE_WEEKS;
-                if (aw >= c.leaveAtAbsWeek) {
+                if (aw >= c.leaveAtAbsWeek && fullWindowSince(c.stage3Abs, aw, false)) {
                     const parting = c.dim === 'agent'
                         ? I18n.t('sim.partingAgent', { name: p.name })
                         : I18n.t('sim.partingOther', { name: p.name });
@@ -631,12 +652,13 @@ const Sim = {
             }
             events.push({ type: 'morale', text: I18n.t('sim.esc.event2', { name: p.name }) });
         } else if (c.stage === 3) {
+            c.stage3Abs = GameState.absWeek();   // the breaking point: a full window must follow before anything drastic
             if (c.dim === 'time' || c.dim === 'club') {
                 c.forcedMove = true;
                 GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.acceptSubj', { name: p.name }), body: I18n.t('sim.esc.acceptBody', { name: p.name }), ttl: 10 });
             } else if (c.dim === 'wage') {
                 // converts to a club-style case at stage-2 rules (hands in a transfer request over money)
-                c.dim = 'club'; c.stage = 2;
+                c.dim = 'club'; c.stage = 2; c.from = 'wage'; delete c.stage3Abs;
                 GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.wageToClubSubj', { name: p.name }), body: I18n.t('sim.esc.wageToClubBody', { name: p.name }), ttl: 8 });
             } else if (c.dim === 'agent') {
                 GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('sim.esc.finalSubj', { name: p.name }), body: I18n.t('sim.esc.finalBody', { name: p.name }), ttl: 8 });
@@ -658,6 +680,9 @@ const Sim = {
             const c = p.moraleCase;
             if (!c || !c.forcedMove || p.onLoanAt) return;
             if (c.leaveAtAbsWeek != null) return;   // he's already walking out on the agency — don't also move his club
+            // not before you've had a whole window to move him yourself: he forces it through in its last week
+            if (c.stage3Abs == null) c.stage3Abs = GameState.absWeek();
+            if (!fullWindowSince(c.stage3Abs, GameState.absWeek(), true)) return;
             const homeClub = Clubs.getClubById(p.clubId);
             const val = Agency.playerValue(p);
             const cands = Clubs.allClubs.filter(cl =>
@@ -866,6 +891,29 @@ const Sim = {
         const cap = SPONSOR_LEVELS.indexOf(Upgrades.sponsorLevel());
         return SPONSOR_LEVELS[Math.min(SPONSOR_LEVELS.indexOf(level), cap)];
     },
+    // A scout's report becomes a log line, a feed event and a mail (the weekly finds, and an instant
+    // report bought with Prestige).
+    deliverScoutFinds(finds, events) {
+        (finds || []).forEach(f => {
+            // an idle / home scout carries no region id — fall back to the found player's country,
+            // the assigned league's country, or the agency's home country so the mail never reads "null"
+            const region = (f.region && regionName(f.region))
+                || (f.players && f.players[0] && (Clubs.getClubById(f.players[0].clubId) || {}).country)
+                || f.country
+                || (f.league && (((Clubs.getClubsByDivision(f.league) || [])[0]) || {}).country)
+                || GameState.homeCountry || '';
+            if (f.none) {
+                const t = I18n.t('sim.scoutNone', { scout: f.scout, region });
+                GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
+                GameState.addMail({ kind: 'news', cat: 'general', subject: I18n.t('sim.scoutNoneSubj', { region }), body: I18n.t('sim.scoutNoneBody', { t }), ttl: 3 });
+                return;
+            }
+            const names = f.players.map(pl => `${pl.name} (${pl.position}, ${pl.ability} OVR — ${Clubs.getClubById(pl.clubId)?.name})`).join('; ');
+            const t = I18n.t('sim.scoutFound', { scout: f.scout, region, n: f.players.length, cost: f.cost ? I18n.t('sim.scoutCost', { amt: UI.money(f.cost) }) : '', names });
+            GameState.addLog(t, 'scout'); events.push({ type: 'scout', text: t });
+            GameState.addMail({ kind: 'news', subject: I18n.t('sim.scoutFoundSubj', { region, n: f.players.length }), body: t, playerIds: f.players.map(pl => pl.id), ttl: 4 });   // ids, not names, say who the report means (see Nego.linkifyPlayers)
+        });
+    },
     _sponsorOffers(events) {
         const wkBase = { local: 50, regional: 200, national: 1000, international: 10000, worldwide: 50000 };
         Agency.clients().forEach(p => {
@@ -890,6 +938,7 @@ const Sim = {
             // base weekly for the tier, with a little noise; loyalty/form can push an outlier higher
             let base = wkBase[level] * (0.85 + Rng.next() * 0.3);
             if (p._mediaTrained) base *= 1.15;   // media training: he interviews well, brands pay for it
+            base *= Agency.intlBoost(p);         // a current international: 5-10% by his squad role
             if (loyal || hot) base *= 1.4 + Rng.next() * 1.1;                        // standout deal
             const annualEquiv = base * 60;                                              // ~€3k/yr at local 50/wk
 
@@ -1022,12 +1071,12 @@ const Sim = {
     // odds a "final season" player postpones retirement, by appearances that season —
     // graduated rather than an all-or-nothing threshold
     _retirePostponeChance(apps) {
-        if (apps >= 30) return 0.7;
-        if (apps >= 25) return 0.5;
-        if (apps >= 20) return 0.4;
+        if (apps >= 30) return 0.5;
+        if (apps >= 25) return 0.4;
+        if (apps >= 20) return 0.3;
         if (apps >= 15) return 0.2;
         if (apps >= 10) return 0.1;
-        return 0;
+        return 0.01;
     },
     _endOfSeason(events, spotlights) {
         const awarded = League.finishSeason();
@@ -1222,6 +1271,7 @@ const Sim = {
         League.rollSeasonDeltas();
         // promotion/relegation from the finished season (moves clubs between divisions)
         const tierBefore = {}; Clubs.allClubs.forEach(c => tierBefore[c.id] = c.tier);
+        League.applyHonoursRep();   // titles, cups, European runs and fading (before the divisions change)
         const prorel = League.applyPromotionRelegation();
         this._repairDivisionSizes();
         this._assertDivisionSizes();

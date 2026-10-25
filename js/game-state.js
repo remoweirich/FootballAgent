@@ -192,7 +192,7 @@ const GameState = {
         (Clubs.allClubs || []).forEach(c => {
             clubState[c.id] = {
                 division: c.division, reputation: c.reputation,
-                anchorRep: c.anchorRep,
+                anchorRep: c.anchorRep, repTemp: c.repTemp && c.repTemp.length ? c.repTemp : undefined,
                 seasonDelta: c.seasonDelta, streakDir: c.streakDir, streakLen: c.streakLen
             };
         });
@@ -473,6 +473,7 @@ const GameState = {
         // helpers). Both are idempotent and self-guarding.
         this._migrateMoraleFields();
         this._repairSponsorNames();
+        this._youthDeals();
         this._restoreClubState(d.clubState);
         // versioned pipeline: infer the starting version, then run each newer migration in order
         let from = d.schemaVersion != null ? d.schemaVersion : (d.worldV >= 2 ? 2 : 1);
@@ -518,6 +519,17 @@ const GameState = {
     // session) just reapplies the same values.
     // A sponsor name stored with an unfilled token ("{regio} à jour", a typo in the Swiss list):
     // fill it now, in signed deals and in pending offers. Every load; a no-op once clean.
+    // Scouted youth talents you have not signed yet were paid like senior players; give them the youth
+    // contract new finds get (PlayerGen.YOUTH_CONTRACT_SHARE). Clients keep their wage: cutting it would
+    // only upset them. Runs once per player.
+    _youthDeals() {
+        if (typeof PlayerGen === 'undefined') return;
+        (this.players || []).forEach(p => {
+            if (p._youthDeal || p.agentId === 'me' || !p.knownToAgent || p.squadRole !== 'youth') return;
+            p.wage = Math.max(30, Math.round((p.wage || 0) * PlayerGen.YOUTH_CONTRACT_SHARE / 10) * 10);
+            p._youthDeal = true;
+        });
+    },
     _repairSponsorNames() {
         if (typeof Upgrades === 'undefined' || !Upgrades._fill) return;
         const fix = n => (typeof n === 'string' && n.includes('{')) ? Upgrades._fill(n, this.homeCountry || 'Netherlands') : n;
@@ -544,6 +556,7 @@ const GameState = {
                 if (s.seasonDelta != null) c.seasonDelta = s.seasonDelta;
                 if (s.streakDir !== undefined) c.streakDir = s.streakDir;
                 if (s.streakLen != null) c.streakLen = s.streakLen;
+                if (s.repTemp) c.repTemp = s.repTemp;
             });
             return;
         }

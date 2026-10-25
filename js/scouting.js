@@ -319,6 +319,20 @@ const Scouting = {
         const r = p.report; if (!r) return '';
         return typeof r.estPotential === 'number' ? this.tierLabel(r.estPotential, r.country) : (r.ceiling || '');
     },
+    // The potential RANGE behind the scout's ceiling verdict: the band of its tier in that country's
+    // ladder ({ upper, lower }), never the hidden estimate itself. Sorting by it ranks verdicts across
+    // countries (a league whose "Regular" spans 57-66 sits above one spanning 58-64) without telling
+    // you who is really better within a tier. null for an old report that kept only the words.
+    ceilingRange(p) {
+        const r = p.report;
+        if (!r || typeof r.estPotential !== 'number') return null;
+        const c = LEAGUE_TIERS[r.country];
+        let tiers = c && c.tiers, shift = 0;
+        if (!tiers) { tiers = LEAGUE_TIERS.Netherlands.tiers; shift = (((c && c.elo) || 1000) - 1000) / 10; }
+        let i = tiers.findIndex(t => r.estPotential - shift >= t.min);
+        if (i < 0) i = tiers.length - 1;
+        return { lower: tiers[i].min + shift, upper: i > 0 ? tiers[i - 1].min - 1 + shift : 99 };
+    },
     floorFor(p) {
         const r = p.report; if (!r) return '';
         return typeof r.floorPotential === 'number' ? this.tierLabel(r.floorPotential, r.country) : (r.floor || '');

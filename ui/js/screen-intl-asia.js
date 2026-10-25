@@ -28,7 +28,7 @@ Object.assign(IntlScreen, {
             if (cyc && cyc.ofc) t.push(['ofcq', I18n.t('intl.tab.wcq')]);
             if (ao && ao.onc) t.push(['onc', compName('INTL_ONC') + ' ' + (S.year + 1)]);
         }
-        if (S && S.type === 'WORLD_CUP' && S.tour) t.push(['tour', this.tourName(S)]);
+        // the World Cup tournament itself is shown under World (IntlScreen.worldTabs)
         t.push(['teams', I18n.t('intl.tab.teams')]);
         t.push(['info', I18n.t('intl.tab.info')]);
         return t;

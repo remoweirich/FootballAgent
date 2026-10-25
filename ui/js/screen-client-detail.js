@@ -35,7 +35,8 @@ const ClientDetail = {
         else if (ctx.tab === 'contract') body = this.tabContract(p);
         else if (ctx.tab === 'development') body = this.tabDevelopment(p);
         else if (ctx.tab === 'history') body = this.tabHistory(p);
-        const seeBtn = ctx.tab === 'potential' && this.canAdReveal(p);
+        const seeAd = ctx.tab === 'potential' && this.canAdReveal(p), seeTip = ctx.tab === 'potential' && this.canTipReveal(p);
+        const seeBtn = seeAd || seeTip;
 
         el.innerHTML = `
         <div class="flex-row" style="align-items:flex-start;justify-content:space-between;margin-bottom:var(--space-4)">
@@ -55,8 +56,13 @@ const ClientDetail = {
             if (el.parentElement) el.parentElement.classList.add('screen--has-cta');
             const dock = document.createElement('div');
             dock.className = 'cta-dock cta-dock--ad';
-            dock.innerHTML = `<button class="btn btn--primary"><span class="btn__stack">${I18n.t('cd.seePotential')}<small>${I18n.t('cd.seePotentialSub')}</small></span><i class="ti ti-ad" style="font-size:22px"></i></button>`;
-            dock.querySelector('button').onclick = () => ClientDetail.adReveal(id);
+            // with an insider tip in hand the ad button takes half the width, the tip the other half
+            const adBtn = `<button class="btn btn--primary" data-act="ad"><span class="btn__stack">${I18n.t('cd.seePotential')}<small>${I18n.t(seeTip ? 'cd.seePotentialSubShort' : 'cd.seePotentialSub')}</small></span><i class="ti ti-ad" style="font-size:22px"></i></button>`;
+            const tipBtn = `<button class="btn btn--primary" data-act="tip"><span class="btn__stack">${I18n.t('cd.useInsiderTip')}<small>${I18n.t('cd.insiderLeft', { n: Agency.prestigeItem('insider') })}</small></span><i class="ti ti-eye" style="font-size:22px"></i></button>`;
+            dock.innerHTML = seeAd && seeTip ? `<div class="cta-split">${adBtn}${tipBtn}</div>` : seeAd ? adBtn : tipBtn;
+            const bind = (act, fn) => { const b = dock.querySelector(`[data-act="${act}"]`); if (b) b.onclick = fn; };
+            bind('ad', () => ClientDetail.adReveal(id));
+            bind('tip', () => ClientDetail.tipReveal(id));
             el.appendChild(dock);
         }
     },
@@ -162,7 +168,8 @@ const ClientDetail = {
     },
 
     // ---- shop to any club, any country, one or several at once ----
-    openShop(id) { this.ctx(id).shop = { country: (Clubs.getClubById(GameState.getPlayer(id).clubId) || {}).country || GameState.homeCountry || 'Netherlands', selected: new Set(), mode: 'transfer' }; this.renderShop(id); },
+    // a loan-listed client is offered out on loan by default; anyone else as a transfer
+    openShop(id) { const p = GameState.getPlayer(id); this.ctx(id).shop = { country: (Clubs.getClubById(p.clubId) || {}).country || GameState.homeCountry || 'Netherlands', selected: new Set(), mode: p.loanListed && Agency.canLoanShop(p) ? 'loan' : 'transfer' }; this.renderShop(id); },
     renderShop(id) {
         const p = GameState.getPlayer(id), shop = this.ctx(id).shop;
         const canLoan = Agency.canLoanShop(p);
@@ -195,12 +202,22 @@ const ClientDetail = {
             const clubs = Clubs.getClubsByDivision(div).filter(c => c.id !== p.clubId).sort((a, b) => b.reputation - a.reputation);
             if (!clubs.length) return '';
             const allSelected = clubs.every(c => shop.selected.has(c.id));
-            const rows = clubs.map(c => `<label class="comp-row" style="cursor:pointer"><span class="flex-row" style="gap:8px"><input type="checkbox" ${shop.selected.has(c.id) ? 'checked' : ''} onchange="ClientDetail.toggleShopClub('${id}','${UI.esc(c.id)}')">${UI.esc(c.name)}</span><span class="muted">${I18n.t('agency.eff.rep')} ${c.reputation}</span></label>`).join('');
+            const net = shop.mode !== 'loan' && Agency.prestigeItem('network') > 0;
+            const rows = clubs.map(c => `<label class="comp-row" style="cursor:pointer"><span class="flex-row" style="gap:8px"><input type="checkbox" ${shop.selected.has(c.id) ? 'checked' : ''} onchange="ClientDetail.toggleShopClub('${id}','${UI.jsArg(c.id)}')">${UI.esc(c.name)}</span><span class="flex-row" style="gap:6px">${net && Agency.canUseNetwork(p, c.id) ? `<button class="gbtn" style="padding:3px 9px;font-size:var(--fs-xs)" onclick="event.preventDefault();event.stopPropagation();ClientDetail.useNetwork('${id}','${UI.jsArg(c.id)}')"><i class="ti ti-world"></i>${I18n.t('cd.networkBtn')}</button>` : ''}<span class="muted">${I18n.t('agency.eff.rep')} ${c.reputation}</span></span></label>`).join('');
             return `<div class="section-head" style="margin-top:var(--space-3);margin-bottom:0">
                 <span class="section-label">${COMPETITIONS[div].name}</span>
                 <button class="gbtn" style="padding:3px 9px;font-size:var(--fs-xs)" onclick="ClientDetail.toggleShopDivision('${id}','${div}')">${allSelected ? I18n.t('cd.deselectAll') : I18n.t('cd.pitchToAll')}</button>
                 </div>${rows}`;
         }).join('');
+    },
+    // a Network bonus: a guaranteed offer from a club at 100 relationship
+    useNetwork(id, clubId) {
+        const p = GameState.getPlayer(id); if (!p) return;
+        const r = Agency.useNetworkBonus(p, clubId);
+        GameState.save();
+        const body = document.getElementById('screenBody'); if (body) this.render(body, id);
+        this.renderShop(id);
+        Router.result(r.message, r.ok ? 'ok' : 'bad');
     },
     setShopCountry(id, c) { this.ctx(id).shop.country = c; this.renderShop(id); },
     toggleShopClub(id, clubId) {
@@ -319,8 +336,15 @@ const ClientDetail = {
     // the "See potential" ad button: gone for good once Enhanced Insights is owned, and for this
     // player once he has been revealed
     canAdReveal(p) { return typeof Ads !== 'undefined' && typeof Monetization !== 'undefined' && !Monetization.owns('insights') && p.insightAd !== true; },
+    // an insider tip (Prestige shop) can reveal him too, on the same terms
+    canTipReveal(p) { return typeof Agency !== 'undefined' && Agency.prestigeItem('insider') > 0 && !(typeof Monetization !== 'undefined' && Monetization.owns('insights')) && p.insightAd !== true; },
+    tipReveal(id) {
+        const p = GameState.getPlayer(id); if (!p) return;
+        const r = Agency.useInsiderTip(p);
+        if (r.ok) { GameState.save(); Router.refresh(); }
+    },
     async adReveal(id) {
-        const p = GameState.getPlayer(id), btn = document.querySelector('.cta-dock--ad button');
+        const p = GameState.getPlayer(id), btn = document.querySelector('.cta-dock--ad [data-act="ad"]');
         if (!p || !this.canAdReveal(p) || this._adBusy) return;
         this._adBusy = true; if (btn) btn.disabled = true;
         let r = 'unavailable';
@@ -681,6 +705,22 @@ const ClientDetail = {
         return modeBar + this._clubHistory(p);
     },
     setHistMode(id, m) { this.ctx(id).histMode = m; Router.refresh(); },
+    // ---- the history table, shared by the Club and International tabs (see _clubHistory and
+    // NationScreen.playerHistoryHTML): the same fixed columns, header, two-line rows and footer ----
+    // apps · goals (clean sheets for a keeper) · assists · yellow · red · rating. The rating is worked out
+    // from the rating total where a record only stores that (international and per-competition rows).
+    htStats(o, gk) {
+        const num = v => `<span class="ht-n">${v || 0}</span>`;
+        const avg = o.avg != null ? o.avg : (o.apps ? (o.ratingSum || 0) / o.apps : 0);
+        return num(o.apps) + num(gk ? o.cs : o.goals) + num(o.assists)
+            + `<span class="ht-n ht-y">${o.yellow || 0}</span><span class="ht-n ht-r">${o.red || 0}</span>`
+            + `<span class="ht-n ht-avg">${o.apps ? UI.ratingText(avg) : '<span class="muted">—</span>'}</span>`;
+    },
+    htHead(gk, second) {
+        return `<div class="ht-row ht-head"><span>${I18n.t('cd.col.season')}</span><span>${second}</span><span class="ht-n">${I18n.t('common.appsShort')}</span><span class="ht-n">${gk ? I18n.t('common.csShort') : I18n.t('common.goalsShort')}</span><span class="ht-n">${I18n.t('common.assistsShort')}</span><span class="ht-n"><span class="card-chip card-chip--yellow"></span></span><span class="ht-n"><span class="card-chip card-chip--red"></span></span><span class="ht-n">${I18n.t('cd.col.avg')}</span></div>`;
+    },
+    // one competition (or club) line inside an opened row, in the same columns
+    htSub(label, o, gk) { return `<div class="ht-row ht-comp"><span></span><span class="ht-club"><span class="ht-line">${label}</span></span>${this.htStats(o, gk)}</div>`; },
     _clubHistory(p) {
         const years = Object.keys(p.stats || {}).map(Number).sort((a, b) => b - a);
         if (!years.length) return `<p class="muted">${I18n.t('cd.noMatches')}</p>`;
@@ -699,11 +739,8 @@ const ClientDetail = {
         // A real table: fixed columns (season · club · apps · goals or clean sheets · assists · cards ·
         // rating), the header once, every row exactly two lines (club / division, both cut with "…"
         // rather than wrapping), digits right-aligned so seasons compare at a glance.
-        const num = v => `<span class="ht-n">${v || 0}</span>`;
-        const statCells = o => num(o.apps) + num(gk ? o.cs : o.goals) + num(o.assists)
-            + `<span class="ht-n ht-y">${o.yellow || 0}</span><span class="ht-n ht-r">${o.red || 0}</span>`
-            + `<span class="ht-n ht-avg">${o.apps ? UI.ratingText(o.avg) : '<span class="muted">—</span>'}</span>`;
-        const head = `<div class="ht-row ht-head"><span>${I18n.t('cd.col.season')}</span><span>${I18n.t('nat.club')}</span><span class="ht-n">${I18n.t('common.appsShort')}</span><span class="ht-n">${gk ? I18n.t('common.csShort') : I18n.t('common.goalsShort')}</span><span class="ht-n">${I18n.t('common.assistsShort')}</span><span class="ht-n"><span class="card-chip card-chip--yellow"></span></span><span class="ht-n"><span class="card-chip card-chip--red"></span></span><span class="ht-n">${I18n.t('cd.col.avg')}</span></div>`;
+        const statCells = o => this.htStats(o, gk);
+        const head = this.htHead(gk, I18n.t('nat.club'));
         const moved = (y, type) => (p.movements || []).some(m => m.year === y && m.type === type);
         let lastY = null;
         const seasonBlocks = rows.map(({ y, st }) => {
@@ -725,10 +762,7 @@ const ClientDetail = {
             lastY = y;
             let inner = '';
             if (open) {
-                const comps = Object.entries(st.comps).map(([cid, c]) => {
-                    const cc = Object.assign({ yellow: 0, red: 0, avg: c.apps ? (c.ratingSum || 0) / c.apps : 0 }, c);
-                    return `<div class="ht-row ht-comp"><span></span><span class="ht-club"><span class="ht-line">${compName(cid)}</span></span>${statCells(cc)}</div>`;
-                }).join('');
+                const comps = Object.entries(st.comps).map(([cid, c]) => this.htSub(compName(cid), c, gk)).join('');
                 const trophyMark = tr => (typeof europeTrophyIcon === 'function' && europeTrophyIcon(tr.compId)) || '<span class="hist-sym">🏆</span>';
                 inner = '<div class="ht-body">' + comps + (troph.length ? `<div class="ht-trophies">${troph.map(tr => (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(tr.compId, `${trophyMark(tr)} ${compName(tr.compId)}`)).join(' · ')}</div>` : '') + '</div>';
             }
@@ -740,7 +774,7 @@ const ClientDetail = {
         let careerInner = '';
         if (careerOpen) {
             const toggle = `<div class="chip-row" style="margin:var(--space-2) 0 var(--space-2)"><button class="htog ${mode === 'club' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','club')">${I18n.t('cd.byClub')}</button><button class="htog ${mode === 'comp' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','comp')">${I18n.t('cd.byComp')}</button></div>`;
-            const line = (label, agg) => `<div class="ht-row ht-comp"><span></span><span class="ht-club"><span class="ht-line">${label}</span></span>${statCells(agg)}</div>`;
+            const line = (label, agg) => this.htSub(label, agg, gk);
             const list = mode === 'club'
                 ? careerByClub(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => line(this.clubLink(m.clubId, UI.esc(UI.clubName(m.clubId))) + (m.loanEver ? ' <i class="ti ti-arrows-exchange ht-loan"></i>' : ''), m.agg))
                 : careerByComp(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => line(compName(m.compId) + (m.youth ? ` <span class="muted">${I18n.t('cd.youthMuted')}</span>` : ''), m.agg));

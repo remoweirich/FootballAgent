@@ -75,7 +75,7 @@ const AgencyScreen = {
         
         el.innerHTML = `
         <div class="info-grid" style="margin-bottom:var(--space-5)">
-            <div class="info"><span><i class="ti ti-star"></i>${I18n.t('agency.reputation')}</span><b>${(ag.reputation || 0).toFixed(2)}<span class="muted" style="font-size:var(--fs-xs)">/${Agency.repLimit()}</span></b></div>
+            <a class="info" href="#reputation" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-star"></i>${I18n.t('agency.reputation')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${(ag.reputation || 0).toFixed(2)}<span class="muted" style="font-size:var(--fs-xs)">/${Agency.repLimit()}</span></b><div class="pr-mini">${I18n.t('pr.prestige')} ${Agency.prestige().toFixed(1)}<span class="muted">/${Agency.PRESTIGE_CAP}</span></div></a>
             <a class="info" href="#clients" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-users"></i>${I18n.t('nav.clients')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${Agency.clients().length}<span class="muted" style="font-size:var(--fs-xs)">/${Agency.capacity()}</span></b></a>
             <a class="info" href="#scouting" style="text-decoration:none;color:inherit;cursor:pointer"><span><i class="ti ti-zoom-scan"></i>${I18n.t('agency.scouts')} <i class="ti ti-chevron-right" style="font-size:11px;color:var(--text-faint)"></i></span><b>${ag.scouts.length}<span class="muted" style="font-size:var(--fs-xs)">/${Upgrades.maxScouts()}</span></b></a>
             <div class="info"><span><i class="ti ti-broadcast"></i>${I18n.t('agency.sponsorReach')}</span><b>${sl}</b></div>
@@ -222,4 +222,104 @@ const AgencyScreen = {
     hireStaff(id) { const r = Upgrades.hireStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); },
     releaseStaff(id) { const r = Upgrades.releaseStaff(id); GameState.save(); Router.refresh(); Router.result(r.message, r.ok ? 'ok' : 'bad'); }
 };
+// ---------------- Reputation & Prestige ----------------
+// Opened from the reputation box on the Agency tab. Top: reputation and how it works in general.
+// Bottom: Prestige (what transfers, retirements and trophies would have added at the limit), the items
+// it bought, and the Prestige shop.
+const ReputationScreen = {
+    ICONS: { mediaDay: 'ti-microphone', kitSale: 'ti-shirt', favour: 'ti-heart-handshake', insider: 'ti-eye', network: 'ti-world', instant: 'ti-zoom-scan' },
+    bar(v, max) { const pct = Math.max(0, Math.min(100, max ? v / max * 100 : 0)); return `<div class="pr-bar"><span style="width:${pct}%"></span></div>`; },
+    render(el) {
+        const a = GameState.agency, lim = Agency.repLimit(), pr = Agency.prestige(), it = Agency.prestigeItems();
+        const items = ['insider', 'network', 'instant'].map(k => `<div class="pr-item"><i class="ti ${this.ICONS[k]}"></i><div style="flex:1;min-width:0"><div class="row-title">${I18n.t('pr.item.' + k)} <span class="muted">${it[k] || 0}/${Agency.PRESTIGE_ITEM_MAX}</span></div><div class="row-sub">${I18n.t('pr.where.' + k)}</div></div></div>`).join('');
+        const shop = Object.keys(Agency.PRESTIGE_SHOP).map(k => {
+            const e = Agency.PRESTIGE_SHOP[k], why = Agency.prestigeBlock(k);
+            const label = e.item ? I18n.t('pr.buy') : I18n.t('pr.use');
+            const act = k === 'mediaDay' ? `ReputationScreen.openMediaDay()` : k === 'kitSale' ? `ReputationScreen.openKitSale()` : k === 'favour' ? `ReputationScreen.openFavour()` : `ReputationScreen.buy('${k}')`;
+            return `<div class="pr-shop">
+                <div class="row-ico" style="background:var(--gold-tint);color:var(--gold)"><i class="ti ${this.ICONS[k]}"></i></div>
+                <div style="flex:1;min-width:0"><div class="row-title">${I18n.t('pr.shop.' + k)} <span class="pill pill--gold" style="padding:1px 7px">${e.cost} ${I18n.t('pr.pts')}</span></div>
+                    <div class="row-sub" style="white-space:normal">${I18n.t('pr.desc.' + k)}</div>
+                    ${why && why !== 'cost' ? `<div class="row-sub" style="color:var(--state-bad)">${I18n.t('pr.block.' + why)}</div>` : ''}</div>
+                <button class="btn btn--primary btn--sm" style="width:auto;flex:none" ${why ? 'disabled' : ''} onclick="${act}">${label}</button></div>`;
+        }).join('');
+        el.innerHTML = `
+            <div class="fcard" style="margin-bottom:var(--space-4)">
+                <div class="section-label" style="margin-top:0"><i class="ti ti-star" style="margin-right:4px"></i>${I18n.t('agency.reputation')}</div>
+                <div class="pr-big">${(a.reputation || 0).toFixed(2)}<span class="muted"> / ${lim}</span></div>${this.bar(a.reputation || 0, lim)}
+                <p class="pr-text">${I18n.t('pr.rep.what')}</p><p class="pr-text">${I18n.t('pr.rep.up')}</p><p class="pr-text">${I18n.t('pr.rep.down')}</p><p class="pr-text">${I18n.t('pr.rep.limit')}</p>
+            </div>
+            <div class="fcard" style="margin-bottom:var(--space-4)">
+                <div class="section-label" style="margin-top:0"><i class="ti ti-sparkles" style="margin-right:4px"></i>${I18n.t('pr.prestige')}</div>
+                <div class="pr-big pr-big--gold">${pr.toFixed(2)}<span class="muted"> / ${Agency.PRESTIGE_CAP}</span></div>${this.bar(pr, Agency.PRESTIGE_CAP)}
+                <p class="pr-text">${I18n.t('pr.what')}</p>
+                <div class="section-label">${I18n.t('pr.yourItems')}</div>${items}
+            </div>
+            <div class="section-label">${I18n.t('pr.shopTitle')}</div>
+            <div class="fcard">${shop}</div>
+            <div id="actionResult"></div>`;
+    },
+    buy(k) {
+        const r = Agency.buyPrestigeItem(k);
+        GameState.save(); Router.refresh();
+        Router.result(r.ok ? I18n.t('pr.bought', { item: I18n.t('pr.item.' + k) }) : I18n.t('pr.err.cost'), r.ok ? 'ok' : 'bad');
+    },
+    // ---- media day: pick three clients ----
+    _media: null,
+    openMediaDay() { this._media = new Set(); this._mediaSheet(); },
+    _mediaSheet() {
+        const sel = this._media, list = Agency.clients().slice().sort((a, b) => b.ability - a.ability);
+        const q = Agency.mediaDayQuote(Array.from(sel));
+        const rows = list.map(p => {
+            const w = Agency.mediaDayValue(p), on = sel.has(p.id);
+            return `<label class="comp-row" style="cursor:pointer"><span class="flex-row" style="gap:8px;min-width:0"><input type="checkbox" ${on ? 'checked' : ''} ${!on && sel.size >= 3 ? 'disabled' : ''} onchange="ReputationScreen.toggleMedia('${p.id}')"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${UI.esc(p.name)} <span class="muted">${p.ability}</span></span></span><span class="muted">${UI.euro(w)}</span></label>`;
+        }).join('');
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('pr.shop.mediaDay')}</div>
+            <p class="hint">${I18n.t('pr.media.note', { n: Agency.MEDIA_DAY_MORALE })}</p>
+            <div style="max-height:46vh;overflow-y:auto">${rows}</div>
+            <div class="result" style="margin-top:var(--space-3)">${I18n.t('pr.media.quote', { n: sel.size, amt: UI.euro(q.amount) })}</div>
+            <div class="flex-row" style="margin-top:var(--space-4)"><button class="btn btn--ghost" onclick="Router.closeSheet()">${I18n.t('common.cancel')}</button>
+            <button class="btn btn--primary" ${sel.size === 3 ? '' : 'disabled'} onclick="ReputationScreen.holdMedia()">${I18n.t('pr.media.go')}</button></div>`);
+    },
+    // ---- kit sale: pick one client ----
+    openKitSale() {
+        const list = Agency.clients().slice().sort((a, b) => b.ability - a.ability);
+        const rows = list.map(p => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ReputationScreen.kitSale('${p.id}')"><span style="flex:1;min-width:0;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${UI.esc(p.name)} <span class="muted">${p.ability}</span></span><span class="muted">${UI.euro(Agency.kitSaleValue(p))}</span></button>`).join('');
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('pr.shop.kitSale')}</div>
+            <p class="hint">${I18n.t('pr.kit.note')}</p>
+            <div style="max-height:52vh;overflow-y:auto">${rows}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
+    },
+    kitSale(id) {
+        const r = Agency.holdKitSale(id);
+        GameState.save(); Router.closeSheet(); Router.refresh();
+        Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
+    toggleMedia(id) { if (this._media.has(id)) this._media.delete(id); else if (this._media.size < 3) this._media.add(id); this._mediaSheet(); },
+    holdMedia() {
+        const r = Agency.holdMediaDay(Array.from(this._media || []));
+        GameState.save(); Router.closeSheet(); Router.refresh();
+        Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
+    // ---- call in a favour: one club you deal with (your clients' clubs, and any club you know) ----
+    openFavour() {
+        const rel = (GameState.agency.relationships) || {};
+        const ids = new Set(Object.keys(rel));
+        Agency.clients().forEach(p => { if (p.clubId) ids.add(p.clubId); if (p.onLoanAt && Clubs.getClubById(p.onLoanAt)) ids.add(p.onLoanAt); });
+        const clubs = Array.from(ids).map(id => Clubs.getClubById(id)).filter(Boolean).filter(c => Agency.relationship(c.id) < 100)
+            .sort((a, b) => Agency.relationship(b.id) - Agency.relationship(a.id) || b.reputation - a.reputation);
+        const rows = clubs.length ? clubs.map(c => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ReputationScreen.favour('${UI.jsArg(c.id)}')"><span style="flex:1;min-width:0;color:var(--text)">${UI.esc(c.name)}</span><span class="muted">${I18n.t('pr.favour.rel', { n: Math.round(Agency.relationship(c.id)) })}</span></button>`).join('')
+            : `<p class="muted">${I18n.t('pr.favour.none')}</p>`;
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('pr.shop.favour')}</div><p class="hint">${I18n.t('pr.favour.note', { n: Agency.FAVOUR_REL })}</p>
+            <div style="max-height:52vh;overflow-y:auto">${rows}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
+    },
+    favour(clubId) {
+        const r = Agency.callInFavour(clubId);
+        GameState.save(); Router.closeSheet(); Router.refresh();
+        Router.result(r.message, r.ok ? 'ok' : 'bad');
+    },
+};
+Router.register('reputation', { isMain: false, parent: 'agency', title: () => I18n.t('pr.screenTitle'), render(el) { ReputationScreen.render(el); } });
+if (typeof window !== 'undefined') window.ReputationScreen = ReputationScreen;
 Router.register('agency', { isMain: true, title: () => I18n.t('nav.agency'), render(el) { AgencyScreen.render(el); } });

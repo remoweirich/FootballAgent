@@ -82,6 +82,20 @@ button { font-family: inherit; }
 /* ---------- Info cell (label / value) grid: contract facts, key stats ---------- */
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 .info-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+/* Reputation & Prestige (Agency > reputation box) */
+.pr-mini { font-size: var(--fs-xs); color: var(--gold); margin-top: 2px; }
+.pr-big { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); color: var(--text); }
+.pr-big .muted { font-size: var(--fs-md); font-weight: 400; }
+.pr-big--gold { color: var(--gold); }
+.pr-bar { height: 6px; border-radius: 3px; background: var(--surface-sunken); overflow: hidden; margin: 6px 0 var(--space-3); }
+.pr-bar span { display: block; height: 100%; background: var(--gold); border-radius: 3px; }
+.pr-text { font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.5; margin: 0 0 var(--space-2); }
+.pr-item { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-top: .5px solid var(--line-faint); }
+.pr-item > .ti { font-size: 18px; color: var(--gold); width: 22px; text-align: center; }
+.pr-shop { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: .5px solid var(--line-faint); }
+.pr-shop:last-child { border-bottom: none; }
+.cta-split { display: flex; gap: var(--space-2); }
+.cta-split .btn { flex: 1; min-width: 0; }
 .info { background: var(--surface-raised); border-radius: var(--radius-md); padding: 9px 11px; }
 .info > span { font-size: var(--fs-xs); color: var(--text-faint); }
 .info > span .ti { font-size: 12px; vertical-align: -2px; margin-right: 4px; }

@@ -77,11 +77,11 @@ const ClubScreen = {
         <a class="gbtn" style="margin-top:var(--space-3)" href="${Router.link('comphist', c.division)}"><i class="ti ti-history"></i>${I18n.t('club.divHistory', { div: c.divisionName })}</a>
         <div class="section-label">${I18n.t('club.yourClients')}</div>
         <div class="chip-row" style="margin:var(--space-2) 0 var(--space-3)">
-            <button class="htog ${mode === 'season' ? 'is-on' : ''}" onclick="ClubScreen.setMode('${clubId}','season')">${I18n.t('club.currentSeason')}</button>
-            <button class="htog ${mode === 'all' ? 'is-on' : ''}" onclick="ClubScreen.setMode('${clubId}','all')">${I18n.t('club.allTime')}</button>
+            <button class="htog ${mode === 'season' ? 'is-on' : ''}" onclick="ClubScreen.setMode('${UI.jsArg(clubId)}','season')">${I18n.t('club.currentSeason')}</button>
+            <button class="htog ${mode === 'all' ? 'is-on' : ''}" onclick="ClubScreen.setMode('${UI.jsArg(clubId)}','all')">${I18n.t('club.allTime')}</button>
         </div>
         <div class="chip-row" style="margin:0 0 var(--space-3)">
-            ${['apps', 'goals', 'assists', 'avg'].map(k => `<button class="htog ${this.state.sort === k ? 'is-on' : ''}" onclick="ClubScreen.setSort('${clubId}','${k}')">${I18n.t({ apps: 'club.apps', goals: 'club.goals', assists: 'club.assists', avg: 'club.rating' }[k])}</button>`).join('')}
+            ${['apps', 'goals', 'assists', 'avg'].map(k => `<button class="htog ${this.state.sort === k ? 'is-on' : ''}" onclick="ClubScreen.setSort('${UI.jsArg(clubId)}','${k}')">${I18n.t({ apps: 'club.apps', goals: 'club.goals', assists: 'club.assists', avg: 'club.rating' }[k])}</button>`).join('')}
         </div>
         <div class="fcard">${clientRows}</div>`;
     },

@@ -59,7 +59,9 @@ const Router = {
         return { name: name || 'home', params: rest.map(s => decodeURIComponent(s)) };
     },
     // build a safe href for a route with an id that may contain spaces/unicode (e.g. club ids)
-    link(name, id) { return `#${name}/${encodeURIComponent(id)}`; },
+    // encodeURIComponent leaves ' alone, which ends a JS string early wherever a link sits inside an
+    // onclick (a club id like "Collina d'Oro"): encode it too. route() decodes it back.
+    link(name, id) { return `#${name}/${encodeURIComponent(id).replace(/'/g, '%27')}`; },
     go(hash) { if (location.hash === '#' + hash) { this.route(true); return; } location.hash = hash; },
     // Replace the current (often now-dead) screen with a deliberate destination: clear the
     // hierarchy stack AND mark this as a back-navigation so route() does NOT re-stack the screen

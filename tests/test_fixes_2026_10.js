@@ -216,4 +216,19 @@ const rent = JSON.parse(run(`
 check('properties take 2/3/3/4/5/6% off the office rent, adding up to 23% (Iconic III: 195k -> 150.15k)',
     rent.cut.join() === '0.02,0.03,0.03,0.04,0.05,0.06' && rent.full === 195000 && rent.steps[5] === 150150 && rent.steps[0] === 191100, JSON.stringify(rent));
 
+// ---------------- a current international is worth more ----------------
+console.log('\n-- international boost --');
+const ib = JSON.parse(run(`
+    var p = __client(); p.ability = 70; p.age = 26; var club = Clubs.allClubs.find(function (c) { return c.reputation >= 85; });
+    var real = Internationals.callupOf, role = null;
+    Internationals.callupOf = function (x) { return x === p && role ? { nation: 'isl', role: role } : null; };
+    var w = function () { return [Agency.offeredWage(p, club, { jitter: false }), Agency.maxClubWage(p, club), Agency.interestWeights(p).boost, Agency.intlBoost(p)]; };
+    var none = w(); role = 'star'; var star = w(); role = 'reserve'; var res = w(); role = null;
+    Internationals.callupOf = real;
+    return JSON.stringify({ none: none, star: star, res: res });`));
+const r1 = (a, b) => Math.round(a / b * 100) / 100;
+check('a called-up star: +10% wage offers, wage ceiling and transfer interest', r1(ib.star[0], ib.none[0]) === 1.1 && r1(ib.star[1], ib.none[1]) === 1.1 && r1(ib.star[2], ib.none[2]) === 1.1, JSON.stringify(ib));
+check('a called-up reserve: +5%; not called up: no boost', r1(ib.res[0], ib.none[0]) === 1.05 && ib.res[3] === 1.05 && ib.none[3] === 1, JSON.stringify(ib));
+check('sponsorship values carry the same boost', /base \*= Agency\.intlBoost\(p\)/.test(fs.readFileSync(root + 'js/simulation.js', 'utf8')));
+
 if (failed) process.exit(1);

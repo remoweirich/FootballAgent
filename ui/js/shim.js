@@ -116,6 +116,10 @@ const UI = {
     },
 
     esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
+    // a value for a '...' argument inside an onclick="..." attribute: the browser turns &#39; back into
+    // ' before running the script, so UI.esc alone breaks on an id like "Collina d'Oro". Backslash-escape
+    // for the script, then HTML-escape for the attribute.
+    jsArg(s) { return this.esc((s == null ? '' : String(s)).replace(/\\/g, '\\\\').replace(/'/g, "\\'")); },
 
     // Open a Play Store page / mailto: etc. outside the game. On a native build Capacitor's WebView
     // intercepts any off-app URL and launches the matching system intent (Play app, mail chooser),

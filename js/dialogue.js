@@ -289,8 +289,11 @@ const Dialogue = {
         let outcome = 'good', revealDriver = null, closed = false;
 
         if (choiceKey === 'listen') {
-            p.morale.agent = Math.min(100, p.morale.agent + (M.TALK_AGENT_BONUS || 6));
+            // being heard helps most the first time; saying it again to the same complaint only goes so far
+            p.morale.agent = Math.min(100, p.morale.agent + (c.listened ? (M.TALK_AGENT_REPEAT != null ? M.TALK_AGENT_REPEAT : 2) : (M.TALK_AGENT_BONUS || 6)));
+            c.listened = true;
             c.sinceAbsWeek += 2;                       // being heard buys patience
+            p._spillPauseUntilAbs = aw + (M.SPILL_LISTEN_PAUSE_WEEKS || 4);   // ...and he stops blaming you for a while
             GameState.addLog(I18n.t('dlg.talk.through', { name: p.name }), 'morale');
         } else if (choiceKey === 'promise') {
             const r = Agency.makePromise(p, promiseType);
@@ -496,8 +499,8 @@ const Dialogue = {
         // a star seen out properly reflects on the agency: word gets around you stay to the end
         let note = null;
         if (this.bondOf(p) >= 50 && !p._farewellDone) {
-            Agency.bumpRep(3);
-            note = this._t('dlg.note.farewellRep', null, 'Word gets around: you look after your people to the very end. (+2 reputation)');
+            Agency.bumpRep(3, 'retirement');
+            note = this._t('dlg.note.farewellRep', null, 'Word gets around: you look after your people to the very end. (+3 reputation)');
         }
         p._farewellDone = true;
         return { ok: true, reply: this._pick(rows, p), note };
@@ -518,6 +521,12 @@ const Dialogue = {
     // "smaller" football nations whose talents more often dream of a bigger league abroad
     SMALL_LEAGUE_HOMES: ['Netherlands', 'Switzerland', 'Portugal', 'Belgium', 'France'],
 
+    // a boyhood club's name: a game club, or one of the European-cup clubs (virtual); null if unknown
+    _favName(id) {
+        const c = Clubs.getClubById(id); if (c) return c.name;
+        const v = typeof findVirtualClub === 'function' ? findVirtualClub(id) : null;
+        return v ? v.name : null;
+    },
     _clubName(id) { const c = Clubs.getClubById(id); return c ? c.name : (typeof League !== 'undefined' && League.teamName ? League.teamName(id) : 'his club'); },
     _weightedByRep2(list) { if (!list.length) return null; const t = list.reduce((s, c) => s + c.reputation * c.reputation, 0); let r = Rng.next() * t; for (const c of list) { r -= c.reputation * c.reputation; if (r <= 0) return c.id; } return list[list.length - 1].id; },
     _weightedByRep(list) { if (!list.length) return null; const t = list.reduce((s, c) => s + c.reputation, 0); let r = Rng.next() * t; for (const c of list) { r -= c.reputation; if (r <= 0) return c.id; } return list[list.length - 1].id; },
@@ -540,12 +549,32 @@ const Dialogue = {
     },
 
     _homeCountryOf(p) {
-        // his nationality when it is a playable country; else where he plays now
-        const played = ['Netherlands', 'England', 'Germany', 'Spain', 'Switzerland', 'Italy', 'France', 'Portugal', 'Belgium'];
-        if (played.includes(p.nationality)) return p.nationality;
+        // his nationality when it has a league in the game (created countries too); else where he
+        // plays now, else the club he played most for. The AGENCY's country is only the very last
+        // resort: falling back to it for a clubless player is what gave a Nigerian scouted in England
+        // a Swiss boyhood club.
+        if (typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[p.nationality]) return p.nationality;
         const c = Clubs.getClubById(effectiveClubId(p));
-        return c ? c.country : GameState.homeCountry;
+        if (c) return c.country;
+        const prim = this._primaryClub(p);
+        if (prim) return prim.country;
+        return GameState.homeCountry;
     },
+    // a club anyone could have grown up supporting: never a youth/reserve side (nobody owned the
+    // "YB U21" kit as a kid) and never a virtual U21 slot
+    _senior(c) { return !!c && !(typeof isReserveClub === 'function' && isReserveClub(c.id)) && String(c.id).indexOf('u21:') !== 0; },
+    // A European nation without a league in the game still has its clubs in the European cups (the
+    // pooled clubs of js/europe-data.js): a Croatian grew up supporting Dinamo Zagreb or Hajduk, not
+    // whoever he happens to play for. Pool keys that differ from the nationality name:
+    EU_POOL_KEY: { 'Republic of Ireland': 'Ireland', 'Bosnia and Herzegovina': 'Bosnia' },
+    _europePool(nat) {
+        if (typeof EUROPE_DATA === 'undefined' || !EUROPE_DATA.pools || !nat) return null;
+        const pool = EUROPE_DATA.pools[this.EU_POOL_KEY[nat] || nat];
+        if (!pool || !pool.clubs || !pool.clubs.length) return null;
+        const list = pool.clubs.map(c => c.real ? Clubs.getClubById(c.id) : { id: c.id, reputation: c.rep || 50 }).filter(c => c && this._senior(c));
+        return list.length ? list : null;
+    },
+    _seniorOf(id) { const par = (typeof parentClubForReserve === 'function') ? parentClubForReserve(id) : null; return par ? par.id : id; },
     // His boyhood club. ~19 in 20 it's from his home country; within that, ~8 in 10 it's from the
     // region he came up in (the club he's at now), so a Basel lad supports a Basel-region side, not a
     // crosstown/national rival. Big clubs still collect the most childhood hearts (rep-squared weight).
@@ -553,18 +582,23 @@ const Dialogue = {
         const home = this._homeCountryOf(p);
         const cur = Clubs.getClubById(effectiveClubId(p));
         const regionId = cur ? cur.region : null;
-        const notRival = c => !this._isPresumedRival(c.id, p);
+        const notRival = c => this._senior(c) && !this._isPresumedRival(c.id, p);
         // ~1 in 20: a foreign giant idolised from afar
         if (Rng.next() < 0.05) {
-            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 82);
+            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 82 && this._senior(c));
             const g = this._weightedByRep2(giants); if (g) return g;
+        }
+        // a European nation with no league in the game: one of its clubs from the European cups
+        if (!(typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[p.nationality])) {
+            const eu = this._europePool(p.nationality);
+            if (eu) return this._weightedByRep2(eu);
         }
         // within his home country: ~8 in 10 from his own region, else anywhere at home
         let pool = null;
         if (regionId && Rng.next() < 0.80) pool = Clubs.allClubs.filter(c => c.country === home && c.region === regionId && notRival(c));
         if (!pool || !pool.length) pool = Clubs.allClubs.filter(c => c.country === home && c.tier <= 2 && notRival(c));
         if (!pool.length) pool = Clubs.allClubs.filter(c => c.country === home && notRival(c));
-        return this._weightedByRep2(pool) || (cur ? cur.id : null);
+        return this._weightedByRep2(pool) || (cur ? this._seniorOf(cur.id) : null);
     },
     _rollFamily(p) {
         const r = Rng.next();
@@ -631,13 +665,13 @@ const Dialogue = {
         const home = this._homeCountryOf(p);
         if (p.ability >= 60) {
             if (favClubId && favClubId !== effectiveClubId(p) && !this._isPresumedRival(favClubId, p) && Rng.next() < 0.3) return favClubId;
-            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 80 && c.id !== effectiveClubId(p) && !this._playedAtClub(p, c.id));
+            const giants = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 80 && this._senior(c) && c.id !== effectiveClubId(p) && !this._playedAtClub(p, c.id));
             const g = this._weightedByRep2(giants); if (g) return g;   // foreign, so never a domestic rival
         }
         // modest, home-grown dream: any top-flight side back home, linear-rep weighted so smaller names show up
-        const pool = Clubs.allClubs.filter(c => c.country === home && c.tier === 1 && c.id !== effectiveClubId(p) && !this._isPresumedRival(c.id, p) && !this._playedAtClub(p, c.id));
+        const pool = Clubs.allClubs.filter(c => c.country === home && c.tier === 1 && this._senior(c) && c.id !== effectiveClubId(p) && !this._isPresumedRival(c.id, p) && !this._playedAtClub(p, c.id));
         const home1 = this._weightedByRep(pool); if (home1) return home1;
-        const abroad = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 78 && c.id !== effectiveClubId(p) && !this._playedAtClub(p, c.id));
+        const abroad = Clubs.allClubs.filter(c => c.country !== home && c.tier === 1 && c.reputation >= 78 && this._senior(c) && c.id !== effectiveClubId(p) && !this._playedAtClub(p, c.id));
         return this._weightedByRep2(abroad) || favClubId || null;
     },
     // every division he has played senior games in (an ambition is never something already done)
@@ -682,6 +716,7 @@ const Dialogue = {
             // this, "home" would drift to wherever he currently plays, which breaks the abroad
             // ambition and made foreign-heritage players "settle in" on domestic moves.
             if (!p.facts.home) { p.facts.home = this._homeCountryOf(p); this._seedLangs(p, p.facts.home); }
+            this._repairFavClub(p);
             return p.facts;
         }
         const home = this._homeCountryOf(p);
@@ -695,6 +730,21 @@ const Dialogue = {
         };
         this._seedLangs(p, home);   // he grew up there: he speaks the language, whatever his passport says
         return p.facts;
+    },
+    // Older saves: a youth side as the boyhood club becomes its senior club (a "YB U21" fan grew up
+    // a YB fan). A boyhood club he has not told you yet, from a country that is neither his home nor
+    // a foreign giant (the agency-country fallback bug), is rolled again. Once he has told you, his
+    // answer stands.
+    _repairFavClub(p) {
+        const fc = p.facts && p.facts.favClub; if (!fc || !fc.clubId || (fc._checked || 0) >= 2) return;
+        fc._checked = 2;   // 2: also re-checked against his nation's European-cup clubs
+        const c = Clubs.getClubById(fc.clubId);
+        if (c && !this._senior(c)) { fc.clubId = this._seniorOf(c.id); return; }
+        if (!c || fc.discovered) return;
+        const giant = c.tier === 1 && c.reputation >= 82;
+        const eu = !(typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[p.nationality]) ? this._europePool(p.nationality) : null;
+        const fits = eu ? eu.some(x => x.id === c.id) : c.country === this._homeCountryOf(p);
+        if (!fits && !giant) fc.clubId = this._rollFavClub(p);
     },
     _seedLangs(p, home) {
         const langs = this.LANGS[home] || [];
@@ -745,8 +795,8 @@ const Dialogue = {
         const f = this.ensureFacts(p);
         if (f.favClub.clubId && !f.favClub.discovered) {
             f.favClub.discovered = true;
-            const c = Clubs.getClubById(f.favClub.clubId);
-            return I18n.t('dlg.vol.boyhood', { club: c ? c.name : I18n.t('dlg.clubBackHome') });
+            const nm = this._favName(f.favClub.clubId);
+            return I18n.t('dlg.vol.boyhood', { club: nm || I18n.t('dlg.clubBackHome') });
         }
         if (!f.ambition.discovered) {
             f.ambition.discovered = true;
@@ -791,8 +841,7 @@ const Dialogue = {
             else variant = 'nothing';
         } else if (q === 'q-club') {
             f.favClub.discovered = true;
-            const c = Clubs.getClubById(f.favClub.clubId);
-            extra.favclub = c ? c.name : this._t('dlg.favclub.none', null, 'a club back home');
+            extra.favclub = this._favName(f.favClub.clubId) || this._t('dlg.favclub.none', null, 'a club back home');
             note = this._t('dlg.note.club', { club: extra.favclub }, 'Noted: his boyhood club is {club}.');
         } else if (q === 'q-ambition') {
             f.ambition.discovered = true;

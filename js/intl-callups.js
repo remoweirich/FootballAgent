@@ -240,7 +240,7 @@ Object.assign(Internationals, {
             c.apps += 1; c.goals += a.g; c.assists += a.a;
             if (p.position === 'GK' && ga === 0) c.cs = (c.cs || 0) + 1;
             const rr = Rng.next(), yr = yellowRate[p.position] ?? 0.1;
-            if (rr < yr * 0.06) { c.red += 1; a.card = 2; } else if (rr < yr) { c.yellow += 1; a.card = 1; }
+            if (rr < yr * (typeof RED_SHARE !== 'undefined' ? RED_SHARE.base : 0.06)) { c.red += 1; a.card = 2; } else if (rr < yr) { c.yellow += 1; a.card = 1; }
             let rating = (typeof RATING_BASE !== 'undefined' ? RATING_BASE : 6.35) + (typeof levelGapRating === 'function' ? levelGapRating(p.ability - rep) : 0)
                 + resultBonus + a.g * (typeof RATING_PER_GOAL !== 'undefined' ? RATING_PER_GOAL : 0.75) + a.a * (typeof RATING_PER_ASSIST !== 'undefined' ? RATING_PER_ASSIST : 0.5);
             if (ga === 0 && ['GK', 'CB', 'LB', 'RB'].includes(p.position)) rating += 0.6;
@@ -319,6 +319,7 @@ Object.assign(Internationals, {
     // every client in the winner's squad gets the title (p.intlTrophies)
     _intlTrophy(nid, comp, year) {
         const I = this.state(), sq = I && I.cu && I.cu.squads[nid]; if (!sq) return;
+        sq.list.forEach(e => { const p = GameState.getPlayer(e.id); if (p && p.agentId === 'me' && typeof Agency !== 'undefined') Agency.bumpRep(Agency.TROPHY_REP.intl, 'trophy'); });
         sq.list.forEach(e => { const p = GameState.getPlayer(e.id); if (p && p.agentId === 'me') (p.intlTrophies = p.intlTrophies || []).push({ comp, year, nation: nid, season: this._year != null ? this._year : GameState.seasonStartYear }); });
     },
     // a four-team Finals (Nations League): winner, runner-up, the two semi-final losers

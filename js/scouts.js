@@ -586,47 +586,62 @@ const Scouts = {
             s.weeksUntilFind -= 1;
             if (s.weeksUntilFind > 0) return;
             s.weeksUntilFind = this.nextFindDelay(s.quality);
-
-            // domestic = region pool at scout quality; international = league pool, with a quality boost for stronger leagues
-            const intl = !!s.league;
-            const pool = intl ? Clubs.getClubsByDivision(s.league) : Clubs.getClubsByRegion(s.region);
-            if (!pool.length) return;
-            const effQ = intl
-                ? Math.min(99, Math.max(1, s.quality - this.leagueShortfallPenalty(s)) + this.leagueQualityBonus(s.league))
-                : s.quality;
-            const span = Math.max(0, Math.min(7, (s.maxTalentAge || 22) - 15));   // wider age window -> more to find
-            const spanF = span / 7;                                              // 0 (only 15yo) .. 1 (15-22)
-            let n = s.quality < 30 ? Math.floor(Rng.next() * 2)               // 0-1 (sometimes empty-handed)
-                : s.quality < 50 ? 1 + Math.floor(Rng.next() * 2)            // 1-2
-                    : 2 + (Rng.next() < 0.5 ? 1 : 0);                        // 2-3
-            if (n === 0 && Rng.next() < 0.25 + spanF * 0.5) n = 1;            // a broad search still tends to turn something up
-            if (Rng.next() < spanF * 0.25) n += 1;                            // and occasionally one extra
-            const batch = [];
-            for (let i = 0; i < n; i++) {
-                const age = this._prospectAge(s.maxTalentAge);
-                // narrowing the brief (a specific position) turns up fewer players overall (B4)
-                if (s.targetPos && Rng.next() < 0.35) continue;
-                const { ability, potential } = this.rolledTalentFiltered(effQ, age, s);
-                if (ability == null) continue;   // no player fitting the chosen tier turned up this time
-                const club = this.pickRegionalClub(pool, ability);
-                if (!club) continue;
-                const prospect = PlayerGen.makeProspect(club, { ability, potential, age, position: s.targetPos || undefined });
-                prospect.knownToAgent = true;
-                prospect.discoveredVia = 'scout:' + s.name;
-                prospect.discoveredWeek = GameState.absWeek();
-                prospect.scoutQuality = s.quality;
-                Scouting.generateReport(prospect, s.quality);
-                GameState.players.push(prospect);
-                batch.push(prospect);
-            }
-            if (batch.length) {
-                const cost = intl ? this.intlLeagueCost(s.league) : this.regionReportCost(s.region);
-                GameState.agency.balance -= cost; GameState.addFinance('Scout reports', -cost);
-                found.push({ scout: s.name, region: s.region || null, league: s.league || null, country: s.country || null, players: batch, cost });
-            } else {
-                found.push({ scout: s.name, region: s.region || null, league: s.league || null, country: s.country || null, players: [], cost: 0, none: true });   // report a blank trip
-            }
+            const f = this.findFor(s);
+            if (f) found.push(f);
         });
         return found;
+    },
+    // One assigned scout's report: the region / league pool at his quality, paid for (as always) only
+    // when it holds players. Used by the weekly tick and by an instant report (Prestige shop).
+    findFor(s) {
+        if (!s || (!s.region && !s.league)) return null;
+
+        // domestic = region pool at scout quality; international = league pool, with a quality boost for stronger leagues
+        const intl = !!s.league;
+        const pool = intl ? Clubs.getClubsByDivision(s.league) : Clubs.getClubsByRegion(s.region);
+        if (!pool.length) return null;
+        const effQ = intl
+            ? Math.min(99, Math.max(1, s.quality - this.leagueShortfallPenalty(s)) + this.leagueQualityBonus(s.league))
+            : s.quality;
+        const span = Math.max(0, Math.min(7, (s.maxTalentAge || 22) - 15));   // wider age window -> more to find
+        const spanF = span / 7;                                              // 0 (only 15yo) .. 1 (15-22)
+        let n = s.quality < 30 ? Math.floor(Rng.next() * 2)               // 0-1 (sometimes empty-handed)
+            : s.quality < 50 ? 1 + Math.floor(Rng.next() * 2)            // 1-2
+                : 2 + (Rng.next() < 0.5 ? 1 : 0);                        // 2-3
+        if (n === 0 && Rng.next() < 0.25 + spanF * 0.5) n = 1;            // a broad search still tends to turn something up
+        if (Rng.next() < spanF * 0.25) n += 1;                            // and occasionally one extra
+        const batch = [];
+        for (let i = 0; i < n; i++) {
+            const age = this._prospectAge(s.maxTalentAge);
+            // narrowing the brief (a specific position) turns up fewer players overall (B4)
+            if (s.targetPos && Rng.next() < 0.35) continue;
+            const { ability, potential } = this.rolledTalentFiltered(effQ, age, s);
+            if (ability == null) continue;   // no player fitting the chosen tier turned up this time
+            const club = this.pickRegionalClub(pool, ability);
+            if (!club) continue;
+            const prospect = PlayerGen.makeProspect(club, { ability, potential, age, position: s.targetPos || undefined });
+            prospect.knownToAgent = true;
+            prospect.discoveredVia = 'scout:' + s.name;
+            prospect.discoveredWeek = GameState.absWeek();
+            prospect.scoutQuality = s.quality;
+            Scouting.generateReport(prospect, s.quality);
+            GameState.players.push(prospect);
+            batch.push(prospect);
+        }
+        if (batch.length) {
+            const cost = intl ? this.intlLeagueCost(s.league) : this.regionReportCost(s.region);
+            GameState.agency.balance -= cost; GameState.addFinance('Scout reports', -cost);
+            return { scout: s.name, region: s.region || null, league: s.league || null, country: s.country || null, players: batch, cost };
+        } else {
+            return { scout: s.name, region: s.region || null, league: s.league || null, country: s.country || null, players: [], cost: 0, none: true };   // report a blank trip
+        }
+    },
+    // An instant report: an assigned scout delivers a report NOW (an extra one; his schedule is
+    // untouched). Same pool, same odds, same price as any report: it may turn up nobody.
+    instantReport(scoutId) {
+        const s = GameState.agency.scouts.find(x => x.id === scoutId);
+        if (!s || (!s.region && !s.league)) return null;
+        if (typeof Agency === 'undefined' || !Agency._takeItem('instant')) return null;
+        return this.findFor(s) || { scout: s.name, region: s.region || null, league: s.league || null, players: [], cost: 0, none: true };
     }
 };
