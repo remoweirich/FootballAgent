@@ -1,6 +1,6 @@
 {
   "appId": "ch.jens.footballagent",
-  "appName": "Football Agent Manager",
+  "appName": "Football Agency Simulator",
   "webDir": "dist/mobile",
   "backgroundColor": "#0F1318",
   "plugins": {

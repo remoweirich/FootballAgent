@@ -12,7 +12,7 @@ is AdMob (ads) and RevenueCat (in-app purchases).
 | | |
 |---|---|
 | App ID (Android + iOS) | `ch.jens.footballagent` |
-| Home-screen name | `Football Agent Manager` (`capacitor.config.json`, Android `strings.xml`). The in-game title is "Football Agency Simulator". Confirm with the owner which name the App Store listing uses. |
+| App name | **Football Agency Simulator** on iOS (App Store listing and home screen) and in `capacitor.config.json`. The Android home-screen label in `android/app/src/main/res/values/strings.xml` is still "Football Agent Manager". |
 | Current version | `android/app/build.gradle` (`versionName` / `versionCode`) and `settings.version` in `ui/js/i18n-en.js`. Bump both together. |
 | Languages | English, German, Spanish, French, Italian, Dutch, Portuguese |
 
@@ -145,7 +145,8 @@ On a Mac with Xcode and the owner's Apple Developer account:
 1. `npm install`, then `npm run build:mobile`, then `npx cap add ios`, then `npx cap sync ios`.
 2. App icons and splash: `npx @capacitor/assets generate --ios` (installed as a dev dependency), from
    `resources/` (source logo: `resources/FAS-Logo.png`).
-3. Info.plist: AdMob keys and ATT text (section 5). Set the display name to the agreed app name.
+3. Info.plist: AdMob keys and ATT text (section 5). Display name: "Football Agency Simulator". Signing uses
+   the owner's Apple Developer team.
 4. Ads: create the iOS AdMob app and units, then make `AD_CONFIG` in `ui/js/ads.js` platform-aware
    (`Capacitor.getPlatform() === 'ios'`).
 5. Purchases: App Store Connect products with the IDs above, the Paid Apps agreement, the RevenueCat iOS
@@ -153,6 +154,24 @@ On a Mac with Xcode and the owner's Apple Developer account:
 6. Test on a device: saves persist after a restart, purchases (sandbox), ads (test mode),
    import/export through the Files app, safe areas, light/dark theme, all 7 languages.
 7. Archive, TestFlight, then App Store review.
+
+8. **Commit the generated `ios/` folder** (minus build output; Capacitor's own `.gitignore` inside it
+   handles that) and write down anything that was set by hand in Xcode, so the owner can ship updates
+   without you.
+
+**Shipping an update to iOS (after the first release):** game changes live in `js/` and `ui/` and are
+shared by both apps. On the Mac:
+
+```
+git pull
+npm install                  # only when package.json changed
+npm run build:mobile
+npx cap sync ios
+npx cap open ios             # Xcode: raise Version / Build, then Product > Archive > Distribute (App Store Connect)
+```
+
+Then submit the build in App Store Connect (or test it via TestFlight first). Only native changes need
+iOS expertise: a new Capacitor plugin, Info.plist or entitlement changes, or signing problems.
 
 **Things that differ from Android:**
 - There is no back button; the in-app back arrows already cover navigation.
