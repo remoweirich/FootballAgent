@@ -11,7 +11,7 @@ const sb = {
     window: { addEventListener() {} },
     Router: { register() {}, sheet(h) { sheetHTML = h; }, closeSheet() {} },
 };
-sb.UI = { esc: s => String(s == null ? '' : s), flag: () => '', money: n => String(n) };
+sb.UI = { esc: s => String(s == null ? '' : s), flag: () => '', money: n => String(n), posGroup: () => null, posChip: s => String(s == null ? '' : s), posDot: () => '' };
 vm.createContext(sb);
 for (const f of ['i18n.js', 'i18n-en.js', 'i18n-de.js', 'storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.js', 'game-state.js', 'upgrades.js', 'scouting.js', 'league.js', 'europe-data.js', 'europe.js', 'scouts.js', 'agency.js', 'injuries-data.js', 'simulation.js'])
     vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sb, { filename: f });

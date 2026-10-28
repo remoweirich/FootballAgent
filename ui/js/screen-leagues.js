@@ -746,7 +746,7 @@ const CompHistory = {
             const gk = r.p.position === 'GK';
             const line = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${gk ? r.cs + ' ' + I18n.t('common.csShort') : r.goals + ' ' + I18n.t('common.goalsShort')} · ${r.assists} ${I18n.t('common.assistsShort')}`;
             return `<a href="${Router.link('client', r.p.id)}" class="list-row" style="cursor:pointer">
-                <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${UI.esc(r.p.name)}</div><div class="row-sub">${r.p.position} · ${r.apps} ${I18n.t('common.appsShort')}${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
+                <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${UI.esc(r.p.name)}</div><div class="row-sub">${UI.posChip(r.p.position)} · ${r.apps} ${I18n.t('common.appsShort')}${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
                 <div style="text-align:right;font-size:var(--fs-sm);color:var(--text-muted)">${line}<br>${UI.ratingText(r.avg)}</div></a>`;
         }).join('');
     },

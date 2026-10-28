@@ -96,14 +96,14 @@ Object.assign(Internationals, {
     },
     // name every squad for window `i` of season y (and tell the agent who made it)
     _callups(y, i, notify) {
-        const I = this.state(), key = y + ':' + i, by = this._eligibleClients(), squads = {};
+        const I = this.state(), key = y + ':' + i, by = this._eligibleClients(), squads = {}, wasCalled = {};
         const prev = this._year; this._year = y;
         const summer = i === INTL_CONFIG.CALLUP_WINDOWS.length - 1 ? this._summerNations(y) : null;
         Object.keys(by).forEach(nid => {
             if (summer && !summer.has(nid)) return;   // no match this summer: no squad
             const list = this.pickSquad(nid, by[nid], y);
             if (!list.length) return;
-            list.forEach(e => { const p = GameState.getPlayer(e.id); if (p) { p.intlCalled = true; p.intlNation = nid; } });
+            list.forEach(e => { const p = GameState.getPlayer(e.id); if (p) { wasCalled[e.id] = !!p.intlCalled; p.intlCalled = true; p.intlNation = nid; } });
             const rep = Math.min(INTL_CONFIG.REP_CAP, this.repAt(nid, y));
             const boost = list.filter(e => e.role === 'star' || e.role === 'starter').reduce((s, e) => s + Math.max(0, (GameState.getPlayer(e.id) || {}).ability - rep || 0) / 11, 0);
             squads[nid] = { list, boost: Math.round(boost * 100) / 100 };
@@ -111,15 +111,61 @@ Object.assign(Internationals, {
         this._year = prev;
         I.cu = { key, squads };
         if (notify && !this._silent) {
-            const lines = [];
-            Object.keys(squads).forEach(nid => squads[nid].list.forEach(e => {
-                const p = GameState.getPlayer(e.id); if (!p) return;
-                lines.push(I18n.t('intl.cu.line', { name: p.name, nation: this.name(nid) }));
-            }));
-            this._weekCallups = lines;   // the week summary lists them too (Sim.advanceWeek)
-            if (lines.length) GameState.addMail({ kind: 'news', cat: 'callup', subject: I18n.t('intl.cu.subj', { n: lines.length }), body: I18n.t('intl.cu.body') + '\n' + lines.join('\n'), ttl: 3 });
+            const groups = this.callupGroups(squads, y, i, wasCalled);
+            const total = groups.reduce((s, g) => s + g.players.length, 0);
+            if (total) {
+                // the mail carries the squads (the mail screen draws them grouped by nation, with the
+                // window's fixtures); the body is the plain-text fallback, grouped the same way
+                const lines = groups.map(g => I18n.t('intl.cu.lineNation', { nation: this.name(g.nid), names: g.players.map(r => r.name + ' (' + r.pos + ')').join(', ') }));
+                const subject = I18n.t('intl.cu.subjX', { clients: this.countText(total, 'Client'), nations: this.countText(groups.length, 'Nation') });
+                GameState.addMail({ kind: 'news', cat: 'callup', subject, body: I18n.t('intl.cu.body') + '\n' + lines.join('\n'), callup: { y, i, groups }, ttl: 3 });
+                this._weekCallups = [this.callupSummary(groups)];   // the week summary (Sim.advanceWeek): one grouped line
+            }
         }
         return I.cu;
+    },
+    // "7 clients" / "1 nation": the count with its noun (keys intl.cu.n<Kind>s / intl.cu.one<Kind>)
+    countText(n, kind) { return n === 1 ? I18n.t('intl.cu.one' + kind) : I18n.t('intl.cu.n' + kind + 's', { n }); },
+    // the call-up mail's content: one group per nation (most of your clients first), its players
+    // GK -> DEF -> MID -> ATT then by squad role, and the nation's fixtures in that window
+    CU_LINE: { GK: 0, CB: 1, LB: 1, RB: 1, CDM: 2, CM: 2, CAM: 2, LW: 3, RW: 3, ST: 3 },
+    CU_ROLE: ['star', 'starter', 'rotation', 'reserve'],
+    // Call-ups are only recorded while a player is your client, so when he becomes one we estimate
+    // once whether he had been capped before: 24 or older and already good enough for at least a
+    // rotation place in his country's squad. A player you sign young, or before he was good enough,
+    // gets NEW at his first call-up at any age; an established international you sign does not.
+    CU_PRIOR_MIN_AGE: 24, CU_PRIOR_RECENT_WEEKS: 26,
+    estimatePriorCaps(p) {
+        if (!p || (p.age || 0) < this.CU_PRIOR_MIN_AGE) return false;
+        const nid = this.nationOfPlayer(p); if (!nid) return false;
+        const role = this._naturalRole(p.ability || 0, this.callupBands(nid));
+        return role === 'star' || role === 'starter' || role === 'rotation';
+    },
+    callupGroups(squads, y, i, wasCalled) {
+        const win = INTL_CONFIG.CALLUP_WINDOWS[i], keys = new Set((win ? win.weeks : []).map(w => this._absKey(y, w)));
+        const line = pos => this.CU_LINE[pos] != null ? this.CU_LINE[pos] : 9;
+        return Object.keys(squads).map(nid => {
+            const players = squads[nid].list.map(e => {
+                const p = GameState.getPlayer(e.id); if (!p) return null;
+                let caps = 0;
+                Object.values(p.intlStats || {}).forEach(s => Object.values(s).forEach(c => { caps += c.apps || 0; }));
+                // NEW = a first ever call-up: never called while with you, no caps, and not already an
+                // international when he joined you (estimated at signing). A client from an older save
+                // without the estimate: a recent signing is estimated now; one with you for longer, never
+                // called up meanwhile, was clearly not an international
+                if (p._intlPrior == null) p._intlPrior = p._signedAbs != null && GameState.absWeek() - p._signedAbs < this.CU_PRIOR_RECENT_WEEKS ? this.estimatePriorCaps(p) : false;
+                return { id: p.id, name: p.name, pos: p.position, role: e.role, caps, isNew: !(wasCalled || {})[p.id] && !caps && !p._intlPrior };
+            }).filter(Boolean).sort((a, b) => line(a.pos) - line(b.pos) || this.CU_ROLE.indexOf(a.role) - this.CU_ROLE.indexOf(b.role) || b.caps - a.caps);
+            let fixtures = [];
+            try { fixtures = (this.nationSchedule ? this.nationSchedule(nid) : []).filter(f => keys.has(f.L)).slice(0, 6).map(f => ({ comp: f.comp, week: f.week, opp: f.opp, venue: f.venue })); } catch (e) { fixtures = []; }
+            return { nid, players, fixtures };
+        }).filter(g => g.players.length)
+            .sort((a, b) => b.players.length - a.players.length || String(this.name(a.nid)).localeCompare(String(this.name(b.nid))));
+    },
+    // "Switzerland 3 · Germany 2 · first call-ups: 2"
+    callupSummary(groups) {
+        const fresh = groups.reduce((s, g) => s + g.players.filter(r => r.isNew).length, 0);
+        return groups.map(g => this.name(g.nid) + ' ' + g.players.length).join(' · ') + (fresh ? ' · ' + I18n.t('intl.cu.newN', { n: fresh }) : '');
     },
     // the role's name, as for clubs (Star Player, Starter, ...; keepers: First Choice, Back Up, Third Keeper)
     ROLE_EN: { star: 'Star Player', starter: 'Starter', rotation: 'Rotation', reserve: 'Reserve', firstChoice: 'First Choice', backUp: 'Back Up', thirdKeeper: 'Third Keeper' },

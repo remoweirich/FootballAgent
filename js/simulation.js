@@ -238,7 +238,7 @@ const Sim = {
             try { Internationals.step(); } catch (e) { if (typeof console !== 'undefined') console.error('[international]', e); }
             // squads named this week: in the week summary too (and the mail is under Needs attention)
             if (Internationals._weekCallups && Internationals._weekCallups.length) {
-                events.push({ type: 'intl', text: I18n.t('intl.cu.event', { n: Internationals._weekCallups.length, list: Internationals._weekCallups.join(', ') }) });
+                events.push({ type: 'intl', text: I18n.t('intl.cu.event', { n: Internationals._weekCallups.length, list: Internationals._weekCallups.join(' · ') }) });
             }
             Internationals._weekCallups = null;
         }

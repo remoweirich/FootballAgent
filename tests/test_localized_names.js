@@ -45,6 +45,8 @@ const runv = c => vm.runInContext('(function(){' + c + '})()', sb);
 vm.runInContext('Clubs.init();', sb);
 
 let failed = false; const check = (l, c, x) => { console.log((c ? 'PASS' : 'FAIL') + '  ' + l + (x && !c ? '   ' + x : '')); if (!c) failed = true; };
+// the real-names pack is kept only on the owner's machine (never in the repository): without it, skip
+if (!fs.existsSync(path.join(root, 'real-club-names.json'))) { console.log('SKIP  real-club-names.json is not present (it is kept locally only)'); process.exit(0); }
 const text = fs.readFileSync(path.join(root, 'real-club-names.json'), 'utf8');
 sb.__map = CX._parseNamesText(text);
 // the live import (Settings > Import names), routed exactly as _readNamesLive does

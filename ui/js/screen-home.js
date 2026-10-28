@@ -32,7 +32,8 @@ Home.needsAttention = function () {
     });
     // international call-ups (named the week before each break)
     GameState.inbox.filter(m => !m.read && m.kind === 'news' && m.cat === 'callup').slice(0, 1).forEach(m => {
-        items.push({ icon: 'ti-flag', color: 'var(--info)', title: I18n.t('home.attn.callups'), sub: m.subject, go: `mail/${m.id}` });
+        const sub = m.callup && m.callup.groups && typeof Internationals !== 'undefined' ? Internationals.callupSummary(m.callup.groups) : m.subject;
+        items.push({ icon: 'ti-flag', color: 'var(--info)', title: I18n.t('home.attn.callups'), sub, go: `mail/${m.id}` });
     });
     GameState.inbox.filter(m => !m.read && m.kind === 'news' && m.cat === 'injury').slice(0, 3).forEach(m => {
         items.push({ icon: 'ti-bandage', color: 'var(--danger)', title: I18n.t('home.attn.injuryNews'), sub: m.subject, go: `mail/${m.id}` });
@@ -126,15 +127,20 @@ Home.advance = function () {
 };
 Home._doAdvance = function () {
     const before = GameState.agency.balance;
+    const trophies = () => Agency.clients().reduce((s, p) => s + ((p.trophies && p.trophies.length) || 0), 0);
+    const trophiesBefore = trophies();
     const res = Sim.advanceWeek();
     Router.lastWeekNet = GameState.agency.balance - before;
     Home._spotlights = res.spotlights || [];
     Home._pendingAttend = (res.attend || []).slice();   // finals the agent may watch this week
     Home._adPending = res.windowClosed === 'winter';    // one a season, after the WINTER window only; Ads owns the rest of the policy
-    // Ask for a rating once, the first time a fifth season rolls over. Device-scoped (Prefs) so a
-    // new save never re-asks; surfaced at the very end of the advance flow so it never stacks.
-    Home._ratePending = !!res.rolledSeason && typeof Prefs !== 'undefined' && !Prefs.get('ratePromptShown', false)
-        && typeof GameState.seasonsCompleted === 'function' && GameState.seasonsCompleted() >= 5;
+    // In-app review moments (ui/js/review.js): the second season over, or a client's trophy. Asked at
+    // the very end of the advance flow, after every scene has closed, so it never stacks.
+    Home._reviewMoment = null;
+    if (typeof Review !== 'undefined') {
+        if (res.rolledSeason && typeof GameState.seasonsCompleted === 'function' && GameState.seasonsCompleted() >= 2 && Review.canAsk('season2')) Home._reviewMoment = 'season2';
+        else if (trophies() > trophiesBefore && Review.canAsk('firstTrophy')) Home._reviewMoment = 'firstTrophy';
+    }
     const lines = res.events.map(e => `<div class="frow"><span class="frow__k">${e.text}</span></div>`).join('');
     // tap anywhere in the card to continue (not just the button) — lets you rattle through
     // several quiet weeks by tapping the same spot repeatedly
@@ -172,22 +178,12 @@ Home._nextSpotlight = function () { Home._spotIndex++; Home._showSpotlight(); };
 // show one interstitial ad on top. Ads gates removal/frequency itself; failures never surface.
 Home._finishAdvance = function () {
     Router.refresh();
-    // the rate prompt takes the slot this week; the (opportunistic) ad simply waits for the next window close
-    if (Home._ratePending) { Home._ratePending = false; Home._adPending = false; Home._showRatePrompt(); return; }
+    // a review request takes the slot this week; the (opportunistic) ad simply waits for the next window close
+    if (Home._reviewMoment) {
+        const moment = Home._reviewMoment; Home._reviewMoment = null;
+        if (Review.request(moment)) { Home._adPending = false; return; }
+    }
     if (Home._adPending) { Home._adPending = false; if (typeof Ads !== 'undefined') Ads.maybeShowInterstitial('window-close'); }
-};
-
-// ---- rate-the-app prompt (once, after the fifth season) ----
-// The × is deliberately the modal's FIRST child: Router's backdrop tap "clicks" the first child,
-// so tapping outside dismisses too, while a tap inside the card never closes it by accident.
-Home._showRatePrompt = function () {
-    if (typeof Prefs !== 'undefined') Prefs.set('ratePromptShown', true);
-    Router.modal(`<button class="modal-x" onclick="Router.closeModal()" aria-label="${I18n.t('common.close')}"><i class="ti ti-x"></i></button>
-        <div style="font-size:var(--fs-hero);text-align:center;margin-bottom:var(--space-2)">⭐</div>
-        <h2 style="margin:0 0 var(--space-3);text-align:center">${I18n.t('rate.title')}</h2>
-        <p style="margin:0 0 var(--space-5);line-height:1.6;text-align:center;color:var(--text-secondary)">${I18n.t('rate.body')}</p>
-        <button class="btn btn--primary" style="width:100%" onclick="Router.closeModal(); UI.openExternal(APP_LINKS.playStore)">${I18n.t('rate.cta')}</button>
-        <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeModal(); UI.openExternal(APP_LINKS.feedbackMail)">${I18n.t('rate.feedback')}</button>`);
 };
 
 // ---- "Attend the Final" invitations ----

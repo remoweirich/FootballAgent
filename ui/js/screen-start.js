@@ -97,6 +97,7 @@ const StartScreen = {
             </div>
         </div></div>`;
         this._fitPlaques();   // trim the plaque lift if this screen is too short for it
+        this._trialNotice();  // the launch bonus: starts (once) inside its window, then says hello / goodbye
         // MUSIC DISABLED for now. Uncomment to bring the background playlist back.
         // if (typeof Sound !== 'undefined') Sound.startPlaylist();
     },
@@ -310,6 +311,20 @@ const StartScreen = {
     },
 
     // a lightweight self-contained overlay (no Router shell on this screen)
+    // Launch bonus (Monetization.TRIAL): a note when the free Enhanced Insights trial starts, and one
+    // when it ends (with the way to the Shop), each shown once.
+    _trialNotice() {
+        const M = typeof Monetization !== 'undefined' ? Monetization : null;
+        if (!M || !M.trialTick) return;
+        try { M.trialTick(); } catch (e) { return; }
+        const kind = M.trialNotice(); if (!kind) return;
+        M.trialNoted(kind);
+        const end = M.trialEnd();
+        const when = end ? new Date(end).toLocaleString(I18n.locale || undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        if (kind === 'welcome') this._overlay(I18n.t('trial.welcomeTitle'), `<p style="margin:0;line-height:1.6">${I18n.t('trial.welcomeBody', { when: UI.esc(when) })}</p>`);
+        else this._overlay(I18n.t('trial.endedTitle'), `<p style="margin:0 0 14px;line-height:1.6">${I18n.t('trial.endedBody', { price: UI.esc(M.priceOf('insights')) })}</p>
+            <button class="btn btn--primary" style="width:100%" onclick="document.getElementById('ssOverlay').remove();StartScreen.store()">${I18n.t('trial.openShop')}</button>`);
+    },
     _overlay(title, bodyHTML) {
         let ov = document.getElementById('ssOverlay');
         if (ov) ov.remove();

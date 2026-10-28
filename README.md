@@ -1,3 +1,5 @@
+> **New here?** Read [ARCHITECTURE.md](ARCHITECTURE.md) for how the project is built, tested and structured (including the iOS port). This README is a changelog.
+
 
 ## v33 — Mobile UI fixes: broken icon/flag CDN, layout bugs, slider bugs
 

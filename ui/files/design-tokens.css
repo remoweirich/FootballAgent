@@ -58,6 +58,13 @@
   --track:      #232A33;  /* slider / progress track, chart baseline */
   --grid:       #20262E;  /* chart gridlines */
 
+  /* ---- Position groups: the classic football-game colours, as a solid tag behind the
+     position letters (UI.posChip). --pos-*-ink is the text colour on that fill ---- */
+  --pos-gk:  #EAB308;  --pos-gk-ink:  #1F1A05;  /* yellow */
+  --pos-def: #2F7DE1;  --pos-def-ink: #FFFFFF;  /* blue   */
+  --pos-mid: #22A85A;  --pos-mid-ink: #FFFFFF;  /* green  */
+  --pos-att: #E0414F;  --pos-att-ink: #FFFFFF;  /* red    */
+
   /* ---- Ability scale (player quality, 7 bands). See DESIGN_SYSTEM.md ---- */
   --ability-1: #FF6B78;  /* < 15   red        */
   --ability-2: #F7973F;  /* 15-29  orange     */

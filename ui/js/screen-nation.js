@@ -139,7 +139,7 @@ const NationScreen = {
         const rows = r.clients.map(c => {
             const p = GameState.getPlayer(c.id); if (!p) return '';
             const gk = p.position === 'GK';
-            return `<a href="${Router.link('client', p.id)}" class="frow" style="cursor:pointer" onclick="Router.closeSheet && Router.closeSheet()"><span class="frow__k">${UI.esc(p.name)} <span class="muted" style="font-size:var(--fs-xs)">${p.position} · ${c.full ? I18n.t('nat.started') : I18n.t('nat.sub')}</span></span>
+            return `<a href="${Router.link('client', p.id)}" class="frow" style="cursor:pointer" onclick="Router.closeSheet && Router.closeSheet()"><span class="frow__k">${UI.esc(p.name)} <span class="muted" style="font-size:var(--fs-xs)">${UI.posChip(p.position)} · ${c.full ? I18n.t('nat.started') : I18n.t('nat.sub')}</span></span>
                 <span class="frow__v">${gk ? (r.ga === 0 ? I18n.t('nat.cleanSheet') + ' · ' : '') : c.g + ' ' + I18n.t('common.goalsShort') + ' · '}${c.a} ${I18n.t('common.assistsShort')} · ${UI.ratingText(c.rating)}${card(c)}</span></a>`;
         }).join('');
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${IntlScreen.nation(nid)} ${r.gf}–${r.ga} ${IntlScreen.nation(opp)}</div>

@@ -21,6 +21,7 @@ const UI_JS_FILES = [
     'prefs.js',
     'monetization.js',
     'ads.js',
+    'review.js',
     'revenuecat.js',
     'i18n-en.js', 'i18n-de.js', 'i18n-es.js', 'i18n-fr.js', 'i18n-pt.js', 'i18n-it.js', 'i18n-nl.js',
     'music-manifest.js', 'audio.js',

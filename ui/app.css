@@ -305,6 +305,39 @@ button { font-family: inherit; }
 .chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .htog { font-size: var(--fs-xs); font-weight: var(--weight-semibold); padding: 4px 9px; border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-muted); cursor: pointer; border: .5px solid var(--line-strong); }
 .htog.is-on { background: var(--accent-tint); color: var(--accent-text); border-color: var(--accent-border); }
+/* position tag (UI.posChip) and the matching dot on the position filters (UI.posDot) */
+.pos-chip { --pc: var(--surface-raised); --pi: var(--text-secondary); display: inline-block; min-width: 34px; padding: 0 5px; box-sizing: border-box; border-radius: 4px; font-size: var(--fs-xs); font-weight: var(--weight-bold); letter-spacing: .03em; line-height: 16px; text-align: center; background: var(--pc); color: var(--pi); white-space: nowrap; vertical-align: baseline; }
+.pos-dot { --pc: var(--text-muted); display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--pc); margin-right: 5px; vertical-align: 1px; }
+.pos--gk { --pc: var(--pos-gk); --pi: var(--pos-gk-ink); } .pos--def { --pc: var(--pos-def); --pi: var(--pos-def-ink); }
+.pos--mid { --pc: var(--pos-mid); --pi: var(--pos-mid-ink); } .pos--att { --pc: var(--pos-att); --pi: var(--pos-att-ink); }
+/* international call-up mail (Nego.callupHTML) */
+.cu-lead { margin: 0 0 var(--space-3); font-size: var(--fs-sm); }
+.cu-card { background: var(--surface); border: .5px solid var(--line-strong); border-radius: var(--radius-md); overflow: hidden; margin-bottom: var(--space-3); color: var(--text); }
+.cu-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px 4px; }
+.cu-nat { color: var(--text); text-decoration: none; font-weight: var(--weight-bold); display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.cu-count { margin-left: auto; font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
+.cu-fix { padding: 2px 12px 8px; font-size: var(--fs-xs); color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: center; line-height: 1.4; }
+.cu-fix:last-of-type { border-bottom: .5px solid var(--line); }
+.cu-comp { flex-basis: 100%; color: var(--accent-text); font-weight: var(--weight-bold); }
+.cu-fx { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cu-wk { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.cu-ha { font-size: 10px; font-weight: var(--weight-bold); min-width: 16px; height: 16px; padding: 0 3px; border-radius: 4px; display: inline-grid; place-items: center; border: 1px solid currentColor; line-height: 1; }
+.cu-ha--H { color: var(--state-good); } .cu-ha--A { color: var(--text-muted); } .cu-ha--N { color: var(--info-text); }
+.cu-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--fs-sm); }
+.cu-table col.cu-c-role { width: 96px; } .cu-table col.cu-c-caps { width: 56px; }
+.cu-table th { text-align: left; font-size: 10.5px; font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); padding: 7px 12px 4px; }
+.cu-table td { padding: 7px 12px; border-top: .5px solid var(--line); vertical-align: middle; }
+.cu-table tbody tr:first-child td { border-top: 0; }
+.cu-n { text-align: right !important; font-variant-numeric: tabular-nums; }
+.cu-role { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cu-who { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.cu-who a { color: var(--text); text-decoration: none; font-weight: var(--weight-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cu-line { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: .5px solid var(--line); font-size: var(--fs-sm); }
+.cu-line .cu-who { flex: 1; } .cu-line .cu-role { flex: none; font-size: var(--fs-xs); }
+.cu-fix + .cu-line, .cu-card > .cu-fix:last-of-type + .cu-line { border-top: 0; }
+.cu-new { font-size: 9.5px; font-weight: var(--weight-bold); letter-spacing: .06em; padding: 1px 5px; border-radius: 4px; background: var(--accent-tint); color: var(--accent-text); border: .5px solid var(--accent-border); flex: none; }
+.cu-key { font-size: var(--fs-xs); color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.cu-key > span { display: inline-flex; align-items: center; gap: 5px; }
 
 /* ---------- How-to / setup screen ----------
    Own scroll region (there's no .screen here, so nothing inherits var(--text)
@@ -351,6 +384,8 @@ button { font-family: inherit; }
 .cl-card { display: block; background: var(--surface); border: .5px solid var(--line); border-radius: var(--radius-lg); padding: 10px 11px; margin-bottom: var(--space-3); }
 .cl-name { font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text); }
 .cl-sub { font-size: var(--fs-sm); color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+.cl-sub .pos-chip, .cl-sub .crest { flex: none; }
+.cl-team { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cl-md { width: var(--dot-morale); height: var(--dot-morale); border-radius: var(--radius-round); }
 .cl-stats { display: flex; margin-top: 9px; padding-top: 9px; border-top: .5px solid var(--line-faint); }
 .cl-st { flex: 1; text-align: center; }

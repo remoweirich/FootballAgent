@@ -84,7 +84,7 @@ const ClientsScreen = {
                         ${p.injury ? '<i class="ti ti-bandage" style="font-size:14px;color:var(--danger)"></i>' : ''}
                         ${p.retiringThisSeason ? `<span class="pill pill--gold" style="padding:1px 7px;font-size:10px">${I18n.t('clients.retiring')}</span>` : ''}
                     </div>
-                    <div class="cl-sub"><span class="flex-row" style="gap:5px">${UI.crest(info ? info.club : club)}${teamHTML}</span><span style="color:var(--text-chevron)">·</span><span>${p.position}</span><span style="color:var(--text-chevron)">·</span><span>${roleName(p)}</span></div>
+                    <div class="cl-sub">${UI.posChip(p.position)}<span class="flex-row" style="gap:5px;min-width:0">${UI.crest(info ? info.club : club)}<span class="cl-team">${teamHTML}</span></span><span style="color:var(--text-chevron)">·</span><span style="flex:none">${roleName(p)}</span></div>
                     ${this.state.sort === 'potential' && typeof Scouting !== 'undefined' ? `<div class="cl-sub" style="color:var(--state-good)"><i class="ti ti-zoom-scan" style="font-size:12px"></i>${UI.esc(Scouting.ceilingFor(p))}</div>` : ''}
                 </div>
                 <div class="flex-row" style="gap:3px;margin-right:9px" data-wt="cl-morale">${this.moraleDots(p)}</div>
@@ -118,7 +118,7 @@ const ClientsScreen = {
     },
     positionPickerRows() {
         return `<div class="chip-row" style="flex-wrap:wrap;gap:6px">${this.POSITIONS.map(pos =>
-            `<button class="htog ${this.state.positions.includes(pos) ? 'is-on' : ''}" onclick="ClientsScreen.togglePos('${pos}')">${pos}</button>`).join('')}</div>`;
+            `<button class="htog ${this.state.positions.includes(pos) ? 'is-on' : ''}" onclick="ClientsScreen.togglePos('${pos}')">${UI.posDot(pos)}${pos}</button>`).join('')}</div>`;
     },
     _refreshPos() {
         const body = document.getElementById('posPickerBody'); if (body) body.innerHTML = this.positionPickerRows();
@@ -175,7 +175,7 @@ const ClientHistory = {
     render(el) {
         const rows = this.sorted();
         const posBtns = [['all', I18n.t('common.all')], ['GK', 'GK'], ['DEF', 'DEF'], ['MID', 'MID'], ['ATT', 'ATT']]
-            .map(([id, l]) => `<button class="htog ${this.state.pos === id ? 'is-on' : ''}" onclick="ClientHistory.setPos('${id}')">${l}</button>`).join('');
+            .map(([id, l]) => `<button class="htog ${this.state.pos === id ? 'is-on' : ''}" onclick="ClientHistory.setPos('${id}')">${UI.posDot(id)}${l}</button>`).join('');
         el.innerHTML = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3);gap:var(--space-2)">
             <p class="hint" style="margin:0">${I18n.t('clienthist.subtitle')}</p>
             <a class="gbtn" href="#records" style="flex:none"><i class="ti ti-award"></i>${I18n.t('clienthist.records')}</a>
@@ -195,7 +195,7 @@ const ClientHistory = {
         const disc = ['yellow', 'red'].includes(this.state.sort);
         const line2 = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${r.p.position === 'GK' ? r.cs + ' ' + I18n.t('common.csShort') : r.goals + ' ' + I18n.t('common.goalsShort')} · ${r.assists} ${I18n.t('common.assistsShort')}`;
         return `<a href="#client/${r.p.id}" class="list-row" style="cursor:pointer">
-            <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${UI.esc(r.p.name)}</div><div class="row-sub">${r.p.position} · ${I18n.t('clienthist.seasonsN', { n: r.seasons })} · <span class="pill" style="padding:1px 7px;font-size:10.5px">${r.status}</span>${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
+            <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${UI.esc(r.p.name)}</div><div class="row-sub">${UI.posChip(r.p.position)} · ${I18n.t('clienthist.seasonsN', { n: r.seasons })} · <span class="pill" style="padding:1px 7px;font-size:10.5px">${r.status}</span>${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
             <div style="text-align:right;font-size:var(--fs-sm);color:var(--text-muted)">${r.apps} ${I18n.t('common.appsShort')} · ${line2}<br>${UI.ratingText(r.avg)}</div>
         </a>`;
     },

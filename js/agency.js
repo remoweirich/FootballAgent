@@ -588,6 +588,8 @@ const Agency = {
         p.repUntilSeason = GameState.seasonStartYear + term; p.repExpired = false;
         p.knownToAgent = true; p.everClient = true; p.dismissedTalent = false;
         p._signedAbs = GameState.absWeek();   // his first 52 weeks with you: wage morale never dips (see Sim._morale)
+        // was he already an international when he joined? (the call-up mail's NEW tag; js/intl-callups.js)
+        if (p._intlPrior == null && typeof Internationals !== 'undefined' && Internationals.estimatePriorCaps) p._intlPrior = Internationals.estimatePriorCaps(p);
         if (!p.history) p.history = { ability: [], wage: [], fees: [] };
         recordAbilityPoint(p); recordWagePoint(p);
         Agency.bumpRep(0.3);
@@ -1608,9 +1610,9 @@ const Agency = {
         }
 
         GameState.removeMail(mail.id);
-        // agreeing a move kills every other open approach for him: rival bids AND any contract-renewal
-        // proposal from the club he's leaving (that deal is moot the moment he's agreed to go)
-        GameState.inbox = GameState.inbox.filter(m => !(['transfer', 'renewal'].includes(m.kind) && m.offer && m.offer.playerId === p.id));
+        // agreeing a move kills every other open approach for him: rival bids, loan offers, AND any
+        // contract-renewal proposal from the club he's leaving (that deal is moot the moment he's agreed to go)
+        GameState.inbox = GameState.inbox.filter(m => !(['transfer', 'loan', 'renewal'].includes(m.kind) && m.offer && m.offer.playerId === p.id));
 
         if (!windowOpen) {
             // agreed outside a window: park the package, complete it when the window opens
@@ -1780,7 +1782,8 @@ const Agency = {
         if (timeWasBelowGood) this._creditAgentAction(p, hadPlayingTimeCase ? MORALE.AGENT_LOAN_BONUS_OPEN_CASE : MORALE.AGENT_LOAN_BONUS);
         else this._creditAgentAction(p, 0);   // still counts as contact for the neglect clock, just no bonus
         GameState.removeMail(mail.id);
-        GameState.inbox = GameState.inbox.filter(m => !(m.kind === 'loan' && m.offer.playerId === p.id));
+        // a loan agreed: the other loan offers AND any transfer bids go; a contract offer from his own club stays
+        GameState.inbox = GameState.inbox.filter(m => !(['loan', 'transfer'].includes(m.kind) && m.offer && m.offer.playerId === p.id));
         const durLabel = this.durLabel((opts.find(o2 => o2.code === code) || {}).label || code);
         GameState.addLog(I18n.t('ag.log.loaned', { name: p.name, club: borrower.name, role: roleLabel(r, p.age, p.position, p.loanCupKeeper), dur: durLabel }), 'loan');
         return { ok: true, message: I18n.t('ag.loan.done', { name: p.name, club: borrower.name, role: roleLabel(r, p.age, p.position, p.loanCupKeeper), dur: durLabel }) };

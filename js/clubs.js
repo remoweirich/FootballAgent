@@ -1453,7 +1453,7 @@ const Clubs = {
         // drop any created-country injections from a previous game this session, so we rebuild a clean
         // stock world before the current database's overlay (incl. its created countries) is applied
         if (typeof WorldExt !== 'undefined' && WorldExt.reset) WorldExt.reset();
-        this._compOverlay = null;
+        this._compOverlay = null; this._compIdentity = true;
 
         // Generate all clubs from league data
         for (const [country, leagueSystem] of Object.entries(LEAGUES_DATA)) {
@@ -1565,24 +1565,30 @@ const Clubs = {
         if (!ovs || typeof COMPETITIONS === 'undefined') return;
         Object.entries(ovs).forEach(([cid, ov]) => {
             const c = COMPETITIONS[cid]; if (!c || !ov) return;
+            if (this._compIdentity === false && !c.custom) return;   // generic names only: a created country's own competitions keep theirs
             const nm = typeof localCompName === 'function' ? localCompName(ov.name) : ov.name;
             if (nm) c.name = nm;
             if (ov.short) c.short = typeof localCompName === 'function' ? localCompName(ov.short) : ov.short;
         });
     },
-    applyDatabase(db) {
+    // opts.identity === false (a save set to generic names & crests): skip the database's names and
+    // logos for the stock clubs and its names for the stock competitions; everything else applies.
+    applyDatabase(db, opts) {
         if (!db) return;
+        const identity = !(opts && opts.identity === false);
+        const created = c => typeof WorldExt !== 'undefined' && WorldExt.created && !!WorldExt.created[c.country];
         // created countries (Customize Part 2): inject their leagues/clubs/regions/names into the world
         if (db.countries && typeof WorldExt !== 'undefined') Object.values(db.countries).forEach(cc => WorldExt.registerCountry(cc));
         // competition-name overrides (rename a league or cup — featured or created)
-        this._compOverlay = db.competitions || null;
+        this._compOverlay = db.competitions || null; this._compIdentity = identity;
         this.applyCompOverlay();
         if (!db.overrides) return;
         Object.entries(db.overrides).forEach(([id, ov]) => {
             const c = this.getClubById(id); if (!c || !ov) return;
-            if (ov.name) c.name = ov.name;
+            const own = identity || created(c);
+            if (ov.name && own) c.name = ov.name;
             if (ov.colors && ov.colors.primary) c.colors = { primary: ov.colors.primary, secondary: ov.colors.secondary || ov.colors.primary };
-            if (ov.logo !== undefined) c.logo = ov.logo || null;
+            if (ov.logo !== undefined && own) c.logo = ov.logo || null;
             if (ov.reputation != null) { const r = ov.reputation; c.reputation = r; c.baseRep = r; c.anchorRep = r; }
             if (ov.division && ov.division !== c.division) this.setDivision(id, ov.division);
         });

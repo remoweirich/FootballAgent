@@ -134,6 +134,14 @@ const UI = {
         } catch (e) { try { window.location.href = url; } catch (e2) { /* nothing sensible left to do */ } }
     },
 
+    // ---- position colour code: GK / DEF / MID / ATT. Accepts a position (CB) or a group (DEF). ----
+    POS_GROUP_OF: { GK: 'gk', CB: 'def', LB: 'def', RB: 'def', CDM: 'mid', CM: 'mid', CAM: 'mid', LW: 'att', RW: 'att', ST: 'att', DEF: 'def', MID: 'mid', ATT: 'att' },
+    posGroup(pos) { return UI.POS_GROUP_OF[pos] || null; },
+    posChip(pos) {
+        const g = UI.posGroup(pos);
+        return g ? `<span class="pos-chip pos--${g}">${UI.esc(pos)}</span>` : UI.esc(pos || '');
+    },
+    posDot(pos) { const g = UI.posGroup(pos); return g ? `<span class="pos-dot pos--${g}"></span>` : ''; },
     // ---- crisp SVG flag (looks up by nationality name, not the stored emoji — so it
     // renders correctly even for players saved before this was added) ----
     flag(nationality) {

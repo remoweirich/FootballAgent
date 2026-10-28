@@ -64,6 +64,11 @@ const BestXI = {
         return (f && f.slots.find(s => s.id === id)) || this.BENCH.find(s => s.id === id);
     },
     _playerName(pid) { const p = GameState.getPlayer(pid); return p ? p.name : null; },
+    // a slot label on its position group's coloured tag; a slot open to several groups stays plain
+    _slotColour(slot) {
+        const gs = new Set((slot.pos || []).map(p => UI.posGroup(p)));
+        return gs.size === 1 && !gs.has(null) ? ` style="background:var(--pos-${[...gs][0]});color:var(--pos-${[...gs][0]}-ink);padding:0 4px;border-radius:3px"` : '';
+    },
     _shortName(name) {
         if (!name) return '';
         const parts = name.trim().split(/\s+/);
@@ -113,7 +118,7 @@ const BestXI = {
                 const era = this._era(p);
                 return `<button class="bx-pick ${current === p.id ? 'bx-pick--on' : ''}" onclick="BestXI.pick('${slotId}','${p.id}')">
                     <span class="bx-pickname">${UI.flag(p.nationality)} ${UI.esc(p.name)}</span>
-                    <span class="bx-pickmeta">${UI.esc(p.position)} · ${p.ability || '—'}${era ? ' · ' + era : ''}</span></button>`;
+                    <span class="bx-pickmeta">${UI.posChip(p.position)} · ${p.ability || '—'}${era ? ' · ' + era : ''}</span></button>`;
             }).join('')
             : `<p class="bx-empty">${I18n.t('bestxi.noneAtPos', { pos: UI.esc(posLabel) })}</p>`;
         const clear = current ? `<button class="bx-clear" onclick="BestXI.clear('${slotId}')">${I18n.t('bestxi.remove', { name: UI.esc(this._shortName(this._playerName(current))) })}</button>` : '';
@@ -166,7 +171,7 @@ const BestXI = {
                 circleInner = String(p.peakAbility || p.ability || '');
             }
             return `<button class="bx-slot ${filled ? 'bx-slot--on' : ''} ${onPitch ? 'bx-slot--pitch' : 'bx-slot--bench'}" ${posStyle} onclick="BestXI.openPicker('${slot.id}')">
-                <span class="bx-slotlab">${slot.lab}</span>
+                <span class="bx-slotlab"${this._slotColour(slot)}>${slot.lab}</span>
                 <span class="bx-circle" ${circleStyle}>${circleInner}</span>
                 ${filled ? `<span class="bx-slotname">${UI.esc(this._shortName(p.name))}</span>` : ''}</button>`;
         };

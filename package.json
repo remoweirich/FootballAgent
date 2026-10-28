@@ -6,10 +6,12 @@
   "scripts": {
     "test": "node tests/run.js",
     "build:mobile": "node scripts/build-mobile.js",
-    "build:apk": "npm run build:mobile && npx cap sync android && cd android && gradlew.bat assembleDebug"
+    "build:apk": "npm run build:mobile && npx cap sync android && cd android && gradlew.bat assembleDebug",
+    "deploy:web": "npm run build:mobile && firebase deploy --only hosting:game"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",
+    "@capacitor-community/in-app-review": "8.0.0",
     "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.4.1",

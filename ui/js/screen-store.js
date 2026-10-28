@@ -26,7 +26,7 @@ const StoreScreen = {
         return `<div class="st-card${owned ? ' st-card--owned' : ''}">
             <div class="st-cardmain">
                 <div class="st-name">${I18n.t('store.' + id + '.name')}${p.bundle ? ` <span class="st-badge">${I18n.t('store.bundle')}</span>` : ''}</div>
-                <div class="st-desc">${I18n.t('store.' + id + '.desc')}</div>
+                <div class="st-desc">${I18n.t('store.' + id + '.desc')}</div>${!owned && id === 'insights' && M.trialActive && M.trialActive() ? `<div class="st-trial"><i class="ti ti-gift"></i> ${I18n.t('trial.storeLine', { when: UI.esc(new Date(M.trialEnd()).toLocaleString(I18n.locale || undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) })}</div>` : ''}
             </div>
             <div class="st-cardright">
                 ${owned
@@ -98,6 +98,7 @@ const StoreScreen = {
         .st-name{font-size:var(--fs-md);font-weight:var(--weight-semibold);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
         .st-badge{font-size:10px;text-transform:uppercase;letter-spacing:var(--tracking-caps);font-weight:var(--weight-bold);color:var(--accent-ink,#04140c);background:var(--accent);border-radius:999px;padding:2px 7px}
         .st-desc{color:var(--text-secondary);font-size:var(--fs-sm);line-height:1.4;margin-top:3px}
+        .st-trial{margin-top:6px;font-size:var(--fs-xs);font-weight:var(--weight-bold);color:var(--accent-text)}
         .st-cardright{flex:none}
         .st-buy{min-width:74px}
         .st-owned{display:inline-flex;align-items:center;gap:5px;color:var(--state-good);font-size:var(--fs-sm);font-weight:var(--weight-semibold)}

@@ -35,7 +35,8 @@ for (const f of ['storage.js', 'rng.js', 'names-data.js', 'clubs.js', 'players.j
     vm.runInContext(fs.readFileSync(root + 'js/' + f, 'utf8'), sb, { filename: f });
 vm.runInContext(`
     var UI = { esc: s => (s == null ? '' : String(s)), euro: n => '\\u20ac' + n, money: n => String(n),
-        abilityBadge: q => String(q), crest: () => '', flag: () => '', clubName: id => String(id) };
+        abilityBadge: q => String(q), crest: () => '', flag: () => '', clubName: id => String(id),
+        posGroup: () => null, posChip: s => (s == null ? '' : String(s)), posDot: () => '' };
     var Router = { isFreshNav: true, screens: {}, register(n, d) { this.screens[n] = d; },
         link: (n, id) => '#' + n + '/' + id, refresh() {}, go() {}, replace() {}, result() {},
         sheet(h) { __sheet(h); }, closeSheet() {}, modal() {}, closeModal() {} };

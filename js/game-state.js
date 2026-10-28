@@ -40,6 +40,7 @@ const GameState = {
     needsSetup: false,
     databaseId: null,           // customization database this game was started on ('null' = Standard); see js/clubs.js applyDatabase
     clubLogos: null,            // { clubId: dataURI } logos added mid-save (Settings > Import logos); re-applied on load over the db
+    genericIdentity: false,     // true after Settings > Remove imported names & logos: this save ignores a database's club names, logos and stock competition names
     clubNames: null,            // { clubId: name } names added mid-save (Settings > Import names — e.g. the real-names pack); re-applied on load
     compNames: null,            // { compId: name } competition names added mid-save (same real-names pack); re-applied on load
     canEditGameState: true,     // gate for reputation/starting-division edits in Customize (flipped by the future paid "Gamestate editor")
@@ -121,6 +122,7 @@ const GameState = {
         this.inbox = []; this.log = [];
         this.clubHistory = {}; this.clubEuropeBest = {};
         this.clubNames = null; this.clubLogos = null; this.compNames = null;   // a fresh game carries no imported real names/logos
+        this.genericIdentity = false;
         this.lastSeasonReport = null; this.attendWindow = null; this.league = null; this.intl = null;
         this.players = PlayerGen.generatePool();
         Agency.init();
@@ -217,6 +219,7 @@ const GameState = {
             clubLogos: this.clubLogos || null,   // mid-save logo additions (Settings > Import logos)
             clubNames: this.clubNames || null,   // mid-save name additions (Settings > Import names)
             compNames: this.compNames || null,   // mid-save competition-name additions (real-names pack)
+            genericIdentity: this.genericIdentity || undefined,   // generic names & crests only (see clearImportedIdentity)
             schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
         };
     },
@@ -244,7 +247,7 @@ const GameState = {
         this.databaseId = (d && d.databaseId) ? d.databaseId : null;
         if (reinit && typeof Clubs !== 'undefined' && Clubs.init) Clubs.init();
         if (!this.databaseId || typeof Clubs === 'undefined' || typeof Clubs.applyDatabase !== 'function') return;
-        try { const db = await Storage.getDatabase(this.databaseId); if (db) Clubs.applyDatabase(db); }
+        try { const db = await Storage.getDatabase(this.databaseId); if (db) Clubs.applyDatabase(db, { identity: !(d && d.genericIdentity) }); }
         catch (e) { console.warn('Database overlay load failed', e); }
     },
     // Apply a loaded state object to the live GameState. Used by load() (autosave) and loadNamedSave().
@@ -264,6 +267,15 @@ const GameState = {
         this.clubNames[id] = name;
         const c = (typeof Clubs !== 'undefined') ? Clubs.getClubById(id) : null;
         if (c) c.name = name;
+    },
+    // Settings > Remove imported names & logos: back to the game's own generic club names, competition
+    // names and crests in this save (e.g. for screenshots and videos). Drops everything imported mid-save
+    // and makes the save ignore its database's club names, logos and stock competition names from now on
+    // (created countries and club colours stay). Takes effect on the reload that follows; importing a
+    // names pack or logos again brings them back.
+    clearImportedIdentity() {
+        this.clubNames = null; this.compNames = null; this.clubLogos = null;
+        this.genericIdentity = true;
     },
     _applyClubNames() {
         if (!this.clubNames || typeof Clubs === 'undefined') return;
@@ -318,6 +330,7 @@ const GameState = {
             this.clubLogos = d.clubLogos || null;
             this.clubNames = d.clubNames || null;
             this.compNames = d.compNames || null;
+            this.genericIdentity = !!d.genericIdentity;
             // Restore the RNG: legacy saves predate the seed, so fall back to one derived from the
             // save so a given save always regenerates the same background squads. rngState (the live
             // position) is preferred; without it we reseed from rngSeed.

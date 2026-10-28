@@ -14,7 +14,27 @@ android/local.properties
 # are large). Drop them into ui/assets/audio/ per that folder's README; the build
 # regenerates ui/js/music-manifest.js from whatever is present.
 ui/assets/audio/**/*.mp3
+# ...except the three sound effects the app ships (small; the iOS build needs them too)
+!ui/assets/audio/goal.mp3
+!ui/assets/audio/whistle1.mp3
+!ui/assets/audio/whistle2.mp3
 ui/assets/audio/**/*.ogg
 ui/assets/audio/**/*.m4a
 ui/assets/audio/**/*.aac
 ui/assets/audio/**/*.wav
+
+# Firebase CLI deploy cache
+.firebase/
+
+# Kept on the owner's machine only: real club/competition names (copyrighted; the game ships generic
+# names and imports a pack at runtime), Firebase/Google config, AdMob hosting, scratch prompts
+real-club-names.json
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+app-ads-hosting/
+*_international_prompt.md
+~$*.xlsx
+android/keystore.properties
+*.jks
+*.keystore
+international_football_prompt.md

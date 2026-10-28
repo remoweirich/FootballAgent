@@ -147,7 +147,7 @@ Nego.prependPlayerLink = function (el, m) {
     el.insertAdjacentHTML('afterbegin', `<a class="list-row" href="${Router.link('client', p.id)}" style="cursor:pointer;margin-bottom:var(--space-4)">
         <div style="flex:1;min-width:0">
             <div class="row-title">${UI.flag(p.nationality)} ${UI.esc(p.name)}</div>
-            <div class="row-sub">${p.position} · ${p.age}y${info ? ' · ' + info.name : ''}</div>
+            <div class="row-sub">${UI.posChip(p.position)} · ${p.age}y${info ? ' · ' + info.name : ''}</div>
         </div>${UI.abilityBadge(p.ability)}<i class="ti ti-chevron-right row-chev"></i></a>`);
 };
 // After resolving an offer you almost always want to look at the player it concerned — and it keeps
@@ -157,9 +157,50 @@ Nego.goPlayer = function (playerId) {
     else Router.back('inbox');
 };
 Nego.generic = function (el, m) {
+    const body = m.callup && m.callup.groups ? this.callupHTML(m) : this.linkifyPlayers(m.body || '', m);
     el.innerHTML = `<p class="hint">W${m.week} ${m.season}</p>
-        <div style="color:var(--text-secondary);line-height:1.6">${this.linkifyPlayers(m.body || '', m)}</div>
+        <div style="color:var(--text-secondary);line-height:1.6">${body}</div>
         <div class="flex-row" style="margin-top:var(--space-6)"><button class="btn btn--ghost" onclick="Nego.dismiss('${m.id}')"><i class="ti ti-trash"></i>${I18n.t('nego.dismiss')}</button><button class="btn btn--primary" onclick="Router.back('inbox')">${I18n.t('common.close')}</button></div>`;
+};
+// The international call-up mail: one card per nation (flag, name, how many of your clients), the
+// window's fixtures, then the players: a table when more than 3 clients were called up, one line each
+// otherwise. NEW marks a first ever call-up. Older mails without the data keep their plain text.
+Nego.callupHTML = function (m) {
+    const C = m.callup, groups = C.groups || [];
+    const total = groups.reduce((s, g) => s + g.players.length, 0), asTable = total > 3;
+    const win = (typeof INTL_CONFIG !== 'undefined' && INTL_CONFIG.CALLUP_WINDOWS[C.i]) || { weeks: [] }, wk = win.weeks;
+    const when = wk.length > 1 && wk[wk.length - 1] > wk[0] ? I18n.t('cu.window', { a: wk[0], b: wk[wk.length - 1] }) : I18n.t('cu.windowSummer');
+    const venues = new Set();
+    const ha = v => { venues.add(v); return `<span class="cu-ha cu-ha--${v}" title="${UI.esc(I18n.t('nat.venue.' + v))}">${I18n.t('cu.venue.' + v)}</span>`; };
+    const nm = nid => (typeof Internationals !== 'undefined' && Internationals.name) ? Internationals.name(nid) : nid;
+    const flag = nid => UI.flag(((typeof NATIONS_BY_ID !== 'undefined' && NATIONS_BY_ID[nid]) || {}).name || nid);
+    const role = r => UI.esc(Internationals.roleName(r.role, r.pos));
+    const caps = n => n === 1 ? I18n.t('nat.cap1') : I18n.t('nat.capsN', { n });
+    let anyNew = false;
+    const who = r => {
+        if (r.isNew) anyNew = true;
+        const p = GameState.getPlayer(r.id);
+        return `<span class="cu-who">${UI.posChip(r.pos)}<a href="${Router.link('client', r.id)}">${UI.esc((p && p.name) || r.name)}</a>${r.isNew ? `<span class="cu-new">${I18n.t('cu.new')}</span>` : ''}</span>`;
+    };
+    const fixtures = g => {
+        if (!g.fixtures || !g.fixtures.length) return `<div class="cu-fix"><span class="muted">${I18n.t('cu.noFixtures')}</span></div>`;
+        const byComp = [];
+        g.fixtures.forEach(f => { const last = byComp[byComp.length - 1]; if (last && last.comp === f.comp) last.list.push(f); else byComp.push({ comp: f.comp, list: [f] }); });
+        return byComp.map(b => `<div class="cu-fix"><span class="cu-comp">${UI.esc(compName(b.comp))}</span>${b.list.map(f =>
+            `<span class="cu-fx"><span class="cu-wk">${I18n.t('leagues.wkShort')} ${f.week}</span> ${I18n.t('cu.vs', { opp: UI.esc(nm(f.opp)) })} ${ha(f.venue)}</span>`).join('')}</div>`).join('');
+    };
+    const players = g => asTable
+        ? `<table class="cu-table"><colgroup><col><col class="cu-c-role"><col class="cu-c-caps"></colgroup>
+            <thead><tr><th>${I18n.t('cu.player')}</th><th>${I18n.t('cu.role')}</th><th class="cu-n">${I18n.t('cu.capsH')}</th></tr></thead>
+            <tbody>${g.players.map(r => `<tr><td>${who(r)}</td><td class="cu-role">${role(r)}</td><td class="cu-n">${r.caps}</td></tr>`).join('')}</tbody></table>`
+        : g.players.map(r => `<div class="cu-line">${who(r)}<span class="cu-role">${role(r)} · ${caps(r.caps)}</span></div>`).join('');
+    const cards = groups.map(g => `<div class="cu-card">
+            <div class="cu-head"><a href="${Router.link('nation', g.nid)}" class="cu-nat">${flag(g.nid)} <span>${UI.esc(nm(g.nid))}</span></a><span class="cu-count">${Internationals.countText(g.players.length, 'Client')}</span></div>
+            ${fixtures(g)}${players(g)}</div>`).join('');
+    const key = [anyNew ? `<span><span class="cu-new">${I18n.t('cu.new')}</span> ${I18n.t('cu.keyNew')}</span>` : '']
+        .concat(['H', 'A', 'N'].filter(v => venues.has(v)).map(v => `<span><span class="cu-ha cu-ha--${v}">${I18n.t('cu.venue.' + v)}</span> ${I18n.t('nat.venue.' + v)}</span>`))
+        .filter(Boolean).join('');
+    return `<p class="cu-lead">${when} · ${I18n.t('intl.cu.body').replace(/\s*[:：]\s*$/, '.')}</p>${cards}${key ? `<div class="cu-key">${key}</div>` : ''}`;
 };
 Nego.dismiss = function (id) {
     const mail = GameState.inbox.find(m => m.id === id);
@@ -377,7 +418,12 @@ Nego.suggestTransfer = function (mailId) {
 };
 Nego.acceptTransfer = function (mailId) {
     const m = GameState.inbox.find(x => x.id === mailId), a = m.offer.agreed;
-    this.concluded(m, Agency.acceptTransfer(m, a.wage, a.role, a.term, a.bonus, { cupKeeper: a.cupKeeper }));
+    const from = Clubs.getClubById(m.offer.fromClubId), to = Clubs.getClubById(m.offer.toClubId);
+    const bigger = !!(from && to && to.reputation > from.reputation);
+    const r = Agency.acceptTransfer(m, a.wage, a.role, a.term, a.bonus, { cupKeeper: a.cupKeeper });
+    this.concluded(m, r);
+    // a move up you negotiated: a good moment for the in-app review (after the confirmation has shown)
+    if (r && r.ok && bigger && typeof Review !== 'undefined' && Review.canAsk('bigTransfer')) setTimeout(() => Review.request('bigTransfer'), 1600);
 };
 
 // ---------------- Renewal ----------------

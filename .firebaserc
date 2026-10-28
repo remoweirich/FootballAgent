@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "footballagencysim"
+  },
+  "targets": {
+    "footballagencysim": {
+      "hosting": {
+        "game": ["footballagencysim-play"]
+      }
+    }
+  }
+}

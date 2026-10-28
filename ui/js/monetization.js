@@ -59,7 +59,73 @@ const Monetization = {
     // is never auto-granted by DEV_UNLOCK_ALL.
     owns(ent) {
         if (this.DEV_UNLOCK_ALL && ent !== 'supporter') return true;
-        return this._set().has(ent);
+        return this._set().has(ent) || (this.TRIAL && ent === this.TRIAL.ent && this.trialActive());
+    },
+
+    // ---- time-limited free trial (the launch bonus) ------------------------------------------------
+    // Anyone who opens the game inside the campaign window gets TRIAL.ent free for TRIAL.hours, ONCE.
+    // The first start writes a record with its own random id; a record, once written, is never
+    // replaced, so a device gets the trial exactly once however the clock is set. It is not a
+    // purchase: it never enters the entitlement set, so a store sync cannot remove or confuse it,
+    // and buyers are unaffected. Turning the clock back does not buy time either: the trial is
+    // checked against the LATEST time this device has reported (maxSeen, kept up to date whenever
+    // the trial is looked at): a clock that reads clearly earlier than that switches the trial off,
+    // so it can never cover more than its 72 hours of clock time.
+    // (Without a server, clearing the app's data or reinstalling is the one way around it.)
+    TRIAL: {
+        key: 'trial_launch2026', ent: 'insights', hours: 72, rollbackMs: 10 * 60e3,
+        // the window in local time: 2 November 2026, 00:00, through 9 November (until 10 November, 00:00)
+        fromYMD: [2026, 10, 2], toYMD: [2026, 10, 10]
+    },
+    _trialWindow() {
+        const T = this.TRIAL;
+        if (T._from == null) { T._from = new Date(T.fromYMD[0], T.fromYMD[1], T.fromYMD[2]).getTime(); T._to = new Date(T.toYMD[0], T.toYMD[1], T.toYMD[2]).getTime(); }
+        return [T._from, T._to];
+    },
+    _trialRec() { try { const r = Prefs.get(this.TRIAL.key, null); return r && typeof r === 'object' && r.start ? r : null; } catch (e) { return null; } },
+    _trialSave(r) { try { Prefs.set(this.TRIAL.key, r); } catch (e) { /* no storage: nothing to keep */ } },
+    _newId() {
+        try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* fall through */ }
+        return 't-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    },
+    // the effective "now": never earlier than the latest time this device has already reported
+    _trialNow(r, now) { return Math.max(now != null ? now : Date.now(), (r && r.maxSeen) || 0); },
+    // called on every launch (start screen): starts the trial inside the window (once), and records
+    // the latest time seen. Returns 'started' the moment it begins, else null.
+    trialTick(now) {
+        const T = this.TRIAL; if (!T) return null;
+        const t = now != null ? now : Date.now();
+        let r = this._trialRec();
+        if (r) {
+            if (t > (r.maxSeen || 0)) { r.maxSeen = t; this._trialSave(r); }
+            return null;
+        }
+        const [from, to] = this._trialWindow();
+        if (t < from || t >= to || this._set().has(T.ent)) return null;   // outside the window, or already bought
+        r = { id: this._newId(), start: t, end: t + T.hours * 3600e3, maxSeen: t, welcomed: false, endNoted: false };
+        this._trialSave(r);
+        return 'started';
+    },
+    trialActive(now) {
+        const r = this._trialRec(); if (!r) return false;
+        const t = now != null ? now : Date.now();
+        if (t < (r.maxSeen || 0) - this.TRIAL.rollbackMs) return false;          // the clock was turned back
+        if (t > (r.maxSeen || 0) + 60e3 && t < r.end) { r.maxSeen = t; this._trialSave(r); }   // keep the latest time (at most once a minute)
+        return t >= r.start && t < r.end;
+    },
+    trialEnd() { const r = this._trialRec(); return r ? r.end : null; },
+    // what the start screen should say, once each: 'welcome' while it runs, 'ended' after (unless bought)
+    trialNotice(now) {
+        const r = this._trialRec(); if (!r) return null;
+        if (!r.welcomed && this.trialActive(now)) return 'welcome';
+        if (!r.endNoted && !this.trialActive(now) && this._trialNow(r, now) >= r.end && !this._set().has(this.TRIAL.ent)) return 'ended';
+        return null;
+    },
+    trialNoted(kind) {
+        const r = this._trialRec(); if (!r) return;
+        if (kind === 'welcome') r.welcomed = true;
+        if (kind === 'ended') { r.welcomed = true; r.endNoted = true; }
+        this._trialSave(r);
     },
     // The REAL ownership (ignores DEV_UNLOCK_ALL) — the Store shows this so Buy vs Owned is truthful
     // even while the prototype unlocks everything for play.

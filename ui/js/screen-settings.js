@@ -80,6 +80,7 @@ const SettingsScreen = {
         const M = (typeof Monetization !== 'undefined') ? Monetization : null;
         const logoRow = inGame ? row(PHOTO, I18n.t('settings.importLogos'), '', 'SettingsScreen.importLogos()') : '';
         const nameRow = inGame ? row(NAMES, I18n.t('settings.importNames'), '', 'SettingsScreen.importNames()') : '';
+        const genericRow = inGame ? row(NAMES, I18n.t('settings.removeImports'), '', 'SettingsScreen.removeImports()') : '';
         // Enhanced Insights: an on/off toggle, shown only once the entitlement is owned
         const insightsRow = (M && M.owns('insights'))
             ? `<div class="set-row set-row--static">${ic('ti-eye')}<span class="set-row__label">${I18n.t('settings.insights')}</span>
@@ -108,6 +109,7 @@ const SettingsScreen = {
                     ${sandboxRow}
                     ${nameRow}
                     ${logoRow}
+                    ${genericRow}
                     ${langRow}
                     ${currencyRow}
                 </div>
@@ -148,6 +150,21 @@ const SettingsScreen = {
     openAchievements() { if (typeof AchievementsScreen !== 'undefined') AchievementsScreen.show(this._from); },
     importLogos() { if (typeof CustomizeScreen !== 'undefined' && CustomizeScreen.importLogosLive) CustomizeScreen.importLogosLive(); },
     importNames() { if (typeof CustomizeScreen !== 'undefined' && CustomizeScreen.importNamesLive) CustomizeScreen.importNamesLive(); },
+    // back to the game's own generic names and crests in this save (GameState.clearImportedIdentity), then
+    // reload it so the world is rebuilt without them
+    removeImports() {
+        this._overlay(I18n.t('settings.removeImports'), `<p class="set-note">${I18n.t('settings.removeImportsBody')}</p>
+            <button class="btn btn--primary" style="width:100%;margin-top:12px" onclick="SettingsScreen._doRemoveImports()">${I18n.t('settings.removeImportsBtn')}</button>`);
+    },
+    async _doRemoveImports() {
+        this._closeOverlay();
+        if (typeof GameState === 'undefined' || GameState.demoMode) return;
+        GameState.clearImportedIdentity();
+        try { Storage.saveGame(GameState._snapshot()); await Storage.flush(); } catch (e) { console.warn('Save failed', e); return; }   // on disk before the reload reads it
+        if (typeof Clubs !== 'undefined' && Clubs.init) Clubs.init();   // a clean generic world; the reload re-applies the save on top
+        await GameState.init();
+        if (typeof Main !== 'undefined' && Main.afterLoad) Main.afterLoad();
+    },
     toggleInsights() { if (typeof Monetization !== 'undefined') { Monetization.setInsights(!Monetization.insightsOn()); this._reshow(); } },
     openSandbox() { if (typeof Sandbox !== 'undefined') Sandbox.show(); },
     openStore() { if (typeof StoreScreen !== 'undefined') StoreScreen.show('game'); },

@@ -49,7 +49,7 @@ const ScoutingScreen = {
                     <div class="flex-row">
                         <div style="flex:1;min-width:0">
                             <div class="flex-row" style="gap:6px"><span class="cl-name">${UI.flag(p.nationality)} ${UI.esc(p.name)}</span><span style="font-size:var(--fs-sm);color:var(--text-faint)">${p.age}y</span>${isNew ? `<span class="pill pill--accent" style="padding:1px 7px;font-size:10px">${I18n.t('scouting.new')}</span>` : ''}</div>
-                            <div class="cl-sub">${p.position} <span style="color:var(--text-chevron)">·</span> <span class="flex-row" style="gap:5px;display:inline-flex">${UI.crest(club)}${club ? club.name : '—'}</span></div>
+                            <div class="cl-sub">${UI.posChip(p.position)} <span style="color:var(--text-chevron)">·</span> <span class="flex-row" style="gap:5px;display:inline-flex">${UI.crest(club)}${club ? club.name : '—'}</span></div>
                         </div>
                         ${UI.abilityBadge(p.ability)}
                     </div>

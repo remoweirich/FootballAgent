@@ -139,5 +139,26 @@ const lis = JSON.parse(run(`
 check('"Listen" pauses the complaint spillover for 4 weeks and gives +6 You the first time', lis.ok && lis.pause === 4 && lis.agent === 56, JSON.stringify(lis));
 check('...listening again to the same complaint only gives +2', lis.again === 58, JSON.stringify(lis));
 
+// accepting a loan clears transfer bids (a contract offer stays); accepting a transfer clears loan offers and contract offers too
+const deals = JSON.parse(run(`
+    var p = Agency.clients().find(function (x) { return x.clubId && !x.onLoanAt && !x.pendingTransfer; });
+    p.contractUntilSeason = GameState.seasonStartYear + 4;
+    var others = Clubs.allClubs.filter(function (c) { return c.id !== p.clubId && c.tier <= 2; });
+    var plant = function () {
+        GameState.inbox = GameState.inbox.filter(function (m) { return !(m.offer && m.offer.playerId === p.id); });
+        var t = GameState.addMail({ kind: 'transfer', subject: 't', offer: { playerId: p.id, fromClubId: p.clubId, toClubId: others[0].id, transferFee: 100000 } });
+        var l = GameState.addMail({ kind: 'loan', subject: 'l', offer: { playerId: p.id, fromClubId: p.clubId, toClubId: others[1].id, role: 'starter' } });
+        var l2 = GameState.addMail({ kind: 'loan', subject: 'l2', offer: { playerId: p.id, fromClubId: p.clubId, toClubId: others[2].id, role: 'starter' } });
+        var r = GameState.addMail({ kind: 'renewal', subject: 'r', offer: { playerId: p.id, fromClubId: p.clubId, toClubId: p.clubId } });
+        return { t: t, l: l, l2: l2, r: r };
+    };
+    var left = function () { return GameState.inbox.filter(function (m) { return m.offer && m.offer.playerId === p.id; }).map(function (m) { return m.kind; }).sort().join(','); };
+    var m = plant(); var lr = Agency.acceptLoanOffer(m.l, 'starter'); var afterLoan = left();
+    p.onLoanAt = null; p.loanUntilSeason = null; p.pendingTransfer = null;
+    m = plant(); var tr = Agency.acceptTransfer(m.t, p.wage, 'starter', 3, 0); var afterTransfer = left();
+    return JSON.stringify({ loanOk: !!(lr && lr.ok), afterLoan: afterLoan, transferOk: !!(tr && tr.ok !== false), afterTransfer: afterTransfer });`));
+check('accepting a loan discards the transfer bids and the other loan offers, the contract offer stays', deals.loanOk && deals.afterLoan === 'renewal', JSON.stringify(deals));
+check('accepting a transfer discards the loan offers and the contract offer too', deals.transferOk && deals.afterTransfer === '', JSON.stringify(deals));
+
 check('no engine errors, got ' + JSON.stringify(errors.slice(0, 2)), errors.length === 0);
 if (failed) process.exit(1);
