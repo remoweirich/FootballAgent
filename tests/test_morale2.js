@@ -29,7 +29,9 @@ check('int-break wk11: time unchanged', runv("return P.morale.time")===50);
 
 // --- C: ordinary week with no apps still decays (sanity: mechanic intact) ---
 run("P.injury=null; P._weekApps=0; P._benchStreak=2; P._playStreak=0; P.morale.time=50; GameState.week=5; Sim._morale([]);");
-check('normal wk5 bench: streak -> 3 and time decays by 2.5 (50->47.5)', runv("return P._benchStreak")===3 && runv("return P.morale.time")===47.5);
+// the 2.5 tick is scaled by his bench patience at this club (Agency.clubFit)
+const benchExp = runv("return 50 - 2.5 * Agency.benchPatience(P)");
+check('normal wk5 bench: streak -> 3 and time decays by 2.5 x bench patience (50->' + benchExp.toFixed(2) + ')', runv("return P._benchStreak")===3 && Math.abs(runv("return P.morale.time") - benchExp) < 1e-9);
 
 // --- D: changing club sets club morale to 90 ---
 run(`

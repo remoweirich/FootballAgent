@@ -887,8 +887,8 @@ const Agency = {
         }
         // most clubs pass — only a minority bite on any given pitch. Being persistent (re-shopping
         // week after week) gives fresh rolls, so a club can still come round; blanket-pitching a whole
-        // division no longer floods you with offers. Transfer-listed players draw a little more interest.
-        const biteChance = p.transferListed ? 0.42 : 0.30;
+        // division no longer floods you with offers. Transfer-listed players draw clearly more interest.
+        const biteChance = p.transferListed ? 0.42 : 0.20;
         if (Rng.next() >= biteChance) return { ok: true, interested: false, message: msg + `${target.name} didn't bite this time.` };
 
         // a stage-2+ club case means he's publicly known to want out — the club's own asking
@@ -989,6 +989,162 @@ const Agency = {
         return cur.apps > 0 ? { avg: cur.avg, apps: cur.apps } : { avg: prev.avg || 0, apps: prev.apps || 0 };
     },
     recentSeasonRating(p) { return this.recentSeason(p).avg; },
+    // ---- how much a club means to a player (patience on its bench; later also how keen he is on a move) ----
+    // relief < 1 makes the bench hurt less: a clearly bigger or elite club, a club that serves his ambition
+    // (whether or not he has told you), generous pay, a modest agreed role, and age 32+. That relief fades the
+    // longer he sits there (full in his first season, half in the second, gone in the third; 20% slower at an
+    // elite club). impatience > 1 makes it hurt more and never fades: a club below his level, age 21 or under.
+    FIT: {
+        statureElite: { rep: 85, gap: 10, f: 0.40 }, statureBig: { gap: 10, f: 0.60 }, statureUp: { gap: 5, f: 0.80 },
+        statureDown: { gap: -5, f: 1.15 }, statureWayDown: { gap: -10, f: 1.30 },
+        ambition: { dreamclub: 0.4, boyhood: 0.5, league: 0.6, europe: 0.6, title: 0.6, cup: 0.75 },
+        payHigh: { ratio: 1.5, f: 0.80 }, payUp: { ratio: 1.2, f: 0.90 },
+        role: { key: 1, starter: 1, rotation: 0.55, fringe: 0.5, youth: 0.5 },
+        veteran: { age: 32, f: 0.7 }, youngster: { age: 21, f: 1.1 },
+        fade: 0.5, fadeElite: 0.4,     // relief lost per season at the club
+        floorElite: 0, floorVeteran: 1,   // share of the relief that never fades (at an elite club / at 32+): a veteran back-up stays content
+        min: 0.1, max: 1.3,            // the bench multiplier: 0.1 very patient ... 1.3 very impatient
+    },
+    _inEuropeNow(clubId) {
+        const ed = GameState.league && GameState.league.europe;
+        if (!ed || !ed.comps) return false;
+        return ['UCL', 'UEL', 'UECL'].some(k => { const c = ed.comps[k]; return c && (c.table || []).some(r => (r.clubId || r) === clubId); });
+    },
+    // seasons he has already completed at his current club (0 = this is his first season there)
+    _seasonsHere(p, clubId) {
+        if (p._clubSince != null && p.clubId === clubId) {
+            const since = Math.floor((p._clubSince - 1) / 52), now = Math.floor((GameState.absWeek() - 1) / 52);   // weeks 1-52 are one season
+            return Math.max(0, now - since);
+        }
+        let n = 0;
+        Object.keys(p.stats || {}).forEach(y => { if (+y < GameState.seasonStartYear && Object.values(p.stats[y]).some(st => st.clubId === clubId && !st.loan)) n++; });
+        return n;
+    },
+    // does this club serve the ambition he holds? (facts are only read, never created here)
+    _ambitionFit(p, club) {
+        const a = p.facts && p.facts.ambition; if (!a || a.fulfilled) return 1;
+        const F = this.FIT.ambition;
+        const rankInDiv = () => Clubs.getClubsByDivision(club.division).filter(c => c.reputation > club.reputation).length;   // 0 = the favourite
+        const fav = p.facts.favClub && p.facts.favClub.clubId;
+        if (a.type === 'dreamclub' && a.clubId === club.id) return F.dreamclub;
+        if (a.type === 'boyhood' && fav === club.id) return F.boyhood;
+        if (a.type === 'league' && a.div && club.division === a.div) return F.league;
+        if (a.type === 'europe' && this._inEuropeNow(club.id)) return F.europe;
+        if (a.type === 'title' && club.tier === 1 && rankInDiv() <= 2) return F.title;
+        if (a.type === 'cup' && rankInDiv() <= 3) return F.cup;
+        return 1;
+    },
+    clubFit(p, club, opts) {
+        opts = opts || {};
+        const F = this.FIT, out = { relief: 1, impatience: 1, reasons: [] };
+        if (!p || !club) return Object.assign(out, { patience: 1 });
+        const gap = club.reputation - p.ability, elite = club.reputation >= F.statureElite.rep && gap >= F.statureElite.gap;
+        let stature = 1;
+        if (elite) stature = F.statureElite.f; else if (gap >= F.statureBig.gap) stature = F.statureBig.f; else if (gap >= F.statureUp.gap) stature = F.statureUp.f;
+        else if (gap <= F.statureWayDown.gap) stature = F.statureWayDown.f; else if (gap <= F.statureDown.gap) stature = F.statureDown.f;
+        if (stature < 1) { out.relief *= stature; out.reasons.push(elite ? 'elite' : 'stepUp'); } else if (stature > 1) { out.impatience *= stature; out.reasons.push('stepDown'); }
+        const amb = this._ambitionFit(p, club); if (amb < 1) { out.relief *= amb; out.reasons.push('ambition'); }
+        const market = this.marketWage ? this.marketWage(p, club) : 0, ratio = market ? (opts.wage != null ? opts.wage : (p.wage || 0)) / market : 1;
+        if (ratio >= F.payHigh.ratio) { out.relief *= F.payHigh.f; out.reasons.push('pay'); } else if (ratio >= F.payUp.ratio) { out.relief *= F.payUp.f; out.reasons.push('pay'); }
+        const role = opts.role || (p.onLoanAt === club.id ? p.loanRole : p.squadRole) || 'starter';
+        out.relief *= (F.role[role] != null ? F.role[role] : 1);
+        if ((p.age || 0) >= F.veteran.age) out.relief *= F.veteran.f;
+        else if ((p.age || 0) <= F.youngster.age) out.impatience *= F.youngster.f;
+        const floor = Math.max(elite ? F.floorElite : 0, (p.age || 0) >= F.veteran.age ? F.floorVeteran : 0);
+        const strength = opts.fresh ? 1 : Math.max(floor, 1 - (elite ? F.fadeElite : F.fade) * this._seasonsHere(p, club.id));
+        out.elite = elite; out.strength = strength;
+        out.patience = Math.max(F.min, Math.min(F.max, (1 - strength * (1 - out.relief)) * out.impatience));
+        return out;
+    },
+    // ---- how keen he is on a move (the tag on transfer and loan offers) ----
+    // A score from what the club means to him against where he is now: its stature, his ambition (the truth,
+    // whether or not he has told you), the role offered (a bench role hurts less at a club he'd be patient at),
+    // the pay, a move abroad for a homebody or an adventurer, and whether he wants out where he is.
+    // Shown as 2 to 5 stars in half steps (below 2 a move would not be on the table): the score maps linearly,
+    // -2.5 or lower = 2 stars, +0.5 = 3.5, +3.5 or higher = 5. reasons = the two strongest factors.
+    KEEN: { ambition: { dreamclub: 4, boyhood: 3, league: 2.5, europe: 1.5, title: 1.5, cup: 0.8 }, leaveDream: -2,
+        role: { key: 1.5, starter: 1, rotation: -1, fringe: -2, youth: -2.5 },
+        stars: { lo: -2.5, hi: 3.5 },   // the score at 2 stars and at 5 stars
+        // a LOAN is about playing time at a sensible level: the club is judged against his own ability (far below
+        // him is unattractive even as a starter), and the role weighs more than in a transfer
+        loanRole: { key: 2.5, starter: 2, rotation: -1, fringe: -2.5, youth: -3 }, loanUp: 6, loanDown: 6, loanDownCap: -4,
+        stepUp: 4, stepDown: 8,        // reputation points per score point: a step up counts twice as much as a step down
+        pay: 3, homebody: -1,          // +50% pay = +1.5, which can outweigh a homebody's reluctance to move abroad
+        arrival: 10 },                  // club morale on arrival: -10 at 2 stars, 0 at 3.5, +10 at 5 stars
+    moveKeenness(p, toClub, offer) {
+        offer = offer || {};
+        const K = this.KEEN, cur = Clubs.getClubById(p.clubId), parts = [];
+        if (!p || !toClub) return { stars: 3.5, score: 0, reasons: [] };
+        const add = (key, w) => { if (w) parts.push({ key, w }); };
+        // stature: a transfer against his current club (a free agent against his own level); a loan against his own level
+        const curRep = offer.loan ? (p.ability || 50) : cur ? cur.reputation : (p.ability || 50) - 10;
+        const dRep = toClub.reputation - curRep;
+        if (offer.loan) add(dRep >= 0 ? 'stepUp' : 'stepDown', dRep >= 0 ? Math.min(2, dRep / K.loanUp) : Math.max(K.loanDownCap, dRep / K.loanDown));
+        else add(dRep >= 0 ? 'stepUp' : 'stepDown', dRep >= 0 ? Math.min(3, dRep / K.stepUp) : Math.max(-2.5, dRep / K.stepDown));
+        const elite = toClub.reputation >= this.FIT.statureElite.rep && toClub.reputation >= curRep;
+        if (elite) add('elite', 1.5);   // one of the giants: worth a lot even from a big club
+        // his ambition
+        const a = p.facts && p.facts.ambition, fav = p.facts && p.facts.favClub;
+        let servesAmbition = false;
+        if (a && !a.fulfilled) {
+            const told = !!a.discovered;
+            const hit = servesAmbition = this._ambitionFit(p, toClub) < 1;
+            if (hit) {
+                const w = K.ambition[a.type] || 1;
+                const key = !told && !(a.type === 'boyhood' && fav && fav.discovered) ? 'secret'
+                    : a.type === 'dreamclub' ? 'dreamClub' : a.type === 'boyhood' ? 'boyhood' : a.type === 'league' ? 'dreamLeague' : a.type;
+                add(key, w);
+            }
+            if (cur && (a.type === 'dreamclub' && a.clubId === cur.id || a.type === 'boyhood' && fav && fav.clubId === cur.id)) add('leaveDream', K.leaveDream);
+        }
+        // the role: a bench role hurts less at a club he'd be patient at
+        const role = offer.role || 'starter', RT = offer.loan ? K.loanRole : K.role, rw = RT[role] != null ? RT[role] : 0;
+        if (rw < 0) add('bench', rw * this.clubFit(p, toClub, { role, wage: offer.wage, fresh: true }).patience);
+        else if (rw > 0 && (offer.loan || !['key', 'starter'].includes(p.squadRole))) add('starter', rw);   // a loan is for games
+        // the pay (a loan doesn't change it)
+        if (!offer.loan && offer.wage && p.wage) {
+            const ratio = offer.wage / Math.max(1, p.wage);
+            add(ratio >= 1 ? 'payUp' : 'payDown', ratio >= 1 ? Math.min(2.5, (ratio - 1) * K.pay) : Math.max(-3, (ratio - 1) * K.pay));
+        }
+        // abroad
+        const home = cur ? cur.country : (p.facts && p.facts.home);
+        // abroad: a homebody would rather not (half as much for a giant), unless it is exactly where his dream points
+        if (home && toClub.country !== home && !servesAmbition) {
+            if (typeof Dialogue !== 'undefined' && Dialogue.hasTrait(p, 'homebody')) add('abroad', elite ? K.homebody / 2 : K.homebody);
+            else if (typeof Dialogue !== 'undefined' && Dialogue.hasTrait(p, 'adventurer')) add('adventure', 1);
+        }
+        // he wants out where he is
+        if (p.morale && (p.morale.club < 35 || p.morale.time < 35)) add('wantsOut', 1);
+        const score = parts.reduce((s, x) => s + x.w, 0);
+        const S = K.stars, t = Math.max(0, Math.min(1, (score - S.lo) / (S.hi - S.lo)));
+        const stars = Math.round((2 + t * 3) * 2) / 2;
+        const reasons = parts.filter(x => Math.abs(x.w) >= 0.4).sort((x, y) => Math.abs(y.w) - Math.abs(x.w)).slice(0, 2).map(x => x.key);
+        return { stars, score: Math.round(score * 10) / 10, reasons };
+    },
+    // the multiplier on a week on the bench at his current club (1 = as before)
+    benchPatience(p) { return this.clubFit(p, Clubs.getClubById(effectiveClubId(p))).patience; },
+    // Transfer-listed: his club will sell, and the market reads his recent season (rating). The band sets how
+    // much likelier a bid is (x the normal weekly chance, during the windows), which clubs bid (relative to his
+    // ability; hi null = the usual ceiling) and the price his club accepts (x his value). Too few games for a
+    // rating counts as steady.
+    LIST_BANDS: [
+        { key: 'inForm', from: 6.995, bidMult: 5.5, lo: -6, hi: null, feeMult: 0.90 },
+        { key: 'steady', from: 6.505, bidMult: 4.0, lo: -10, hi: 10, feeMult: 0.75 },
+        { key: 'poor', from: 6.005, bidMult: 3.0, lo: -13, hi: 2, feeMult: 0.60 },
+        { key: 'abysmal', from: -Infinity, bidMult: 2.5, lo: -18, hi: -1, feeMult: 0.40 },
+    ],
+    LIST_BID_CAP: 0.6,          // the weekly bid chance of a listed player never goes above this
+    LIST_WINDOWS: 2,            // a listing ends after this many transfer windows without a sale
+    listBand(p) {
+        const s = this.recentSeason(p);
+        if (!s.avg || s.apps < this.FORM_MIN_APPS) return this.LIST_BANDS[1];
+        return this.LIST_BANDS.find(b => s.avg >= b.from) || this.LIST_BANDS[this.LIST_BANDS.length - 1];
+    },
+    // put on / taken off the transfer list: one place, so the window count always starts fresh
+    setTransferListed(p, on) {
+        p.transferListed = !!on;
+        if (on) { p._listedAbs = GameState.absWeek(); p._listWins = 0; } else { delete p._listedAbs; delete p._listWins; }
+    },
     // ---------- form ----------
     // One table drives everything form touches: how many clubs come calling, WHICH clubs they are,
     // what they pay, and what wage they put on the table.
@@ -1407,7 +1563,7 @@ const Agency = {
         if (['youth', 'fringe'].includes(p.squadRole)) chance = Math.max(chance, 0.9);
         chance = Math.max(0.05, Math.min(0.95, chance));
         if (Rng.next() < chance) {
-            p.transferListed = true;
+            this.setTransferListed(p, true);
             p._txOffersFrom = GameState.absWeek() + 1;
             GameState.addLog(I18n.t('ag.log.txlistAgreed', { club: club.name, name: p.name }), 'info');
             GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('ag.mail.txlistSubj', { name: p.name }), body: I18n.t('ag.mail.txlistBody', { club: club.name, name: p.name }), ttl: 5 });
@@ -1595,7 +1751,9 @@ const Agency = {
             fee: wasFree ? 0 : o.transferFee, wasFree, initiatedByAgent: !!o.initiatedByAgent,
             // a keeper signed as Back Up can be earmarked the Cup Goalkeeper (plays the cup ties)
             cupKeeper: !!opts.cupKeeper && p.position === 'GK' && role === 'rotation',
-            forced: !!opts.forced, credited: false
+            forced: !!opts.forced, credited: false,
+            // how keen he was when he agreed (shapes his club morale on arrival; not for a forced move)
+            keen: opts.forced ? null : this.moveKeenness(p, toClub, { role: role || null, wage: agreedWage }).stars
         };
 
         // the signing bonus is banked at signature, not when he reports for duty
@@ -1624,7 +1782,7 @@ const Agency = {
             // the season the move actually completes in (winter window = this season; otherwise next) —
             // used to label "Joining 26/27" instead of the old undefined -> "NaN/NaN"
             p._joinSeason = (GameState.week >= 7 && GameState.week <= 27) ? GameState.seasonStartYear : GameState.seasonStartYear + 1;
-            p.transferListed = false; p.loanListed = false; p._loanOk = false;
+            p.transferListed = false; delete p._listedAbs; delete p._listWins; p.loanListed = false; p._loanOk = false;
             // the agent's work ends at the handshake: promises count as kept and the deal
             // credits his standing now (finalize skips both via pkg.credited)
             this._checkPromiseKept(p, ['move', 'renegotiateRep']);
@@ -1647,10 +1805,11 @@ const Agency = {
         p.history.fees.push({ t: GameState.absWeek(), age: careerAge(p), value: pkg.fee, fromId: pkg.fromClubId, toId: pkg.toClubId });
 
         p.clubId = toClub.id; p.onLoanAt = null; p.loanUntilSeason = null; p.loanRole = null; p.freeAgent = false;
+        p._clubSince = GameState.absWeek();   // his patience on the bench is fullest in his first season here (clubFit)
         const winKey = GameState.transferWindowKey ? GameState.transferWindowKey() : null;
         if (winKey) p._txWindow = winKey;
         p.wage = pkg.wage; p.contractUntilSeason = GameState.seasonStartYear + pkg.term;
-        p.transferListed = false; p.loanListed = false; p._loanOk = false;
+        p.transferListed = false; delete p._listedAbs; delete p._listWins; p.loanListed = false; p._loanOk = false;
         delete p.pendingTransfer; delete p.joiningClubId; delete p._joinSeason;
         p.squadRole = (pkg.role && ROLE_ORDER.includes(pkg.role)) ? pkg.role : this.maxRoleAt(p, toClub);
         p.cupKeeper = p.position === 'GK' && !!pkg.cupKeeper;   // the negotiated Cup Goalkeeper flag (GK only)
@@ -1688,6 +1847,8 @@ const Agency = {
         }
         // he had to agree to sign, so he's happy at the club he just joined — club morale resets high
         p.morale.club = MORALE.CLUB_RESET_ON_MOVE;
+        // ...more so after a move he was keen on, less after one he was reluctant about
+        if (pkg.keen != null) p.morale.club = Math.max(0, Math.min(100, Math.round(p.morale.club + (pkg.keen - 3.5) / 1.5 * this.KEEN.arrival)));
         // a move — any move — is a fresh start for how he feels about playing time
         p.morale.time = MORALE.TIME_RESET_ON_MOVE; p._playStreak = 0; p._benchStreak = 0;
         // the new deal settles his wage for good: he agreed to it, so any wage grievance is resolved
@@ -1732,7 +1893,10 @@ const Agency = {
         if (role && !this.roleAcceptable(p, club, role))
             return { ok: false, message: I18n.t('ag.deal.roleTooHigh', { club: club.name, name: p.name, role: roleLabel(role, p.age, p.position), ceil: roleLabel(this.clubRoleCeiling(p, club), p.age, p.position) }) };
         p.wage = agreedWage; p.contractUntilSeason = GameState.seasonStartYear + term; p.freeAgent = false; p._renewSeason = GameState.seasonStartYear;
-        p.transferListed = false; p.loanListed = false; p._loanOk = false;   // committing to a new deal takes him off the market
+        p._clubSince = GameState.absWeek();   // he signed up for this role again: his patience on the bench starts afresh (clubFit)
+        // ...and he agreed to it, so he is content with it: a fresh start for playing time, as after a move
+        p.morale.time = Math.max(p.morale.time, MORALE.TIME_RESET_ON_MOVE); p._benchStreak = 0;
+        p.transferListed = false; delete p._listedAbs; delete p._listWins; p.loanListed = false; p._loanOk = false;   // committing to a new deal takes him off the market
         if (role && ROLE_ORDER.includes(role)) p.squadRole = role;
         p.cupKeeper = p.position === 'GK' && !!opts.cupKeeper && role === 'rotation';   // Cup Goalkeeper (GK Back Up only)
         recordWagePoint(p);
@@ -1931,12 +2095,12 @@ const Agency = {
         GameState.addFinance('Release pay-outs', -fee);
         GameState.agency.balance -= fee;
         p.agentId = null; p.wageCommission = 0; p.sponsorCommission = 0; p.repUntilSeason = null;
-        p.transferListed = false; p.loanListed = false; p.dismissedTalent = true;   // ex-client: out of clients & talent, kept in Client History
+        p.transferListed = false; delete p._listedAbs; delete p._listWins; p.loanListed = false; p.dismissedTalent = true;   // ex-client: out of clients & talent, kept in Client History
         GameState.addLog(I18n.t('ag.log.released', { name: p.name, amt: UI.money(fee) }), 'warn');
         if (typeof Achievements !== 'undefined') Achievements.noteRelease();
         return { ok: true, message: I18n.t('ag.release.done', { name: p.name, amt: UI.money(fee) }) };
     },
-    toggleTransferList(p) { p.transferListed = !p.transferListed; GameState.addLog(I18n.t(p.transferListed ? 'ag.log.txlistAdded' : 'ag.log.txlistRemoved', { name: p.name }), 'info'); return p.transferListed; },
+    toggleTransferList(p) { this.setTransferListed(p, !p.transferListed); GameState.addLog(I18n.t(p.transferListed ? 'ag.log.txlistAdded' : 'ag.log.txlistRemoved', { name: p.name }), 'info'); return p.transferListed; },
     toggleLoanList(p) { p.loanListed = !p.loanListed; if (p.loanListed) p._loanOffersFrom = GameState.absWeek() + 1; GameState.addLog(I18n.t(p.loanListed ? 'ag.log.loanlistAdded' : 'ag.log.loanlistRemoved', { name: p.name }), 'info'); return p.loanListed; },
 
     // ---------- helpers ----------
@@ -2000,6 +2164,8 @@ const Agency = {
         if (!opts.skipCaseDiscount && p.moraleCase && p.moraleCase.dim === 'club' && p.moraleCase.stage >= 2) {
             v *= MORALE.STAGE2_CLUB_FEE_MULT;
         }
+        // transfer-listed: his club wants him gone, at a price that reflects how he's playing (LIST_BANDS)
+        if (p.transferListed) v *= this.listBand(p).feeMult;
         const step = v < 50000 ? 1000 : 10000;                         // finer granularity for small, low-league fees
         return Math.max(500, Math.round(v / step) * step);
     },

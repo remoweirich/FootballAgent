@@ -160,5 +160,130 @@ const deals = JSON.parse(run(`
 check('accepting a loan discards the transfer bids and the other loan offers, the contract offer stays', deals.loanOk && deals.afterLoan === 'renewal', JSON.stringify(deals));
 check('accepting a transfer discards the loan offers and the contract offer too', deals.transferOk && deals.afterTransfer === '', JSON.stringify(deals));
 
+// Client History counts the same as Records and the player's career total: every senior club competition
+const hist = JSON.parse(run(`
+    var p = Agency.clients()[0], club = Clubs.getClubById(p.clubId), yr = GameState.seasonStartYear - 1;
+    p.stats = p.stats || {};
+    var comps = {}; comps[club.division] = { apps: 30, goals: 9, assists: 4, cs: 0, yellow: 2, red: 0, ratingSum: 30 * 7 };
+    comps.dummy_cup = { apps: 5, goals: 3, assists: 1, cs: 0, yellow: 0, red: 0, ratingSum: 5 * 7 };
+    p.stats[yr] = { h: { clubId: p.clubId, loan: false, youth: false, order: 0, comps: comps } };
+    var row = ClientHistory.rows().find(function (r) { return r.p.id === p.id; }), all = careerTotal(p), league = careerLeagueTotal(p);
+    return JSON.stringify({ hist: [row.apps, row.goals, row.assists], all: [all.apps, all.goals, all.assists], league: league.apps });`));
+check('Client History shows the same totals as Records / the career total (cups and Europe included), got ' + JSON.stringify(hist),
+    JSON.stringify(hist.hist) === JSON.stringify(hist.all) && hist.all[0] > hist.league);
+
+// boyhood / dream club: a player from a nation with no clubs in the game (Argentina) never gets a local side
+// of the country he plays in; a Dutch player still can; older saves are repaired; the unnamed club is askable
+const fav = JSON.parse(run(`
+    var nl = Clubs.allClubs.find(function (c) { return c.country === 'Netherlands' && c.tier === 3; });
+    var giant = function (id) { var c = Clubs.getClubById(id); return !!c && c.tier === 1 && c.reputation >= 82; };
+    var mk = function (nat) { var p = PlayerGen.makePlayer(nl, { ability: 64, age: 22, position: 'RB' }); p.nationality = nat; p.clubId = nl.id; return p; };
+    var arg = { local: 0, giants: 0, none: 0, dreamLocal: 0 }, nlp = { dutch: 0 };
+    for (var i = 0; i < 300; i++) {
+        var a = mk('Argentina'); delete a.facts; var f = Dialogue.ensureFacts(a), id = f.favClub.clubId;
+        if (!id) arg.none++; else if (giant(id)) arg.giants++; else arg.local++;
+        var dc = f.ambition.clubId; if (dc && Clubs.getClubById(dc) && Clubs.getClubById(dc).country === 'Netherlands' && Clubs.getClubById(dc).tier > 1) arg.dreamLocal++;
+        var d = mk('Netherlands'); delete d.facts; var g = Dialogue.ensureFacts(d).favClub.clubId; if (g && Clubs.getClubById(g).country === 'Netherlands') nlp.dutch++;
+    }
+    // an older save: an Argentinian with an untold Dutch third-tier boyhood club and a dream pointing at it
+    var o = mk('Argentina'); Dialogue.ensureFacts(o);
+    o.facts.favClub = { clubId: nl.id, discovered: false, fulfilled: false }; o.facts.ambition = { type: 'dreamclub', clubId: nl.id, discovered: false, fulfilled: false };
+    Dialogue.ensureFacts(o);
+    var repaired = { fav: o.facts.favClub.clubId, dream: o.facts.ambition.clubId || null };
+    // ...but an answer he already gave stands
+    var t = mk('Argentina'); Dialogue.ensureFacts(t); t.facts.favClub = { clubId: nl.id, discovered: true, fulfilled: false };
+    Dialogue.ensureFacts(t); var told = t.facts.favClub.clubId;
+    // an unnamed boyhood club can still be asked about, and the answer is "a club back home"
+    var u = mk('Argentina'); Dialogue.ensureFacts(u); u.facts.favClub = { clubId: null, discovered: false, fulfilled: false };
+    var scene = Dialogue.buildCheckinScene ? Dialogue.buildCheckinScene(u) : null;
+    var asks = scene ? scene.choices.some(function (c) { return c.key === 'q-club'; }) : null;
+    var res = Dialogue.resolveCheckin(u, 'q-club');
+    return JSON.stringify({ arg: arg, nl: nlp, repaired: repaired, nlId: nl.id, told: told, asks: asks, note: res && res.note, discovered: u.facts.favClub.discovered });`));
+check('an Argentinian playing in the Netherlands never gets a local Dutch side as boyhood club (a foreign giant sometimes, else unnamed), got ' + JSON.stringify(fav.arg),
+    fav.arg.local === 0 && fav.arg.giants > 0 && fav.arg.none > 0);
+check('...nor a Dutch lower-league side as his dream club', fav.arg.dreamLocal === 0, JSON.stringify(fav.arg));
+check('a Dutch player still grows up on a Dutch club', fav.nl.dutch > 250, JSON.stringify(fav.nl));
+check('older saves: an untold local boyhood club (and the dream pointing at it) is rolled again', fav.repaired.fav !== fav.nlId && fav.repaired.dream !== fav.nlId, JSON.stringify(fav));
+check('...but a boyhood club he already told you stands', fav.told === fav.nlId);
+check('an unnamed boyhood club can be asked about: "a club back home"', fav.asks !== false && fav.discovered === true && /club back home/.test(fav.note || ''), JSON.stringify(fav));
+
+// regional nationalities: weighted lists, and region entries that only state what differs from the country
+// (rules, not today's numbers, so tuning the lists never breaks this)
+const reg = JSON.parse(run(`
+    var ch = secondaryNationalities('Switzerland'), vd = secondaryNationalities('Switzerland', 'vaud'), be = secondaryNationalities('Switzerland', 'bern');
+    var inherited = Object.keys(ch).filter(function (k) { return !(k in SECONDARY_NATIONALITIES['Switzerland/vaud']); }).every(function (k) { return vd[k] === ch[k]; });
+    var overridden = Object.keys(SECONDARY_NATIONALITIES['Switzerland/vaud']).every(function (k) { var w = SECONDARY_NATIONALITIES['Switzerland/vaud'][k]; return w > 0 ? vd[k] === w : !(k in vd); });
+    // a 0 removes a country for a region; a plain country list counts as weight 1 each
+    // (Brazil: still a plain list; the clubbed countries are all weighted now)
+    SECONDARY_NATIONALITIES['Brazil/test'] = { 'Germany': 0, 'Chile': 2 }; delete _secondaryResolved['Brazil/test'];
+    var nn = secondaryNationalities('Brazil', 'test'); delete SECONDARY_NATIONALITIES['Brazil/test']; delete _secondaryResolved['Brazil/test'];
+    // the draw follows the weights
+    var n = 40000, hit = 0, tot = Object.values(ch).reduce(function (s, w) { return s + w; }, 0);
+    for (var i = 0; i < n; i++) if (getRegionSecondaryNationality('Switzerland', 'bern') === 'Liechtenstein') hit++;
+    var nl = {}; for (var j = 0; j < n; j++) { var x = getRegionSecondaryNationality('Brazil'); nl[x] = (nl[x] || 0) + 1; }
+    return JSON.stringify({ inherited: inherited, overridden: overridden, sameAsCountry: be === ch, noord: nn,
+        lie: hit / n, lieExpected: (ch.Liechtenstein || 0) / tot, nl: nl, n: n, obj: pickWeightedNationality({ Japan: 0, Chile: 2 }) });`));
+check('a region entry changes only what it names; everything else is the country list', reg.inherited && reg.overridden, JSON.stringify(reg));
+check('a region without an entry uses the country list as is', reg.sameAsCountry);
+check('in a region entry, 0 removes a country and a new one is added (plain country lists count as 1 each)', !('Germany' in reg.noord) && reg.noord.Chile === 2 && reg.noord.Italy === 1, JSON.stringify(reg.noord));
+check('draws follow the weights (Liechtenstein in Bern: expected ' + (reg.lieExpected * 100).toFixed(1) + '%, got ' + (reg.lie * 100).toFixed(1) + '%)', Math.abs(reg.lie - reg.lieExpected) < 0.008);
+check('plain lists pick evenly, and a weight of 0 is never picked', Object.values(reg.nl).every(v => Math.abs(v / reg.n - 1 / Object.keys(reg.nl).length) < 0.012) && reg.obj === 'Chile', JSON.stringify(reg.nl));
+
+// regions can have their own neighbour list: more Liechtensteiners in the east, French in the west,
+// Italians in the south; a region without its own list uses the country's
+const rg = JSON.parse(run(`
+    var club = function (reg) { return Clubs.allClubs.find(function (c) { return c.country === 'Switzerland' && c.region === reg; }); };
+    // wiring: a club's region reaches the neighbour list (captured, no dice involved)
+    var seen = {}, real = getRegionSecondaryNationality;
+    getRegionSecondaryNationality = function (country, sub) { seen[country + '/' + sub] = 1; return real(country, sub); };
+    for (var i = 0; i < 200; i++) getRegionForClub(club('vaud'));
+    getRegionSecondaryNationality = real;
+    var w = function (reg, nat) { var l = secondaryNationalities('Switzerland', reg), t = Object.values(l).reduce(function (s, x) { return s + x; }, 0); return (l[nat] || 0) / t; };
+    return JSON.stringify({ wired: !!seen['Switzerland/vaud'],
+        lieEast: w('ostschweiz', 'Liechtenstein'), lieBern: w('bern', 'Liechtenstein'), fraVaud: w('vaud', 'France'), fraBern: w('bern', 'France'),
+        itaSouth: w('ticinovalais', 'Italy'), itaBern: w('bern', 'Italy'),
+        bayern: (Clubs.getClubById('Bayern Munich') || {}).region, eschen: (Clubs.getClubById('Eschen-Mauren') || {}).region });`));
+check('a club’s region reaches the neighbour list', rg.wired);
+check('eastern Switzerland lists more Liechtensteiners than a region using the country list, got ' + (rg.lieEast * 100).toFixed(1) + '% vs ' + (rg.lieBern * 100).toFixed(1) + '%', rg.lieEast > rg.lieBern);
+check('western Switzerland more French, the south more Italians', rg.fraVaud > rg.fraBern && rg.itaSouth > rg.itaBern, JSON.stringify(rg));
+check('Bayern Munich and Eschen/Mauren sit in their own regions (not the Dutch Middelland)', rg.bayern === 'bayern' && rg.eschen === 'ostschweiz', JSON.stringify(rg));
+
+// the history tables (Client History, club page): goals for everybody, clean sheets only when sorted by them or
+// filtered to goalkeepers; the club page has the same position filter and sort list
+const tbl = JSON.parse(run(`
+    var gk = Agency.clients().find(function (p) { return p.position === 'GK'; }) || Agency.clients()[0];
+    gk.position = 'GK'; var club = Clubs.getClubById(gk.clubId), y = GameState.seasonStartYear - 1, comps = {};
+    comps[club.division] = { apps: 20, goals: 0, assists: 0, cs: 13, yellow: 1, red: 0, ratingSum: 20 * 6.9 };
+    gk.stats = gk.stats || {}; gk.stats[y] = { t: { clubId: club.id, loan: false, youth: false, order: 0, comps: comps } };
+    var head = function (html) { var i = html.indexOf('ht-head'); return html.slice(i, i + 400); };
+    var st = ClientHistory.state, keep = JSON.stringify(st);
+    var el = { innerHTML: '' }; st.sort = 'apps'; st.pos = 'all'; ClientHistory.render(el); var dflt = head(el.innerHTML);
+    st.sort = 'cs'; ClientHistory.render(el); var bySort = head(el.innerHTML);
+    st.sort = 'apps'; st.pos = 'GK'; ClientHistory.render(el); var byPos = head(el.innerHTML);
+    Object.assign(st, JSON.parse(keep));
+    ClubScreen.state.mode = 'all'; var c = { innerHTML: '' }; ClubScreen.render(c, club.id);
+    return JSON.stringify({ dflt: dflt, bySort: bySort, byPos: byPos, club: c.innerHTML });`));
+const csH = '>' + run(`return I18n.t('common.csShort')`) + '<', gH = '>' + run(`return I18n.t('common.goalsShort')`) + '<';
+check('the history table shows goals by default, clean sheets only when sorted by them or filtered to keepers', tbl.dflt.includes(gH) && !tbl.dflt.includes(csH) && tbl.bySort.includes(csH) && tbl.byPos.includes(csH));
+// the Clients tab keeps its OWN sort list (age, contract, ...): the shared table is History and the club page only
+const cs = JSON.parse(run(`var a = ClientsScreen.sortPickerRows(), h = ClientHistory.sortPickerRows();
+    return JSON.stringify({ own: ClientsScreen.SORTS.every(function (x) { return a.indexOf("ClientsScreen.setSort('" + x[0] + "')") >= 0; }),
+        noHist: a.indexOf('ClientHistory') < 0, hist: h.indexOf("ClientHistory.setSort('cs')") >= 0 && h.indexOf('ClientsScreen') < 0 });`));
+check('the Clients tab sort picker is its own (no History stats, no jump to History), got ' + JSON.stringify(cs), cs.own && cs.noHist && cs.hist);
+check('the club page uses the same table with the position filter and sort picker', tbl.club.includes('hist-table') && tbl.club.includes('ClubScreen.setPos') && tbl.club.includes('ClubScreen.pickSort'));
+
+// the stars follow the terms on the table: what you negotiate, then what the club agreed, else its first offer
+const kt = JSON.parse(run(`
+    var p = Agency.clients()[0], club = Clubs.allClubs.find(function (c) { return c.id !== p.clubId && Math.abs(c.reputation - p.ability) <= 3; });
+    p.facts = p.facts || { ambition: { type: 'goals' }, favClub: {} };
+    var m = GameState.addMail({ kind: 'loan', subject: 'l', offer: { playerId: p.id, fromClubId: p.clubId, toClubId: club.id, role: 'rotation' } });
+    // the score, not the stars: a client who is already at 5 stars cannot show the rise
+    var first = UI.keenFor(m).score, live = UI.keenFor(m, { role: 'starter' }).score;
+    m.offer.agreed = { loanRole: 'starter' }; var agreed = UI.keenFor(m).score;
+    return JSON.stringify({ first: first, live: live, agreed: agreed });`));
+check('the stars follow the negotiation: a starting role negotiated (or agreed) scores higher than the first rotation offer, got ' + JSON.stringify(kt), kt.live > kt.first && kt.agreed === kt.live);
+const negSrc = fs.readFileSync(root + 'ui/js/screen-negotiations.js', 'utf8');
+check('changing a term in the offer screen refreshes the stars', /Nego\._slide = function \(id, key, val\) \{ this\._slideTerms\(id, key, val\); this\.refreshKeen\(id\); \}/.test(negSrc));
+
 check('no engine errors, got ' + JSON.stringify(errors.slice(0, 2)), errors.length === 0);
 if (failed) process.exit(1);

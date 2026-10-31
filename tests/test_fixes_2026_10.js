@@ -197,7 +197,7 @@ const rs = JSON.parse(run(`
     var sq = { list: [{ id: p.id, role: 'reserve' }, { id: q.id, role: 'rotation' }] };
     var play = JSON.stringify(C.CALLUP_PLAY); C.CALLUP_PLAY.reserve = 1; C.CALLUP_PLAY.rotation = 1;   // both play every game, to count starts
     for (var i = 0; i < 4000; i++) {
-        p._weekApps = 0; q._weekApps = 0;
+        p._weekApps = 0; q._weekApps = 0; p._intlBan = 0; q._intlBan = 0;   // (red-card bans are tested in test_batch_2026_10_30)
         Internationals._clientsPlay('isl', sq, { h: 'isl', a: 'fro', hg: 1, ag: 0, w: 20, c: 'INTL_FRIENDLY' }, 2026, 1, 0);
         [[p, 'reserve'], [q, 'rotation']].forEach(function (x) { if (x[0]._weekApps > 0) { n[x[1]][0]++; if (x[0]._weekApps >= 1) n[x[1]][1]++; } });
     }

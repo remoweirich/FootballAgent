@@ -238,7 +238,11 @@ Object.assign(Internationals, {
     },
     _clientsPlay(nid, sq, fx, season, gf, ga) {
         const C = INTL_CONFIG, comp = fx.c === 'INTL_WC' && fx.st === 'ic' ? 'INTL_WCPO' : (fx.c || 'INTL_FRIENDLY');
-        const members = sq.list.map(e => ({ e, p: GameState.getPlayer(e.id) })).filter(m => m.p && !m.p.injury && !m.p.retired && m.p.agentId === 'me');
+        const squadMembers = sq.list.map(e => ({ e, p: GameState.getPlayer(e.id) })).filter(m => m.p && !m.p.injury && !m.p.retired && m.p.agentId === 'me');
+        // a red card in an international: he serves the ban at his nation's next match (with the squad, not playing)
+        const banned = new Set();
+        squadMembers.forEach(m => { if ((m.p._intlBan || 0) > 0) { banned.add(m.p.id); m.p._intlBan -= 1; } });
+        const members = squadMembers.filter(m => !banned.has(m.p.id));
         const appear = [];
         // goalkeepers: one keeper plays; client keepers take their share of the slot in role order
         let u = Rng.next(), at = 0;
@@ -256,7 +260,7 @@ Object.assign(Internationals, {
         const I = this.state();
         const t = this._absKey(season, fx.w);
         if (!I.away || I.away.t !== t) I.away = { t, ids: [] };
-        members.forEach(m => { if (!I.away.ids.includes(m.p.id)) I.away.ids.push(m.p.id); });
+        squadMembers.forEach(m => { if (!I.away.ids.includes(m.p.id)) I.away.ids.push(m.p.id); });
         if (!appear.length) return;
         // goals and assists: the clients on the pitch against the virtual rest of the XI
         const posW = { ST: 1.0, LW: 0.8, RW: 0.8, CAM: 0.7, CM: 0.4, CDM: 0.2, LB: 0.15, RB: 0.15, CB: 0.12, GK: 0.0 };
@@ -286,7 +290,7 @@ Object.assign(Internationals, {
             c.apps += 1; c.goals += a.g; c.assists += a.a;
             if (p.position === 'GK' && ga === 0) c.cs = (c.cs || 0) + 1;
             const rr = Rng.next(), yr = yellowRate[p.position] ?? 0.1;
-            if (rr < yr * (typeof RED_SHARE !== 'undefined' ? RED_SHARE.base : 0.06)) { c.red += 1; a.card = 2; } else if (rr < yr) { c.yellow += 1; a.card = 1; }
+            if (rr < yr * (typeof RED_SHARE !== 'undefined' ? RED_SHARE.base : 0.06)) { c.red += 1; a.card = 2; p._intlBan = (p._intlBan || 0) + 1; } else if (rr < yr) { c.yellow += 1; a.card = 1; }
             let rating = (typeof RATING_BASE !== 'undefined' ? RATING_BASE : 6.35) + (typeof levelGapRating === 'function' ? levelGapRating(p.ability - rep) : 0)
                 + resultBonus + a.g * (typeof RATING_PER_GOAL !== 'undefined' ? RATING_PER_GOAL : 0.75) + a.a * (typeof RATING_PER_ASSIST !== 'undefined' ? RATING_PER_ASSIST : 0.5);
             if (ga === 0 && ['GK', 'CB', 'LB', 'RB'].includes(p.position)) rating += 0.6;

@@ -268,7 +268,8 @@ const Router = {
     // persistent Balance / this-week ± / Reputation strip — sits in the top bar itself, between the
     // page title and the inbox icon, on every screen, since you need to see both while buying things
     // (upgrades, scouts, gifts…) wherever you are in the app
-    financeStrip() {
+    // opts.noNet: leave out the week's ± (the player card shows the season there instead)
+    financeStrip(opts) {
         const ag = (typeof GameState !== 'undefined') ? GameState.agency : null;
         if (!ag) return '';
         const net = this.lastWeekNet;
@@ -276,7 +277,7 @@ const Router = {
         const netText = net == null ? '—' : (net >= 0 ? '+' : '−') + UI.cur() + UI.abbr(Math.abs(net));
         return `<a class="hdr-finance" href="#finance" aria-label="${I18n.t('common.finances')}">
             <span class="hf-item"><i class="ti ti-wallet"></i>${UI.eabbr(ag.balance)}</span>
-            <span class="hf-item" style="color:${netColor}"><i class="ti ${net == null || net >= 0 ? 'ti-trending-up' : 'ti-trending-down'}"></i>${netText}</span>
+            ${opts && opts.noNet ? '' : `<span class="hf-item" style="color:${netColor}"><i class="ti ${net == null || net >= 0 ? 'ti-trending-up' : 'ti-trending-down'}"></i>${netText}</span>`}
             <span class="hf-item"><i class="ti ti-award"></i>${Math.round(ag.reputation)}</span>
         </a>`;
     },
@@ -289,6 +290,9 @@ const Router = {
             const nav = this.NAV.find(n => n[0] === name);
             const titleHTML = nav ? `<i class="ti ${nav[1]}" style="font-size:26px"></i>` : this.title(def, params);
             chrome = `<div class="app-bar"><span class="app-bar__title app-bar__title--shrink">${titleHTML}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
+        } else if (def.seasonBar) {
+            // the player card: its name is right below, so the bar shows the season ("37/38") instead, and no week ±
+            chrome = `<div class="push-bar"><button class="push-bar__back" onclick="Router.back()" aria-label="${I18n.t('common.back')}"><i class="ti ti-chevron-left" style="font-size:24px"></i></button><span class="push-bar__title push-bar__season">${GameState.seasonLabel()}</span>${this.settingsButton()}${this.financeStrip({ noNet: true })}${this.inboxButton()}</div>`;
         } else {
             chrome = `<div class="push-bar"><button class="push-bar__back" onclick="Router.back()" aria-label="${I18n.t('common.back')}"><i class="ti ti-chevron-left" style="font-size:24px"></i></button><span class="push-bar__title">${this.title(def, params)}</span>${this.settingsButton()}${this.financeStrip()}${this.inboxButton()}</div>`;
         }

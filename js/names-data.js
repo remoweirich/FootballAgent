@@ -763,7 +763,60 @@ const NAMES_DATABASE = {
    "Cyprus": {
     firstNames: ["Andreas", "Georgios", "Christos", "Constantinos", "Dimitrios", "Panayiotis", "Michalis", "Nikos", "Stelios", 	"Marios", "Costas", "Savvas", "Antonis", "Yiannis", "Philippos", "Petros", "Pavlos", "Stavros", "Charalambos", "Kyriakos"],
     lastNames: ["Georgiou", "Charalambous", "Christodoulou", "Dimitriou", "Constantinou", "Nicolaou", "Andreou", "Stylianou", "Kyriakides", "Papadopoulos", "Loizou", "Michael", "Savva", "Ioannou", "Hadjiconstantinou", "Gregoriou", "Antoniou", "Neophytou", "Chrysostomou", "Theodorou"]
-}
+},
+    // added 2026-10-30: nationalities named in the regional lists (also links their national teams)
+    "Cape Verde": {
+        firstNames: ["Jamiro", "Garry", "Kenny", "Ryan", "Roberto", "Willy", "Jovane", "Lisandro", "Dylan", "Hélio", "Nuno", "Kevin", "Patrick", "Steven", "Mário", "Gilson", "Telmo", "Elvis", "Logan", "Deroy", "Sidny", "João", "Carlos", "Edson"],
+        lastNames: ["Monteiro", "Rodrigues", "Tavares", "Semedo", "Lopes", "Mendes", "Fortes", "Varela", "Borges", "Duarte", "Pina", "Gomes", "Cabral", "Andrade", "Brito", "Fernandes", "Delgado", "Moreira", "Pires", "Silva", "Barros", "Almeida", "Évora", "Spencer"]
+    },
+    "Suriname": {
+        firstNames: ["Sheraldo", "Ryan", "Kelvin", "Jaïro", "Myenty", "Tjaronn", "Gleofilo", "Ridgeciano", "Virgil", "Dion", "Shaquille", "Damil", "Kenneth", "Mitchell", "Romano", "Juninho", "Ravi", "Anand", "Rishi", "Sergio", "Clarence", "Edgar", "Stefano", "Glenn"],
+        lastNames: ["Becker", "Fonville", "Chery", "Vlijter", "Malone", "Haps", "Abena", "Kolk", "Landveld", "Tjin-A-Djie", "Amatkarijo", "Sabajo", "Sitaram", "Ramdin", "Kartosen", "Sodikromo", "Biervliet", "Pinas", "Waterberg", "Linger", "Doorson", "Emanuelson", "Kasanwirjo", "Dors"]
+    },
+    "Curaçao": {
+        firstNames: ["Raymond", "Marlon", "José", "Robert", "Carlos", "Michael", "Jean", "Ronald", "Hubert", "Leandro", "Juninho", "Cuco", "Eloy", "Tahith", "Kenji", "Sontje", "Jürgen", "Gervane", "Rangelo", "Shurandy", "Jearl", "Brandley", "Jarchinio", "Livano", "Godfried", "Riechedly", "Charlison", "Roshon", "Jeremy", "Quentin", "Gino", "Richairo", "Ayrton"],
+        lastNames: ["Bacuna", "Martis", "Maduro", "Jansen", "Hooi", "Martha", "Maria", "Leito", "Francisca", "Zimmerman", "Martina", "Room", "Chong", "Gorré", "Hansen", "Locadia", "Kastaneer", "Janga", "Sambo", "Margaritha", "Kuwas", "Antonia", "Comenencia", "Bazoer", "Benschop", "Floranus", "Obispo", "Martha", "Felida", "Nepomuceno", "Anita", "Zeefuik", "Statia"]
+    },
+    "Venezuela": {
+        firstNames: ["José", "Luis", "Carlos", "Yeferson", "Salomón", "Josef", "Tomás", "Yangel", "Darwin", "Eduard", "Jefferson", "Wuilker", "Yordan", "Rómulo", "Ronald", "Jhon", "Telasco", "Christian", "Andrés", "Kervin", "Daniel", "Alexander", "Yohan", "Jhonder"],
+        lastNames: ["Rondón", "Soteldo", "Martínez", "Rincón", "Machís", "Herrera", "Bello", "Osorio", "Navarro", "Cádiz", "Savarino", "Hernández", "González", "Rodríguez", "Pérez", "Mago", "Aramburu", "Faríñez", "Romo", "Segovia", "Casseres", "Lucena", "Sosa", "Villanueva"]
+    },
+    "Syria": {
+        firstNames: ["Omar", "Firas", "Mahmoud", "Ahmad", "Mohammad", "Khaled", "Amro", "Ibrahim", "Youssef", "Hamid", "Samer", "Bassel", "Jehad", "Tamer", "Fahd", "Nader", "Ward", "Zaher", "Ammar", "Rami", "Moayad", "Alaa", "Hussein", "Aias"],
+        lastNames: ["Al Soma", "Kharbin", "Al Khatib", "Mardikian", "Aosman", "Jenyat", "Al Mawas", "Al Midani", "Bakdash", "Ghaddar", "Al Hamwi", "Haj Mohammad", "Al Salih", "Kurdaghli", "Dali", "Ajouz", "Al Hussein", "Hamwieh", "Shaker", "Al Shami", "Kaddour", "Jamous", "Ismail", "Darwish"]
+    },
+    "Bangladesh": {
+        firstNames: ["Jamal", "Hamza", "Sohel", "Topu", "Rakib", "Sumon", "Biplu", "Tariq", "Mehedi", "Rahmat", "Masuk", "Mohammad", "Saad", "Faisal", "Shakil", "Rafiq", "Imran", "Arif", "Nabib", "Riyadul", "Anisur", "Kawsar", "Tanvir", "Sajjad"],
+        lastNames: ["Bhuyan", "Choudhury", "Rahman", "Hossain", "Islam", "Ahmed", "Kazi", "Uddin", "Miah", "Karim", "Sarkar", "Talukder", "Akand", "Haque", "Alam", "Mollah", "Biswas", "Das", "Roy", "Sikder", "Khan", "Bepari", "Jibon", "Raju"]
+    },
+    "Afghanistan": {
+        firstNames: ["Ahmad", "Mohammad", "Omid", "Faysal", "Sharif", "Zubayr", "Noor", "Masih", "Hashmatullah", "Rahmat", "Abasin", "Najib", "Farid", "Jawid", "Milad", "Wahid", "Sohrab", "Mustafa", "Hamidullah", "Shabir", "Bilal", "Farshad", "Zamir", "Tamim"],
+        lastNames: ["Noor", "Amiri", "Popalzay", "Hashemi", "Saadat", "Haidari", "Karimi", "Rahimi", "Sharifi", "Mohammadi", "Ahmadi", "Zazai", "Sultani", "Azizi", "Rezaei", "Habibi", "Stanikzai", "Barakzai", "Durrani", "Wardak", "Safi", "Nazari", "Sadat", "Popal"]
+    },
+    "Jamaica": {
+        firstNames: ["Leon", "Michail", "Demarai", "Bobby", "Kasey", "Ethan", "Shamar", "Damion", "Andre", "Dexter", "Kemar", "Ricardo", "Omar", "Junior", "Trevor", "Wesley", "Javain", "Ravel", "Dujuan", "Kaheem", "Tyreek", "Jahshaun", "Romario", "Daniel"],
+        lastNames: ["Bailey", "Antonio", "Gray", "Reid", "Palmer", "Pinnock", "Lowe", "Lawrence", "Nicholson", "Morrison", "Williams", "Campbell", "Brown", "Thompson", "Powell", "Johnson", "Clarke", "Bennett", "Grant", "Walker", "Henry", "Russell", "Simpson", "Francis"]
+    },
+    "Pakistan": {
+        firstNames: ["Muhammad", "Ali", "Hassan", "Hamza", "Usman", "Bilal", "Ahmed", "Faisal", "Imran", "Kashif", "Waleed", "Zain", "Saad", "Haris", "Adnan", "Junaid", "Shahzaib", "Harun", "Umar", "Abdullah", "Talha", "Fahad", "Rehan", "Easah"],
+        lastNames: ["Khan", "Ahmed", "Ali", "Hussain", "Siddiqui", "Qureshi", "Malik", "Butt", "Chaudhry", "Iqbal", "Shah", "Raza", "Sheikh", "Akhtar", "Mirza", "Javed", "Riaz", "Saleem", "Anwar", "Rasheed", "Baloch", "Abbasi", "Yousuf", "Haider"]
+    },
+    "Angola": {
+        firstNames: ["Fredy", "Gelson", "Manuel", "Edson", "Domingos", "Carlos", "João", "Pedro", "Paulo", "Jacinto", "Francisco", "Wilson", "Hugo", "Nelson", "Adriano", "Feliciano", "Valdemar", "Augusto", "Eduardo", "Mateus", "Clinton", "Helder", "Milton", "Jonathan"],
+        lastNames: ["Dala", "Gonçalves", "Neto", "Mendes", "Francisco", "Kiala", "Mussunda", "Capita", "Sebastião", "Kinanga", "Muanza", "Tchipa", "Lourenço", "Dias", "Vunge", "Pascoal", "Fernandes", "Domingos", "Simão", "Mateus", "Bumba", "Kalunga", "Cassule", "Ngola"]
+    },
+    "Guinea-Bissau": {
+        firstNames: ["Mamadu", "Bacari", "Saliu", "Braima", "Ibraima", "Seco", "Abdu", "Sana", "Alfa", "Fali", "Mauro", "Edgar", "João", "Carlos", "Tomás", "Marcelo", "Domingos", "Nelson", "Herculano", "Rudinilson", "Jorge", "Simão", "Toni", "Moreto"],
+        lastNames: ["Cassamá", "Mendes", "Djaló", "Baldé", "Embaló", "Candé", "Sanhá", "Camará", "Mané", "Indjai", "Sambú", "Có", "Gomes", "Pereira", "Da Silva", "Fati", "Seidi", "Turé", "Biai", "Sané", "Djú", "Dabó", "Nhaga", "Sambi"]
+    },
+    "Paraguay": {
+        firstNames: ["Miguel", "Julio", "Gustavo", "Omar", "Antonio", "Mathías", "Diego", "Ángel", "Ramón", "Alejandro", "Andrés", "Junior", "Hernán", "Matías", "Fabián", "Óscar", "Roberto", "Carlos", "Juan", "Blas", "Derlis", "Iván", "Gastón", "Lucas"],
+        lastNames: ["Almirón", "Enciso", "Gómez", "Alderete", "Sanabria", "Villasanti", "Cubas", "Balbuena", "Rojas", "Benítez", "González", "Cardozo", "Santa Cruz", "Riveros", "Ortiz", "Martínez", "Cáceres", "Valdez", "Báez", "Giménez", "Domínguez", "Fernández", "Romero", "Duarte"]
+    },
+    "Bolivia": {
+        firstNames: ["Marcelo", "Carlos", "Ramiro", "Miguel", "Héctor", "Diego", "Luis", "Jaime", "Víctor", "Fernando", "Leonel", "Gabriel", "Henry", "Rodrigo", "Moisés", "Robson", "Ervin", "Boris", "Jhasmani", "Roberto", "Pablo", "Danny", "Erwin", "Ramón"],
+        lastNames: ["Moreno", "Martins", "Vaca", "Justiniano", "Arce", "Quiroga", "Saavedra", "Villarroel", "Cuéllar", "Chumacero", "Bejarano", "Haquín", "Fernández", "Algarañaz", "Jusino", "Vargas", "Mamani", "Choque", "Quispe", "Flores", "Rojas", "Gutiérrez", "Suárez", "Terceros"]
+    },
 };
 
 // Nationality distribution based on national team strength
@@ -844,7 +897,8 @@ const NATIONALITY_DISTRIBUTION = {
     "Madagascar": 0.2,
     "Liechtenstein": 0.1,
     "Luxembourg": 0.1,
-    "Cyprus": 0.1
+    "Cyprus": 0.1,
+    "DRC": 1
 };
 
 // Fallback names for countries not in main database
@@ -868,7 +922,7 @@ function getRandomNationality() {
 
 // Function to get nationality based on scouting region
 // 85% from region, 14% international mix, 1% complete wildcard
-function getRegionBasedNationality(scoutRegion) {
+function getRegionBasedNationality(scoutRegion, subRegion) {
     const rand = Rng.next();
 
     // ~11% chance: complete wildcard from the full weighted distribution (global variety)
@@ -881,8 +935,8 @@ function getRegionBasedNationality(scoutRegion) {
         return getRegionPrimaryNationality(scoutRegion);
     }
 
-    // ~21% chance: international player (nearby countries / diaspora)
-    return getRegionSecondaryNationality(scoutRegion);
+    // ~21% chance: international player (nearby countries / diaspora), by the club's region where it has its own list
+    return getRegionSecondaryNationality(scoutRegion, subRegion);
 }
 
 // Get primary nationality for a region
@@ -931,46 +985,196 @@ function getRegionPrimaryNationality(region) {
     return regionMap[region] || (NAMES_DATABASE[region] ? region : "Netherlands");
 }
 
-// Get secondary (immigrant/neighbor) nationality for a region
-function getRegionSecondaryNationality(region) {
-    const secondaryMap = {
-        // Netherlands: Common immigrant populations + neighbors
-        "Netherlands": ["Germany", "Belgium", "Morocco", "Türkiye", "Suriname", "Indonesia", "Poland"],
-        "North Holland": ["Germany", "Belgium", "Morocco", "Türkiye", "Suriname"],
-        "South Holland": ["Morocco", "Türkiye", "Suriname", "Indonesia", "Cape Verde"],
-        "Utrecht": ["Germany", "Morocco", "Türkiye", "Suriname"],
-        "Gelderland": ["Germany", "Türkiye", "Poland"],
-        "North Brabant": ["Belgium", "Germany", "Türkiye", "Morocco"],
-        "Limburg": ["Belgium", "Germany", "Türkiye"],
-        "Friesland": ["Germany", "Poland"],
-        "Groningen": ["Germany", "Poland"],
-        
-        // Germany: Neighbors + immigrants
-        "Germany": ["Poland", "Türkiye", "Italy", "Croatia", "Serbia", "Greece", "Netherlands"],
-        "Bavaria": ["Austria", "Czechia", "Italy", "Croatia", "Türkiye"],
-        "North Rhine-Westphalia": ["Netherlands", "Belgium", "Türkiye", "Poland", "Italy"],
-        "Baden-Württemberg": ["Switzerland", "France", "Italy", "Türkiye", "Croatia"],
-        
-        // Switzerland: Mix of all 4 language regions
-        "Switzerland": ["Germany", "France", "Italy", "Portugal", "Spain", "Serbia", "Kosovo", "Türkiye"],
-        
-        // Belgium: FR/NL mix + immigrants
-        "Belgium": ["Netherlands", "France", "Morocco", "Türkiye", "Italy", "Poland"],
-        
-        // Others
-        "France": ["Algeria", "Morocco", "Tunisia", "Senegal", "Cameroon", "Portugal", "Italy"],
-        "Spain": ["Morocco", "Ecuador", "Colombia", "Argentina", "Brazil"],
-        "Italy": ["Albania", "Romania", "Morocco", "Senegal", "Brazil"],
-        "England": ["Republic of Ireland", "Jamaica", "Nigeria", "Ghana", "Pakistan", "India", "Poland"],
-        "Portugal": ["Brazil", "Cape Verde", "Angola", "Guinea-Bissau"],
-        "Brazil": ["Italy", "Germany", "Japan", "Portugal", "Spain"],
-        "Argentina": ["Italy", "Spain", "Paraguay", "Bolivia"]
-    };
-    
-    const options = secondaryMap[region] || ["Germany", "France", "Spain", "Italy", "Brazil"];
-    
-    // Pick random from secondary options
-    return options[Math.floor(Rng.next() * options.length)];
+// Secondary (neighbour / immigrant) nationalities: about 1 in 5 of a club's players comes from this list.
+//
+// COUNTRY entries ("Switzerland") give the full list for every club in that country. Write either a plain
+// list (every country equally likely) or a weighted one { "Germany": 1.5, "Liechtenstein": 0.3 }, where
+// weights are relative (2 = twice as likely as 1).
+//
+// REGION entries ("Switzerland/vaud") list ONLY WHAT IS DIFFERENT in that region; everything else comes
+// from the country entry. A country named here gets this weight in the region (one the country list
+// lacks is added), and a weight of 0 removes it for the region. A region without an entry is exactly
+// the country. Region ids are the ones in js/clubs.js (e.g. REGIONS_CH: westschweiz, vaud, genève,
+// nordwestschweiz, nordostschweiz, ostschweiz, innerschweiz, bern, ticinovalais).
+const SECONDARY_NATIONALITIES = {
+    // Weights follow the size of each group in the country's official statistics (foreign-born / foreign
+    // nationals, ca. 2021-23: CBS, Destatis, ONS, INE, ISTAT, INSEE, AIMA), limited to nationalities the
+    // game has names and flags for. Big groups without them are left out (e.g. the Philippines, Moldova).
+    // A weight is the group's SIZE; how much of it reaches football is FOOTBALL_AFFINITY (below).
+
+    // Netherlands (CBS): Türkiye, Morocco, Suriname and Germany the largest; Indonesia, Poland; Belgium, Ukraine
+    "Netherlands": { "Türkiye": 2, "Morocco": 2, "Suriname": 1.7, "Germany": 1.7, "Indonesia": 1.2, "Poland": 1.2, "Belgium": 0.6, "Ukraine": 0.5, "Cape Verde": 0.2, "Ghana": 0.2, "Curaçao": 0.6, "Syria": 0.4 },
+    // ...Amsterdam: more Moroccans, Surinamese and Ghanaians
+    "Netherlands/noord-holland": { "Morocco": 2.8, "Suriname": 2.2, "Ghana": 0.5 },
+    // ...Rotterdam and The Hague: more Surinamese, Turks and Cape Verdeans (Rotterdam's community)
+    "Netherlands/zuid-holland": { "Suriname": 2.5, "Türkiye": 2.5, "Cape Verde": 0.7, "Curaçao": 1 },
+    // ...along the German border (Twente, Gelderland) and in the north: more Germans
+    "Netherlands/oost": { "Germany": 3 },
+    "Netherlands/noord": { "Germany": 2.5, "Poland": 1.5 },
+    // ...Brabant and Limburg: Belgians and Germans next door
+    "Netherlands/zuid": { "Belgium": 2, "Germany": 2.5 },
+
+    // Germany (Destatis): Türkiye far ahead, then Poland, Ukraine, Romania, Italy; Croatia, Bulgaria, Greece; the Balkans
+    "Germany": { "Türkiye": 2.5, "Poland": 1.5, "Ukraine": 1.3, "Romania": 1.3, "Italy": 1, "Croatia": 0.7, "Bulgaria": 0.6, "Greece": 0.6, "Kosovo": 0.5, "Serbia": 0.4, "Bosnia and Herzegovina": 0.4, "Austria": 0.4, "Iraq": 0.3, "Hungary": 0.3, "Netherlands": 0.2, "Syria": 1.2, "Afghanistan": 0.6 },
+    // ...the east (Saxony, Thuringia, Saxony-Anhalt): few of the old guest-worker groups; Poles, Czechs, Ukrainians
+    "Germany/ostdeutschland": { "Türkiye": 0.5, "Italy": 0.3, "Greece": 0.2, "Croatia": 0.3, "Poland": 2.5, "Czechia": 1, "Ukraine": 1.8 },
+    // ...Berlin, Brandenburg and Mecklenburg: Berlin's Turks, and Poland next door
+    "Germany/nordosten": { "Poland": 2.5, "Türkiye": 2.2, "Italy": 0.6 },
+    // ...Bavaria: Austrians, Croats, Bosnians, Kosovars; Czechs over the border
+    "Germany/bayern": { "Austria": 1.3, "Croatia": 1.2, "Bosnia and Herzegovina": 0.7, "Kosovo": 0.8, "Czechia": 0.4, "Hungary": 0.5 },
+    // ...the south-west (Baden-Württemberg, Palatinate, Saarland): Italians, Croats, Greeks; French at the border
+    "Germany/sudwesten": { "Italy": 1.8, "Croatia": 1, "Greece": 0.9, "Kosovo": 0.7, "France": 0.4 },
+    // ...North Rhine-Westphalia: the largest Turkish community, and the Dutch border
+    "Germany/nrw": { "Türkiye": 3.2, "Greece": 0.8, "Netherlands": 0.7 },
+    // ...Hamburg, Bremen, Schleswig-Holstein: Poles, Danes at the border, Hamburg's Ghanaians
+    "Germany/norddeutschland": { "Poland": 1.8, "Denmark": 0.5, "Ghana": 0.3 },
+
+    // Switzerland: Mix of all 4 language regions
+    "Switzerland": { "Germany": 1.5, "France": 1, "Italy": 1.5, "Portugal": 1.5, "Spain": 1.5, "Serbia": 0.7, "Kosovo": 1.5, "Türkiye": 0.7, "Poland": 0.5, "North Macedonia": 0.7, "Liechtenstein": 0.3, "Austria": 0.5, "Cameroon": 0.5, "DR Congo": 0.5 },
+    // ...the east borders Liechtenstein and Austria (Vaduz and Eschen/Mauren play here)
+    "Switzerland/ostschweiz": { "Liechtenstein": 1.5, "Austria": 1.5 },
+    // ...the French-speaking west: more French and Portuguese
+    "Switzerland/westschweiz": { "France": 3, "Portugal": 2, "Senegal": 0.5 },
+    "Switzerland/vaud": { "France": 3, "Portugal": 2, "Senegal": 0.5 },
+    "Switzerland/genève": { "France": 3, "Portugal": 2, "Senegal": 0.5, "Cape Verde": 0.2 },
+    // ...the south (Ticino, Valais): Italy first
+    "Switzerland/ticinovalais": { "Italy": 4 },
+
+    // Belgium: FR/NL mix + immigrants
+    "Belgium": { "Netherlands": 1.5, "France": 1.5, "Morocco": 1, "Türkiye": 0.5, "Italy": 1, "Poland": 0.5, "Romania": 1, "Spain": 0.5, "Ukraine": 0.5, "Portugal": 0.5, "Germany": 0.5, "Bulgaria": 0.5, "Cameroon": 0.5, "DR Congo": 0.5 },
+
+    // ...Flanders: the Dutch next door; Antwerp's Moroccans; Limburg's Turks and the Italians of its old mines
+    "Belgium/N-W Belgium": { "Netherlands": 2.5, "France": 1, "Poland": 0.8 },
+    "Belgium/Noord België": { "Netherlands": 3, "France": 0.6, "Morocco": 1.8, "Poland": 0.8 },
+    "Belgium/N-E Belgium": { "Netherlands": 3, "France": 0.6, "Türkiye": 1.3, "Italy": 1.5 },
+    // ...Brussels: Moroccans, French, Romanians, Congolese and the rest of the EU
+    "Belgium/brussels": { "Morocco": 2.5, "France": 2, "Romania": 1.5, "DR Congo": 1.2, "Türkiye": 0.8, "Cameroon": 0.8, "Spain": 0.8, "Portugal": 0.8, "Netherlands": 0.6 },
+    // ...Wallonia: the French next door, the Italians of the Hainaut and Liège mines; Germans in the east cantons
+    "Belgium/S-O Belgique": { "France": 3, "Italy": 2.5, "Netherlands": 0.4 },
+    "Belgium/S-E Belgique": { "France": 2.5, "Italy": 2, "Germany": 1, "Luxembourg": 0.4, "Netherlands": 0.5 },
+
+    // France (INSEE): Algeria, Morocco and Portugal the largest; Tunisia, Italy, Türkiye, Spain; West and Central Africa
+    "France": { "Afghanistan": 0.2, "Algeria": 2.5, "Morocco": 2.2, "Portugal": 1.7, "Tunisia": 0.9, "Italy": 0.8, "Türkiye": 0.7, "Spain": 0.7, "Senegal": 0.5, "Côte d'Ivoire": 0.5, "Mali": 0.4, "Cameroon": 0.4, "DR Congo": 0.4, "Romania": 0.4, "Madagascar": 0.3, "Belgium": 0.3, "Germany": 0.3, "England": 0.3 },
+    // ...the north-east (Grand Est, Hauts-de-France): Belgians and Germans, Lorraine's Italians, Alsace's Turks, the Nord's Poles
+    "France/N-E France": { "Belgium": 1, "Germany": 0.8, "Italy": 1.2, "Türkiye": 1, "Poland": 0.3, "Luxembourg": 0.2 },
+    // ...Paris: much more of West and Central Africa
+    "France/centre France": { "Algeria": 3, "Mali": 1, "Senegal": 1, "Côte d'Ivoire": 1, "DR Congo": 0.8, "Cameroon": 0.7 },
+    // ...the south-east (Rhône-Alpes, Provence; id 'S-O France'): Italians and Tunisians, Marseille's Algerians
+    "France/S-O France": { "Italy": 1.6, "Tunisia": 1.4, "Algeria": 3, "Türkiye": 0.9 },
+    // ...the south-west (Aquitaine, Occitanie; id 'S-E France'): Spaniards, Portuguese, Moroccans; the British in the Dordogne
+    "France/S-E France": { "Spain": 1.6, "Portugal": 2.2, "Morocco": 2.5, "England": 0.6 },
+    // ...Brittany, Normandy, Pays de la Loire: less immigration overall, so the neighbours count more
+    "France/N-O France": { "Algeria": 1.3, "Morocco": 1.1, "England": 0.7 },
+    // ...Corsica: Moroccans first, then Portuguese, Italians, Tunisians
+    "France/Îles": { "Morocco": 3, "Portugal": 2, "Italy": 1.5, "Tunisia": 1 },
+
+    // Spain (INE): Morocco, Colombia, Romania the largest; Ecuador, Argentina, the British, Italians, Peruvians, Ukrainians
+    "Spain": { "Morocco": 2.5, "Colombia": 2, "Romania": 1.7, "Venezuela": 1.5, "Ecuador": 1.2, "Argentina": 1, "England": 0.8, "Italy": 0.8, "Peru": 0.7, "Ukraine": 0.6, "China": 0.5, "Brazil": 0.5, "Bolivia": 0.4, "Germany": 0.4, "France": 0.4, "Paraguay": 0.3, "Senegal": 0.3, "Bulgaria": 0.3 },
+    // ...Andalusia and Murcia: more Moroccans, the British on the coast, Murcia's Ecuadorians
+    "Spain/sur de españa": { "Morocco": 3.5, "England": 1.5, "Ecuador": 1.3 },
+    // ...Catalonia, Aragon, Valencia: Romanians, Italians, the French next door, Barcelona's Pakistanis
+    "Spain/noreste de españa": { "Romania": 2.2, "Italy": 1.2, "France": 0.7, "Pakistan": 0.4 },
+    // ...Madrid: the Latin American communities and the Romanians of the Henares corridor
+    "Spain/españa central": { "Colombia": 2.5, "Romania": 2.2, "Ecuador": 1.5, "Peru": 1.2, "Paraguay": 0.6, "Venezuela": 2 },
+    // ...Galicia, Asturias, Castile and León: the Portuguese next door, Bulgarians, the Galician diaspora coming home
+    "Spain/noroeste de españa": { "Portugal": 1.5, "Bulgaria": 0.6, "Argentina": 1.2, "Uruguay": 0.4 },
+    // ...the Basque Country, Navarre, Cantabria, La Rioja: Colombians, Romanians, Portuguese
+    "Spain/nor de españa": { "Colombia": 1.5, "Romania": 1.3, "Portugal": 0.5 },
+    // ...the Balearics and the Canaries: Germans, British and the Canaries' Italians
+    "Spain/islas": { "Germany": 1.5, "England": 1.5, "Italy": 1.3, "Argentina": 1.2, "Venezuela": 2.5 },   // the Canaries' Venezuelan returnees
+
+    // Italy (ISTAT): Romania far ahead, then Albania and Morocco; China, Ukraine; South Asia, North and West Africa;
+    // and the oriundi from Argentina and Brazil
+    "Italy": { "Romania": 2.5, "Albania": 1.5, "Morocco": 1.5, "China": 0.9, "Ukraine": 0.8, "India": 0.5, "Egypt": 0.5, "Pakistan": 0.5, "Senegal": 0.4, "Nigeria": 0.4, "Tunisia": 0.4, "Argentina": 0.4, "Brazil": 0.4, "Peru": 0.3, "Bangladesh": 0.6 },
+    // ...Lombardy, Piedmont, Liguria: Milan's Egyptians and Peruvians, Genoa's Ecuadorians
+    "Italy/nordovest italia": { "Morocco": 2, "Egypt": 0.9, "Peru": 0.5, "Ecuador": 0.5 },
+    // ...the north-east: South Tyrol's Austrians, Friuli's Slovenes, the Balkans, the Ghanaians of Veneto and Emilia
+    "Italy/nordest italia": { "Austria": 0.5, "Slovenia": 0.4, "North Macedonia": 0.5, "Bosnia and Herzegovina": 0.3, "Croatia": 0.3, "Ghana": 0.4 },
+    // ...Tuscany, Lazio and the centre: Lazio's Romanians, Prato's Chinese
+    "Italy/italia centrale": { "Romania": 3, "China": 1.5 },
+    // ...the south: Apulia's Albanians, Campania's Ukrainians and Nigerians
+    "Italy/sud italia": { "Albania": 2, "Ukraine": 1.1, "Nigeria": 0.6, "Bulgaria": 0.4 },
+    // ...Sicily and Sardinia: Tunisians across the water
+    "Italy/isole": { "Tunisia": 1.5 },
+
+    // England (ONS 2021): India, Poland, Pakistan, Romania, Ireland the largest; Nigeria, Italy, Germany, South Africa,
+    // Jamaica; and the other home nations, which football draws on more than any census shows
+    "England": { "India": 2, "Poland": 1.6, "Pakistan": 1.4, "Romania": 1.2, "Republic of Ireland": 1, "Scotland": 1, "Nigeria": 0.8, "Wales": 0.6, "Italy": 0.6, "Germany": 0.5, "South Africa": 0.5, "Jamaica": 0.5, "Northern Ireland": 0.4, "Portugal": 0.4, "Ghana": 0.4, "Bangladesh": 0.6, "Afghanistan": 0.2 },
+    // ...London: West Africans, Jamaicans, Portuguese and French
+    "England/greater-london": { "Nigeria": 1.5, "Ghana": 1, "Jamaica": 1, "Portugal": 0.7, "France": 0.5, "Bangladesh": 2 },
+    // ...Birmingham and the West Midlands: Pakistanis, Indians, Jamaicans
+    "England/west-midlands": { "Pakistan": 2.5, "India": 2.5, "Jamaica": 0.8 },
+    // ...Yorkshire (Bradford, Leeds, Sheffield): Pakistanis
+    "England/yorkshire": { "Pakistan": 2.5 },
+    // ...the North West: Pakistanis, the Irish of Liverpool and Manchester, Wales next door
+    "England/north-west": { "Pakistan": 1.8, "Republic of Ireland": 1.5, "Wales": 1 },
+    // ...Leicester's Indians; Poles and Romanians in the Midlands and the East
+    "England/east-midlands": { "India": 2.5, "Poland": 2, "Romania": 1.5 },
+    "England/east-england": { "Poland": 2.2, "Romania": 1.8, "Portugal": 0.6 },
+    // ...the North East: Scotland next door
+    "England/north-east": { "Scotland": 1.8 },
+    // ...the South West: Wales across the Severn
+    "England/south-west": { "Wales": 1.2 },
+
+    // Portugal (AIMA): Brazil far ahead; Angola, Cape Verde, Ukraine, the British, India, Guinea-Bissau
+    "Portugal": { "Brazil": 3, "Angola": 0.8, "Cape Verde": 0.8, "Ukraine": 0.6, "England": 0.6, "India": 0.5, "Guinea-Bissau": 0.5, "Italy": 0.4, "France": 0.4, "Spain": 0.4, "China": 0.3, "Romania": 0.3, "Germany": 0.3 },
+    // ...Lisbon: the Cape Verdean, Angolan and Guinean communities
+    "Portugal/Lisbon": { "Cape Verde": 1.5, "Angola": 1.3, "Guinea-Bissau": 0.8 },
+    // ...the Algarve and Alentejo: British and German residents, South Asian and Eastern European farm workers
+    "Portugal/Sul": { "England": 1.5, "Germany": 0.6, "India": 0.7, "Ukraine": 0.8, "Romania": 0.6 },
+    // ...the north: Galicia next door, emigrants' families back from France
+    "Portugal/Noroeste": { "Spain": 1.5, "France": 0.8 },
+    "Portugal/Norte": { "Spain": 1, "France": 0.8 },
+    // ...Madeira and the Azores: British, German and American residents
+    "Portugal/Ilhas": { "England": 0.8, "Germany": 0.6, "USA": 0.4, "Venezuela": 3 },   // Madeira's returnees from Venezuela
+
+    // Others (no clubs in the game today)
+    "Brazil": ["Italy", "Germany", "Japan", "Portugal", "Spain"],
+    "Argentina": ["Italy", "Spain", "Paraguay", "Bolivia"]
+};
+// How much of a community reaches football, for groups where another sport comes first (cricket in South Asia
+// and Afghanistan, baseball in Venezuela) or football is small (China, USA). A list weight is multiplied by
+// this and capped at FOOTBALL_AFFINITY_CAP, so a huge cricket-playing group never outweighs a footballing one.
+const FOOTBALL_AFFINITY = { "India": 0.25, "Pakistan": 0.25, "Bangladesh": 0.25, "Afghanistan": 0.5, "China": 0.35, "Venezuela": 0.6, "USA": 0.6 };
+const FOOTBALL_AFFINITY_CAP = 0.5;
+function _footballWeighted(list) {
+    if (Array.isArray(list)) return list;
+    const out = {};
+    Object.entries(list).forEach(([n, w]) => { const f = FOOTBALL_AFFINITY[n]; out[n] = f == null ? w : Math.min(FOOTBALL_AFFINITY_CAP, w * f); });
+    return out;
+}
+const SECONDARY_DEFAULT = ["Germany", "France", "Spain", "Italy", "Brazil"];
+const _secondaryResolved = {};   // "Country" / "Country/region" -> the list actually drawn from (built once)
+
+// The list for a club's country and region: the country's, with the region's differences applied on top.
+function secondaryNationalities(country, subRegion) {
+    const key = subRegion && SECONDARY_NATIONALITIES[country + '/' + subRegion] ? country + '/' + subRegion : country;
+    if (_secondaryResolved[key]) return _secondaryResolved[key];
+    const base = SECONDARY_NATIONALITIES[country] || SECONDARY_DEFAULT;
+    let list = base;
+    if (key !== country) {
+        const merged = {};
+        if (Array.isArray(base)) base.forEach(n => { merged[n] = 1; }); else Object.assign(merged, base);
+        Object.entries(SECONDARY_NATIONALITIES[key]).forEach(([n, w]) => { if (w > 0) merged[n] = w; else delete merged[n]; });
+        list = merged;
+    }
+    _secondaryResolved[key] = list = _footballWeighted(list);
+    return list;
+}
+
+function getRegionSecondaryNationality(region, subRegion) {
+    return pickWeightedNationality(secondaryNationalities(region, subRegion));
+}
+
+// One nationality from a plain list (equal chances) or a { nationality: weight } list. Always exactly
+// one random draw, so switching a list between the two forms never shifts the rest of the game's dice.
+function pickWeightedNationality(options) {
+    if (Array.isArray(options)) return options[Math.floor(Rng.next() * options.length)];
+    const entries = Object.entries(options).filter(([, w]) => w > 0);
+    const total = entries.reduce((s, [, w]) => s + w, 0);
+    let r = Rng.next() * total;
+    for (const [nat, w] of entries) { r -= w; if (r < 0) return nat; }
+    return entries.length ? entries[entries.length - 1][0] : "Germany";
 }
 
 // Function to generate a name based on nationality
@@ -1030,7 +1234,7 @@ function getNationalityFlag(nationality) {
         "Chile": "🇨🇱",
         "Peru": "🇵🇪",
         "Ecuador": "🇪🇨",
-        "Morocco": "🇲🇦", "Türkiye": "🇹🇷", "Suriname": "🇸🇷", "Indonesia": "🇮🇩",
+        "Morocco": "🇲🇦", "Türkiye": "🇹🇷", "Suriname": "🇸🇷", "Curaçao": "🇨🇼", "Venezuela": "🇻🇪", "Syria": "🇸🇾", "Bangladesh": "🇧🇩", "Afghanistan": "🇦🇫", "Indonesia": "🇮🇩",
         "Cape Verde": "🇨🇻", "Kosovo": "🇽🇰", "Albania": "🇦🇱", "Algeria": "🇩🇿",
         "Tunisia": "🇹🇳", "Angola": "🇦🇴", "Guinea-Bissau": "🇬🇼", "Jamaica": "🇯🇲",
         "Pakistan": "🇵🇰", "India": "🇮🇳", "Paraguay": "🇵🇾", "Bolivia": "🇧🇴",

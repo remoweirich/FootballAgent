@@ -152,6 +152,45 @@ const ClientsScreen = {
 };
 Router.register('clients', { isMain: true, title: () => I18n.t('nav.clients'), render(el) { ClientsScreen.render(el); } });
 
+// ---------------- shared player table (Client History, the club page) ----------------
+// The player page's History table, one row per player: Player (two lines) · Apps · G · A · yellow · red ·
+// Avg. The G column shows goals for everybody (keepers too); only when the list is sorted by clean sheets
+// or filtered to goalkeepers does it switch to clean sheets. Same position filter and sort list everywhere.
+const PlayerTable = {
+    POSGROUP: { GK: 'GK', CB: 'DEF', LB: 'DEF', RB: 'DEF', CDM: 'MID', CM: 'MID', CAM: 'MID', LW: 'ATT', RW: 'ATT', ST: 'ATT' },
+    SORTS: ['apps', 'goals', 'cs', 'assists', 'avg', 'seasons', 'titles', 'yellow', 'red'],
+    filterSort(rows, st) {
+        const dir = st.dir === 'asc' ? 1 : -1;
+        return rows.filter(r => st.pos === 'all' || (this.POSGROUP[r.p.position] || 'MID') === st.pos)
+            .sort((a, b) => ((a[st.sort] || 0) - (b[st.sort] || 0)) * dir);
+    },
+    showCs(st) { return st.sort === 'cs' || st.pos === 'GK'; },
+    posButtons(st, onclick) {
+        return [['all', I18n.t('common.all')], ['GK', 'GK'], ['DEF', 'DEF'], ['MID', 'MID'], ['ATT', 'ATT']]
+            .map(([id, l]) => `<button class="htog ${st.pos === id ? 'is-on' : ''}" onclick="${onclick}('${id}')">${UI.posDot(id)}${l}</button>`).join('');
+    },
+    sortButton(st, onclick) {
+        return `<button class="gbtn" onclick="${onclick}()" style="flex:none"><i class="ti ti-arrows-sort"></i>${I18n.t('clienthist.sort.' + st.sort)}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>`;
+    },
+    sortPickerRows(st, onclick) {
+        return this.SORTS.map(id => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="${onclick}('${id}')"><span style="flex:1;color:var(--text)">${I18n.t('clienthist.sort.' + id)}</span>${st.sort === id ? `<i class="ti ${st.dir === 'asc' ? 'ti-sort-ascending' : 'ti-sort-descending'}" style="color:var(--accent-text)"></i>` : ''}</button>`).join('');
+    },
+    // rows: { p, apps, goals, cs, assists, yellow, red, avg, titles, sub (text for line two, shortened with "…"),
+    // status (a pill that always shows), flag, current }
+    html(rows, st) {
+        const cs = this.showCs(st);
+        const head = `<div class="pt-row ht-head"><span>${I18n.t('cu.player')}</span><span class="ht-n">${I18n.t('common.appsShort')}</span><span class="ht-n">${cs ? I18n.t('common.csShort') : I18n.t('common.goalsShort')}</span><span class="ht-n">${I18n.t('common.assistsShort')}</span><span class="ht-n"><span class="card-chip card-chip--yellow"></span></span><span class="ht-n"><span class="card-chip card-chip--red"></span></span><span class="ht-n">${I18n.t('cd.col.avg')}</span></div>`;
+        const body = rows.map(r => `<a href="${Router.link('client', r.p.id)}" class="ht-stint pt-stint${r.current ? ' pt-current' : ''}">
+            <div class="pt-row"><span class="ht-club"><span class="ht-line ht-name pt-name">${r.flag ? UI.flag(r.p.nationality) + ' ' : ''}<span class="pt-n">${UI.esc(r.p.name)}</span>${r.titles ? `<span class="pt-troph"><i class="ti ti-trophy"></i> ${r.titles}</span>` : ''}</span>
+                <span class="ht-line ht-sub pt-sub">${UI.posChip(r.p.position)}<span class="pt-t">${r.sub || ''}</span>${r.status || ''}</span></span>
+            <span class="ht-n">${r.apps || 0}</span><span class="ht-n">${cs ? (r.cs || 0) : (r.goals || 0)}</span><span class="ht-n">${r.assists || 0}</span><span class="ht-n ht-y">${r.yellow || 0}</span><span class="ht-n ht-r">${r.red || 0}</span>
+            <span class="ht-n ht-avg">${r.apps ? UI.ratingText(r.avg) : '<span class="muted">—</span>'}</span></div></a>`).join('');
+        return `<div class="fcard hist-list hist-table">${head}${body}</div>`;
+    },
+    // plain sub-line text like the player page's History (a boxed pill took the room the seasons need)
+    statusPill(text, accent) { return text ? `<span class="pt-status${accent ? ' pt-status--on' : ''}">· ${text}</span>` : ''; }
+};
+
 // ---------------- Client History ----------------
 const ClientHistory = {
     state: { pos: 'all', sort: 'apps', dir: 'desc' },
@@ -159,45 +198,35 @@ const ClientHistory = {
     SORTS: [['apps', 'Games'], ['goals', 'Goals'], ['cs', 'Clean sheets'], ['assists', 'Assists'], ['avg', 'Avg rating'], ['seasons', 'Seasons'], ['titles', 'Titles'], ['yellow', 'Yellow cards'], ['red', 'Red cards']],
     rows() {
         return GameState.players.filter(p => p.everClient).map(p => {
-            const c = careerLeagueTotal(p);
+            // the same totals as Records and the player's own career total: every senior club competition
+            // (league, cups, Europe, play-offs), not youth games and not internationals
+            const c = careerTotal(p);
             return {
                 p, grp: this.POSGROUP[p.position] || 'MID', apps: c.apps, goals: c.goals, cs: c.cs || 0, assists: c.assists,
                 yellow: c.yellow, red: c.red, titles: (p.trophies || []).length,
                 avg: c.avg, seasons: seasonsActiveLeague(p),
                 status: p.archived ? (p.retired ? I18n.t('clienthist.status.retired') : I18n.t('clienthist.status.archived')) : (p.agentId === 'me' ? I18n.t('clienthist.status.active') : I18n.t('clienthist.status.exClient'))
             };
-        }).filter(r => this.state.pos === 'all' || r.grp === this.state.pos);
+        });
     },
-    sorted() {
-        const dir = this.state.dir === 'asc' ? 1 : -1;
-        return this.rows().sort((a, b) => (a[this.state.sort] - b[this.state.sort]) * dir);
-    },
+    sorted() { return PlayerTable.filterSort(this.rows(), this.state); },
     render(el) {
         const rows = this.sorted();
-        const posBtns = [['all', I18n.t('common.all')], ['GK', 'GK'], ['DEF', 'DEF'], ['MID', 'MID'], ['ATT', 'ATT']]
-            .map(([id, l]) => `<button class="htog ${this.state.pos === id ? 'is-on' : ''}" onclick="ClientHistory.setPos('${id}')">${UI.posDot(id)}${l}</button>`).join('');
+        const posBtns = PlayerTable.posButtons(this.state, 'ClientHistory.setPos');
         el.innerHTML = `<div class="flex-row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-3);gap:var(--space-2)">
             <p class="hint" style="margin:0">${I18n.t('clienthist.subtitle')}</p>
             <a class="gbtn" href="#records" style="flex:none"><i class="ti ti-award"></i>${I18n.t('clienthist.records')}</a>
         </div>
         <div class="flex-row" style="justify-content:space-between;margin-bottom:var(--space-4);flex-wrap:wrap;gap:var(--space-2)">
             <div class="chip-row">${posBtns}</div>
-            <button class="gbtn" onclick="ClientHistory.pickSort()" style="flex:none"><i class="ti ti-arrows-sort"></i>${I18n.t('clienthist.sort.' + this.state.sort)}<i class="ti ti-chevron-down" style="color:var(--text-faint)"></i></button>
+            ${PlayerTable.sortButton(this.state, 'ClientHistory.pickSort')}
         </div>
         <div id="clientHistBody">${this.rowsHTML(rows)}</div>`;
     },
     rowsHTML(rows) {
-        return rows.length ? rows.map(r => this.row(r)).join('') : `<div class="empty"><div class="empty__icon"><i class="ti ti-history"></i></div><div class="empty__title">${I18n.t('clienthist.noHistory')}</div><div class="empty__hint">${I18n.t('clienthist.noHistorySub')}</div></div>`;
-    },
-    // normally shows goals+assists; sorting by yellow/red swaps them in instead, since
-    // scanning for discipline stats while goals/assists sit there unrelated is noisy
-    row(r) {
-        const disc = ['yellow', 'red'].includes(this.state.sort);
-        const line2 = disc ? `<span class="card-chip card-chip--yellow"></span>${r.yellow} <span class="card-chip card-chip--red"></span>${r.red}` : `${r.p.position === 'GK' ? r.cs + ' ' + I18n.t('common.csShort') : r.goals + ' ' + I18n.t('common.goalsShort')} · ${r.assists} ${I18n.t('common.assistsShort')}`;
-        return `<a href="#client/${r.p.id}" class="list-row" style="cursor:pointer">
-            <div style="flex:1;min-width:0"><div class="row-title">${UI.flag(r.p.nationality)} ${UI.esc(r.p.name)}</div><div class="row-sub">${UI.posChip(r.p.position)} · ${I18n.t('clienthist.seasonsN', { n: r.seasons })} · <span class="pill" style="padding:1px 7px;font-size:10.5px">${r.status}</span>${r.titles ? ` · <i class="ti ti-trophy" style="font-size:11px;color:var(--gold)"></i> ${r.titles}` : ''}</div></div>
-            <div style="text-align:right;font-size:var(--fs-sm);color:var(--text-muted)">${r.apps} ${I18n.t('common.appsShort')} · ${line2}<br>${UI.ratingText(r.avg)}</div>
-        </a>`;
+        if (!rows.length) return `<div class="empty"><div class="empty__icon"><i class="ti ti-history"></i></div><div class="empty__title">${I18n.t('clienthist.noHistory')}</div></div>`;
+        return PlayerTable.html(rows.map(r => ({ ...r, flag: true,
+            sub: I18n.t('clienthist.seasonsN', { n: r.seasons }), status: PlayerTable.statusPill(r.status, r.p.agentId === 'me') })), this.state);
     },
     setPos(id) { this.state.pos = id; Router.refresh(); },
     // same "stays open" picker as ClientsScreen.pickSort() — see the comment there
@@ -206,9 +235,7 @@ const ClientHistory = {
             <div id="sortPickerBody">${this.sortPickerRows()}</div>
             <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.done')}</button>`);
     },
-    sortPickerRows() {
-        return this.SORTS.map(([id, label]) => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ClientHistory.setSort('${id}')"><span style="flex:1;color:var(--text)">${I18n.t('clienthist.sort.' + id)}</span>${this.state.sort === id ? `<i class="ti ${this.state.dir === 'asc' ? 'ti-sort-ascending' : 'ti-sort-descending'}" style="color:var(--accent)"></i>` : ''}</button>`).join('');
-    },
+    sortPickerRows() { return PlayerTable.sortPickerRows(this.state, 'ClientHistory.setSort'); },
     setSort(id) {
         if (this.state.sort === id) this.state.dir = this.state.dir === 'asc' ? 'desc' : 'asc';
         else { this.state.sort = id; this.state.dir = 'desc'; }

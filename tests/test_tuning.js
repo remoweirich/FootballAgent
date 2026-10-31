@@ -15,6 +15,8 @@ let failed = false;
 const check = (label, cond) => { console.log((cond ? 'PASS' : 'FAIL') + '  ' + label); if (!cond) failed = true; };
 
 run(`Clubs.init(); GameState.startNewGame('Switzerland', 'Tuning Test'); GameState.week = 20;`);
+// the BASE bench tick (the club-fit patience multiplier is tested in test_batch_2026_10_30)
+run(`Agency.benchPatience = function () { return 1; };`);
 
 // ---- reserve<->parent registry (the Basel U21 bug) ----
 check('reserveClubFor(Basel) -> Basel U21', runv(`const r = reserveClubFor('Basel'); return r && r.id === 'Basel U21';`));

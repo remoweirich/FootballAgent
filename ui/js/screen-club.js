@@ -2,7 +2,7 @@
 //  Club profile — honours, recent finishes, your clients there.
 // ============================================================
 const ClubScreen = {
-    state: { sort: 'apps', mode: 'season' },
+    state: { sort: 'apps', dir: 'desc', pos: 'all', mode: 'season' },
     render(el, clubId) {
         const c = Clubs.getClubById(clubId);
         if (!c) {
@@ -39,30 +39,36 @@ const ClubScreen = {
         // or departure still shows, just with however many games he's played here so far); "All
         // time" is the full career-at-this-club aggregate.
         const rowsData = [];
+        const atClubYears = p => Object.keys(p.stats || {}).map(Number).filter(y => seasonStints(p, y).some(st => st.clubId === clubId && !st.youth && st.totals.apps > 0)).sort((x, y) => x - y);
+        const row = (p, agg, extra) => ({ p, apps: agg.apps || 0, goals: agg.goals || 0, cs: agg.cs || 0, assists: agg.assists || 0, yellow: agg.yellow || 0, red: agg.red || 0,
+            avg: agg.avg != null ? agg.avg : (agg.apps ? (agg.ratingSum || 0) / agg.apps : 0), ...extra });
         GameState.players.filter(p => p.everClient).forEach(p => {
             const current = p.agentId === 'me' && (p.clubId === clubId || p.onLoanAt === clubId);
+            const status = current ? PlayerTable.statusPill(I18n.t('club.current'), true) : p.retired ? PlayerTable.statusPill(I18n.t('club.retired')) : '';
             if (mode === 'season') {
                 const st = seasonStints(p, year).find(s => s.clubId === clubId);
                 if (!st || !st.totals.apps) return;
-                rowsData.push({ p, agg: st.totals, youthOnly: !!st.youth, current, tro: (p.trophies || []).filter(tr => tr.year === year && tr.clubId === clubId).length });
+                const sub = [st.youth ? I18n.t('club.youth') : '', st.loan ? I18n.t('cd.col.loan') : ''].filter(Boolean).join(' · ');
+                rowsData.push(row(p, st.totals, { current, seasons: 1, titles: (p.trophies || []).filter(tr => tr.year === year && tr.clubId === clubId).length, sub, status }));
             } else {
                 const byClub = careerByClub(p);
                 const senior = byClub.find(m => m.clubId === clubId);
                 const youth = byClub.find(m => m.clubId === 'u21:' + clubId);
-                const registeredHere = p.clubId === clubId;
-                if (!senior && !youth && !registeredHere) return;
-                let agg, youthOnly = false;
-                if (senior && senior.agg.apps > 0) agg = senior.agg;
-                else if (youth && youth.agg.apps > 0) { agg = { apps: 0, goals: 0, assists: 0, avg: youth.agg.avg }; youthOnly = true; }
-                else agg = { apps: 0, goals: 0, assists: 0, avg: 0 };
-                rowsData.push({ p, agg, youthOnly, current, tro: (p.trophies || []).filter(tr => tr.clubId === clubId).length });
+                if (!senior && !youth && p.clubId !== clubId) return;
+                const agg = senior && senior.agg.apps > 0 ? senior.agg : { apps: 0, goals: 0, assists: 0, avg: 0 };
+                const ys = atClubYears(p);
+                const span = !ys.length ? (youth ? I18n.t('club.youth') : '')
+                    : ys.length === 1 ? GameState.seasonLabelFor(ys[0])
+                    : `${GameState.seasonLabelFor(ys[0])}–${GameState.seasonLabelFor(ys[ys.length - 1])}`;
+                // the span already says how long; the count only when he left and came back (gaps in the span)
+                const gaps = ys.length > 1 && ys[ys.length - 1] - ys[0] + 1 !== ys.length;
+                const sub = [span, gaps ? I18n.t('clienthist.seasonsN', { n: ys.length }) : '', senior && senior.loanEver ? I18n.t('cd.col.loan') : ''].filter(Boolean).join(' · ');
+                rowsData.push(row(p, agg, { current, seasons: ys.length, titles: (p.trophies || []).filter(tr => tr.clubId === clubId).length, sub, status }));
             }
         });
-        const sorters = { apps: (a, b) => b.agg.apps - a.agg.apps, goals: (a, b) => b.agg.goals - a.agg.goals, assists: (a, b) => b.agg.assists - a.agg.assists, avg: (a, b) => b.agg.avg - a.agg.avg };
-        rowsData.sort((a, b) => (b.current - a.current) || (sorters[this.state.sort] || sorters.apps)(a, b));
-        const clientRows = rowsData.length ? rowsData.map(d => `<a href="${Router.link('client', d.p.id)}" class="frow" style="cursor:pointer;${d.current ? 'background:var(--accent-fill);border-radius:var(--radius-sm)' : ''}">
-            <span class="frow__k">${UI.esc(d.p.name)}${d.current ? ` <span class="pill pill--accent" style="padding:1px 6px;font-size:10px">${I18n.t('club.current')}</span>` : ''}${d.p.retired ? ` <span class="pill" style="padding:1px 6px;font-size:10px">${I18n.t('club.retired')}</span>` : ''}${d.youthOnly ? ` <span class="muted">${I18n.t('club.youth')}</span>` : ''}</span>
-            <span class="frow__v">${d.agg.apps} ${I18n.t('common.appsShort')} · ${d.agg.goals}${I18n.t('common.goalsShort')} · ${d.agg.assists || 0}${I18n.t('common.assistsShort')} · ${UI.ratingText(d.agg.avg)}${d.tro ? ' · 🏆' + d.tro : ''}</span></a>`).join('')
+        // your current clients here first, then the chosen order
+        const shown = PlayerTable.filterSort(rowsData, this.state).sort((a, b) => (b.current ? 1 : 0) - (a.current ? 1 : 0));
+        const clientRows = shown.length ? PlayerTable.html(shown, this.state)
             : `<p class="muted">${mode === 'season' ? I18n.t('club.noneSeason') : I18n.t('club.noneAll')}</p>`;
 
         el.innerHTML = `
@@ -80,10 +86,11 @@ const ClubScreen = {
             <button class="htog ${mode === 'season' ? 'is-on' : ''}" onclick="ClubScreen.setMode('${UI.jsArg(clubId)}','season')">${I18n.t('club.currentSeason')}</button>
             <button class="htog ${mode === 'all' ? 'is-on' : ''}" onclick="ClubScreen.setMode('${UI.jsArg(clubId)}','all')">${I18n.t('club.allTime')}</button>
         </div>
-        <div class="chip-row" style="margin:0 0 var(--space-3)">
-            ${['apps', 'goals', 'assists', 'avg'].map(k => `<button class="htog ${this.state.sort === k ? 'is-on' : ''}" onclick="ClubScreen.setSort('${UI.jsArg(clubId)}','${k}')">${I18n.t({ apps: 'club.apps', goals: 'club.goals', assists: 'club.assists', avg: 'club.rating' }[k])}</button>`).join('')}
+        <div class="flex-row" style="justify-content:space-between;margin:0 0 var(--space-3);flex-wrap:wrap;gap:var(--space-2)">
+            <div class="chip-row">${PlayerTable.posButtons(this.state, `ClubScreen.setPos.bind(ClubScreen,'${UI.jsArg(clubId)}')`)}</div>
+            ${PlayerTable.sortButton(this.state, `ClubScreen.pickSort.bind(ClubScreen,'${UI.jsArg(clubId)}')`)}
         </div>
-        <div class="fcard">${clientRows}</div>`;
+        ${clientRows}`;
     },
     // Best-ever run in each European competition (UCL/UEL/UECL), if the club has ever qualified.
     europeBestHTML(clubId) {
@@ -100,7 +107,20 @@ const ClubScreen = {
         if (!rows) return '';
         return `<div class="section-label">${I18n.t('club.bestEurope')}</div><div class="fcard" style="margin-top:var(--space-2)">${rows}</div>`;
     },
-    setSort(clubId, k) { this.state.sort = k; Router.refresh(); },
+    setPos(clubId, id) { this.state.pos = id; Router.refresh(); },
+    pickSort(clubId) {
+        this._sortClub = clubId;
+        Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('clienthist.sortTitle')}</div>
+            <div id="sortPickerBody">${PlayerTable.sortPickerRows(this.state, 'ClubScreen.setSort')}</div>
+            <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.done')}</button>`);
+    },
+    // same "stays open" picker as Client History: tapping the current sort flips its direction
+    setSort(k) {
+        if (this.state.sort === k) this.state.dir = this.state.dir === 'asc' ? 'desc' : 'asc';
+        else { this.state.sort = k; this.state.dir = 'desc'; }
+        const body = document.getElementById('sortPickerBody'); if (body) body.innerHTML = PlayerTable.sortPickerRows(this.state, 'ClubScreen.setSort');
+        Router.refresh();
+    },
     setMode(clubId, m) { this.state.mode = m; Router.refresh(); }
 };
 Router.register('clubs', { isMain: false, parent: 'leagues', title: () => I18n.t('club.title'), render(el, params) { ClubScreen.render(el, params[0]); } });

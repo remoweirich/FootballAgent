@@ -29,7 +29,7 @@ const MORALE = {
     WAGE_UNDERPAID_DECAY: 2.2, // weekly wage-morale erosion when underpaid, scaled by how far below fair he is
     CLUB_LOCK_UNDER_AGE: 18, CLUB_LOCK_VALUE: 80,   // U18s don't resent their club yet: pinned at 80
 
-    TROPHY_CLUB: 12, TROPHY_AGENT: 3,   // a trophy is his club's doing more than his agent's
+    TROPHY_CLUB: 12, TROPHY_AGENT: 3, TROPHY_TIME: 6,   // a medal also eases the bench a little   // a trophy is his club's doing more than his agent's
     PROMOTION_CLUB: 10, RELEGATION_CLUB: -12,
     // The season-end "what a year he's had" bonus: +15 time, +30 club, +6 agent, -10 wage (agent was +20, but
     // a good season is little of his agent's doing, and it kept the You bar pinned near the top). It is a
@@ -316,6 +316,7 @@ const Sim = {
         // ---- inbox: new offers during window, sponsors anytime, expiry/persistence ----
         this._deliverPending(events);
         if (GameState.isTransferWindowOpen(week) || week >= 48) this._generateOffers(events);
+        this._listingExpiry(events);
         this._forcedMoves(events);   // stage-3 time/club: the player pushes his own move through (window only; guards inside)
         this._sponsorOffers(events);
         this._clubRenewals(events);   // clubs proactively try to re-sign final-year clients they want to keep
@@ -480,7 +481,8 @@ const Sim = {
                     p.morale.time = Math.max(0, Math.min(100, p.morale.time + tierOf(p._playStreak, MORALE.PLAY_TICK)));
                 } else if (!offSeasonNoMatch) {
                     p._benchStreak += 1; p._playStreak = 0;
-                    p.morale.time = Math.max(0, Math.min(100, p.morale.time + tierOf(p._benchStreak, MORALE.BENCH_TICK)));
+                    // how much the bench hurts depends on what this club means to him (Agency.clubFit)
+                    p.morale.time = Math.max(0, Math.min(100, p.morale.time + tierOf(p._benchStreak, MORALE.BENCH_TICK) * Agency.benchPatience(p)));
                 }
             }
 
@@ -706,6 +708,24 @@ const Sim = {
         });
     },
 
+    // A transfer listing ends after Agency.LIST_WINDOWS windows without a sale (a new contract ends it at
+    // once, see acceptRenewal). Checked the week after each window closes; a window counts if he was listed
+    // from its first three weeks on.
+    _listingExpiry(events) {
+        const week = GameState.week; if (week !== 7 && week !== 34) return;
+        const start = GameState.seasonStartYear * 52 + (week === 7 ? 1 : 28);
+        Agency.clients().forEach(p => {
+            if (!p.transferListed) return;
+            if (p._listedAbs == null) p._listedAbs = start;   // listed before this rule existed: count from now
+            if (p._listedAbs > start + 2) return;             // listed too late in this window to count it
+            p._listWins = (p._listWins || 0) + 1;
+            if (p._listWins < Agency.LIST_WINDOWS) return;
+            const club = Clubs.getClubById(p.clubId);
+            Agency.setTransferListed(p, false);
+            GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('sim.listEndSubj', { name: p.name }), body: I18n.t('sim.listEndBody', { name: p.name, club: club ? club.name : '' }), ttl: 4 });
+            events.push({ type: 'offer', text: I18n.t('sim.listEndEvent', { name: p.name }) });
+        });
+    },
     _deliverPending(events) {
         const aw = GameState.absWeek();
         Agency.clients().forEach(p => {
@@ -766,7 +786,7 @@ const Sim = {
             // a club may list a player it no longer builds on, to recoup a fee
             const homeClub = Clubs.getClubById(p.clubId);
             if (homeClub && !p.transferListed && ['youth', 'fringe'].includes(p.squadRole) && p.ability < homeClub.reputation - 6 && Rng.next() < 0.015) {
-                p.transferListed = true;
+                Agency.setTransferListed(p, true);
                 GameState.addMail({ playerId: p.id, kind: 'news', subject: I18n.t('sim.aiListSubj', { club: homeClub.name, name: p.name }), body: I18n.t('sim.aiListBody', { club: homeClub.name, name: p.name }), ttl: 4 });
                 events.push({ type: 'offer', text: I18n.t('sim.ev.listed', { club: homeClub.name, name: p.name }) });
             }
@@ -776,7 +796,7 @@ const Sim = {
                 // stage-2 escalation is public knowledge: an agitating player or a formal transfer
                 // request both draw noticeably more interest than usual
                 const caseAttract = (mc && mc.stage >= 2) ? (mc.dim === 'time' ? MORALE.STAGE2_TIME_ATTRACT : mc.dim === 'club' ? MORALE.STAGE2_CLUB_ATTRACT : 0) : 0;
-                const attract = 10 + Math.min(20, tot.apps) * 0.5 + (p.transferListed ? 22 : 0) + caseAttract;
+                const attract = 10 + Math.min(20, tot.apps) * 0.5 + caseAttract;
                 // elite players attract bids far less often — only a handful of clubs can afford them, and
                 // they don't get fresh approaches every window
                 const scarcity = p.ability >= 84 ? 0.30 : p.ability >= 80 ? 0.48 : p.ability >= 74 ? 0.68 : p.ability >= 68 ? 0.90 : 1.0;
@@ -786,15 +806,18 @@ const Sim = {
                 // to be built BEFORE the roll (it also sets how far above him clubs may be — a player
                 // in the form of his life is looked at by clubs plainly too good for him).
                 const w = Agency.interestWeights(p);
-                const lo = p.transferListed ? p.ability - 14 : p.ability - 6;
-                const hi = p.ability + 16 + w.widen;
+                // transfer-listed: his form decides which clubs come (Agency.LIST_BANDS); otherwise the usual range
+                const lb = p.transferListed ? Agency.listBand(p) : null;
+                const lo = lb ? p.ability + lb.lo : p.ability - 6;
+                const hi = lb && lb.hi != null ? p.ability + lb.hi : p.ability + 16 + w.widen;
                 const val = Agency.playerValue(p);
                 const cands = Clubs.allClubs.filter(c =>
                     c.id !== p.clubId && c.reputation >= lo && c.reputation <= hi &&
                     Agency.buyerMaxFee(c) >= val * 0.55 &&
                     !Agency.clubHasMyPlayerAtPos(c.id, p.position, p.id, posIdx) &&
                     !offeredBy.has(c.id));
-                const chance = Math.min(0.26, 0.02 + attract / 320) * scarcity * w.boost * Agency.meanBuyerWeight(p, cands, w);
+                let chance = Math.min(0.26, 0.02 + attract / 320) * scarcity * w.boost * Agency.meanBuyerWeight(p, cands, w);
+                if (lb) chance = Math.min(Agency.LIST_BID_CAP, chance * lb.bidMult);   // listed: x5.5 / x4 / x3 / x2.5 by form
                 if (cands.length && Rng.next() < chance) {
                     {
                         // a player clearly outgrowing his club, in hot form, or a big-potential prospect

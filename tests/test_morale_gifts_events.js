@@ -118,7 +118,8 @@ const parsed = JSON.parse(hf);
 const gotTrophyToo = runv(`return GameState.getPlayer(window.__pid).trophies.length`) > runv(`return window.__trophiesBefore`);
 const expClub = 50 + 30 + (gotTrophyToo ? 12 : 0);
 const expAgent = 50 + 6 + (gotTrophyToo ? 3 : 0);
-check('hot form: time +15, got ' + parsed.time, Math.abs(parsed.time - 65) < 0.01);
+const expTime = 65 + (gotTrophyToo ? runv(`return MORALE.TROPHY_TIME || 0`) : 0);   // a real trophy also eases the bench
+check('hot form: time +15' + (gotTrophyToo ? ' (+ the trophy)' : '') + ', got ' + parsed.time, Math.abs(parsed.time - expTime) < 0.01);
 check('hot form: wage -10, got ' + parsed.wage, Math.abs(parsed.wage - 40) < 0.01);
 check('hot form: club +30' + (gotTrophyToo ? ' (+ a real trophy this season, +12)' : '') + ', got ' + parsed.club, Math.abs(parsed.club - expClub) < 0.01);
 check('hot form: agent +6' + (gotTrophyToo ? ' (+ a real trophy this season, +3)' : '') + ', got ' + parsed.agent, Math.abs(parsed.agent - expAgent) < 0.01);

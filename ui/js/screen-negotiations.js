@@ -76,7 +76,7 @@ Router.register('inbox', {
             const href = m.kind === 'attend' ? Router.link('attendfinals') : Router.link('mail', m.id);
             return `<a class="list-row" href="${href}" style="cursor:pointer;${m.read ? '' : 'background:var(--accent-fill)'}">
                 <div class="row-ico" style="background:color-mix(in srgb, ${UI.kindColor(m.kind)} 16%, transparent);color:${UI.kindColor(m.kind)}"><i class="ti ${UI.kindIcon(m.kind)}"></i></div>
-                <div style="flex:1;min-width:0"><div class="row-title">${UI.esc(m.subject)}</div><div class="row-sub">W${m.week} ${m.season}${off ? ' · ' + off : ''}</div></div>
+                <div style="flex:1;min-width:0"><div class="row-title">${UI.esc(m.subject)}</div><div class="row-sub">W${m.week} ${m.season}${off ? ' · ' + off : ''}${UI.keenChip(UI.keenFor(m)) ? ' ' + UI.keenChip(UI.keenFor(m)) : ''}</div></div>
                 ${!m.read ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none"></span>' : ''}
             </a>`;
         }).join('')}</div>`;
@@ -237,6 +237,7 @@ Nego.transfer = function (el, m) {
 
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
         <div style="margin:6px 0 var(--space-3)">${UI.relBadge(to.id)}</div>
+        ${this.keenLine(m)}
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.playersWage')}</span><span class="frow__v">${UI.euro(p.wage)}/wk</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.currentClub')}</span><span class="frow__v">${fromLeague}</span></div>
@@ -372,7 +373,9 @@ Nego.slide = function (id, key, val) {
     this._slide(id, key, val);
     this.syncAgreed(id);
 };
-Nego._slide = function (id, key, val) {
+// every change to the terms also updates how keen he is (the stars)
+Nego._slide = function (id, key, val) { this._slideTerms(id, key, val); this.refreshKeen(id); };
+Nego._slideTerms = function (id, key, val) {
     const c = this.ctxFor(id);
     if (key === 'duration') { c.duration = val; return; }
     // the goalkeeper "Cup Goalkeeper" option is a Back Up (rotation) flagged to play the cup ties
@@ -478,6 +481,25 @@ Nego.acceptRenewal = function (mailId) {
 };
 
 // ---------------- Loan ----------------
+// "How he feels about it": the keenness tag and its two strongest reasons (UI.keenFor)
+// the terms on screen right now (what you are negotiating), so the stars move with the role and wage
+Nego.keenTerms = function (m) {
+    const c = this.ctx[m.id]; if (!c) return null;
+    return m.kind === 'loan' ? { role: c.loanRole } : { role: c.role, wage: c.wage };
+};
+Nego.keenInner = function (m) {
+    const k = UI.keenFor(m, this.keenTerms(m)); if (!k) return '';
+    const why = UI.keenReasons(k);
+    return `<span class="keen-label">${I18n.t('keen.label')}</span>${UI.keenChip(k)}${why ? `<span class="keen-why">${UI.esc(why)}</span>` : ''}`;
+};
+Nego.keenLine = function (m) {
+    const inner = this.keenInner(m);
+    return inner ? `<div class="keen-line" id="negoKeen">${inner}</div>` : '';
+};
+Nego.refreshKeen = function (id) {
+    const el = document.getElementById('negoKeen'), m = GameState.inbox.find(x => x.id === id);
+    if (el && m) el.innerHTML = this.keenInner(m);
+};
 Nego.loan = function (el, m) {
     const o = m.offer, p = GameState.getPlayer(o.playerId), to = Clubs.getClubById(o.toClubId);
     if (!p || !to) { this.dismiss(m.id); return; }
@@ -496,6 +518,7 @@ Nego.loan = function (el, m) {
     if (!o.agreed) this.agree(m, c);
     el.innerHTML = `<p style="font-style:italic;color:var(--text-secondary)">"${Agency.greetingFor(to.id)}"</p>
         <div style="margin:6px 0 var(--space-3)">${UI.relBadge(to.id)}</div>
+        ${this.keenLine(m)}
         <div class="fcard">
             <div class="frow"><span class="frow__k">${I18n.t('nego.club')}</span><span class="frow__v">${this.clubLine(to)}</span></div>
             <div class="frow"><span class="frow__k">${I18n.t('nego.from')}</span><span class="frow__v">${p.clubId && Clubs.getClubById(p.clubId) ? this.clubLine(Clubs.getClubById(p.clubId)) : ''}</span></div>

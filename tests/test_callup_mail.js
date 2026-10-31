@@ -47,13 +47,16 @@ const r = JSON.parse(run(`
   // the same mail cut to 2 clients: lines instead of a table
   var small = JSON.parse(JSON.stringify(m)); small.callup.groups = [G[0]]; small.callup.groups[0].players = G[0].players.slice(0, 2);
   var el2 = { innerHTML: '' }; Nego.generic(el2, small);
-  var attn = Home.needsAttention().filter(function (i) { return i.icon === 'ti-flag'; }).map(function (i) { return i.sub; });
+  // by title: a new complaint shares the flag icon
+  var attn = Home.needsAttention().filter(function (i) { return i.title === I18n.t('home.attn.callups'); }).map(function (i) { return i.sub; });
   // NEW: a first ever call-up at any age, unless he was already an international when he joined you
   // (estimated at signing: 24+ and good enough for a rotation place or better)
   var nid = G[0].nid, cl = Agency.clients(), aw = GameState.absWeek(), B = Internationals.callupBands(nid);
   var a = cl[0], b = cl[1], c = cl[2], d = cl[3];
   [a, b, c, d].forEach(function (p) { p.intlStats = {}; });
   a.age = 28; a._intlPrior = false;                                                    // signed before he was good enough
+  var ofNid = GameState.players.find(function (p) { return Internationals.nationOfPlayer(p) === nid; });
+  b.nationality = ofNid.nationality;                                                 // the estimate uses his own nation's bands
   b.age = 28; b.ability = B.starter + 1; delete b._intlPrior; b._signedAbs = aw - 2;  // an established international, just signed
   c.age = 28; c.ability = B.starter + 1; delete c._intlPrior; c._signedAbs = aw - 60; // older save: with you a year, never called
   d.age = 19; d._intlPrior = false; d.intlStats = { 2026: { INTL_NL: { apps: 2 } } };   // already capped

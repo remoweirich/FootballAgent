@@ -578,6 +578,7 @@ const Dialogue = {
     // His boyhood club. ~19 in 20 it's from his home country; within that, ~8 in 10 it's from the
     // region he came up in (the club he's at now), so a Basel lad supports a Basel-region side, not a
     // crosstown/national rival. Big clubs still collect the most childhood hearts (rep-squared weight).
+    NO_HOME_GIANT_SHARE: 0.3,
     _rollFavClub(p) {
         const home = this._homeCountryOf(p);
         const cur = Clubs.getClubById(effectiveClubId(p));
@@ -592,6 +593,14 @@ const Dialogue = {
         if (!(typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[p.nationality])) {
             const eu = this._europePool(p.nationality);
             if (eu) return this._weightedByRep2(eu);
+            // a nation the game has no clubs for at all (Argentina, Brazil, Nigeria...): he grew up on a
+            // club back home, not on one in the country he happens to play in now. Some idolised a foreign
+            // giant from afar; otherwise the club stays unnamed ("a club back home")
+            if (Rng.next() < this.NO_HOME_GIANT_SHARE) {
+                const giants = Clubs.allClubs.filter(c => c.tier === 1 && c.reputation >= 82 && this._senior(c));
+                const g = this._weightedByRep2(giants); if (g) return g;
+            }
+            return null;
         }
         // within his home country: ~8 in 10 from his own region, else anywhere at home
         let pool = null;
@@ -736,15 +745,23 @@ const Dialogue = {
     // a foreign giant (the agency-country fallback bug), is rolled again. Once he has told you, his
     // answer stands.
     _repairFavClub(p) {
-        const fc = p.facts && p.facts.favClub; if (!fc || !fc.clubId || (fc._checked || 0) >= 2) return;
-        fc._checked = 2;   // 2: also re-checked against his nation's European-cup clubs
+        const fc = p.facts && p.facts.favClub; if (!fc || !fc.clubId || (fc._checked || 0) >= 3) return;
+        fc._checked = 3;   // 2: re-checked against his nation's European-cup clubs; 3: nations with no clubs in the game
         const c = Clubs.getClubById(fc.clubId);
         if (c && !this._senior(c)) { fc.clubId = this._seniorOf(c.id); return; }
         if (!c || fc.discovered) return;
         const giant = c.tier === 1 && c.reputation >= 82;
-        const eu = !(typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[p.nationality]) ? this._europePool(p.nationality) : null;
-        const fits = eu ? eu.some(x => x.id === c.id) : c.country === this._homeCountryOf(p);
-        if (!fits && !giant) fc.clubId = this._rollFavClub(p);
+        const inGame = typeof COUNTRY_DIVS !== 'undefined' && COUNTRY_DIVS[p.nationality];
+        const eu = !inGame ? this._europePool(p.nationality) : null;
+        // a nation with neither a league nor European-cup clubs: only a foreign giant fits (never a local side)
+        const fits = eu ? eu.some(x => x.id === c.id) : inGame ? c.country === this._homeCountryOf(p) : false;
+        if (!fits && !giant) {
+            const old = fc.clubId;
+            fc.clubId = this._rollFavClub(p);
+            // a dream he has not told you yet that pointed at that club goes with it
+            const a = p.facts.ambition;
+            if (a && !a.discovered && (a.clubId === old || a.type === 'boyhood')) p.facts.ambition = { ...this._rollAmbition(p, fc.clubId), discovered: false, fulfilled: false };
+        }
     },
     _seedLangs(p, home) {
         const langs = this.LANGS[home] || [];
@@ -818,11 +835,34 @@ const Dialogue = {
         const f = this.ensureFacts(p);
         const open = this._pick(DIALOGUE_DATA.checkin.filter(r => r.beat === 'open'), p);
         const keys = [];
-        if (f.favClub.clubId && !f.favClub.discovered) keys.push('q-club');
+        if (!f.favClub.discovered) keys.push('q-club');   // an unnamed one too: "a club back home"
         if (!f.ambition.discovered) keys.push('q-ambition');
         keys.push('q-life', 'q-room', 'q-none');
         const choices = keys.map(k => ({ key: k, ...this.choiceLabel('checkin', k) }));
         return { kind: 'checkin', playerId: p.id, open, choices };
+    },
+    // The club-morale range each dressing-room line may be said in (ids from the dialogue workbook).
+    // "No reason to ever leave" only from a genuinely happy player, "a squad of mercenaries" only from
+    // an unhappy one. Every q-room line must be listed here (tests/test_batch_2026_10_25.js checks it),
+    // so a line added to the workbook cannot slip in unclassified.
+    ROOM_MORALE: {
+        K027: [45, 100],   // "Dressing room's good. Few big egos..."
+        K028: [65, 100],   // "great group of lads. Best I've been part of."
+        K029: [0, 100],    // the parking spot: says nothing about the club
+        K030: [0, 55],     // "my team mates don't appreciate my excellence"
+        K031: [60, 100],   // "It's a blast... I'm the DJ!"
+        K032: [70, 100],   // "I see no reason to ever leave"
+        K033: [70, 100],   // (same line, loyal)
+        K034: [0, 45],     // "two-faced snakes"
+        K035: [0, 50],     // "a squad of mercenaries"
+        K036: [65, 100],   // "so grateful to be part of this amazing team"
+        K037: [60, 100],   // "I really feel blessed"
+    },
+    roomLinesFor(p, rows) {
+        const m = (p.morale && p.morale.club != null) ? p.morale.club : 60;
+        const fits = rows.filter(r => { const rg = this.ROOM_MORALE[r.id]; return rg && m >= rg[0] && m <= rg[1]; });
+        // nothing for exactly this mood (an empty personality pool): the neutral line, never a contradiction
+        return fits.length ? fits : rows.filter(r => r.id === 'K029');
     },
     resolveCheckin(p, q) {
         const f = this.ensureFacts(p);
@@ -848,8 +888,10 @@ const Dialogue = {
             extra.ambition = this.ambitionText(p);
             note = this._t('dlg.note.ambition', { amb: extra.ambition }, 'Noted: he wants to {amb}.');
         }
-        const rows = DIALOGUE_DATA.checkin.filter(r => r.beat === 'reply' && r.choice === q
+        let rows = DIALOGUE_DATA.checkin.filter(r => r.beat === 'reply' && r.choice === q
             && (r.variant === variant || r.variant === 'any' || (q !== 'q-life' && !r.variant)));
+        // what he says about the dressing room has to match how he actually feels about his club
+        if (q === 'q-room') rows = this.roomLinesFor(p, rows);
         const reply = this._pick(rows.length ? rows : DIALOGUE_DATA.checkin.filter(r => r.beat === 'reply' && r.choice === q), p, extra);
         const revealed = this._maybeReveal(p);
         return { ok: true, reply, note, revealed };

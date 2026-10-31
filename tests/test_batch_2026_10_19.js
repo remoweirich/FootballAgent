@@ -46,7 +46,9 @@ const fav = JSON.parse(run(`
     for (var i = 0; i < res.n; i++) {
         var p = PlayerGen.makePlayer(eng, { ability: 60, age: 20, position: 'CM' }); p.nationality = 'Nigeria';
         var c = Clubs.getClubById(Dialogue._rollFavClub(p));
+        if (!c) { res.unnamed = (res.unnamed || 0) + 1; continue; }   // grew up on a club back home the game has no clubs for
         res.country[c.country] = (res.country[c.country] || 0) + 1;
+        if (!(c.tier === 1 && c.reputation >= 82)) res.local = (res.local || 0) + 1;
         if (isReserveClub(c.id)) res.reserve++;
     }
     // clubless (free agent): his last club decides, not the agency's country (Switzerland)
@@ -59,8 +61,8 @@ const fav = JSON.parse(run(`
     for (var j = 0; j < 300; j++) { var q = PlayerGen.makePlayer(yb, { ability: 60, age: 19, position: 'ST' }); q.nationality = 'Switzerland'; if (isReserveClub(Dialogue._rollFavClub(q))) sw++; }
     res.swissReserve = sw;
     return JSON.stringify(res);`));
-const eng = fav.country.England || 0;
-check('a Nigerian at an English club: his boyhood club is English (bar the odd foreign giant), never Swiss', eng >= fav.n * 0.9 && !fav.country.Switzerland, JSON.stringify(fav.country));
+// (changed 2026-10-30: a nation with no clubs in the game never takes a local side of the country he plays in)
+check('a Nigerian at an English club: a foreign giant he idolised or an unnamed club back home, never a local English or Swiss side', !fav.local && (fav.unnamed || 0) > fav.n * 0.5, JSON.stringify(fav))
 check('a clubless player: the club he played for decides his home, not the agency country', fav.faHome === 'England', fav.faHome);
 check('a boyhood club is never a youth side', fav.reserve === 0 && fav.swissReserve === 0, JSON.stringify(fav));
 const mig = JSON.parse(run(`

@@ -603,7 +603,9 @@ const League = {
         const QUAD = new Set(['SuperLeagueCH', 'ChallengeLeague']);
         ALL_LEAGUE_DIVS.forEach(div => {
             const ids = Clubs.getClubsByDivision(div).map(c => c.id);
-            schedule[div] = QUAD.has(div) ? this.quadRoundRobin(ids) : this.roundRobin(ids);
+            // shuffled, so the fixture list (and which games fall on the last matchday) differs every season
+            const order = this.shuffle(ids);
+            schedule[div] = QUAD.has(div) ? this.quadRoundRobin(order) : this.roundRobin(order);
             mdIndex[div] = 0;
             tables[div] = ids.map(id => ({ clubId: id, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, Pts: 0 }));
         });
@@ -2867,11 +2869,16 @@ const League = {
         const rest = available.filter(p => !guaranteed.includes(p) && !maybeLoan.includes(p));
         // GK depth chart (D4): the No.1 (First Choice/Star) starts, EXCEPT the Cup Goalkeeper takes the cup
         // games, and the Back Up gets the odd league match (~≤10% of them).
-        const gkRank = rest.filter(p => p.position === 'GK').sort((a, b) => b.ability - a.ability);
+        // the depth chart follows the squad role (First Choice, then Back Up / Cup Goalkeeper, then Third
+        // Keeper), ability only breaking ties: a Cup Goalkeeper rated above the No.1 still sits out the league
+        const GK_ORDER = { key: 0, starter: 1, rotation: 2, fringe: 3, youth: 4 };
+        const gkRole = p => (p.onLoanAt === clubId ? (p.loanRole || 'starter') : p.squadRole);
+        const gkRank = rest.filter(p => p.position === 'GK').sort((a, b) => ((GK_ORDER[gkRole(a)] ?? 3) - (GK_ORDER[gkRole(b)] ?? 3)) || (b.ability - a.ability));
         const isCupTie = COMPETITIONS[compId] && COMPETITIONS[compId].type === 'cup';
         let bestGK = gkRank[0];
         if (isCupTie) { const ck = gkRank.find(g => g.cupKeeper || (g.onLoanAt === clubId && g.loanCupKeeper)); if (ck) bestGK = ck; }
-        else if (gkRank.length > 1 && Rng.next() < 0.08) bestGK = gkRank[1];
+        // the Back Up's occasional league start, but never in a big match (a final or play-off): the No.1 plays
+        else if (!bigMatch && gkRank.length > 1 && Rng.next() < 0.08) bestGK = gkRank[1];
 
         // squad role decides how often a player features — but a loaned-in player follows the role his
         // loan deal guaranteed (a youth prospect loaned out as a star plays like a star at the loan club)
@@ -2896,7 +2903,8 @@ const League = {
             return hot ? (HOT_STEP[r] || r) : r;
         };
 
-        const outfield = rest.filter(p => p !== bestGK)
+        // the other keepers stay on the bench: a goalkeeper never fills an outfield place
+        const outfield = rest.filter(p => p !== bestGK && p.position !== 'GK')
             .map(p => ({ p, w: (ROLE_PLAYTIME[effRole(p)] ?? 0.4) * 3 + p.ability / 80 + Rng.next() * 0.8 }))
             .sort((a, b) => b.w - a.w).map(x => x.p);
 
@@ -3079,7 +3087,7 @@ const League = {
                 clientWinners.push(p.id);
                 const rep = Agency.trophyRep(compId);
                 if (rep > 0) Agency.bumpRep(rep, 'trophy');
-                if (p.morale) { p.morale.club = Math.min(100, p.morale.club + MORALE.TROPHY_CLUB); p.morale.agent = Math.min(100, p.morale.agent + MORALE.TROPHY_AGENT); }
+                if (p.morale) { p.morale.club = Math.min(100, p.morale.club + MORALE.TROPHY_CLUB); p.morale.agent = Math.min(100, p.morale.agent + MORALE.TROPHY_AGENT); p.morale.time = Math.min(100, p.morale.time + (MORALE.TROPHY_TIME || 0)); }
             }
         });
         awarded.push({ clubId, compId, clients: clientWinners });

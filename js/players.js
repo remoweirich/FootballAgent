@@ -416,7 +416,7 @@ function levelGapRating(gap) {
     return gap <= 12 ? gap * 0.0625 : 0.75 + (gap - 12) * 0.022;
 }
 function clubTierOf(p) { const c = Clubs.getClubById(p.clubId); return c ? c.tier : 4; }
-function getRegionForClub(club) { return getRegionBasedNationality(club.country || 'Netherlands'); }
+function getRegionForClub(club) { return getRegionBasedNationality(club.country || 'Netherlands', club.region); }
 function effectiveClubId(p) { return p.onLoanAt || p.clubId; }
 // World model: only players the user can ever see or interact with are simulated individually
 // (aging, development, injuries, match stats). Everyone else is a frozen background extra —

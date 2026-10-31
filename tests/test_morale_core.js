@@ -48,6 +48,8 @@ const run = code => vm.runInContext('{' + code + '}', sb);
 const runv = code => vm.runInContext('(function(){' + code + '})()', sb);   // for expressions that need a return value
 
 run(`Clubs.init();`);
+// these are the BASE bench/play ticks: the club-fit patience multiplier is tested in test_batch_2026_10_30
+run(`Agency.benchPatience = function () { return 1; };`);
 
 // ---- 1. Core formula sanity ----
 check('moraleBand(70) = GOOD', runv(`return moraleBand(70)`) === 'GOOD');

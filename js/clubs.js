@@ -1283,8 +1283,9 @@ const REGIONS_FR = [
     { id: 'N-O France', name: "Nord-Ouest de la France", blurb: "Bretagne, Normandie, and Pays de la Loire" },
     { id: 'N-E France', name: "Nord-Est de la France", blurb: 'Grand Est, Hauts-de-France, and Bourgogne-Franche-Compté' },
     { id: 'centre France', name: 'Centre de la France', blurb: 'Île-de-France and Centre-Val de Loire' },
-    { id: 'S-O France', name: 'Sud-Ouest de la France', blurb: "Auvergne-Rhône-Alpes and Provence-Alpes-Côte d'Azur" },
-    { id: 'S-E France', name: 'Sud-Est de la France', blurb: 'Nouvelle-Aquitaine and Occitanie' },
+    // the ids are swapped against the compass (saves store them, so they stay); the names are right
+    { id: 'S-O France', name: 'Sud-Est de la France', blurb: "Auvergne-Rhône-Alpes and Provence-Alpes-Côte d'Azur" },
+    { id: 'S-E France', name: 'Sud-Ouest de la France', blurb: 'Nouvelle-Aquitaine and Occitanie' },
     { id: 'Îles', name: 'Îles', blurb: 'Corse and other islands' }
 ];
 const REGIONS_BY_COUNTRY = { Netherlands: REGIONS, England: REGIONS_EN, Germany: REGIONS_DE, Spain: REGIONS_ES, Switzerland: REGIONS_CH, Italy: REGIONS_IT, Portugal: REGIONS_PT, France: REGIONS_FR, Belgium: REGIONS_BE };
@@ -1307,7 +1308,7 @@ const CITY_REGION = {
     "Ipswich":"east-england","Norwich":"east-england","Peterborough":"east-england","Cambridge":"east-england","Colchester":"east-england","Southend-on-Sea":"east-england","Braintree":"east-england","Stevenage":"east-england","Watford":"east-england","Luton":"east-england","Borehamwood":"east-england",
     // ---- Germany ----
     // bayern (Bavaria)
-    "Munich":"bayern","Augsburg":"bayern","Nuremberg":"bayern","Fürth":"bayern","Regensburg":"bayern","Ingolstadt":"bayern","Unterhaching":"bayern","Illertissen":"bayern","Vilzing":"bayern","Würzburg":"bayern","Schweinfurt":"bayern","Bayreuth":"bayern","Landsberg":"bayern","Eltersdorf":"bayern","Aubstadt":"bayern","Eichstätt":"bayern","Burghausen":"bayern","Buchbach":"bayern","Memmingen":"bayern",
+    "Munich":"bayern","München":"bayern","Augsburg":"bayern","Nuremberg":"bayern","Fürth":"bayern","Regensburg":"bayern","Ingolstadt":"bayern","Unterhaching":"bayern","Illertissen":"bayern","Vilzing":"bayern","Würzburg":"bayern","Schweinfurt":"bayern","Bayreuth":"bayern","Landsberg":"bayern","Eltersdorf":"bayern","Aubstadt":"bayern","Eichstätt":"bayern","Burghausen":"bayern","Buchbach":"bayern","Memmingen":"bayern",
     // nordosten (Mecklenburg-Vorpommern, Berlin, Brandenburg)
     "Berlin":"nordosten","Cottbus":"nordosten","Potsdam":"nordosten","Greifswald":"nordosten","Rostock":"nordosten",
     // ostdeutschland (Sachsen, Thüringen, Sachsen-Anhalt)
@@ -1338,7 +1339,7 @@ const CITY_REGION = {
     "Monthey":"ticinovalais",
     "Basel":"nordwestschweiz","Aarau":"nordwestschweiz","Baden":"nordwestschweiz","Solothurn":"nordwestschweiz","Muttenz":"nordwestschweiz","Wohlen":"nordwestschweiz",
     "Zürich":"nordostschweiz","Winterthur":"nordostschweiz","Schaffhausen":"nordostschweiz","Dietikon":"nordostschweiz","Thalwil":"nordostschweiz","Kreuzlingen":"nordostschweiz","Marthalen":"nordostschweiz","Wettswil-Bonstetten":"nordostschweiz",
-    "St. Gallen":"ostschweiz","Rapperswil-Jona":"ostschweiz","Wil":"ostschweiz","Gossau SG":"ostschweiz","Widnau":"ostschweiz","Vaduz":"ostschweiz","Eschen-Mauren":"ostschweiz",
+    "St. Gallen":"ostschweiz","Rapperswil-Jona":"ostschweiz","Wil":"ostschweiz","Gossau SG":"ostschweiz","Widnau":"ostschweiz","Vaduz":"ostschweiz","Eschen-Mauren":"ostschweiz","Eschen/Mauren":"ostschweiz",
     "Luzern":"innerschweiz","Kriens":"innerschweiz","Zug":"innerschweiz","Buochs":"innerschweiz","Freienbach":"innerschweiz","Tuggen":"innerschweiz","Schötz":"innerschweiz","Cham":"innerschweiz",
     "Bern":"bern","Thun":"bern","Biel-Bienne":"bern","Langenthal":"bern","Gümligen":"bern","Münsingen":"bern",
     "Lugano":"ticinovalais","Bellinzona":"ticinovalais","Naters":"ticinovalais","Mendrisio":"ticinovalais","Collina d'Oro":"ticinovalais","Paradiso":"ticinovalais","Locarno":"ticinovalais","Sion":"ticinovalais","Taverne":"ticinovalais",
@@ -1387,7 +1388,9 @@ const CITY_REGION = {
     // S-E Belgique: Namur, Liège & Luxembourg provinces
     "Liège":"S-E Belgique","Eupen":"S-E Belgique","Seraing":"S-E Belgique","La Bruyère":"S-E Belgique","Rochefort":"S-E Belgique","Saint-Georges-sur-Meuse":"S-E Belgique","Namur":"S-E Belgique","Onhaye":"S-E Belgique","Verviers":"S-E Belgique","Huy":"S-E Belgique","Virton":"S-E Belgique","Habay-la-Neuve":"S-E Belgique"
 };
-function regionOfCity(city){ return CITY_REGION[city] || 'middelland'; }
+// a town name used in two countries (one key in CITY_REGION can hold only one of them): "Country/City"
+const CITY_REGION_BY_COUNTRY = { "Germany/Bocholt": "nrw" };
+function regionOfCity(city, country){ return (country && CITY_REGION_BY_COUNTRY[country + '/' + city]) || CITY_REGION[city] || 'middelland'; }
 function regionsForCountry(country){ return REGIONS_BY_COUNTRY[country] || REGIONS; }
 function regionName(id){
     for (const arr of Object.values(REGIONS_BY_COUNTRY)) { const r = arr.find(x => x.id === id); if (r) return r.name; }
@@ -1465,7 +1468,7 @@ const Clubs = {
                         division: tier.id,
                         tier: tier.tier,
                         divisionName: tier.name,
-                        region: regionOfCity(clubData.city),
+                        region: regionOfCity(clubData.city, country),
                         // Reputation model: baseRep is the immutable day-one value; anchorRep moves
                         // only on promotion/relegation (capped at baseRep±10 so divisions can't
                         // drift arbitrarily far apart). The runtime `reputation` every consumer

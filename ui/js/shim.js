@@ -141,6 +141,25 @@ const UI = {
         const g = UI.posGroup(pos);
         return g ? `<span class="pos-chip pos--${g}">${UI.esc(pos)}</span>` : UI.esc(pos || '');
     },
+    // how keen a client is on an offered move (Agency.moveKeenness): a small tag, and the reasons in words
+    // terms: { role, wage } on the screen right now; otherwise what the club has agreed to, else its first offer
+    keenFor(m, terms) {
+        if (!m || !m.offer || !['transfer', 'loan'].includes(m.kind) || typeof Agency === 'undefined' || !Agency.moveKeenness) return null;
+        const o = m.offer, p = GameState.getPlayer(o.playerId), to = Clubs.getClubById(o.toClubId);
+        if (!p || !to || p.agentId !== 'me') return null;
+        const loan = m.kind === 'loan', ag = o.agreed || {};
+        const role = (terms && terms.role) || (loan ? ag.loanRole : ag.role) || o.role;
+        const wage = (terms && terms.wage) || ag.wage || o.proposedWage;
+        return Agency.moveKeenness(p, to, { role, wage, loan });
+    },
+    // 2 to 5 stars in half steps
+    keenChip(k) {
+        if (!k) return '';
+        let html = '';
+        for (let i = 1; i <= 5; i++) html += `<span class="kstar ${k.stars >= i ? 'kstar--full' : k.stars >= i - 0.5 ? 'kstar--half' : ''}"></span>`;
+        return `<span class="keen-stars" role="img" aria-label="${UI.esc(I18n.t('keen.stars', { n: k.stars }))}" title="${UI.esc(I18n.t('keen.stars', { n: k.stars }))}">${html}</span>`;
+    },
+    keenReasons(k) { return k && k.reasons.length ? k.reasons.map(r => I18n.t('keen.r.' + r)).join(' · ') : ''; },
     posDot(pos) { const g = UI.posGroup(pos); return g ? `<span class="pos-dot pos--${g}"></span>` : ''; },
     // ---- crisp SVG flag (looks up by nationality name, not the stored emoji — so it
     // renders correctly even for players saved before this was added) ----

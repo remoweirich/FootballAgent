@@ -79,9 +79,10 @@ const item2 = vm.runInContext(`(function(){
     const club = Clubs.allClubs.filter(c => c.reputation <= 32).sort((a,b)=>a.reputation-b.reputation)[0] || Clubs.allClubs[0];
     const p = GameState.players.find(x => x.clubId && !x.injury);
     p.agentId='me'; p.everClient=true; p.knownToAgent=true; p.squadRole='key'; p.ability=99; p.onLoanAt=null; p.injury=null; p._recent=[]; p.clubId = club.id;
+    // he is fit before every match (p.injury reset): this is about selection, not knocks
     let big=0, normal=0; const N=50;
-    for (let i=0;i<N;i++){ p._suspended=0; const ap = League.assignStats(club.id,'EED',2,1,true)||[]; if (ap.some(a=>a.p===p)) big++; }
-    for (let i=0;i<N;i++){ p._suspended=0; const ap = League.assignStats(club.id,'EED',2,1,false)||[]; if (ap.some(a=>a.p===p)) normal++; }
+    for (let i=0;i<N;i++){ p._suspended=0; p.injury=null; const ap = League.assignStats(club.id,'EED',2,1,true)||[]; if (ap.some(a=>a.p===p)) big++; }
+    for (let i=0;i<N;i++){ p._suspended=0; p.injury=null; const ap = League.assignStats(club.id,'EED',2,1,false)||[]; if (ap.some(a=>a.p===p)) normal++; }
     return { big, normal, N, rep: club.reputation };
 })()`, sb);
 check('lineup: a standout client plays EVERY big match (never rested)', () => item2.big === item2.N, `big ${item2.big}/${item2.N}, normal ${item2.normal}/${item2.N} (rep ${item2.rep})`);

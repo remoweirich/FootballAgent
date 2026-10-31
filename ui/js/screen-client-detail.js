@@ -474,7 +474,7 @@ const ClientDetail = {
         const rows = [];
         const fav = f.favClub;
         rows.push(['ti-heart', I18n.t('cd.boyhoodClub'), fav.discovered
-            ? `${UI.clubName(fav.clubId)}${fav.fulfilled ? ' <span style="color:var(--gold)">✓ ' + I18n.t('cd.dreamMove') + (fav.year ? ', ' + GameState.seasonLabelFor(fav.year) : '') + '</span>' : ''}`
+            ? `${fav.clubId ? UI.clubName(fav.clubId) : UI.esc(I18n.t('dlg.favclub.none'))}${fav.fulfilled ? ' <span style="color:var(--gold)">✓ ' + I18n.t('cd.dreamMove') + (fav.year ? ', ' + GameState.seasonLabelFor(fav.year) : '') + '</span>' : ''}`
             : ask]);
         const amb = f.ambition;
         rows.push(['ti-target-arrow', I18n.t('cd.ambition'), amb.discovered
@@ -806,4 +806,4 @@ const ClientDetail = {
     toggleCareer(id) { this.ctx(id).careerOpen = !this.ctx(id).careerOpen; Router.refresh(); },
     setCareerMode(id, m) { const c = this.ctx(id); c.careerMode = m; c.careerOpen = true; Router.refresh(); }
 };
-Router.register('client', { isMain: false, parent: 'clients', title: p => (GameState.getPlayer(p[0]) || {}).name || I18n.t('cd.player'), render(el, params) { ClientDetail.render(el, params[0]); } });
+Router.register('client', { isMain: false, parent: 'clients', seasonBar: true, title: p => (GameState.getPlayer(p[0]) || {}).name || I18n.t('cd.player'), render(el, params) { ClientDetail.render(el, params[0]); } });
