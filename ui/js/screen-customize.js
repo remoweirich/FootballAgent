@@ -592,10 +592,13 @@ const CustomizeScreen = {
             let map;
             try { map = this._parseNamesText(String(reader.result || '')); } catch (e) { this._toast(I18n.t('customize.importBad')); return; }
             let n = 0;
-            Object.entries(map).forEach(([id, nm]) => {
+            const comp = id => { if (!this.db.competitions) this.db.competitions = {}; return this.db.competitions[id] || (this.db.competitions[id] = {}); };
+            Object.entries(map).forEach(([key, nm]) => {
                 if (!nm) return;
-                if (Clubs.getClubById(id)) { const name = this._packName(nm, false); if (name) { this._setOverride(id, { name }); n++; } }
-                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { const name = this._packName(nm, true); if (name) { if (!this.db.competitions) this.db.competitions = {}; this.db.competitions[id] = { name }; n++; } }
+                // "short:<id>": a club's short name (history tables) or a competition's abbreviation
+                const sm = /^short:(.+)$/.exec(key), id = sm ? sm[1] : key;
+                if (Clubs.getClubById(id)) { const v = this._packName(nm, false); if (v) { this._setOverride(id, sm ? { short: v.slice(0, SHORT_NAME_MAX) } : { name: v }); n++; } }
+                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { const v = this._packName(nm, true); if (v) { comp(id)[sm ? 'short' : 'name'] = v; n++; } }
             });
             this._snapshot = JSON.stringify(this.db.overrides);   // fold imports into the cancel baseline
             this._refreshTable();
@@ -805,8 +808,10 @@ const CustomizeScreen = {
                 if (!nm || typeof GameState === 'undefined') return;
                 // the same file carries both clubs and competitions — route each id to the right one
                 // (a competition may name itself once per language; a club has one name)
-                if (typeof Clubs !== 'undefined' && Clubs.getClubById(id)) { const name = this._packName(nm, false); if (name) { GameState.setClubName(id, name); n++; } }
-                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) { const name = this._packName(nm, true); if (name) { GameState.setCompName(id, name); n++; } }
+                // "short:<id>": a club's short name (history tables) or a competition's abbreviation
+                const sm = /^short:(.+)$/.exec(id), tid = sm ? sm[1] : id;
+                if (typeof Clubs !== 'undefined' && Clubs.getClubById(tid)) { const v = this._packName(nm, false); if (v) { if (sm) GameState.setClubShort(tid, v); else GameState.setClubName(tid, v); n++; } }
+                else if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[tid]) { const v = this._packName(nm, true); if (v) { if (sm) GameState.setCompShort(tid, v); else GameState.setCompName(tid, v); n++; } }
             });
             if (typeof GameState !== 'undefined' && GameState.save) GameState.save();
             if (typeof Router !== 'undefined' && Router.refresh) Router.refresh();

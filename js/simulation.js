@@ -339,6 +339,8 @@ const Sim = {
         GameState.save();
         Storage.flush();   // a completed week is a meaningful checkpoint — don't leave it debounced
         const attend = (typeof Attend !== 'undefined') ? Attend.windowFinals() : [];
+        // spotlights raised from deeper in the week (a client's private heads-up, Dialogue.tipOff)
+        if (GameState._weekSpotlights) { spotlights.push(...GameState._weekSpotlights); GameState._weekSpotlights = []; }
         return { events, spotlights, rolledSeason, seasonFinished, windowClosed, attend };
     },
 
@@ -519,6 +521,9 @@ const Sim = {
                 const quiet = pending && (dim === 'club' || dim === 'wage');
                 p._badStreak[dim] = !quiet && p.morale[dim] < MORALE.BAND_BAD ? (p._badStreak[dim] || 0) + 1 : 0;
             });
+            // frozen out: the club promised him a starting place (Star Player / First Choice) and has left
+            // him out long enough for a playing-time complaint. It lists him itself rather than sit on him.
+            if (Agency.frozenOut(p) && !p.transferListed && !pending) Agency.listFrozenOut(p, events);
             if (!p.moraleCase) {
                 const qualifying = ['club', 'time', 'wage', 'agent'].filter(d => p._badStreak[d] >= MORALE.CASE_OPEN_BAD_STREAK);
                 if (qualifying.length) {
@@ -763,7 +768,7 @@ const Sim = {
             for (const m of GameState.inbox) if (m.kind === 'transfer' && m.offer && m.offer.playerId === p.id) offeredBy.add(m.offer.toClubId);
             if (p.injury) return;
             if (p.retiringThisSeason) return;   // announced his final season -> clubs stop chasing him (you can still tout him out)
-            if (p.onLoanAt) return;   // out on loan / with reserves -> no transfer interest until he's back
+            if (awayOnLoan(p)) return;   // out on loan -> no transfer interest until he's back (a spell with his own U21 / B team doesn't count)
             if (winKey && p._txWindow === winKey) return;   // just changed clubs this window -> no fresh approaches until next window
             // free agents: clubs approach with contract offers (no transfer fee)
             if (Agency.isFreeAgent(p)) {
@@ -1075,7 +1080,7 @@ const Sim = {
                 const p = GameState.getPlayer(m.offer.playerId);
                 const to = Clubs.getClubById(m.offer.toClubId);
                 // a player who has gone out on loan since the bid landed is off the market: let it lapse
-                if (p && to && !p.onLoanAt) {
+                if (p && to && !awayOnLoan(p)) {
                     const improved = { ...m.offer, transferFee: Math.round(m.offer.transferFee * 1.12 / 500) * 500, proposedWage: Math.round(m.offer.proposedWage * 1.1 / 10) * 10 };
                     keep.push({ id: 'm_' + Rng.next().toString(36).slice(2, 9), kind: 'transfer', subject: I18n.t('sim.improveBidSubj', { club: to.name, name: p.name }), offer: improved, persistence: m.persistence - 1, ttl: 2, week: GameState.week, season: GameState.seasonLabel(), read: false });
                     events.push({ type: 'offer', text: I18n.t('sim.ev.improvedBid', { club: to.name, name: p.name }) });

@@ -65,9 +65,10 @@ const LeaguesScreen = {
         belgiancup: 'BELCUP', notrecoupe: 'NOTRECOUPE', coupefrance: 'COUPEFR', coupenational: 'COUPENAT'
     },
     // "<competition> history" button linking to the standalone winners/players history page
-    compHistLink(compId) {
+    // atTop: above the content (a cup's rounds list is long, so its history link goes first)
+    compHistLink(compId, atTop) {
         if (!compId) return '';
-        return `<a class="gbtn" style="margin-top:var(--space-4)" href="${Router.link('comphist', compId)}"><i class="ti ti-history"></i>${I18n.t('leagues.compHistLink', { comp: compName(compId) })}</a>`;
+        return `<a class="gbtn" style="${atTop ? 'margin-bottom:var(--space-3)' : 'margin-top:var(--space-4)'}" href="${Router.link('comphist', compId)}"><i class="ti ti-history"></i>${I18n.t('leagues.compHistLink', { comp: compName(compId) })}</a>`;
     },
 
     renderSection() {
@@ -97,7 +98,7 @@ const LeaguesScreen = {
             const bracketView = bracketable && this.state.cupView === 'bracket';
             const toggle = bracketable ? `<div class="tab-bar" style="margin-bottom:var(--space-3)"><button class="tab ${!bracketView ? 'is-active' : ''}" onclick="LeaguesScreen.setCupView('rounds')">${I18n.t('leagues.cupRoundsTab')}</button><button class="tab ${bracketView ? 'is-active' : ''}" onclick="LeaguesScreen.setCupView('bracket')">${I18n.t('leagues.bracketTab')}</button></div>` : '';
             const bodyHtml = bracketView ? this.cupBracket(C) : ((comp && comp.groups) ? this.groupCup(key, label) : this.knockoutCup(key, label));
-            body.innerHTML = toggle + bodyHtml + this.compHistLink(this.CUP_KEY_COMP[key]);
+            body.innerHTML = this.compHistLink(this.CUP_KEY_COMP[key], true) + toggle + bodyHtml;
         }
     },
 

@@ -300,23 +300,26 @@ const LiveSim = {
         const middlePool = idx.middleByFam.get(fam) || [], endPool0 = idx.endByFam.get(fam) || [];
         const middles = [];
         let cursor = start;
+        // who could be carrying the move: the trigger, until a piece that names someone hands it on
+        let carry = [trigger];
         const wantSecond = rnd() < LIVE_SIM.SECOND_MIDDLE_CHANCE;
         for (let i = 0; i < (wantSecond ? LIVE_SIM.MAX_MIDDLES : 1); i++) {
             // A second middle must be a DIFFERENT piece — several families (N, X, M) carry only one
             // middle per branch, so without this the chain reads the same line twice in a row.
             const pool = middlePool.filter(p => middles.indexOf(p) < 0 &&
                 this.keysLink(cursor.keys, p.keys) &&
-                this._eligible(p, trigger, clients) &&
+                this._eligible(p, trigger, clients, carry) &&
                 this.chainBranch([start, ...middles, p].map(x => x.keys)));
             const m = this.pickWeighted(pool, rnd, p => p.weight * stale(p));
             if (!m) break;
             middles.push(m); cursor = m;
+            carry = (m.names ? clients : carry).filter(c => this._fits(m, c));
             // a second middle is only legal when both agree on the branch, which chainBranch checks
         }
         if (!middles.length) return null;
 
         const endPool = endPool0.filter(p => this.keysLink(cursor.keys, p.keys) &&
-            this._eligible(p, trigger, clients) &&
+            this._eligible(p, trigger, clients, carry) &&
             this.chainBranch([start, ...middles, p].map(x => x.keys)) &&
             (!opts.allow || opts.allow(p.tags, p)));
         const end = this.pickWeighted(endPool, rnd, p => p.weight * stale(p));
@@ -325,20 +328,31 @@ const LiveSim = {
         return this._bind(start, middles, end, trigger, clients, rnd, opts.credit);
     },
 
-    // A piece is usable if it either names nobody (connective — it just continues the last actor)
-    // or lists a role code belonging to a client actually in this match.
-    _eligible(piece, trigger, clients) {
-        if (!piece.names) return true;
-        return clients.some(c => { const rc = this.roleCodeOf(c); return rc && piece.codes.has(rc); });
+    _fits(piece, c) { const rc = this.roleCodeOf(c); return !!rc && piece.codes.has(rc); },
+    // A piece that names someone needs a client in this match whose role code it lists. One that
+    // names nobody continues the last actor ("he carries it sixty yards…"), so its role codes must
+    // fit whoever could be carrying the move (carry) — otherwise a sweeper keeper who starts a
+    // play-out-from-the-back move ends up running sixty yards with it.
+    _eligible(piece, trigger, clients, carry) {
+        if (!piece.names) return (carry || [trigger]).some(c => this._fits(piece, c));
+        return clients.some(c => this._fits(piece, c));
     },
 
     // Bind an actor to every piece. Pieces that name someone take a client eligible for them;
-    // pieces that don't simply carry the previous actor forward.
+    // pieces that don't simply carry the previous actor forward. A named middle picks, where it
+    // can, a client who also fits the unnamed pieces that will carry him on.
     _bind(start, middles, end, trigger, clients, rnd, credit) {
         const pieces = [{ piece: start, player: trigger }];
+        const seq = [...middles, end];
         let last = trigger;
-        for (const m of middles) {
-            const player = m.names ? this._pickActor(m, clients, last, rnd, false) : last;
+        for (const [i, m] of middles.entries()) {
+            let player = last;
+            if (m.names) {
+                const run = [];
+                for (let j = i + 1; j < seq.length && !seq[j].names; j++) run.push(seq[j]);
+                const fitting = clients.filter(c => run.every(p => this._fits(p, c)));
+                player = this._pickActor(m, fitting.length ? fitting : clients, last, rnd, false);
+            }
             pieces.push({ piece: m, player });
             last = player;
         }

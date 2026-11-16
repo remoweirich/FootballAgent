@@ -319,6 +319,18 @@ button { font-family: inherit; }
 .pt-status { flex: 0 100 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }   /* gives way first */
 .pt-status--on { color: var(--accent); font-weight: var(--weight-semibold); }
 .ht-total > .ht-row { color: var(--text); font-weight: var(--weight-semibold); }
+/* club page, season list: the final position boxed green (promoted) / red (relegated), the row faintly tinted */
+.ch-pos { display: inline-block; min-width: 38px; text-align: center; padding: 2px 7px; border-radius: 6px; border: 1px solid transparent; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.ch-up { color: var(--state-good); background: var(--move-up-tint); border-color: var(--move-up-border); }
+.ch-down { color: var(--state-bad); background: var(--move-down-tint); border-color: var(--move-down-border); }
+.frow.ch-row-up, .frow.ch-row-down { margin: 0 -10px; padding-left: 10px; padding-right: 10px; }
+.frow.ch-row-up { background: var(--move-up-row); }
+.frow.ch-row-down { background: var(--move-down-row); }
+.ch-league { color: var(--text); }
+.ch-tr { color: var(--gold); margin-right: 6px; text-decoration: none; }
+/* 1000+ career games: four-digit totals need wider number columns (the season rows keep theirs) */
+.ht-row.ht-row--wide { grid-template-columns: 38px minmax(0, 1fr) 36px 28px 26px 22px 18px 32px; }
+.pt-row.pt-row--wide { grid-template-columns: minmax(0, 1fr) 36px 28px 26px 22px 18px 32px; }
 /* small rectangular card indicators (mirroring a real football card's proportions),
    replacing the old square-emoji stand-ins */
 .card-chip { display: inline-block; width: 7px; height: 10px; border-radius: 1.5px; vertical-align: -1px; margin-right: 1px; }

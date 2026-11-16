@@ -43,6 +43,8 @@ const GameState = {
     genericIdentity: false,     // true after Settings > Remove imported names & logos: this save ignores a database's club names, logos and stock competition names
     clubNames: null,            // { clubId: name } names added mid-save (Settings > Import names — e.g. the real-names pack); re-applied on load
     compNames: null,            // { compId: name } competition names added mid-save (same real-names pack); re-applied on load
+    clubShorts: null,           // { clubId: short } history-table short names from the same pack ("short:<id>"); re-applied on load
+    compShorts: null,           // { compId: abbreviation } competition abbreviations from the same pack; re-applied on load
     canEditGameState: true,     // gate for reputation/starting-division edits in Customize (flipped by the future paid "Gamestate editor")
 
     // ---- season phase ----
@@ -121,7 +123,7 @@ const GameState = {
         this.homeCountry = (country && REGIONS_BY_COUNTRY[country]) ? country : 'Netherlands';
         this.inbox = []; this.log = [];
         this.clubHistory = {}; this.clubEuropeBest = {};
-        this.clubNames = null; this.clubLogos = null; this.compNames = null;   // a fresh game carries no imported real names/logos
+        this.clubNames = null; this.clubLogos = null; this.compNames = null; this.clubShorts = null; this.compShorts = null;   // a fresh game carries no imported real names/logos
         this.genericIdentity = false;
         this.lastSeasonReport = null; this.attendWindow = null; this.league = null; this.intl = null;
         this.players = PlayerGen.generatePool();
@@ -219,6 +221,7 @@ const GameState = {
             clubLogos: this.clubLogos || null,   // mid-save logo additions (Settings > Import logos)
             clubNames: this.clubNames || null,   // mid-save name additions (Settings > Import names)
             compNames: this.compNames || null,   // mid-save competition-name additions (real-names pack)
+            clubShorts: this.clubShorts || null, compShorts: this.compShorts || null,   // the pack's short names / abbreviations
             genericIdentity: this.genericIdentity || undefined,   // generic names & crests only (see clearImportedIdentity)
             schemaVersion: this.SCHEMA_VERSION   // ordered-migration pipeline (see _runMigrations)
         };
@@ -266,7 +269,19 @@ const GameState = {
         if (!this.clubNames) this.clubNames = {};
         this.clubNames[id] = name;
         const c = (typeof Clubs !== 'undefined') ? Clubs.getClubById(id) : null;
-        if (c) c.name = name;
+        if (c) { c.name = name; c.short = (this.clubShorts && this.clubShorts[id]) || null; }   // a new name drops the generic short one
+    },
+    // A club's short name for the history tables, or a competition's abbreviation (the pack's "short:<id>")
+    setClubShort(id, short) {
+        if (!id || !short) return;
+        (this.clubShorts || (this.clubShorts = {}))[id] = String(short).slice(0, typeof SHORT_NAME_MAX !== 'undefined' ? SHORT_NAME_MAX : 15);
+        const c = (typeof Clubs !== 'undefined') ? Clubs.getClubById(id) : null;
+        if (c) c.short = this.clubShorts[id];
+    },
+    setCompShort(id, short) {
+        if (!id || !short || !localCompName(short)) return;
+        (this.compShorts || (this.compShorts = {}))[id] = short;   // a string, or one per language
+        if (typeof COMPETITIONS !== 'undefined' && COMPETITIONS[id]) COMPETITIONS[id].short = localCompName(short);
     },
     // Settings > Remove imported names & logos: back to the game's own generic club names, competition
     // names and crests in this save (e.g. for screenshots and videos). Drops everything imported mid-save
@@ -274,12 +289,14 @@ const GameState = {
     // (created countries and club colours stay). Takes effect on the reload that follows; importing a
     // names pack or logos again brings them back.
     clearImportedIdentity() {
-        this.clubNames = null; this.compNames = null; this.clubLogos = null;
+        this.clubNames = null; this.compNames = null; this.clubLogos = null; this.clubShorts = null; this.compShorts = null;
         this.genericIdentity = true;
     },
     _applyClubNames() {
         if (!this.clubNames || typeof Clubs === 'undefined') return;
-        Object.entries(this.clubNames).forEach(([id, name]) => { const c = Clubs.getClubById(id); if (c && name) c.name = name; });
+        Object.entries(this.clubNames).forEach(([id, name]) => { const c = Clubs.getClubById(id); if (c && name) { c.name = name; c.short = null; } });
+        // the pack's own short names (a renamed club with none falls back to its name, shortened if needed)
+        Object.entries(this.clubShorts || {}).forEach(([id, sh]) => { const c = Clubs.getClubById(id); if (c && sh) c.short = sh; });
     },
     // Rename a competition mid-save (Settings > Import names — e.g. the real-names pack, which restores
     // the real league/cup/European names on top of the shipped generics). Stored per-save; re-applied on
@@ -297,6 +314,7 @@ const GameState = {
         // and importing the pack once more restores the real one)
         Object.keys(this.compNames).forEach(id => { if (!localCompName(this.compNames[id])) delete this.compNames[id]; });
         Object.entries(this.compNames).forEach(([id, name]) => { const nm = localCompName(name); if (COMPETITIONS[id] && nm) COMPETITIONS[id].name = nm; });
+        Object.entries(this.compShorts || {}).forEach(([id, sh]) => { const s = localCompName(sh); if (COMPETITIONS[id] && s) COMPETITIONS[id].short = s; });
         if (typeof Clubs !== 'undefined' && Clubs.refreshDivisionNames) Clubs.refreshDivisionNames();
     },
     _applyClubLogos() {
@@ -330,6 +348,7 @@ const GameState = {
             this.clubLogos = d.clubLogos || null;
             this.clubNames = d.clubNames || null;
             this.compNames = d.compNames || null;
+            this.clubShorts = d.clubShorts || null; this.compShorts = d.compShorts || null;
             this.genericIdentity = !!d.genericIdentity;
             // Restore the RNG: legacy saves predate the seed, so fall back to one derived from the
             // save so a given save always regenerates the same background squads. rngState (the live

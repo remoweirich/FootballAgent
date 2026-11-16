@@ -166,6 +166,7 @@ Home._showSpotlight = function () {
         <div style="font-size:38px;margin-bottom:var(--space-3)">${s.icon || '📣'}</div>
         <h2 style="margin:0 0 var(--space-3)">${UI.esc(s.title)}</h2>
         <p style="color:var(--text-secondary);font-style:italic;line-height:1.6">"${UI.esc(s.quote)}"</p>
+        ${s.note ? `<p class="hint" style="margin-top:var(--space-3)">${UI.esc(s.note)}</p>` : ''}
         <div class="flex-row" style="margin-top:var(--space-5)">
             ${s.playerId ? `<a class="btn btn--ghost" href="${Router.link('client', s.playerId)}" onclick="event.stopPropagation()">${I18n.t('home.viewPlayer')}</a>` : ''}
             <button class="btn btn--primary">${i < list.length - 1 ? I18n.t('common.next') : I18n.t('common.continue')}</button>

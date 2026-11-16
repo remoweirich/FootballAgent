@@ -1380,6 +1380,8 @@ I18n.register('nl', {
     'pr.favour.rel': 'relatie {n}',
     'pr.favour.none': 'Nog geen club waarbij je een gunst kunt inlossen.',
     'pr.favour.note': 'Kies een club: je relatie stijgt met {n}.',
+    'pr.favour.allCountries': "Alle landen",
+    'pr.favour.allDivs': "Alle divisies",
     'cd.seePotentialSubShort': 'Bekijk een advertentie',
     'cd.useInsiderTip': 'Insidertip gebruiken',
     'cd.insiderLeft': '{n} op voorraad',

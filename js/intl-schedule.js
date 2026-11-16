@@ -251,7 +251,7 @@ Object.assign(Internationals, {
         const add = (season, w, s, h, a, c, st, n) => {
             if (!w || !ok(h) || !ok(a)) return;
             const L = this._absKey(season, w);
-            if (L > now || (L === now && !this._playedNow(h, a))) out.push({ L, s: s || 'A', h, a, c, st: st || '', n: n ? 1 : 0 });
+            if (L > now || (L === now && !this._playedNow(h, a))) out.push({ L, s: s || 'A', h, a, c, st: st || '', n: n === 2 ? 2 : n ? 1 : 0 });
         };
         const fxs = (season, list, c, n) => (list || []).forEach(f => { if (f && f.hg == null) add(f.y != null ? f.y : season, f.w, f.s, f.h, f.a, f.c || c, f.st, n); });
         const groups = (season, gs, c) => (gs || []).forEach(g => fxs(season, g.fx, c));
@@ -264,8 +264,10 @@ Object.assign(Internationals, {
         };
         const tour = (season, T, c) => {
             if (!T) return;
-            (T.groups || []).forEach(g => (g.fx || []).forEach(f => { if (f.hg == null) add(season, f.w || C.TOURNAMENT_WEEKS[(f.md || 1) - 1], 'A', f.h, f.a, T.comp || c, 'group', 1); }));
-            Object.keys(T.ko || {}).forEach(k => [].concat(T.ko[k] || []).forEach(m => { if (m && m.hg == null) add(season, m.w, m.s, m.h, m.a, T.comp || c, k, 1); }));
+            // neutral, except for a host: it plays at home (0 = the home side hosts, 2 = the away side does)
+            const H = T.hosts || [], ven = (h, a) => H.includes(h) && !H.includes(a) ? 0 : H.includes(a) && !H.includes(h) ? 2 : 1;
+            (T.groups || []).forEach(g => (g.fx || []).forEach(f => { if (f.hg == null) add(season, f.w || C.TOURNAMENT_WEEKS[(f.md || 1) - 1], 'A', f.h, f.a, T.comp || c, 'group', ven(f.h, f.a)); }));
+            Object.keys(T.ko || {}).forEach(k => [].concat(T.ko[k] || []).forEach(m => { if (m && m.hg == null) add(season, m.w, m.s, m.h, m.a, T.comp || c, k, ven(m.h, m.a)); }));
         };
         const legs = { w: C.LEG1_WEEK, s: 'A' }, legs2 = { w: C.LEG2_WEEK, s: 'A' };
         [y - 1, y].forEach(sy => {
@@ -345,7 +347,7 @@ Object.assign(Internationals, {
     nationSchedule(nid) {
         return this.knownFixtures().filter(f => f.h === nid || f.a === nid).map(f => {
             const season = Math.floor((f.L - 3) / 52), wk = f.L - season * 52;
-            return { L: f.L, season, week: wk > 52 ? wk - 52 : wk, opp: f.h === nid ? f.a : f.h, comp: f.c, stage: f.st, venue: f.n ? 'N' : f.h === nid ? 'H' : 'A', upcoming: true };
+            return { L: f.L, season, week: wk > 52 ? wk - 52 : wk, opp: f.h === nid ? f.a : f.h, comp: f.c, stage: f.st, venue: this.venueOf(f.n, f.h === nid), upcoming: true };
         });
     },
 });

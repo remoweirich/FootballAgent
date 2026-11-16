@@ -7,9 +7,12 @@ const root = path.join(__dirname, '..') + '/';
 const build = fs.readFileSync(root + 'scripts/build-mobile.js', 'utf8');
 const ENGINE = [...build.match(/ENGINE_FILES\s*=\s*\[([\s\S]*?)\]/)[1].matchAll(/'([^']+\.js)'/g)].map(m => m[1]);
 const errors = [];
+// GameState.startNewGame seeds the world from the clock (Date.now), which overrode Rng.seed(7) below and
+// made every run a different world. A fixed clock in the sandbox keeps the world the same every run.
+class FixedDate extends Date { static now() { return 7007; } }
 const mkEl = () => ({ innerHTML: '', style: {}, querySelectorAll: () => [], addEventListener() {} });
 const sb = {
-    console: { log() {}, warn() {}, error: (...a) => errors.push(a.map(String).join(' ')) }, setTimeout: () => 0, clearTimeout() {}, Math, Date, JSON,
+    console: { log() {}, warn() {}, error: (...a) => errors.push(a.map(String).join(' ')) }, setTimeout: () => 0, clearTimeout() {}, Math, Date: FixedDate, JSON,
     indexedDB: undefined, localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     document: { addEventListener() {}, getElementById: () => null, createElement: mkEl, querySelector: () => null, documentElement: { style: {}, setAttribute() {} } },
     addEventListener() {}, matchMedia: () => ({ matches: false }), location: { hash: '' },
@@ -48,7 +51,12 @@ const r = JSON.parse(run(`
   var small = JSON.parse(JSON.stringify(m)); small.callup.groups = [G[0]]; small.callup.groups[0].players = G[0].players.slice(0, 2);
   var el2 = { innerHTML: '' }; Nego.generic(el2, small);
   // by title: a new complaint shares the flag icon
+  // Home lists at most 6 items, offers / injuries / expiring contracts first; in some worlds those fill
+  // all 6 (by design). Hold them aside so this checks the call-up item itself.
+  var inbox0 = GameState.inbox, csl0 = Agency.contractSeasonsLeft, inj0 = Agency.clients().map(function (p) { return p.injury; });
+  GameState.inbox = [m]; Agency.contractSeasonsLeft = function () { return 3; }; Agency.clients().forEach(function (p) { p.injury = null; });
   var attn = Home.needsAttention().filter(function (i) { return i.title === I18n.t('home.attn.callups'); }).map(function (i) { return i.sub; });
+  GameState.inbox = inbox0; Agency.contractSeasonsLeft = csl0; Agency.clients().forEach(function (p, k) { p.injury = inj0[k]; });
   // NEW: a first ever call-up at any age, unless he was already an international when he joined you
   // (estimated at signing: 24+ and good enough for a rotation place or better)
   var nid = G[0].nid, cl = Agency.clients(), aw = GameState.absWeek(), B = Internationals.callupBands(nid);

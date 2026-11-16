@@ -157,7 +157,7 @@ Object.assign(Internationals, {
                 return { id: p.id, name: p.name, pos: p.position, role: e.role, caps, isNew: !(wasCalled || {})[p.id] && !caps && !p._intlPrior };
             }).filter(Boolean).sort((a, b) => line(a.pos) - line(b.pos) || this.CU_ROLE.indexOf(a.role) - this.CU_ROLE.indexOf(b.role) || b.caps - a.caps);
             let fixtures = [];
-            try { fixtures = (this.nationSchedule ? this.nationSchedule(nid) : []).filter(f => keys.has(f.L)).slice(0, 6).map(f => ({ comp: f.comp, week: f.week, opp: f.opp, venue: f.venue })); } catch (e) { fixtures = []; }
+            try { fixtures = (this.nationSchedule ? this.nationSchedule(nid) : []).filter(f => keys.has(f.L)).slice(0, 6).map(f => ({ comp: f.comp, week: f.week, opp: f.opp, venue: f.venue, year: this.TOUR_COMPS[f.comp] ? f.season + 1 : null })); } catch (e) { fixtures = []; }
             return { nid, players, fixtures };
         }).filter(g => g.players.length)
             .sort((a, b) => b.players.length - a.players.length || String(this.name(a.nid)).localeCompare(String(this.name(b.nid))));
@@ -246,15 +246,21 @@ Object.assign(Internationals, {
         const appear = [];
         // goalkeepers: one keeper plays; client keepers take their share of the slot in role order
         let u = Rng.next(), at = 0;
+        const starGK = (fx.st && fx.st !== 'group' && fx.st !== 'friendly') && members.find(m => m.p.position === 'GK' && m.e.role === 'star');
+        if (starGK) { appear.push({ p: starGK.p, full: true, g: 0, a: 0 }); u = 2; }   // u past every share: no other keeper
         members.filter(m => m.p.position === 'GK').sort((a, b) => this.ROLE_RANK[a.e.role] - this.ROLE_RANK[b.e.role]).forEach(m => {
             const sh = C.CALLUP_PLAY_GK[m.e.role] || 0;
             if (u >= at && u < at + sh && !appear.some(a => a.p.position === 'GK')) appear.push({ p: m.p, full: true, g: 0, a: 0 });
             at += sh;
         });
+        // a knockout game: the stars always start (nobody rests his best players with elimination at stake)
+        const ko = !!fx.st && fx.st !== 'group' && fx.st !== 'friendly';
         members.filter(m => m.p.position !== 'GK').forEach(m => {
-            if (Rng.next() >= (C.CALLUP_PLAY[m.e.role] || 0)) return;
-            appear.push({ p: m.p, full: Rng.next() < (C.CALLUP_START[m.e.role] ?? 0.4), g: 0, a: 0 });
+            const star = ko && m.e.role === 'star';
+            if (!star && Rng.next() >= (C.CALLUP_PLAY[m.e.role] || 0)) return;
+            appear.push({ p: m.p, role: m.e.role, full: star || Rng.next() < (C.CALLUP_START[m.e.role] ?? 0.4), g: 0, a: 0 });
         });
+        this._fitXI(appear);
         // the whole squad is with its national team this week, playing or not: not available to his club (the European qualifiers
         // in weeks 1-2 run while the summer tournaments finish)
         const I = this.state();
@@ -309,6 +315,27 @@ Object.assign(Internationals, {
             e[9] = (e[9] || []).concat(appear.map(a => [a.p.id, nid === fx.h ? 1 : 0, a.g, a.a, Math.round(a.rating * 10), a.card || 0, a.full ? 1 : 0]));
         }
     },
+    // The clients who start have to make a real XI: the call-up limits (CALLUP_XI_POS / _GROUP /
+    // _OUTFIELD) and room left for at least 3 defenders, 2 midfielders and 1 attacker. Picked in role
+    // order (stars first, then ability); the rest come off the bench, at most XI_SUBS of them.
+    XI_LINE: { CB: 'D', LB: 'D', RB: 'D', CDM: 'M', CM: 'M', CAM: 'M', LW: 'A', RW: 'A', ST: 'A' },
+    XI_MIN: { D: 3, M: 2, A: 1 }, XI_SUBS: 5,
+    _fitXI(appear) {
+        const C = INTL_CONFIG, L = this.XI_LINE, MIN = this.XI_MIN, rank = a => this.ROLE_RANK[a.role] ?? 4;
+        const pos = {}, line = { D: 0, M: 0, A: 0 };
+        let out = 0;
+        appear.filter(a => a.p.position !== 'GK' && a.full).sort((x, y) => rank(x) - rank(y) || y.p.ability - x.p.ability).forEach(a => {
+            const ps = a.p.position, ln = L[ps] || 'M';
+            const need = Object.keys(MIN).reduce((s, k) => s + Math.max(0, MIN[k] - line[k] - (k === ln ? 1 : 0)), 0);
+            const fits = (pos[ps] || 0) < (C.CALLUP_XI_POS[ps] || 1) && line[ln] < (C.CALLUP_XI_GROUP[ln] || 4)
+                && out < C.CALLUP_XI_OUTFIELD && need <= C.CALLUP_XI_OUTFIELD - (out + 1);
+            if (!fits) { a.full = false; return; }
+            pos[ps] = (pos[ps] || 0) + 1; line[ln]++; out++;
+        });
+        // the bench: at most XI_SUBS come on, the best-ranked first; the rest don't play
+        const subs = appear.filter(a => !a.full).sort((x, y) => rank(x) - rank(y) || y.p.ability - x.p.ability);
+        subs.slice(this.XI_SUBS).forEach(a => appear.splice(appear.indexOf(a), 1));
+    },
     // is a client with his national team this week (and so missing his club's match)?
     clientAway(p) {
         const I = this.state(); if (!I || !I.away || !p) return false;
@@ -327,7 +354,7 @@ Object.assign(Internationals, {
         const I = this.state(); if (!I) return;
         if (!Array.isArray(I.res)) I.res = [];   // (an object per nation in the first builds of this)
         const tag = fx.pens ? fx.pens.h + '-' + fx.pens.a : fx.et ? 'e' : 0;
-        const e = [this._absKey(season, fx.w || 0), fx.h, fx.a, fx.hg, fx.ag, this._compCode(fx.c || 'INTL_FRIENDLY'), fx.st || 0, fx.n ? 1 : 0, tag];
+        const e = [this._absKey(season, fx.w || 0), fx.h, fx.a, fx.hg, fx.ag, this._compCode(fx.c || 'INTL_FRIENDLY'), fx.st || 0, fx.n ? (fx.hv === 'h' ? 0 : fx.hv === 'a' ? 2 : 1) : 0, tag];
         while (e.length > 5 && !e[e.length - 1]) e.pop();
         I.res.push(e);
     },
@@ -336,6 +363,10 @@ Object.assign(Internationals, {
         const cut = L - INTL_CONFIG.RESULTS_KEEP_WEEKS;
         if (I.res.some(e => e[0] < cut)) I.res = I.res.filter(e => e[0] >= cut);
     },
+    // venue flag: 1 neutral, 2 the AWAY side is at home (a tournament host), else the home side is
+    venueOf(n, home) { return n === 1 ? 'N' : n === 2 ? (home ? 'A' : 'H') : (home ? 'H' : 'A'); },
+    // tournaments get their year in labels ("EURO 2048"): played at the end of season S, so S + 1
+    TOUR_COMPS: { INTL_EURO: 1, INTL_WC: 1, INTL_COPA: 1, INTL_GOLD: 1, INTL_AFCON: 1, INTL_AC: 1, INTL_ONC: 1 },
     // a nation's matches, newest first: { L, season, week, opp, gf, ga, comp, stage, venue: 'H'|'A'|'N', tag }
     nationResults(nid) {
         const I = this.state(), list = (I && Array.isArray(I.res)) ? I.res.slice().sort((a, b) => a[0] - b[0]) : [], out = [];
@@ -346,7 +377,7 @@ Object.assign(Internationals, {
             const pens = typeof tg === 'string' && tg !== 'e' ? tg.split('-') : null;
             const tag = pens ? 'p' + (home ? pens[0] + '-' + pens[1] : pens[1] + '-' + pens[0]) : tg === 'e' ? 'e' : '';
             const clients = (cl || []).filter(c => c[1] === (home ? 1 : 0)).map(([id, side, g, as, r, card, full]) => ({ id, g, a: as, rating: r / 10, card, full: !!full }));
-            out.push({ L, season, week: wk > 52 ? wk - 52 : wk, opp: home ? a : h, gf: home ? hg : ag, ga: home ? ag : hg, comp: this._compOf(cc), stage: st || '', venue: n ? 'N' : home ? 'H' : 'A', tag, clients });
+            out.push({ L, season, week: wk > 52 ? wk - 52 : wk, opp: home ? a : h, gf: home ? hg : ag, ga: home ? ag : hg, comp: this._compOf(cc), stage: st || '', venue: this.venueOf(n, home), tag, clients });
         }
         return out;
     },

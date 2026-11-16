@@ -898,7 +898,11 @@ const NATIONALITY_DISTRIBUTION = {
     "Liechtenstein": 0.1,
     "Luxembourg": 0.1,
     "Cyprus": 0.1,
-    "DRC": 1
+    "DRC": 1,
+    "Curaçao": 0.1,
+    "Syria": 0.1,
+    "Afghanistan": 0.1,
+    "Venezuela": 0.1
 };
 
 // Fallback names for countries not in main database

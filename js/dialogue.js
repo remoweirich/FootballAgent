@@ -127,7 +127,10 @@ const Dialogue = {
             // localize discovered "vocabulary" values (hobby, keepsake, occasion, ...) at fill time,
             // so a value stored/generated in one language still reads right in the current locale
             if (pk && pk.vocab && pk.vocab[v]) v = pk.vocab[v];
-            out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), v);
+            // a value that opens a sentence ("…already paid for. {thing}.") starts with a capital;
+            // after a trailing-off "..." it stays lowercase
+            const s = String(v), cap = s.charAt(0).toUpperCase() + s.slice(1);
+            out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), (m, off, str) => /(?:^|(?<!\.)[.!?]\s+)[¡¿]?$/.test(str.slice(0, off)) ? cap : s);
         }
         return out;
     },
@@ -1082,15 +1085,18 @@ const Dialogue = {
             entry._paid = true;
             if (entry.gift === 'money') {
                 const gpk = this._pack();
-                extra.thing = (gpk && gpk.envelope) ? gpk.envelope.replace('{amt}', UI.money(entry.value)) : `an envelope. Inside: €${UI.money(entry.value)} toward the agency`;
+                extra.thing = ((gpk && gpk.envelope) || 'an envelope. Inside: €{amt} toward the agency').replace('{amt}', UI.money(entry.value))
+                    .replace(/€/g, typeof UI.cur === 'function' ? UI.cur() : '€');
                 GameState.agency.balance += entry.value;
                 GameState.addFinance('Gifts from clients', entry.value);
-                notes.push(`He covered €${UI.money(entry.value)} of the agency's costs.`);
+                notes.push(this._t('dlg.note.giftMoney', { amt: UI.money(entry.value) }, "He covered €{amt} of the agency's costs."));
             } else {
-                extra.thing = entry.thing;
+                // he says it himself, so the line gets the first-person wording ("from my debut");
+                // the file keeps the stored third-person text
+                extra.thing = this.keepsakeSaid(entry.thing);
                 const f = this.ensureFacts(p);
                 (f.keepsakes = f.keepsakes || []).push({ year: GameState.seasonStartYear, text: entry.thing });
-                notes.push('A keepsake for the office shelf. It goes in his file, and your memory.');
+                notes.push(this._t('dlg.note.keepsake', null, 'A keepsake for the office shelf. It goes in his file, and your memory.'));
             }
         }
         if (entry.type === 'thanks') extra.thing = extra.thing || entry.thing || 'a gift';
@@ -1188,6 +1194,18 @@ const Dialogue = {
 
     // =================================================== reciprocity (Phase 4)
     KEEPSAKES: ['a signed shirt from his debut', 'a watch with a date engraved on the back', 'a framed photo of the two of you at his first signing', 'the match ball from his best game, signed by the whole squad', 'a bottle from a vineyard he part-owns'],
+    // the same keepsakes as he says them when he hands them over (the packs carry theirs in `said`)
+    KEEPSAKES_SAID: {
+        'a signed shirt from his debut': 'a signed shirt from my debut',
+        'a framed photo of the two of you at his first signing': 'a framed photo of the two of us at my first signing',
+        'the match ball from his best game, signed by the whole squad': 'the match ball from my best game, signed by the whole squad',
+        'a bottle from a vineyard he part-owns': 'a bottle from a vineyard I part-own',
+    },
+    keepsakeSaid(v) {
+        const pk = this._pack();
+        if (pk) return (pk.said && pk.said[v]) || (pk.vocab && pk.vocab[v]) || v;
+        return this.KEEPSAKES_SAID[v] || v;
+    },
     // Called from addBond: a big moment at Confidant+ sometimes moves him to give something back.
     _maybeThanks(p, delta) {
         if (p.archived || delta < 3 || this.bondOf(p) < 50) return;
@@ -1213,9 +1231,16 @@ const Dialogue = {
         if (this.bondOf(p) < 50 || p._tipSeason === year) return false;
         p._tipSeason = year; p._tipUntil = aw + 2;
         const what = { time: I18n.t('dlg.tip.time'), club: I18n.t('dlg.tip.club'), wage: I18n.t('dlg.tip.wage'), agent: I18n.t('dlg.tip.agent') }[dim] || I18n.t('dlg.tip.something');
+        const What = what.charAt(0).toUpperCase() + what.slice(1);
         GameState.addMail({
             playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('dlg.tip.subj', { name: p.name }),
-            body: I18n.t('dlg.tip.body', { name: p.name, what: what.charAt(0).toUpperCase() + what.slice(1) }), ttl: 4
+            body: I18n.t('dlg.tip.body', { name: p.name, what: What }), ttl: 4
+        });
+        // too important to sit unread among the week's news: it also pops up after the week summary
+        // (Sim.advanceWeek hands these on as spotlights; transient, the mail is the record)
+        (GameState._weekSpotlights = GameState._weekSpotlights || []).push({
+            icon: '🤫', title: I18n.t('dlg.tip.subj', { name: p.name }), quote: I18n.t('dlg.tip.quote', { what: What }),
+            note: I18n.t('dlg.tip.note'), playerId: p.id
         });
         GameState.addLog(I18n.t('dlg.tip.log', { name: p.name }), 'morale');
         return true;

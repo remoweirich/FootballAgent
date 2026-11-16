@@ -1382,6 +1382,8 @@ I18n.register('pt', {
     'pr.favour.rel': 'relação {n}',
     'pr.favour.none': 'Ainda não há nenhum clube a quem pedir um favor.',
     'pr.favour.note': 'Escolhe um clube: a relação sobe {n}.',
+    'pr.favour.allCountries': "Todos os países",
+    'pr.favour.allDivs': "Todas as divisões",
     'cd.seePotentialSubShort': 'Vê um anúncio',
     'cd.useInsiderTip': 'Usar dica',
     'cd.insiderLeft': '{n} em stock',

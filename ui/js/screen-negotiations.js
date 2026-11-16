@@ -186,7 +186,7 @@ Nego.callupHTML = function (m) {
         if (!g.fixtures || !g.fixtures.length) return `<div class="cu-fix"><span class="muted">${I18n.t('cu.noFixtures')}</span></div>`;
         const byComp = [];
         g.fixtures.forEach(f => { const last = byComp[byComp.length - 1]; if (last && last.comp === f.comp) last.list.push(f); else byComp.push({ comp: f.comp, list: [f] }); });
-        return byComp.map(b => `<div class="cu-fix"><span class="cu-comp">${UI.esc(compName(b.comp))}</span>${b.list.map(f =>
+        return byComp.map(b => `<div class="cu-fix"><span class="cu-comp">${UI.esc(compName(b.comp))}${b.list[0].year ? ' ' + b.list[0].year : ''}</span>${b.list.map(f =>
             `<span class="cu-fx"><span class="cu-wk">${I18n.t('leagues.wkShort')} ${f.week}</span> ${I18n.t('cu.vs', { opp: UI.esc(nm(f.opp)) })} ${ha(f.venue)}</span>`).join('')}</div>`).join('');
     };
     const players = g => asTable
@@ -363,6 +363,7 @@ Nego.roleOptionsHtml = function (p, selRole, selCup) {
     const sel = (gk && selCup) ? '__cup__' : selRole;
     const opts = [];
     ROLE_ORDER.forEach(r => {
+        if (r === 'youth' && r !== selRole && Agency.roleForAge('youth', p.age) !== 'youth') return;   // no Youth role past 21
         opts.push([r, roleLabel(r, p.age, p.position, false)]);
         if (gk && r === 'rotation') opts.push(['__cup__', roleLabel('rotation', p.age, 'GK', true)]);
     });
@@ -438,7 +439,9 @@ Nego.renewal = function (el, m) {
     if (c.wage == null) {
         // the club offers him his current role, unless he has outgrown its view of him: then the
         // most it will give, so its own opening offer is always one it would actually sign
-        const role = Agency.roleAcceptable(p, club, p.squadRole) ? p.squadRole : Agency.clubRoleCeiling(p, club);
+        // ...and a player who has outgrown his contract is offered his new role straight away
+        const role = o.proposedRole && Agency.roleAcceptable(p, club, o.proposedRole) ? o.proposedRole
+            : Agency.roleAcceptable(p, club, p.squadRole) ? p.squadRole : Agency.clubRoleCeiling(p, club);
         Object.assign(c, o.agreed || { wage: o.proposedWage, role, cupKeeper: role === p.squadRole && !!p.cupKeeper, term: Math.min(o.proposedTermSeasons || 2, termCap) });
     }
     if (!o.agreed) this.agree(m, c);

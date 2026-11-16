@@ -67,6 +67,33 @@ check('thanks: keepsake lands in the facts ledger, pays once', runv(`
   Dialogue.buildMomentScene(entry);   // rebuild must not double-pay
   return n1 === 1 && P.facts.keepsakes.length === 1 && scene.open.text.includes('signed shirt');
 `));
+// he hands the gift over himself: first person ("from my debut"), and a gift that opens a
+// sentence starts with a capital ("…already paid for. A watch…"), in English and German
+check('thanks: every keepsake reads in his own voice, capitalised after a full stop (en + de)', runv(`
+  const bad = [];
+  const opens = DIALOGUE_DATA.moments.filter(r => r.kind === 'thanks' && r.beat === 'open');
+  for (const loc of ['en', 'de']) {
+    I18n.locale = loc;
+    for (const thing of Dialogue.KEEPSAKES) for (const row of opens) {
+      const t = Dialogue.fill(Dialogue._locTxt(row), P, { thing: Dialogue.keepsakeSaid(thing) });
+      if (loc === 'en' && /\\b(his|he|you) (debut|first|best|part-owns)|two of you/.test(t)) bad.push(t);
+      if (loc === 'de' && /seine[mr]? |er beteiligt|von euch/.test(t)) bad.push(t);
+      if (/[.!?]\\s+[¡¿]?[a-zäöü]/.test(t.replace(/\\.\\.\\.\\s+\\S+/g, ''))) bad.push(t);
+    }
+  }
+  I18n.locale = 'en';
+  // the player file keeps the stored third-person text
+  const fileText = (P.facts.keepsakes || [])[0];
+  if (bad.length) console.error(bad.slice(0, 3).join(' || '));
+  return bad.length === 0 && fileText && /his debut/.test(fileText.text);
+`));
+check('thanks: the gift notes are localised and use the chosen currency symbol', runv(`
+  I18n.locale = 'de';
+  const s1 = Dialogue.buildMomentScene({ type: 'thanks', playerId: P.id, gift: 'keepsake', thing: 'a watch with a date engraved on the back' });
+  const s2 = Dialogue.buildMomentScene({ type: 'thanks', playerId: P.id, gift: 'money', value: 5000 });
+  I18n.locale = 'en';
+  return /Andenken/.test(s1.notes[0]) && /Agenturkosten/.test(s2.notes[0]) && /Ein Umschlag|ein Umschlag/.test(s2.open.text);
+`));
 check('thanks: cherish suits the loyal (+1 bond)', runv(`
   P.personality = { primary: 'loyal', secondary: 'homebody', revP: true, revS: true };
   const scene = { kind: 'moment', momentType: 'thanks', playerId: P.id, extra: { thing: 'a watch' } };
@@ -123,6 +150,16 @@ check('tipoff: Confidant gets a warning and a two-week grace before a case opens
   const opens = Dialogue.tipOff(P, 'time') === false;
   GameState.week -= 2;
   return intercepted && mailed && stillGrace && opens && P._tipUntil === undefined;
+`));
+check('tipoff: also pops up after the week summary (handed on as a spotlight, once)', runv(`
+  P.bond = 60; delete P._tipSeason; delete P._tipUntil; GameState._weekSpotlights = [];
+  Dialogue.tipOff(P, 'time');
+  const q = GameState._weekSpotlights.slice();
+  const s = q[0] || {};
+  const src = Sim.advanceWeek.toString();
+  delete P._tipUntil; GameState._weekSpotlights = [];   // _tipSeason stays set: the next check relies on it
+  return q.length === 1 && s.playerId === P.id && /freezing me out/i.test(s.quote) && /two weeks/.test(s.note)
+    && /spotlights\\.push\\(\\.\\.\\.GameState\\._weekSpotlights\\)/.test(src);
 `));
 check('tipoff: only once a season, never below Confidant', runv(`
   P.bond = 60;

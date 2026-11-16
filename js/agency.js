@@ -537,8 +537,11 @@ const Agency = {
         if (d >= -1) return 'starter';
         if (d >= -8) return 'rotation';
         if (d >= -16) return 'fringe';
-        return 'youth';
+        return this.roleForAge('youth', p.age);
     },
+    // a Youth role only exists up to 21: an older player the club barely rates is Fringe instead
+    YOUTH_MAX_AGE: 21,
+    roleForAge(role, age) { return (role === 'youth' && age != null && age > this.YOUTH_MAX_AGE) ? 'fringe' : role; },
     // Starters + stars among MY clients at a club follow the national-team limits (INTL_CONFIG
     // CALLUP_XI_*): per position (GK, RB, LB 1; ST, RW, LW, CAM, CDM 2; CM, CB 3), per line (5 defenders,
     // 4 midfielders, 3 attackers) and 10 outfielders. A club never has two star right-backs: once the
@@ -729,7 +732,7 @@ const Agency = {
         p.squadRole = 'fringe';
         if (wasWage < this.PRO_WAGE_FLOOR) {
             const pro = Math.max(2500, this.offeredWage(p, parent, { loyalty: false, jitter: false }));
-            p.wage = pro; p.contractUntilSeason = GameState.seasonStartYear + 2;
+            p.wage = pro; p.contractUntilSeason = GameState.seasonStartYear + 2; p._contractAbility = p.ability;
             if (p.agentId === 'me' && typeof recordWagePoint === 'function') recordWagePoint(p);
             // his first professional contract is a life moment, not just a ledger entry
             if (p.agentId === 'me' && typeof Dialogue !== 'undefined') Dialogue.queueMoment({ type: 'procontract', playerId: p.id });
@@ -780,7 +783,7 @@ const Agency = {
             let proNote = '';
             if ((p.wage || 0) < this.PRO_WAGE_FLOOR && club) {
                 const pro = Math.max(2500, this.offeredWage(p, club, { loyalty: false, jitter: false }));
-                p.wage = pro; p.contractUntilSeason = GameState.seasonStartYear + 2;
+                p.wage = pro; p.contractUntilSeason = GameState.seasonStartYear + 2; p._contractAbility = p.ability;
                 if (p.agentId === 'me' && typeof recordWagePoint === 'function') recordWagePoint(p);
                 if (p.agentId === 'me' && typeof Dialogue !== 'undefined') Dialogue.queueMoment({ type: 'procontract', playerId: p.id });
                 proNote = I18n.t('ag.recall.proNote', { amt: UI.money(pro) });
@@ -842,8 +845,8 @@ const Agency = {
     // ---------- shop player to ANY club, in any country ----------
     shopPlayer(p, targetClubId) {
         if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
-        // out on loan (or with the reserves): nobody talks about a permanent move until he's back
-        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.shop.awayLoan', { name: p.name, club: UI.clubName ? UI.clubName(p.onLoanAt) : I18n.t('ag.anotherClub') }) };
+        // out on loan: nobody talks about a permanent move until he's back (his own U21 / B team is no loan)
+        if (awayOnLoan(p)) return { ok: false, message: I18n.t('ag.shop.awayLoan', { name: p.name, club: UI.clubName ? UI.clubName(p.onLoanAt) : I18n.t('ag.anotherClub') }) };
         const parent = Clubs.getClubById(p.clubId);
         const target = Clubs.getClubById(targetClubId);
         if (!target) return { ok: false, message: I18n.t('ag.unknownClub') };
@@ -949,15 +952,20 @@ const Agency = {
         const wageCaseOpen = p.moraleCase && p.moraleCase.dim === 'wage' && p.moraleCase.stage >= 2;
         const refuse = (msg) => { if (wageCaseOpen) p.morale.club = Math.max(0, p.morale.club + MORALE.STAGE2_WAGE_CLUB_PENALTY); return { ok: false, message: msg }; };
         const seasonsLeft = (p.contractUntilSeason ?? GameState.seasonStartYear) - GameState.seasonStartYear;
-        if (seasonsLeft > 2 && Rng.next() < 0.7) return refuse(`${club.name} won't talk — plenty of contract left.`);
-        if (p.squadRole === 'fringe' && Rng.next() < 0.5) return refuse(`${club.name} aren't planning with ${p.name}.`);
-        if (this.renewalStance(p, club) === 'release') return refuse(I18n.t('ag.renew.noPlans', { club: club.name, name: p.name }));
+        // a player who has outgrown his contract (see outgrownContract) always gets talks, and his new role
+        const outgrown = this.outgrownContract(p, club);
+        if (!outgrown) {
+            if (seasonsLeft > 2 && Rng.next() < 0.7) return refuse(I18n.t('ag.renew.plentyLeft', { club: club.name }));
+            if (Rng.next() < (this.RENEW_NOPLANS[p.squadRole] || 0) * this.renewFormMult(p).noPlans) return refuse(I18n.t('ag.renew.notPlanning', { club: club.name, name: p.name }));
+            if (this.renewalStance(p, club) === 'release') return refuse(I18n.t('ag.renew.noPlans', { club: club.name, name: p.name }));
+        }
         // a renewal reflects loyalty and recent form (and the club's stance and budget)
         const proposedWage = this.renewalWage(p, club);
         const proposedTermSeasons = Math.min(2 + Math.floor(Rng.next() * 2), this.maxContractTerm(p, club));
         const offer = { playerId: p.id, clubId: club.id, proposedWage, proposedTermSeasons };
+        if (outgrown) offer.proposedRole = this.clubRoleCeiling(p, club);
         GameState.addMail({ playerId: p.id, kind: 'renewal', subject: I18n.t('ag.mail.renewalSubj', { name: p.name, club: club.name }), offer, persistence: 0, ttl: 3 });
-        return { ok: true, message: I18n.t('ag.renew.open', { club: club.name }) };
+        return { ok: true, message: outgrown ? I18n.t('ag.renew.outgrown', { club: club.name, name: p.name }) : I18n.t('ag.renew.open', { club: club.name }) };
     },
 
     // How much a raw ability-to-potential gap should move a price, scaled down for low-ability
@@ -989,6 +997,28 @@ const Agency = {
         return cur.apps > 0 ? { avg: cur.avg, apps: cur.apps } : { avg: prev.avg || 0, apps: prev.apps || 0 };
     },
     recentSeasonRating(p) { return this.recentSeason(p).avg; },
+    // His form over roughly his last FORM_WINDOW club games: this season's, topped up with last season's
+    // average to reach the window (stats are kept per season, not per game). { avg, apps }.
+    FORM_WINDOW: 25,
+    recentForm(p) {
+        const y = GameState.seasonStartYear, cur = seasonTotals(p, y), prev = seasonTotals(p, y - 1);
+        const take = Math.min(prev.apps, Math.max(0, this.FORM_WINDOW - cur.apps));
+        const apps = cur.apps + take;
+        return { apps, avg: apps ? (cur.ratingSum + prev.avg * take) / apps : 0 };
+    },
+    // Renewal refusals follow form (the same bands as a listing): an in-form player is never "not in
+    // our plans" and rarely let go; a bad run makes both likelier. Under RENEW_FORM_MIN_APPS the club
+    // has nothing to judge him on: x1.
+    RENEW_RELEASE: { key: 0.01, starter: 0.05, youth: 0.10, rotation: 0.20, fringe: 0.45 },
+    RENEW_NOPLANS: { fringe: 0.5, rotation: 0.2 },
+    RENEW_FORM_MULT: { inForm: { noPlans: 0, release: 0.25 }, steady: { noPlans: 0.6, release: 0.6 }, poor: { noPlans: 1.3, release: 1.5 }, abysmal: { noPlans: 1.6, release: 2.2 } },
+    RENEW_FORM_MIN_APPS: 8, RENEW_RELEASE_CAP: 0.8,
+    renewFormMult(p) {
+        const f = this.recentForm(p);
+        if (f.apps < this.RENEW_FORM_MIN_APPS) return { noPlans: 1, release: 1 };
+        const band = this.LIST_BANDS.find(b => f.avg >= b.from) || this.LIST_BANDS[this.LIST_BANDS.length - 1];
+        return this.RENEW_FORM_MULT[band.key];
+    },
     // ---- how much a club means to a player (patience on its bench; later also how keen he is on a move) ----
     // relief < 1 makes the bench hurt less: a clearly bigger or elite club, a club that serves his ambition
     // (whether or not he has told you), generous pay, a modest agreed role, and age 32+. That relief fades the
@@ -1206,6 +1236,19 @@ const Agency = {
         if (p.age > 32 && bonus > 0) bonus = Math.max(0.05, bonus - 0.15 * (p.age - 32));
         return 1 + Math.max(0, bonus);
     },
+    // A club's wage budget for him, with long service on top: the budget caps what he is worth on the
+    // market, and loyalty is paid above it (bounded: at most the budget x his loyalty multiplier), so a
+    // player who outgrew his club keeps climbing a little each season instead of flatlining.
+    loyalWageCap(p, club) {
+        const cap = this.clubWageCap(club);
+        return (club && p.clubId === club.id) ? Math.round(cap * this.loyaltyMult(p) / 10) * 10 : cap;
+    },
+    // 8+ seasons at the club and still in the XI: a renewal holds his wage, it is never cut
+    LOYAL_VETERAN_SEASONS: 8,
+    loyalVeteran(p, club) {
+        return !!club && p.clubId === club.id && ['key', 'starter'].includes(p.squadRole)
+            && typeof Sim !== 'undefined' && Sim._seasonsAtClub && Sim._seasonsAtClub(p) >= this.LOYAL_VETERAN_SEASONS;
+    },
     // Country pay tendency, with a per-offer jitter so it's a likelihood rather than a fixed law: an
     // English suitor USUALLY outpays a Portuguese one for the same player, but not on literally every bid.
     countryWageMult(club, jitter) {
@@ -1226,7 +1269,8 @@ const Agency = {
         // a club never OPENS at its whole wage budget: it keeps room to be haggled up (see maxClubWage)
         // the teenage hard cap (PlayerGen.YOUTH_WAGE_CAP) is a ceiling too: open below it as well
         const teenCap = PlayerGen.capYouthWage(Infinity, p.age, rep, p.potential);
-        w = Math.min(w, Math.min(this.clubWageCap(club), teenCap) * (opts.full ? 1 : this.OPENING_SHARE));   // opts.full: his worth to them, not an opening offer
+        const budget = opts.loyalty ? this.loyalWageCap(p, club) : this.clubWageCap(club);   // loyalty is paid on top of the budget
+        w = Math.min(w, Math.min(budget, teenCap) * (opts.full ? 1 : this.OPENING_SHARE));   // opts.full: his worth to them, not an opening offer
         return Math.max(30, Math.round(w / 10) * 10);
     },
     // the most of its per-player wage budget a club puts in its OPENING offer; the rest is haggling room
@@ -1270,18 +1314,38 @@ const Agency = {
     // `worth` is the market wage there (loyalty and form included), never above the club's budget.
     // A wage only rises while it is below his worth, so renewing on short deals every year can't
     // ratchet it up for ever.
+    // Outgrown his contract: +OUTGROWN_GAIN rating since he signed it, or the club would now give him a
+    // role OUTGROWN_ROLE_STEPS above the one he has. A club that won't loan or sell him because it rates
+    // him has to pay and play him: talks always open, a raise, and the new role.
+    OUTGROWN_GAIN: 10, OUTGROWN_ROLE_STEPS: 2,
+    contractAbility(p) {
+        if (p._contractAbility != null) return p._contractAbility;
+        // older saves: his rating when his wage was last set (each contract records a wage point)
+        const h = p.history || {}, w = (h.wage || [])[(h.wage || []).length - 1];
+        if (!w || !h.ability || !h.ability.length) return null;
+        let v = null;
+        for (const a of h.ability) { if (a.t <= w.t) v = a.value; else break; }
+        return v;
+    },
+    outgrownContract(p, club) {
+        if (!p || !club || awayOnLoan(p) || p.clubId !== club.id) return false;
+        const base = this.contractAbility(p);
+        if (base != null && p.ability - base >= this.OUTGROWN_GAIN) return true;
+        return ROLE_ORDER.indexOf(this.maxRoleAt(p, club)) - ROLE_ORDER.indexOf(p.squadRole) >= this.OUTGROWN_ROLE_STEPS;
+    },
     renewalStance(p, club) {
         if (!club) return 'release';
+        if (this.outgrownContract(p, club)) return 'raise';
         const y = GameState.seasonStartYear, st = p._renewStance;
         if (st && st.y === y && st.c === club.id) return st.s;
         const worth = this.offeredWage(p, club, { loyalty: true, jitter: false, full: true });
         const role = p.squadRole;
         let s;
         if (this.lostBelief(p, club)) s = 'release';
-        else if (p.wage > worth * 1.6) s = (role === 'key' || role === 'starter') ? 'cut' : 'release';
+        else if (p.wage > worth * 1.6) s = (role === 'key' || role === 'starter') ? (this.loyalVeteran(p, club) ? 'hold' : 'cut') : 'release';
         else if (p.wage > worth * 1.01) s = 'hold';   // already paid above what he is worth to them
         else {
-            const r = Rng.next(), drop = { key: 0.03, starter: 0.10, rotation: 0.25, youth: 0.15 }[role] ?? 0.45;
+            const r = Rng.next(), drop = Math.min(this.RENEW_RELEASE_CAP, (this.RENEW_RELEASE[role] ?? 0.45) * this.renewFormMult(p).release);
             s = r < drop ? 'release' : r < drop + this.RENEW_HOLD_CHANCE ? 'hold' : 'raise';
         }
         p._renewStance = { y, c: club.id, s };
@@ -1289,9 +1353,9 @@ const Agency = {
     },
     // the wage a club opens a renewal at, by its stance
     renewalWage(p, club, bump = 1) {
-        const s = this.renewalStance(p, club), cap = this.clubWageCap(club);
+        const s = this.renewalStance(p, club), cap = this.loyalWageCap(p, club);
         const worth = this.offeredWage(p, club, { loyalty: true, jitter: false, full: true });
-        if (s === 'hold') return Math.min(p.wage, cap);
+        if (s === 'hold') return this.loyalVeteran(p, club) ? p.wage : Math.min(p.wage, cap);   // a loyal veteran keeps his wage
         if (s === 'cut') return worth;
         return Math.min(cap, Math.round(Math.max(p.wage + 10, worth * bump) / 10) * 10);
     },
@@ -1303,14 +1367,14 @@ const Agency = {
         if (club && p.clubId === club.id) base *= this.loyaltyMult(p);                      // long service pays, when he stays
         base *= 1 + Math.max(-0.08, Math.min(0.25, (this.relationship(club ? club.id : null) - 55) / 220));
         base = PlayerGen.capYouthWage(base, p.age, rep, p.potential);
-        const cap = this.clubWageCap(club);
+        const cap = this.loyalWageCap(p, club);
         let max = Math.min(cap, Math.round(base / 10) * 10);
         // At his OWN club the renewal stance rules: no raise when they'd only hold his wage, his worth
         // when they'd cut it. (There used to be a guaranteed raise on his current wage here, which let a
         // string of one-season deals compound the wage without limit.)
         if (club && p.clubId === club.id) {
             const s = this.renewalStance(p, club);
-            if (s === 'hold') max = Math.min(p.wage, cap);
+            if (s === 'hold') max = this.loyalVeteran(p, club) ? p.wage : Math.min(p.wage, cap);   // a loyal veteran keeps his wage
             else if (s === 'cut') max = this.offeredWage(p, club, { loyalty: true, jitter: false });
         }
         return max;
@@ -1543,10 +1607,25 @@ const Agency = {
         if (round >= 4) return { status: 'final', role: ceil, message: I18n.t('nego.loanRole.final', { role: roleLabel(ceil, p.age, p.position), name: p.name }) };
         return { status: 'counter', role: ceil, message: I18n.t('nego.loanRole.counter', { name: p.name, role: roleLabel(ceil, p.age, p.position), reqRole: roleLabel(requested, p.age, p.position) }) };
     },
+    // A Star Player / First Choice at his own club who has been left out for weeks on end (his
+    // playing-time bar has sat in BAD long enough to open a complaint), not through injury.
+    frozenOut(p) {
+        return !!p && !p.onLoanAt && !p.injury && ['key', 'starter'].includes(p.squadRole)
+            && !!p._badStreak && (p._badStreak.time || 0) >= MORALE.CASE_OPEN_BAD_STREAK;
+    },
+    // the club can't refuse to list a player it won't play: it lists him itself, and tells you
+    listFrozenOut(p, events) {
+        const club = Clubs.getClubById(p.clubId); if (!club) return;
+        this.setTransferListed(p, true);
+        p._txOffersFrom = GameState.absWeek() + 1;
+        GameState.addMail({ playerId: p.id, kind: 'news', cat: 'morale', subject: I18n.t('ag.mail.frozenListSubj', { club: club.name, name: p.name }),
+            body: I18n.t('ag.mail.frozenListBody', { club: club.name, name: p.name, role: roleLabel(p.squadRole, p.age, p.position) }), ttl: 6 });
+        if (events) events.push({ type: 'morale', text: I18n.t('ag.log.frozenList', { club: club.name, name: p.name }) });
+    },
     // ask the club to transfer-list your player; they may agree (more offers) or keep him
     requestTransferListing(p) {
         if (!this.isClient(p)) return { ok: false, message: I18n.t('ag.notClient') };
-        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.txlist.away', { name: p.name }) };
+        if (awayOnLoan(p)) return { ok: false, message: I18n.t('ag.txlist.away', { name: p.name }) };
         const club = Clubs.getClubById(p.clubId);
         if (!club) return { ok: false, message: I18n.t('ag.txlist.noClub', { name: p.name }) };
         if (p.transferListed) return { ok: false, message: I18n.t('ag.txlist.already', { name: p.name }) };
@@ -1562,6 +1641,7 @@ const Agency = {
         // is all but guaranteed for those roles — the two stances can't contradict each other.
         if (['youth', 'fringe'].includes(p.squadRole)) chance = Math.max(chance, 0.9);
         chance = Math.max(0.05, Math.min(0.95, chance));
+        if (this.frozenOut(p)) chance = 1;   // they won't play him, so they can't claim he's too important to sell
         if (Rng.next() < chance) {
             this.setTransferListed(p, true);
             p._txOffersFrom = GameState.absWeek() + 1;
@@ -1708,7 +1788,7 @@ const Agency = {
         if (!p) return { ok: false, message: I18n.t('ag.playerGone') };
         const toClub = Clubs.getClubById(o.toClubId), fromClub = Clubs.getClubById(o.fromClubId);
         if (!toClub) return { ok: false, message: I18n.t('ag.clubGone') };
-        if (p.onLoanAt) return { ok: false, message: I18n.t('ag.tr.onLoan', { name: p.name }) };
+        if (awayOnLoan(p)) return { ok: false, message: I18n.t('ag.tr.onLoan', { name: p.name }) };
         if (p.pendingTransfer) return { ok: false, message: I18n.t('ag.tr.pending', { name: p.name, club: Clubs.getClubById(p.pendingTransfer.toClubId)?.name || I18n.t('ag.anotherClub') }) };
         const term = Math.max(1, Math.min(6, termSeasons || 3));
 
@@ -1811,9 +1891,9 @@ const Agency = {
         p.wage = pkg.wage; p.contractUntilSeason = GameState.seasonStartYear + pkg.term;
         p.transferListed = false; delete p._listedAbs; delete p._listWins; p.loanListed = false; p._loanOk = false;
         delete p.pendingTransfer; delete p.joiningClubId; delete p._joinSeason;
-        p.squadRole = (pkg.role && ROLE_ORDER.includes(pkg.role)) ? pkg.role : this.maxRoleAt(p, toClub);
+        p.squadRole = this.roleForAge((pkg.role && ROLE_ORDER.includes(pkg.role)) ? pkg.role : this.maxRoleAt(p, toClub), p.age);
         p.cupKeeper = p.position === 'GK' && !!pkg.cupKeeper;   // the negotiated Cup Goalkeeper flag (GK only)
-        recordWagePoint(p);
+        recordWagePoint(p); p._contractAbility = p.ability;   // his rating when this contract was signed (outgrownContract)
 
         if (fromClub) this.changeRelationship(fromClub.id, pkg.initiatedByAgent ? +1 : +3);
         // agent-negotiated deals already booked their conclusion goodwill in acceptTransfer (profile-based);
@@ -1897,9 +1977,9 @@ const Agency = {
         // ...and he agreed to it, so he is content with it: a fresh start for playing time, as after a move
         p.morale.time = Math.max(p.morale.time, MORALE.TIME_RESET_ON_MOVE); p._benchStreak = 0;
         p.transferListed = false; delete p._listedAbs; delete p._listWins; p.loanListed = false; p._loanOk = false;   // committing to a new deal takes him off the market
-        if (role && ROLE_ORDER.includes(role)) p.squadRole = role;
+        if (role && ROLE_ORDER.includes(role)) p.squadRole = this.roleForAge(role, p.age);
         p.cupKeeper = p.position === 'GK' && !!opts.cupKeeper && role === 'rotation';   // Cup Goalkeeper (GK Back Up only)
-        recordWagePoint(p);
+        recordWagePoint(p); p._contractAbility = p.ability;
         // renewals stay NEUTRAL (no fee to weigh), so goodwill is the neutral +2, plus the fast-deal
         // bonus when it was wrapped up inside the first couple of rounds (see concludeRelDelta)
         this.changeRelationship(club.id, this.concludeRelDelta('NEUTRAL', o.neg ? o.neg.round : 1));

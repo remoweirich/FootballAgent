@@ -150,7 +150,10 @@ I18n.register('nl', {
     // --- agency: renewals ---
     'ag.renew.cooldown': '{club} heeft u deze week al antwoord gegeven over een nieuw contract — wacht tot volgende week voordat u er weer over begint.',
     'ag.renew.open': '{club} staat open voor gesprekken — voorstel in uw postvak.',
+    'ag.renew.outgrown': "{club} erkent dat {name} zijn contract ontgroeid is: een nieuw voorstel met een grotere rol en loonsverhoging staat in uw postvak.",
     'ag.renew.noPlans': '{club} is niet van plan het contract van {name} te verlengen.',
+    'ag.renew.plentyLeft': "{club} wil niet praten: het contract loopt nog lang.",
+    'ag.renew.notPlanning': "{club} rekent niet op {name}.",
     'ag.renew.movingAway': '{name} heeft al een vertrek afgesproken — een verlenging is niet meer aan de orde.',
     'ag.renew.alreadyDone': 'Het contract van {name} is dit seizoen al heronderhandeld — volgend seizoen kunt u er weer op terugkomen.',
     'ag.renew.done': 'Verlengd: €{wage}/wk als {role} tot het einde van {until}.',
@@ -320,6 +323,9 @@ I18n.register('nl', {
     'ag.mail.renewalSubj': 'Verlengingsvoorwaarden voor {name} bij {club}',
     'ag.mail.txlistSubj': '{name} op de transferlijst',
     'ag.mail.txlistBody': '{club} heeft {name} op de lijst gezet. Verwacht vanaf volgende week geïnteresseerde clubs.',
+    'ag.mail.frozenListSubj': "{club} zet {name} op de transferlijst",
+    'ag.mail.frozenListBody': "{name} tekende als {role}, maar speelt al weken nauwelijks. {club} erkent dat hij buiten de selectie is gezet en zet hem op de transferlijst. Verwacht vanaf volgende week geïnteresseerde clubs.",
+    'ag.log.frozenList': "{club} zet de buitengesloten {name} op de transferlijst.",
     'ag.mail.promiseKeptSubj': '{name} — belofte nagekomen',
     'ag.mail.promiseKeptBody': '{name}: «U heeft uw woord gehouden. Dat waardeer ik.»',
     'ag.mail.moveDoneSubj': '{name} rondt zijn overgang af',
@@ -586,6 +592,8 @@ I18n.register('nl', {
     'dlg.tip.something': 'iets',
     'dlg.tip.subj': '{name} nam u even apart',
     'dlg.tip.body': '{name}, zachtjes, na de training: «Luister. {what}. Ik ga er niet mee naar buiten, nog niet. Maar regel het, ja?» U heeft een voorsprong voordat dit een formele klacht wordt.',
+    'dlg.tip.quote': "Luister. {what}. Ik ga er niet mee naar buiten, nog niet. Maar regel het, ja?",
+    'dlg.tip.note': "U heeft twee weken voordat dit een formele klacht wordt.",
     'dlg.tip.log': '{name} waarschuwde u voordat hij het officieel maakte.',
     // financial advisor
     'dlg.adv.expiredSubj': '{name} — contract van de adviseur verlopen',
@@ -690,6 +698,8 @@ I18n.register('nl', {
     'dlg.note.flowers': 'De bloemen zijn onderweg (−€{amt}).',
     'dlg.note.weekend': 'Een goed besteed weekend (−€{amt}).',
     'dlg.note.giftSent': 'Het cadeau is onderweg (−€{amt}).',
+    'dlg.note.giftMoney': "Hij heeft €{amt} van de bureaukosten betaald.",
+    'dlg.note.keepsake': "Een aandenken voor de plank op kantoor. Het gaat in zijn dossier, en in uw geheugen.",
     // --- scout report: role tags, the written verdict and the tier a potential lands in.
     // {comp} is a competition name, so the rank templates keep it where a proper noun reads.
     'scout.rank.star': '{comp} · Sterspeler',

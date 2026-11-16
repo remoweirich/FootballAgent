@@ -146,7 +146,10 @@ I18n.register('fr', {
     // --- agency: renewals ---
     'ag.renew.cooldown': '{club} vous a déjà répondu au sujet d\'un nouveau contrat cette semaine : attendez la semaine prochaine avant d\'en reparler.',
     'ag.renew.open': '{club} est ouvert à la discussion : proposition dans votre boîte de réception.',
+    'ag.renew.outgrown': "{club} reconnaît que {name} a dépassé son contrat : une nouvelle offre avec un rôle plus important et une augmentation vous attend dans votre boîte de réception.",
     'ag.renew.noPlans': '{club} ne prévoit pas de prolonger le contrat de {name}.',
+    'ag.renew.plentyLeft': "{club} refuse de discuter : il reste largement assez de contrat.",
+    'ag.renew.notPlanning': "{club} ne compte pas sur {name}.",
     'ag.renew.movingAway': '{name} a déjà accepté un départ : une prolongation n\'est plus envisageable.',
     'ag.renew.alreadyDone': 'Le contrat de {name} a déjà été renégocié cette saison : vous pourrez y revenir la saison prochaine.',
     'ag.renew.done': 'Prolongé : €{wage}/sem comme {role} jusqu\'à la fin de {until}.',
@@ -316,6 +319,9 @@ I18n.register('fr', {
     'ag.mail.renewalSubj': 'Conditions de prolongation pour {name} à {club}',
     'ag.mail.txlistSubj': '{name} sur la liste des transferts',
     'ag.mail.txlistBody': '{club} a accepté de placer {name} sur la liste. Attendez-vous à voir arriver des clubs intéressés dès la semaine prochaine.',
+    'ag.mail.frozenListSubj': "{club} place {name} sur la liste des transferts",
+    'ag.mail.frozenListBody': "{name} a signé comme {role}, mais il ne joue presque plus depuis des semaines. {club} admet l'avoir mis à l'écart et le place sur la liste des transferts. Attendez-vous à des clubs intéressés dès la semaine prochaine.",
+    'ag.log.frozenList': "{club} place {name}, mis à l'écart, sur la liste des transferts.",
     'ag.mail.promiseKeptSubj': '{name} — promesse tenue',
     'ag.mail.promiseKeptBody': '{name} : « Vous avez tenu parole. Je l\'apprécie. »',
     'ag.mail.moveDoneSubj': '{name} finalise son transfert',
@@ -583,6 +589,8 @@ I18n.register('fr', {
     'dlg.tip.subj': '{name} vous a pris à part',
     'dlg.tip.log': '{name} vous a prévenu avant de rendre les choses officielles.',
     'dlg.tip.body': '{name}, discrètement, après l\'entraînement : « Écoute. {what}. Je ne vais pas le rendre public, pas encore. Mais règle ça, d\'accord ? » Vous avez une longueur d\'avance avant que cela devienne une plainte officielle.',
+    'dlg.tip.quote': "Écoute. {what}. Je ne vais pas le rendre public, pas encore. Mais règle ça, d'accord ?",
+    'dlg.tip.note': "Vous avez deux semaines avant que cela devienne une plainte officielle.",
     // financial advisor
     'dlg.adv.expiredSubj': '{name} — contrat du conseiller expiré',
     'dlg.adv.expiredBody': 'Le conseiller financier que vous avez trouvé pour {name} est arrivé au terme de son contrat. {name} est du genre à surveiller côté argent : renouvelez depuis sa page si vous voulez qu\'il reste couvert.',
@@ -686,6 +694,8 @@ I18n.register('fr', {
     'dlg.note.flowers': 'Les fleurs sont en route (−€{amt}).',
     'dlg.note.weekend': 'Un week-end bien employé (−€{amt}).',
     'dlg.note.giftSent': 'Le cadeau est en route (−€{amt}).',
+    'dlg.note.giftMoney': "Il a pris en charge €{amt} des frais de l'agence.",
+    'dlg.note.keepsake': "Un souvenir pour l'étagère du bureau. Il rejoint son dossier, et votre mémoire.",
     // --- scout report: role tags, the written verdict and the tier a potential lands in.
     // {comp} is a competition name, so the rank templates keep it where a proper noun reads.
     'scout.rank.star': '{comp} · Star',

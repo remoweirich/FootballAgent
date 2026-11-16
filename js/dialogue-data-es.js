@@ -407,6 +407,13 @@ const DIALOGUE_ES = {
     },
 
     // --- the cash thank-you gift, filled into {thing} ---
+    // the keepsakes as he says them himself (first person), when he hands them over
+    said: {
+        "a signed shirt from his debut": "una camiseta firmada de mi debut",
+        "a framed photo of the two of you at his first signing": "una foto enmarcada de los dos en mi primera firma",
+        "the match ball from his best game, signed by the whole squad": "el balón de mi mejor partido, firmado por toda la plantilla",
+        "a bottle from a vineyard he part-owns": "una botella de un viñedo del que soy copropietario",
+    },
     envelope: "un sobre. Dentro: €{amt} para la agencia",
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = { DIALOGUE_ES };

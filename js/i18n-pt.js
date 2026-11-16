@@ -153,7 +153,10 @@ I18n.register('pt', {
     // --- agency: renewals ---
     'ag.renew.cooldown': 'O {club} já lhe deu uma resposta sobre um novo contrato esta semana — aguarde pela próxima antes de voltar ao assunto.',
     'ag.renew.open': 'O {club} está aberto a conversas — proposta na sua caixa de entrada.',
+    'ag.renew.outgrown': "O {club} reconhece que {name} superou o seu contrato: tem na sua caixa de entrada uma nova proposta com um papel maior e um aumento.",
     'ag.renew.noPlans': 'O {club} não pretende renovar o contrato do {name}.',
+    'ag.renew.plentyLeft': "O {club} não quer negociar: ainda falta muito contrato.",
+    'ag.renew.notPlanning': "O {club} não conta com {name}.",
     'ag.renew.movingAway': 'O {name} já acertou uma saída — a renovação está fora de questão.',
     'ag.renew.alreadyDone': 'O contrato do {name} já foi renegociado esta época — pode voltar ao assunto na próxima.',
     'ag.renew.done': 'Renovado: €{wage}/sem como {role} até ao final de {until}.',
@@ -323,6 +326,9 @@ I18n.register('pt', {
     'ag.mail.renewalSubj': 'Condições de renovação para o {name} no {club}',
     'ag.mail.txlistSubj': '{name} na lista de transferências',
     'ag.mail.txlistBody': 'O {club} aceitou colocar o {name} na lista. Conte com clubes interessados a partir da próxima semana.',
+    'ag.mail.frozenListSubj': "O {club} coloca {name} na lista de transferências",
+    'ag.mail.frozenListBody': "{name} assinou como {role}, mas há semanas que mal joga. O {club} admite que o afastou e coloca-o na lista de transferências. Espere clubes interessados a partir da próxima semana.",
+    'ag.log.frozenList': "O {club} coloca {name}, afastado da equipa, na lista de transferências.",
     'ag.mail.promiseKeptSubj': '{name} — promessa cumprida',
     'ag.mail.promiseKeptBody': '{name}: «Cumpriu o que disse. Fico-lhe grato.»',
     'ag.mail.moveDoneSubj': 'O {name} concretiza a mudança',
@@ -589,6 +595,8 @@ I18n.register('pt', {
     'dlg.tip.something': 'alguma coisa',
     'dlg.tip.subj': 'O {name} chamou-o à parte',
     'dlg.tip.body': '{name}, baixinho, depois do treino: «Ouve. {what}. Não vou tornar isto público, ainda não. Mas resolve isso, está bem?» Tem uma vantagem antes que isto se torne uma queixa formal.',
+    'dlg.tip.quote': "Ouve. {what}. Não vou tornar isto público, ainda não. Mas resolve isso, está bem?",
+    'dlg.tip.note': "Tem duas semanas antes que isto se torne uma queixa formal.",
     'dlg.tip.log': 'O {name} avisou-o antes de tornar isto oficial.',
     // financial advisor
     'dlg.adv.expiredSubj': '{name} — contrato do consultor expirado',
@@ -693,6 +701,8 @@ I18n.register('pt', {
     'dlg.note.flowers': 'As flores vão a caminho (−€{amt}).',
     'dlg.note.weekend': 'Um fim de semana bem passado (−€{amt}).',
     'dlg.note.giftSent': 'O presente vai a caminho (−€{amt}).',
+    'dlg.note.giftMoney': "Cobriu €{amt} das despesas da agência.",
+    'dlg.note.keepsake': "Uma recordação para a prateleira do escritório. Fica no ficheiro dele, e na sua memória.",
     // --- scout report: role tags, the written verdict and the tier a potential lands in.
     // {comp} is a competition name, so the rank templates keep it where a proper noun reads.
     'scout.rank.star': '{comp} · Estrela',

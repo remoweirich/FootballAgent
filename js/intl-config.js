@@ -32,6 +32,10 @@ const INTL_CONFIG = {
     HOST_DRAW_SEASONS_BEFORE: 1,
 
     // ---- match engine ----
+    // the club goal model is too even for national teams (a #36 side reached a third of World Cup
+    // finals): an international's strength gap is stretched by this, capped so a mismatch stays a
+    // football score, not a cricket one
+    STRENGTH_SPREAD: 1.8, STRENGTH_GAP_CAP: 45,
     HOME_ADVANTAGE: 6,                              // added to the home side's reputation-strength
 
     // ---- Nations League ----

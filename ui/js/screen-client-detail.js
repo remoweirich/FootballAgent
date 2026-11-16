@@ -94,7 +94,9 @@ const ClientDetail = {
                     <button class="btn btn--ghost" onclick="ClientDetail.reqLoan('${p.id}')"><i class="ti ti-tag"></i>${I18n.t('cd.requestLoan')}</button>
                     ${atReserve ? `<button class="btn btn--ghost" onclick="ClientDetail.reqPromote('${p.id}')"><i class="ti ti-arrow-up"></i>${I18n.t('cd.requestPromotion')}</button>` : `<button class="btn btn--ghost" onclick="ClientDetail.sendU21('${p.id}')"><i class="ti ti-arrow-down"></i>${I18n.t('cd.sendReserves')}</button>`}`;
             } else if (isU21Loan(p) || isReserveClub(p.onLoanAt)) {
-                moveBtns = `<button class="btn btn--accent-outline" onclick="ClientDetail.reqU21Recall('${p.id}')"><i class="ti ti-arrow-up"></i>${I18n.t('cd.requestRecall', { club: UI.clubName(p.onLoanAt) })}</button>`;
+                // with his own U21 / B team: still for sale, so the shop stays
+                moveBtns = `<button class="btn btn--accent-outline" onclick="ClientDetail.openShop('${p.id}')"><i class="ti ti-send"></i>${I18n.t('cd.shopToClubs')}</button>
+                    <button class="btn btn--ghost" onclick="ClientDetail.reqU21Recall('${p.id}')"><i class="ti ti-arrow-up"></i>${I18n.t('cd.requestRecall', { club: UI.clubName(p.onLoanAt) })}</button>`;
             }
             const ci = (typeof Dialogue !== 'undefined') ? Dialogue.canCheckIn(p) : { ok: false };
             const checkinBtn = `<button class="btn btn--ghost" ${ci.ok ? '' : 'disabled'} onclick="ClientDetail.checkIn('${p.id}')"><i class="ti ti-message-circle"></i>${ci.ok ? I18n.t('cd.checkIn') : ci.reason === 'cooldown' ? I18n.t('cd.checkedInRecently', { w: ci.weeksLeft }) : I18n.t('cd.checkIn')}</button>`;
@@ -756,7 +758,7 @@ const ClientDetail = {
                 + (last && moved(y, 'promo') ? '<i class="ti ti-arrow-up-right ht-up"></i>' : '')
                 + (last && moved(y, 'releg') ? '<i class="ti ti-arrow-down-right ht-down"></i>' : '')
                 + (st.loan ? '<i class="ti ti-arrows-exchange ht-loan"></i>' : '');
-            const club = this.clubLink(st.clubId, UI.esc(UI.clubName(st.clubId)));
+            const club = this.clubLink(st.clubId, UI.esc(UI.clubShort(st.clubId)));   // short names: a long one plus a trophy got cut off
             const sub = [divLabel, st.loan ? I18n.t('cd.col.loan') : ''].filter(Boolean).join(' · ');
             const seasonCell = y !== lastY ? GameState.seasonLabelFor(y) : '';
             lastY = y;
@@ -776,12 +778,12 @@ const ClientDetail = {
             const toggle = `<div class="chip-row" style="margin:var(--space-2) 0 var(--space-2)"><button class="htog ${mode === 'club' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','club')">${I18n.t('cd.byClub')}</button><button class="htog ${mode === 'comp' ? 'is-on' : ''}" onclick="event.stopPropagation();ClientDetail.setCareerMode('${p.id}','comp')">${I18n.t('cd.byComp')}</button></div>`;
             const line = (label, agg) => this.htSub(label, agg, gk);
             const list = mode === 'club'
-                ? careerByClub(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => line(this.clubLink(m.clubId, UI.esc(UI.clubName(m.clubId))) + (m.loanEver ? ' <i class="ti ti-arrows-exchange ht-loan"></i>' : ''), m.agg))
+                ? careerByClub(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => line(this.clubLink(m.clubId, UI.esc(UI.clubShort(m.clubId))) + (m.loanEver ? ' <i class="ti ti-arrows-exchange ht-loan"></i>' : ''), m.agg))
                 : careerByComp(p).sort((a, b) => b.agg.apps - a.agg.apps).map(m => line(compName(m.compId) + (m.youth ? ` <span class="muted">${I18n.t('cd.youthMuted')}</span>` : ''), m.agg));
             careerInner = toggle + list.join('');
         }
         const careerBlock = `<div class="ht-stint ht-total ${careerOpen ? 'is-open' : ''}" onclick="ClientDetail.toggleCareer('${p.id}')">
-            <div class="ht-row"><span class="ht-club" style="grid-column:1 / span 2"><span class="ht-line ht-name">${I18n.t('cd.careerTotal')} <i class="ti ${careerOpen ? 'ti-chevron-up' : 'ti-chevron-down'}" style="font-size:12px"></i></span><span class="ht-line ht-sub">${I18n.t('cd.senior')}</span></span>${statCells(ct)}</div>
+            <div class="ht-row${ct.apps >= 1000 ? ' ht-row--wide' : ''}"><span class="ht-club" style="grid-column:1 / span 2"><span class="ht-line ht-name">${I18n.t('cd.careerTotal')} <i class="ti ${careerOpen ? 'ti-chevron-up' : 'ti-chevron-down'}" style="font-size:12px"></i></span><span class="ht-line ht-sub">${I18n.t('cd.senior')}</span></span>${statCells(ct)}</div>
             ${careerOpen ? `<div class="ht-body" onclick="event.stopPropagation()">${careerInner}</div>` : ''}</div>`;
         return honours + `<div class="fcard hist-list hist-table">${head}${seasonBlocks}${careerBlock}</div><p class="hint">${I18n.t('cd.histTapHint')} ${I18n.t('cd.youthNote')}</p>`;
     },

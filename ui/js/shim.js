@@ -227,6 +227,12 @@ const UI = {
         if (typeof League !== 'undefined' && League.teamName) return League.teamName(id);
         return id || '—';
     },
+    // the short name (at most 15 letters) for the history tables, where a long name next to a trophy is cut off
+    clubShort(id) {
+        if (typeof id === 'string' && id.indexOf('u21') === 0) { const parent = id.split(':')[1], c = parent && Clubs.getClubById(parent); return c ? youthTeamShort(c) : 'U21'; }
+        const c = Clubs.getClubById(id); if (c) return clubShortName(c);
+        return this.clubName(id);
+    },
     clubLabel(clubId, loan, youth) { const n = this.clubName(clubId); if (youth) return n; return loan ? `${n} <span class="muted">(loan)</span>` : n; },
 
     // Where a player is actually playing RIGHT NOW — the loan destination (including a

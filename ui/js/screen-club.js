@@ -28,7 +28,15 @@ const ClubScreen = {
             ? `<div class="chip-row">${Object.entries(titleCount).map(([t, n]) => { const ic = (typeof europeTrophyIcon === 'function' && europeTrophyIcon(t)) || '<i class="ti ti-trophy" style="font-size:13px"></i>'; return (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(t, `<span class="pill pill--gold">${ic}${compName(t)}${n > 1 ? ' ×' + n : ''}</span>`); }).join('')}</div>`
             : `<p class="muted">${I18n.t('club.noHonours')}</p>`;
         // all finishes, newest first — the container scrolls, so ~8 show and the deeper past is a scroll away
-        const finishes = hist.length ? hist.slice().reverse().map(h => `<div class="frow"><span class="frow__k">${GameState.seasonLabelFor(h.year)} · ${(COMPETITIONS[h.division] || {}).short || h.division}</span><span class="frow__v">${h.position === 1 ? '🥇 ' : ''}${UI.ordinal(h.position)}${(h.trophies || []).length ? ' · 🏆 ' + h.trophies.map(t => (typeof trophyLink === 'function' ? trophyLink : (c, h) => h)(t, (COMPETITIONS[t] || {}).short || t)).join(', ') : ''}</span></div>`).join('')
+        // the full league name, and the final position boxed green / red (row faintly tinted) when the club
+        // went up / down that season: its next league season is in a higher / lower division
+        const move = this.seasonMoves(clubId, hist);
+        const tLink = (typeof trophyLink === 'function' ? trophyLink : (c, h) => h);
+        const finishes = hist.length ? hist.slice().reverse().map(h => {
+            const mv = move.get(h), cls = mv === 'up' ? ' ch-row-up' : mv === 'down' ? ' ch-row-down' : '';
+            const troph = (h.trophies || []).map(t => tLink(t, `<span class="ch-tr" title="${UI.esc(compName(t))}">🏆</span>`)).join('');
+            return `<div class="frow${cls}"><span class="frow__k">${GameState.seasonLabelFor(h.year)} · <span class="ch-league">${UI.esc(compName(h.division))}</span></span><span class="frow__v">${troph}<span class="ch-pos${mv ? ' ch-' + mv : ''}">${h.position === 1 ? '🥇 ' : ''}${UI.ordinal(h.position)}</span></span></div>`;
+        }).join('')
             : `<p class="muted">${I18n.t('club.noSeasons')}</p>`;
         const euBestHTML = this.europeBestHTML(clubId);
 
@@ -93,6 +101,22 @@ const ClubScreen = {
         ${clientRows}`;
     },
     // Best-ever run in each European competition (UCL/UEL/UECL), if the club has ever qualified.
+    // Map of history entry -> 'up' | 'down' for league seasons that ended in a move: compared with the
+    // club's next league season, or for the newest one with the division it plays in now. Cup rows and
+    // leagues outside a country ladder (reserve leagues) get nothing.
+    seasonMoves(clubId, hist) {
+        const out = new Map(), club = Clubs.getClubById(clubId);
+        const tierOf = d => { for (const ds of Object.values(COUNTRY_DIVS)) { const i = ds.indexOf(d); if (i >= 0) return i; } return -1; };
+        const leagues = hist.filter(h => tierOf(h.division) >= 0).slice().sort((a, b) => a.year - b.year);
+        leagues.forEach((h, i) => {
+            const next = leagues[i + 1];
+            const nextDiv = next ? (next.year === h.year + 1 ? next.division : null) : (club && club.division);
+            const a = tierOf(h.division), b = nextDiv ? tierOf(nextDiv) : -1;
+            if (b < 0 || a === b) return;
+            out.set(h, b < a ? 'up' : 'down');
+        });
+        return out;
+    },
     europeBestHTML(clubId) {
         const eb = (GameState.clubEuropeBest && GameState.clubEuropeBest[clubId]) || null;
         if (!eb) return '';

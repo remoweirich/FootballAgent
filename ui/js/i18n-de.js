@@ -1374,6 +1374,8 @@ I18n.register('de', {
     'pr.favour.rel': 'Beziehung {n}',
     'pr.favour.none': 'Noch kein Verein, bei dem du einen Gefallen einfordern kannst.',
     'pr.favour.note': 'Wähle einen Verein: Deine Beziehung steigt um {n}.',
+    'pr.favour.allCountries': "Alle Länder",
+    'pr.favour.allDivs': "Alle Ligen",
     'cd.seePotentialSubShort': 'Werbung ansehen',
     'cd.useInsiderTip': 'Insider-Tipp nutzen',
     'cd.insiderLeft': '{n} auf Vorrat',

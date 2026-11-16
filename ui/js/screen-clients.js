@@ -179,9 +179,11 @@ const PlayerTable = {
     // status (a pill that always shows), flag, current }
     html(rows, st) {
         const cs = this.showCs(st);
-        const head = `<div class="pt-row ht-head"><span>${I18n.t('cu.player')}</span><span class="ht-n">${I18n.t('common.appsShort')}</span><span class="ht-n">${cs ? I18n.t('common.csShort') : I18n.t('common.goalsShort')}</span><span class="ht-n">${I18n.t('common.assistsShort')}</span><span class="ht-n"><span class="card-chip card-chip--yellow"></span></span><span class="ht-n"><span class="card-chip card-chip--red"></span></span><span class="ht-n">${I18n.t('cd.col.avg')}</span></div>`;
+        // a 1000-game career needs four-digit columns, for the whole table so it stays aligned
+        const wide = rows.some(r => (r.apps || 0) >= 1000) ? ' pt-row--wide' : '';
+        const head = `<div class="pt-row${wide} ht-head"><span>${I18n.t('cu.player')}</span><span class="ht-n">${I18n.t('common.appsShort')}</span><span class="ht-n">${cs ? I18n.t('common.csShort') : I18n.t('common.goalsShort')}</span><span class="ht-n">${I18n.t('common.assistsShort')}</span><span class="ht-n"><span class="card-chip card-chip--yellow"></span></span><span class="ht-n"><span class="card-chip card-chip--red"></span></span><span class="ht-n">${I18n.t('cd.col.avg')}</span></div>`;
         const body = rows.map(r => `<a href="${Router.link('client', r.p.id)}" class="ht-stint pt-stint${r.current ? ' pt-current' : ''}">
-            <div class="pt-row"><span class="ht-club"><span class="ht-line ht-name pt-name">${r.flag ? UI.flag(r.p.nationality) + ' ' : ''}<span class="pt-n">${UI.esc(r.p.name)}</span>${r.titles ? `<span class="pt-troph"><i class="ti ti-trophy"></i> ${r.titles}</span>` : ''}</span>
+            <div class="pt-row${wide}"><span class="ht-club"><span class="ht-line ht-name pt-name">${r.flag ? UI.flag(r.p.nationality) + ' ' : ''}<span class="pt-n">${UI.esc(r.p.name)}</span>${r.titles ? `<span class="pt-troph"><i class="ti ti-trophy"></i> ${r.titles}</span>` : ''}</span>
                 <span class="ht-line ht-sub pt-sub">${UI.posChip(r.p.position)}<span class="pt-t">${r.sub || ''}</span>${r.status || ''}</span></span>
             <span class="ht-n">${r.apps || 0}</span><span class="ht-n">${cs ? (r.cs || 0) : (r.goals || 0)}</span><span class="ht-n">${r.assists || 0}</span><span class="ht-n ht-y">${r.yellow || 0}</span><span class="ht-n ht-r">${r.red || 0}</span>
             <span class="ht-n ht-avg">${r.apps ? UI.ratingText(r.avg) : '<span class="muted">—</span>'}</span></div></a>`).join('');

@@ -136,7 +136,10 @@ I18n.register('en', {
     // --- agency: renewals ---
     'ag.renew.cooldown': '{club} already gave you an answer on a new deal this week — wait until next week before raising it again.',
     'ag.renew.open': '{club} are open to talks — proposal in your inbox.',
+    'ag.renew.outgrown': "{club} accept {name} has outgrown his contract: a new deal with a bigger role and a raise is in your inbox.",
     'ag.renew.noPlans': '{club} aren\'t planning to extend {name}\'s contract.',
+    'ag.renew.plentyLeft': "{club} won't talk: there's plenty of contract left.",
+    'ag.renew.notPlanning': "{club} aren't planning with {name}.",
     'ag.renew.movingAway': '{name} has already agreed a move away — a renewal is off the table.',
     'ag.renew.alreadyDone': "{name}'s deal has already been renegotiated this season — you can revisit it next season.",
     'ag.renew.done': 'Renewed: €{wage}/wk as {role} until end of {until}.',
@@ -306,6 +309,9 @@ I18n.register('en', {
     'ag.mail.renewalSubj': 'Renewal terms for {name} at {club}',
     'ag.mail.txlistSubj': '{name} transfer-listed',
     'ag.mail.txlistBody': '{club} have agreed to list {name}. Expect interested clubs to start coming in from next week.',
+    'ag.mail.frozenListSubj': "{club} transfer-list {name}",
+    'ag.mail.frozenListBody': "{name} signed as {role} but has barely played for weeks. {club} accept they have frozen him out and have put him on the transfer list. Expect interested clubs from next week.",
+    'ag.log.frozenList': "{club} put the frozen-out {name} on the transfer list.",
     'ag.mail.promiseKeptSubj': '{name} — promise kept',
     'ag.mail.promiseKeptBody': '{name}: "You came through for me. I appreciate it."',
     'ag.mail.moveDoneSubj': '{name} completes his move',
@@ -572,6 +578,8 @@ I18n.register('en', {
     'dlg.tip.something': 'something',
     'dlg.tip.subj': '{name} pulled you aside',
     'dlg.tip.body': '{name}, quietly, after training: "Listen. {what}. I\'m not going public with it, not yet. But sort it, yeah?" You have a head start before this becomes a formal complaint.',
+    'dlg.tip.quote': "Listen. {what}. I'm not going public with it, not yet. But sort it, yeah?",
+    'dlg.tip.note': "You have two weeks before this becomes a formal complaint.",
     'dlg.tip.log': '{name} tipped you off before making it official.',
     // financial advisor
     'dlg.adv.expiredSubj': '{name} — advisor contract expired',
@@ -676,6 +684,8 @@ I18n.register('en', {
     'dlg.note.flowers': 'Flowers on their way (−€{amt}).',
     'dlg.note.weekend': 'A weekend well spent (−€{amt}).',
     'dlg.note.giftSent': 'The gift is on its way (−€{amt}).',
+    'dlg.note.giftMoney': "He covered €{amt} of the agency's costs.",
+    'dlg.note.keepsake': "A keepsake for the office shelf. It goes in his file, and your memory.",
     // --- scout report: the tier a potential lands in. Composed from the competition's CURRENT
     // name plus a rank, so it follows both the locale and the real-club-names overlay.
     'scout.rank.star': '{comp} · Star',

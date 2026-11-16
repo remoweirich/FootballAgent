@@ -1380,6 +1380,8 @@ I18n.register('it', {
     'pr.favour.rel': 'rapporto {n}',
     'pr.favour.none': 'Ancora nessun club a cui chiedere un favore.',
     'pr.favour.note': 'Scegli un club: il rapporto sale di {n}.',
+    'pr.favour.allCountries': "Tutti i paesi",
+    'pr.favour.allDivs': "Tutte le divisioni",
     'cd.seePotentialSubShort': 'Guarda una pubblicità',
     'cd.useInsiderTip': 'Usa una soffiata',
     'cd.insiderLeft': '{n} a disposizione',

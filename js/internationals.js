@@ -230,10 +230,19 @@ const Internationals = {
         const adv = INTL_CONFIG.HOME_ADVANTAGE;
         this._matchWeek = o.week;   // the call-up window this match is in (js/intl-callups.js)
         const advH = o.neutral ? !!o.advH : true, advA = o.neutral ? !!o.advA : false;
-        const sh = this._strength(h) + (advH && !advA ? adv : 0) + (o.bH || 0);   // bH / bA: a host at its own tournament
-        const sa = this._strength(a) + (advA && !advH ? adv : 0) + (o.bA || 0);
+        let sh = this._strength(h) + (advH && !advA ? adv : 0) + (o.bH || 0);   // bH / bA: a host at its own tournament
+        let sa = this._strength(a) + (advA && !advH ? adv : 0) + (o.bA || 0);
+        // the gap counts for more between nations than between clubs (INTL_CONFIG.STRENGTH_SPREAD)
+        const C = INTL_CONFIG, mid = (sh + sa) / 2;
+        const gap = Math.max(-C.STRENGTH_GAP_CAP, Math.min(C.STRENGTH_GAP_CAP, (sh - sa) * (C.STRENGTH_SPREAD || 1)));
+        sh = mid + gap / 2; sa = mid - gap / 2;
         const fx = { h, a, hg: League.scoreGoals(sh, sa), ag: League.scoreGoals(sa, sh), w: o.week, s: o.slot || 'A' };
-        if (o.neutral) fx.n = 1;
+        if (o.neutral) {
+            // a tournament host is at home in its own tournament: the venue is neutral only for the others
+            const hH = !!(o.bH || o.advH), hA = !!(o.bA || o.advA);
+            if (hH !== hA) fx.hv = hH ? 'h' : 'a';
+            fx.n = 1;
+        }
         if (o.ko && fx.hg === fx.ag) this._decide(fx, sh, sa, !!o.pensOnly);
         if (o.defer) return fx;   // the caller decides it first (a second leg), then records it
         return this._record(fx, o);
@@ -276,7 +285,8 @@ const Internationals = {
         else if (fx.c !== 'INTL_FRIENDLY') this._amCount[key] = (this._amCount[key] || 0) + 1;
         const set = this._slotTeams[key] || (this._slotTeams[key] = new Set());
         [fx.h, fx.a].forEach(id => { this._assert(!set.has(id), `${id} plays twice in slot ${key} (season ${this._year})`); set.add(id); });
-        try { this.onInternationalMatch(fx); } catch (e) { /* a hook must never break the week */ }
+        // a hook must never break the week, but a failure is kept (it used to vanish, leaving a match without its clients)
+        try { this.onInternationalMatch(fx); } catch (e) { const I = this.state(); if (I) { I.warnings = I.warnings || []; I.warnings.push('match hook ' + fx.h + '-' + fx.a + ' ' + (fx.st || '') + ': ' + (e && e.message)); if (I.warnings.length > 30) I.warnings.splice(0, I.warnings.length - 30); } }
         return fx;
     },
     // A two-legged tie: `lo` hosts leg 1, `hi` hosts leg 2; aggregate, no away goals; extra time

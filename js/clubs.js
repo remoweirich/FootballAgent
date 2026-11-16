@@ -1399,6 +1399,103 @@ function regionName(id){
 
 // ---- reserve ("Jong X") clubs ----
 // virtual youth-side name: Dutch clubs field a "Jong X" side, others field an "X U21"
+// Short club names for the history tables (at most SHORT_NAME_MAX letters), where a long name plus a
+// trophy or a loan mark would be cut off. Only those tables use them; everywhere else shows the full
+// name. A name that already fits needs no entry. An imported names pack brings its own (short:<id>).
+const SHORT_NAME_MAX = 15;
+const CLUB_SHORT = {
+    "jong-ajax": "Amsterdam W. II",
+    "jong-psv": "Eindhoven R. II",
+    "den-bosch": "Den Bosch",
+    "gvvv": "Veenendaal Y.",
+    "jong-almere": "Almere B&Y",
+    "jong-sparta": "Rotterdam W. II",
+    "spakenburg": "Bunschoten B&W",
+    "rkav": "Volendam O&B",
+    "Aston Villa": "B'ham Claret",
+    "Newcastle": "Newcastle",
+    "Crystal Palace": "London B&R",
+    "Brentford": "London R&B",
+    "Millwall": "London N&W",
+    "QPR": "London B&W",
+    "Stoke": "Stoke Red",
+    "Charlton": "London R&W",
+    "Burton": "Burton",
+    "Wimbledon": "London C&W",
+    "Notts County": "Nott'm Black",
+    "Port Vale": "Stoke White",
+    "Bristol Rovers": "Bristol R&B",
+    "Viktoria Köln": "Cologne R&B",
+    "Stuttgart II": "Stuttgart R. II",
+    "Lok Leipzig": "Leipzig W&B",
+    "Bergisch Gladbach": "Berg. Gladbach",
+    "Tasmania": "Berlin R&B",
+    "RSV Eintracht": "Berlin W&B",
+    "VfB Lübeck": "Lübeck G&W",
+    "Barcelona": "BCN Claret",
+    "Vallecano": "Madrid R&W",
+    "Real Sociedad B": "S. Sebastián II",
+    "Europa": "BCN Purple",
+    "Sant Andreu": "BCN C&Y",
+    "Fabril": "Coruña Claret",
+    "Barcelona B": "BCN Claret II",
+    "Rayo Cantabria": "Santander G&W",
+    "Basconia": "Bilbao R&B",
+    "Alavés B": "Vitoria II",
+    "Arosa": "Vilagarcía",
+    "Xerez": "Jerez",
+    "Sanluqueño": "Sanlúcar",
+    "UCAM Murcia": "Murcia C&Y",
+    "Valencia B": "Valencia W. II",
+    "Salamanca": "Villares",
+    "FCSG": "St Gallen Green",
+    "Brühl": "St Gallen G&W",
+    "Lausanne-Sport U21": "Lausanne B. II",
+    "La Chaux-de-Fonds": "Chaux-de-Fonds",
+    "FC Wettswil-Bonstetten": "Wettswil-B.",
+    "FC Black Stars": "Basel B&Y",
+    "FCSG U21": "St Gallen G. II",
+    "Juve Stabia": "Castellammare",
+    "Red Star FC": "Paris N&R",
+    "FC Sochaux-Montbéliard": "Sochaux",
+    "FC Villefranche-Beaujolais": "Villefranche",
+    "Le Puy-en-Velay FC": "Espaly",
+    "Quevilly-Rouen Métropole": "Petit-Quevilly",
+    "VFC La Roche": "La Roche-s-Yon",
+    "Saint-Pryvé Saint-Hilaire": "Saint-Pryvé",
+    "Andrézieux-Bouthéon FC": "Andrézieux",
+    "Fréjus-St-Raphaël": "Fréjus-St-R.",
+    "moreirense FC": "Moreira",
+    "feirense": "Feira White",
+    "Paços de Ferreira": "Paços Ferreira",
+    "São João de Ver": "Feira W&R",
+    "caldas": "Caldas Red",
+    "marco 09": "Caldas White",
+    "leça fc": "Leça",
+    "vitória sernache": "Cernache",
+    "oliveira do hospital": "Oliveira Hosp.",
+    "rfc liège": "Liège R&B",
+    "Anderlecht U21": "Brussels P. II",
+    "Union SG U21": "Brussels Y. II",
+    "stockay": "Saint-Georges",
+    "termien": "Genk B&Y"
+};
+function clubShortName(idOrClub){
+    const c = (typeof idOrClub === 'string') ? Clubs.getClubById(idOrClub) : idOrClub;
+    if (!c) return '';
+    if (c.short) return c.short;
+    return c.name.length <= SHORT_NAME_MAX ? c.name : c.name.slice(0, SHORT_NAME_MAX - 1).trimEnd() + '…';
+}
+// the youth side's name built from the short name ("Spurs U21", "Jong Ajax", "Bayern II")
+function youthTeamShort(parentOrId){
+    const c = (typeof parentOrId === 'string') ? Clubs.getClubById(parentOrId) : parentOrId;
+    if (!c) return 'U21';
+    const n = clubShortName(c);
+    if (c.country === 'Netherlands') return 'Jong ' + n;
+    if (c.country === 'Germany') return n + ' II';
+    if (c.country === 'Spain') return n + ' B';
+    return n + ' U21';
+}
 function youthTeamName(parentOrId){
     const c = (typeof parentOrId === 'string') ? Clubs.getClubById(parentOrId) : parentOrId;
     if (!c) return 'U21';
@@ -1469,6 +1566,7 @@ const Clubs = {
                         tier: tier.tier,
                         divisionName: tier.name,
                         region: regionOfCity(clubData.city, country),
+                        short: CLUB_SHORT[clubData.id] || null,   // history tables only (clubShortName)
                         // Reputation model: baseRep is the immutable day-one value; anchorRep moves
                         // only on promotion/relegation (capped at baseRep±10 so divisions can't
                         // drift arbitrarily far apart). The runtime `reputation` every consumer
@@ -1589,7 +1687,8 @@ const Clubs = {
         Object.entries(db.overrides).forEach(([id, ov]) => {
             const c = this.getClubById(id); if (!c || !ov) return;
             const own = identity || created(c);
-            if (ov.name && own) c.name = ov.name;
+            if (ov.name && own) { c.name = ov.name; c.short = null; }   // a renamed club drops the generic short name...
+            if (ov.short && own) c.short = String(ov.short).slice(0, SHORT_NAME_MAX);   // ...unless the database gives one
             if (ov.colors && ov.colors.primary) c.colors = { primary: ov.colors.primary, secondary: ov.colors.secondary || ov.colors.primary };
             if (ov.logo !== undefined && own) c.logo = ov.logo || null;
             if (ov.reputation != null) { const r = ov.reputation; c.reputation = r; c.baseRep = r; c.anchorRep = r; }

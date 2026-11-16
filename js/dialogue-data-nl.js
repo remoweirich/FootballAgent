@@ -413,6 +413,13 @@ const DIALOGUE_NL = {
     },
 
     // --- the cash thank-you gift, filled into {thing} ---
+    // the keepsakes as he says them himself (first person), when he hands them over
+    said: {
+        "a signed shirt from his debut": "een gesigneerd shirt van mijn debuut",
+        "a framed photo of the two of you at his first signing": "een ingelijste foto van ons tweeën bij mijn eerste contract",
+        "the match ball from his best game, signed by the whole squad": "de wedstrijdbal van mijn beste wedstrijd, gesigneerd door de hele selectie",
+        "a bottle from a vineyard he part-owns": "een fles van een wijngaard waarvan ik mede-eigenaar ben",
+    },
     envelope: "een envelop. Daarin: €{amt} voor het bureau",
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = { DIALOGUE_NL };

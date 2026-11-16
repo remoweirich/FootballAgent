@@ -69,8 +69,10 @@ const SPONSOR_COMPANIES = {
         local: ['Bäckerei Müller', 'Schreinerei Baumann', 'Ristorante Rössli', 'Gasthaus zum Ochsen', 'Praxis Auwies', 'Tante Anna Laden',
             'Doktor Bührer', 'Fahrschule Avdija', 'La Boulangerie Prox', 'Ristorante Amore', 'La Boutique Quotidien', 'Casa Maria', 'Les Menuisiers du Ville'],
         regional: ['TV {region}', 'Radio {region}', 'La Nouvelle', '{region} à jour', 'Getränkemarkt Mo', 'Bio-Dschungel', 'Schneider, Schneiter & Leu Anwälte',
-            'MegaDürüm', 'FalafElDorado', 'Bière Artisane', 'Pane e Acqua', 'MediaMakler', 'Tourismus {region}', 'Folg', 'Rolandi'],
-        national: ['Tourismus Schweiz', 'Kohp', 'Mygro', 'LaPoste', 'eSBeBe', 'SwissNet', 'derLöwe.ch', 'primamode.ch', 'Nudel.ch', 'Pepper', 'Krasiqi Consulting'],
+            'MegaDürüm', 'FalafElDorado', 'Bière Artisane', 'Pane e Acqua', 'MediaMakler', 'Tourismus {region}', 'Folg', 'Rolandi', 'Equans', 'Primin Steiner AG'],
+        national: ['Tourismus Schweiz', 'Kohp', 'Mygro', 'LaPoste', 'eSBeBe', 'SwissNet', 'derLöwe.ch', 'primamode.ch', 'Nudel.ch', 'Pepper', 'Krasniqi Consulting', 'Equans', 'SwissBank',
+            'SwissRail', 'Solarbear', 'Swash', 'Roll-Axe', 'Prack.ch', 'Galuxus', '' 
+        ],
         international: ['Purello Tires', 'Carwindow', 'WMB', 'Skybus', 'Monohebel', 'SkyFranz', 'Alliance', 'Mercury-Bans', 'Loco Choco', ],
         worldwide: ['Naik', 'Adadis', 'Popsi', 'Cola Cola', 'Macrohard', 'Pear', 'Stripeify', 'Qatair', 'Soily Arabica',
             'Jones & Jones', 'ApprenticeCard', 'Nile', 'Interflix', 'Kansasinstruments', 'Amyrates', 'Cheep Automobiles',

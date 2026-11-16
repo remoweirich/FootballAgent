@@ -1380,6 +1380,8 @@ I18n.register('fr', {
     'pr.favour.rel': 'relation {n}',
     'pr.favour.none': 'Aucun club auprès duquel demander un service pour l’instant.',
     'pr.favour.note': 'Choisis un club : ta relation augmente de {n}.',
+    'pr.favour.allCountries': "Tous les pays",
+    'pr.favour.allDivs': "Toutes les divisions",
     'cd.seePotentialSubShort': 'Regarde une pub',
     'cd.useInsiderTip': 'Utiliser un tuyau',
     'cd.insiderLeft': '{n} en stock',

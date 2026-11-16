@@ -381,6 +381,13 @@ const DIALOGUE_DE = {
     // --- milestone labels (Dialogue._mileText); {n} filled by the engine ---
     mile: { apps: "{n} Einsätze", goals: "{n} Karrieretore", caps: "{n} Länderspiele für {nation}", intlgoals: "{n} Tore für {nation}" },
     // --- the "envelope of cash" thank-you gift (Dialogue moment 'thanks'); {amt} filled by the engine ---
+    // the keepsakes as he says them himself (first person), when he hands them over
+    said: {
+        "a signed shirt from his debut": "ein signiertes Trikot von meinem Debüt",
+        "a framed photo of the two of you at his first signing": "ein gerahmtes Foto von uns beiden bei meiner ersten Unterschrift",
+        "the match ball from his best game, signed by the whole squad": "der Spielball meines besten Spiels, signiert von der ganzen Mannschaft",
+        "a bottle from a vineyard he part-owns": "eine Flasche aus einem Weingut, an dem ich beteiligt bin",
+    },
     envelope: "ein Umschlag. Darin: €{amt} für die Agentur",
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = { DIALOGUE_DE };

@@ -302,15 +302,34 @@ const ReputationScreen = {
         Router.result(r.message, r.ok ? 'ok' : 'bad');
     },
     // ---- call in a favour: one club you deal with (your clients' clubs, and any club you know) ----
+    // filtered by country, then division, so a long list narrows to one league at a time
+    _favCountry: '', _favDiv: '',
+    setFavCountry(c) { this._favCountry = c; this._favDiv = ''; this.openFavour(); },
+    setFavDiv(d) { this._favDiv = d; this.openFavour(); },
     openFavour() {
         const rel = (GameState.agency.relationships) || {};
         const ids = new Set(Object.keys(rel));
         Agency.clients().forEach(p => { if (p.clubId) ids.add(p.clubId); if (p.onLoanAt && Clubs.getClubById(p.onLoanAt)) ids.add(p.onLoanAt); });
-        const clubs = Array.from(ids).map(id => Clubs.getClubById(id)).filter(Boolean).filter(c => Agency.relationship(c.id) < 100)
+        const all = Array.from(ids).map(id => Clubs.getClubById(id)).filter(Boolean).filter(c => Agency.relationship(c.id) < 100);
+        const countryOf = c => c.country || divCountry(c.division);
+        const countries = Array.from(new Set(all.map(countryOf))).sort();
+        if (this._favCountry && !countries.includes(this._favCountry)) { this._favCountry = ''; this._favDiv = ''; }
+        const inCountry = this._favCountry ? all.filter(c => countryOf(c) === this._favCountry) : all;
+        // divisions in ladder order (top flight first), any others (reserve leagues) after
+        const ladder = COUNTRY_DIVS[this._favCountry] || [];
+        const divs = Array.from(new Set(inCountry.map(c => c.division))).sort((a, b) => ((ladder.indexOf(a) + 1) || 99) - ((ladder.indexOf(b) + 1) || 99));
+        if (this._favDiv && !divs.includes(this._favDiv)) this._favDiv = '';
+        const clubs = (this._favDiv ? inCountry.filter(c => c.division === this._favDiv) : inCountry)
             .sort((a, b) => Agency.relationship(b.id) - Agency.relationship(a.id) || b.reputation - a.reputation);
+        const sel = (onchange, opts) => `<select class="select-input" style="margin-bottom:var(--space-2)" onchange="${onchange}">${opts}</select>`;
+        const filters = sel('ReputationScreen.setFavCountry(this.value)', `<option value="">${I18n.t('pr.favour.allCountries')}</option>` +
+                countries.map(c => `<option value="${UI.esc(c)}" ${this._favCountry === c ? 'selected' : ''}>${((UI.flagEmoji && UI.flagEmoji(c)) ? UI.flagEmoji(c) + ' ' : '') + UI.esc(c)}</option>`).join(''))
+            + (this._favCountry ? sel('ReputationScreen.setFavDiv(this.value)', `<option value="">${I18n.t('pr.favour.allDivs')}</option>` +
+                divs.map(d => `<option value="${UI.esc(d)}" ${this._favDiv === d ? 'selected' : ''}>${UI.esc(compName(d) || (COMPETITIONS[d] || {}).name || d)}</option>`).join('')) : '');
         const rows = clubs.length ? clubs.map(c => `<button class="list-row" style="width:100%;background:none;border:0;cursor:pointer;text-align:left" onclick="ReputationScreen.favour('${UI.jsArg(c.id)}')"><span style="flex:1;min-width:0;color:var(--text)">${UI.esc(c.name)}</span><span class="muted">${I18n.t('pr.favour.rel', { n: Math.round(Agency.relationship(c.id)) })}</span></button>`).join('')
             : `<p class="muted">${I18n.t('pr.favour.none')}</p>`;
         Router.sheet(`<div class="sheet__handle"></div><div class="sheet__title">${I18n.t('pr.shop.favour')}</div><p class="hint">${I18n.t('pr.favour.note', { n: Agency.FAVOUR_REL })}</p>
+            ${all.length ? filters : ''}
             <div style="max-height:52vh;overflow-y:auto">${rows}</div>
             <button class="btn btn--ghost" style="width:100%;margin-top:var(--space-3)" onclick="Router.closeSheet()">${I18n.t('common.close')}</button>`);
     },

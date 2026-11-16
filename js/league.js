@@ -2871,9 +2871,14 @@ const League = {
         // games, and the Back Up gets the odd league match (~≤10% of them).
         // the depth chart follows the squad role (First Choice, then Back Up / Cup Goalkeeper, then Third
         // Keeper), ability only breaking ties: a Cup Goalkeeper rated above the No.1 still sits out the league
-        const GK_ORDER = { key: 0, starter: 1, rotation: 2, fringe: 3, youth: 4 };
+        // Star Player and First Choice are both the No.1 promise. Signing a client as either never demotes
+        // the keeper already there, so inside that class the client's negotiated role is honoured first:
+        // otherwise a better-rated NPC No.1 kept him on the bench all season.
+        const GK_ORDER = { key: 0, starter: 0, rotation: 2, fringe: 3, youth: 4 };
         const gkRole = p => (p.onLoanAt === clubId ? (p.loanRole || 'starter') : p.squadRole);
-        const gkRank = rest.filter(p => p.position === 'GK').sort((a, b) => ((GK_ORDER[gkRole(a)] ?? 3) - (GK_ORDER[gkRole(b)] ?? 3)) || (b.ability - a.ability));
+        const gkClass = p => GK_ORDER[gkRole(p)] ?? 3;
+        const gkMine = p => (gkClass(p) === 0 && p.agentId === 'me') ? 0 : 1;
+        const gkRank = rest.filter(p => p.position === 'GK').sort((a, b) => (gkClass(a) - gkClass(b)) || (gkMine(a) - gkMine(b)) || (b.ability - a.ability));
         const isCupTie = COMPETITIONS[compId] && COMPETITIONS[compId].type === 'cup';
         let bestGK = gkRank[0];
         if (isCupTie) { const ck = gkRank.find(g => g.cupKeeper || (g.onLoanAt === clubId && g.loanCupKeeper)); if (ck) bestGK = ck; }

@@ -79,6 +79,9 @@
   --zone-relegate: #F0596A;  /* direct relegation */
   --zone-po-up:    #86EFAC;  /* promotion play-off (lighter green) */
   --zone-po-down:  #FCA5A5;  /* relegation play-off (lighter red)  */
+  /* ---- Club history: a season that ended in promotion / relegation (box + faint row tint) ---- */
+  --move-up-tint:   rgba(52,211,153,.12);  --move-up-border:   rgba(52,211,153,.45);  --move-up-row:   rgba(52,211,153,.06);
+  --move-down-tint: rgba(240,89,106,.12);  --move-down-border: rgba(240,89,106,.45);  --move-down-row: rgba(240,89,106,.06);
 
   /* ---- Spacing scale ---- */
   --space-1: 4px;
@@ -209,4 +212,6 @@
   /* ---- Standings zones: deepen the light play-off tints so they read on white ---- */
   --zone-po-up:   #34C77E;
   --zone-po-down: #EE7B7B;
+  --move-up-tint:   rgba(14,159,114,.12);  --move-up-border:   rgba(14,159,114,.50);  --move-up-row:   rgba(14,159,114,.07);
+  --move-down-tint: rgba(226,58,78,.10);   --move-down-border: rgba(226,58,78,.45);   --move-down-row: rgba(226,58,78,.06);
 }

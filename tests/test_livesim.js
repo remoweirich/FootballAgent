@@ -205,6 +205,16 @@ check('build: an unfiltered poacher DOES score sometimes (the filter above prove
     if(LiveSim.resolveTags(ch).some(e=>e.tag==="GOAL"&&e.player)) goals++; }
   return goals>0;
 `));
+check('build: a line that names nobody still fits the player it continues (a sweeper keeper never carries it sixty yards)', run(`
+  const all=[]; for(const [pos,roles] of Object.entries(LIVE_SIM_DATA.roleCodes)) for(const role of Object.keys(roles)) all.push({id:pos+role,name:"Test Client",position:pos,styleRole:role});
+  const bad=new Set();
+  const scan=(ch)=>{ for(const {piece,player} of ch.pieces) if(!piece.codes.has(LiveSim.roleCodeOf(player))) bad.add(LiveSim.roleCodeOf(player)+" <- "+piece.text.slice(0,40)); };
+  for(const c of all) for(let i=0;i<150;i++){ const ch=LiveSim.buildChain(c,[c]); if(ch) scan(ch); }
+  const GK={id:"g",name:"Keeper",position:"GK",styleRole:"sweeper_keeper"}, CB={id:"b",name:"Back",position:"CB",styleRole:"ball_playing"};
+  for(let i=0;i<1500;i++){ const ch=LiveSim.buildChain(GK,[GK,CB]); if(ch) scan(ch); }
+  if(bad.size) console.error("misfit lines: "+[...bad].slice(0,4).join(" | "));
+  return bad.size===0;
+`));
 check('build: with two clients, both can appear in one chain', run(`
   const A={id:"a",name:"Luca Meier",position:"LW",styleRole:"winger"};
   const B={id:"b",name:"Ben Riva",position:"ST",styleRole:"poacher"};
