@@ -51,7 +51,12 @@ const SPONSOR_WORLD = ['Naik', 'Adadis', 'Popsi', 'Cola Cola', 'Macrohard', 'Pea
     'Jones & Jones', 'ApprenticeCard', 'Nile', 'Interflix', 'Kansasinstruments', 'Amyrates', 'Cheep Automobiles',
     'Eddyhat', 'Q-Smartphone', 'OIO'];
 // full home-country name -> sponsor-roster key
-const SPONSOR_COUNTRY_KEY = { Netherlands: 'NL', Switzerland: 'CH', England: 'EN', Germany: 'DE', Spain: 'ES', Italy: 'IT', France: 'FR' };
+const SPONSOR_COUNTRY_KEY = { Netherlands: 'NL', Switzerland: 'CH', England: 'EN', Germany: 'DE', Spain: 'ES', Italy: 'IT', France: 'FR', Belgium: 'BE', Portugal: 'PT' };
+// A tier may be split by language: { nl: [...], fr: [...] }. A club's region picks its language
+// (SPONSOR_REGION_LANG); a region with none (bilingual Brussels) or no region at all draws from every list.
+const SPONSOR_REGION_LANG = {
+    BE: { 'N-W Belgium': 'nl', 'Noord België': 'nl', 'N-E Belgium': 'nl', 'S-O Belgique': 'fr', 'S-E Belgique': 'fr' },
+};
 const SPONSOR_COMPANIES = {
     NL: {
         local: ['Bakker Boris', 'Pizzeria La Neapolitana', 'Tante Emma Winkel', 'Adrian Hijn {place}', 'Doktor Hermans',
@@ -120,6 +125,22 @@ const SPONSOR_COMPANIES = {
         regional: ['Radio {region}', 'La Dépêche de {region}', 'Crédit {region}', 'Garage Lefèvre', 'Hyper Yu', 'Carrefive',
             'Le Clairc', 'Bricolorado', 'Vins de {region}', 'Boulangerie Panéra'],
         national: ['Orangina Télécom', 'BNP Pariboa', 'SNCFou', 'La Poste Presse', 'Renaultre', 'Peugeaut', 'Danonon', 'Décathlonge', 'Crédit Agrocole', 'TotalEnairgie'],
+        international: SPONSOR_INTL,
+        worldwide: SPONSOR_WORLD,
+    },
+    BE: {
+        local: { nl: ["Bakkerij Broodnodig", "Frituur De Gouden Friet", "Café Den Hoek", "Slagerij {place}", "Apotheek {place}", "Brasserie De Zatte Haan", "Kapsalon Knip & Klaar", "Chocolaterie Pralientje", "Fietsen Peeters", "Wafelhuis {place}", "Frituur Patatje Oorlog", "Dakwerken Vermeulen"],
+            fr: ["Boulangerie du Coin", "Friterie Chez Martine", "Boucherie {place}", "Pharmacie {place}", "Café du Commerce", "Chocolatier Praliné", "Gaufrerie {place}", "Garage Dubois", "Taverne Le Houblon", "Coiffure Bigoudi", "Friterie La Mitraillette", "Toitures Lejeune"] },
+        regional: { nl: ["Radio {region}", "Het {region} Nieuws", "Brouwerij Hopsakee", "Bouwbedrijf Janssens", "Autohandel Maes", "Tuincentrum Groenvinger", "Delhaas Supermarkt", "Spekulootje", "Jeneverstokerij Borrel", "Mosselhuis Zeebries"],
+            fr: ["Radio {region}", "L'Écho de {region}", "Brasserie Chimère", "Carrières de {region}", "Garage Lambert", "Fromagerie du Plateau", "Pékèt du Perron", "Abbaye de Saint-Houblon", "Thermes de {region}", "Ardennes Jambons"] },
+        national: ["Proximoes", "Telenaat", "KBZ Bank", "Belfuus", "Duvelijk Bier", "Côte d'Orange Chocolat", "Brussels Wafflelines", "b-posted", "AB Inbreuw", "Spoorweg NMBZ", "Kolruyter", "Lotto-Loterij Fortuna"],
+        international: SPONSOR_INTL,
+        worldwide: SPONSOR_WORLD,
+    },
+    PT: {
+        local: ["Pastelaria Nata Nata", "Tasca do Zé", "Churrasqueira Frango Feliz", "Café Bica Boa", "Padaria {place}", "Marisqueira O Polvo", "Talho Bom Bife", "Barbearia Navalha", "Farmácia {place}", "Snack-Bar A Bifana", "Adega do Avô", "Mercearia Dona Rosa"],
+        regional: ["Rádio {region}", "Jornal de {region}", "Caixa Agrícola {region}", "Vinhos de {region}", "Oficina Ferreira", "Pingo Ácido", "Continentinho", "Bacalhau & Filhos", "Cerâmicas {region}", "Azeites do Monte"],
+        national: ["Superbock-a-Bock", "Sagrada Cerveja", "CTE Correios Tardios", "Galpão Energia", "MEU Telecom", "NOZ Comunicações", "Gama Cafés", "TAPete Air", "Milénio BCE", "Vista Triste Porcelanas", "Navegador Papel", "Pastéis de Belém-Belém"],
         international: SPONSOR_INTL,
         worldwide: SPONSOR_WORLD,
     },
@@ -196,7 +217,7 @@ const Upgrades = {
 
     // ---- sponsor company picker ----
     // country is the full home-country name (e.g. 'England'); tokens fill from that country's own towns/regions
-    _fill(name, country = 'Netherlands') {
+    _fill(name, country = 'Netherlands', region = null) {
         name = String(name).replace(/\{regio\}/g, '{region}');   // a typo shipped in the Swiss list (saves still carry it)
         if (name.includes('{place}')) {
             let places = [];
@@ -206,19 +227,25 @@ const Upgrades = {
         }
         if (name.includes('{region}')) {
             const src = (typeof REGIONS_BY_COUNTRY !== 'undefined' && REGIONS_BY_COUNTRY[country]) || (typeof REGIONS !== 'undefined' ? REGIONS : []);
+            const own = region && src.find(r => r.id === region);   // the player's own region, when he plays there
+            if (own) return name.replace('{region}', own.name.replace(/\s*\(.*\)$/, ''));
             const regs = src.map(r => r.name.replace(/\s*\(.*\)$/, ''));
             name = name.replace('{region}', regs.length ? regs[Math.floor(Rng.next() * regs.length)] : 'Gelderland');
         }
         return name;
     },
-    sponsorPool(level, country = 'Netherlands') {
+    sponsorPool(level, country = 'Netherlands', region = null) {
         const key = SPONSOR_COUNTRY_KEY[country] || (SPONSOR_COMPANIES[country] ? country : 'NL');
         const byCountry = SPONSOR_COMPANIES[key] || SPONSOR_COMPANIES.NL;
-        return byCountry[level] || byCountry.local;
+        const tier = byCountry[level] || byCountry.local;
+        if (Array.isArray(tier)) return tier;
+        // split by language: his region's list, or every list when the region has none
+        const lang = region && SPONSOR_REGION_LANG[key] && SPONSOR_REGION_LANG[key][region];
+        return (lang && tier[lang]) || [].concat(...Object.values(tier));
     },
-    pickSponsor(level, country = 'Netherlands') {
-        const pool = this.sponsorPool(level, country);
-        return this._fill(pool[Math.floor(Rng.next() * pool.length)], country);
+    pickSponsor(level, country = 'Netherlands', region = null) {
+        const pool = this.sponsorPool(level, country, region);
+        return this._fill(pool[Math.floor(Rng.next() * pool.length)], country, region);
     },
 
     // ---- SVG art (compact, recognisable) ----

@@ -9,7 +9,7 @@ const run=c=>vm.runInContext(c,sb), runv=c=>vm.runInContext('(function(){'+c+'})
 let failed=false; const check=(l,c)=>{console.log((c?'PASS':'FAIL')+'  '+l); if(!c)failed=true;};
 run("Clubs.init();");
 
-const COUNTRIES={Netherlands:'NL',England:'EN',Germany:'DE',Spain:'ES',Switzerland:'CH',Italy:'IT',France:'FR'};
+const COUNTRIES={Netherlands:'NL',England:'EN',Germany:'DE',Spain:'ES',Switzerland:'CH',Italy:'IT',France:'FR',Belgium:'BE',Portugal:'PT'};
 
 // ---- B: country routing of pickSponsor (national + worldwide have no tokens -> exact membership) ----
 for(const [country,key] of Object.entries(COUNTRIES)){
@@ -53,6 +53,18 @@ const capped=runv(`GameState.startNewGame('England','T'); Sim._seasonLeagueApps=
   const club=Clubs.getClubsByDivision('PREM')[0];
   return Sim._sponsorLevelFor({clubId:club.id, ability:85, potential:60, age:27});`);
 check('fresh Home Office caps a PREM star down to local: '+capped, capped==='local');
+
+// ---- every country with clubs has its own sponsors; Belgium splits local/regional brands by language ----
+const clubCountries=JSON.parse(runv("return JSON.stringify(Array.from(new Set(Clubs.allClubs.map(c=>c.country))))"));
+check('every country with clubs has its own sponsor roster, got missing '+JSON.stringify(clubCountries.filter(c=>!COUNTRIES[c])), clubCountries.every(c=>runv(`return !!SPONSOR_COUNTRY_KEY[${JSON.stringify(c)}]`)));
+check('Belgium: Flanders draws Dutch-language local brands, Wallonia French ones, Brussels both', runv(`
+  const nl=SPONSOR_COMPANIES.BE.local.nl, fr=SPONSOR_COMPANIES.BE.local.fr, seen={nl:0,fr:0};
+  const raw=n=>n.replace(/^(Slagerij|Apotheek|Wafelhuis|Boucherie|Pharmacie|Gaufrerie) .*$/,'$1 {place}');
+  for(let i=0;i<60;i++){ if(!nl.includes(raw(Upgrades.pickSponsor('local','Belgium','N-W Belgium')))) return false; if(!fr.includes(raw(Upgrades.pickSponsor('local','Belgium','S-E Belgique')))) return false; }
+  for(let i=0;i<200;i++){ const n=raw(Upgrades.pickSponsor('local','Belgium','brussels')); if(nl.includes(n)) seen.nl++; if(fr.includes(n)) seen.fr++; }
+  return seen.nl>20 && seen.fr>20;`));
+check('Belgium is no longer handed Dutch (Netherlands) brands', runv(`for(let i=0;i<60;i++){ if(SPONSOR_COMPANIES.NL.national.includes(Upgrades.pickSponsor('national','Belgium'))) return false;} return true;`));
+check("{region} names the player's own region when he plays there", runv(`for(let i=0;i<30;i++){ if(Upgrades._fill('Radio {region}','Portugal','Norte')!=='Radio Norte') return false;} return true;`));
 
 console.log(failed?'\n*** FAIL ***':'\nAll sponsor checks passed.');
 process.exitCode=failed?1:0;

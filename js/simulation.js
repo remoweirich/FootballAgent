@@ -978,13 +978,14 @@ const Sim = {
             // country only mixes in if the game has a sponsor pool for that nationality.
             const homeCountry = (typeof SPONSOR_COUNTRY_KEY !== 'undefined' && SPONSOR_COUNTRY_KEY[p.nationality]) ? p.nationality : null;
             const srcFor = () => (homeCountry && homeCountry !== playCountry && Rng.next() < 0.45) ? homeCountry : playCountry;
+            const playRegion = club ? club.region : null;   // local and regional brands come from his own region
             // Up to three DISTINCT companies, none of them a brand he already has an active deal with
             // (a player never holds two deals from the same sponsor). Capped attempts so a thin sponsor
             // roster can't spin forever, and if none is available the approach is skipped this week.
             const held = new Set((p.sponsorDeals || []).filter(d => d.untilSeason >= GameState.seasonStartYear).map(d => d.company));
             const pool = []; const used = new Set(held);
             for (let tries = 0; pool.length < 3 && tries < 60; tries++) {
-                const c = Upgrades.pickSponsor(level, srcFor());
+                const src = srcFor(), c = Upgrades.pickSponsor(level, src, src === playCountry ? playRegion : null);
                 if (c && !used.has(c)) { used.add(c); pool.push(c); }
             }
             if (!pool.length) return;   // nothing to offer that he doesn't already carry
