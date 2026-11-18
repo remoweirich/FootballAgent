@@ -140,6 +140,22 @@ Feature code only ever asks `Monetization.owns('<entitlement>')`; it never talks
 
 ## 7. iOS port checklist
 
+**App Store Connect and App ID settings** (decided by the owner; use exactly these):
+
+| Setting | Value |
+|---|---|
+| Name | Football Agency Simulator |
+| Primary language | English (U.K.). The game uses British spelling. The other six languages can be added as listing localisations. |
+| Bundle ID | `ch.jens.footballagent` (explicit App ID, same as Android) |
+| SKU | `football-agency-simulator` |
+| User access | Full access |
+| App ID description | Football Agency Simulator |
+| Capabilities | In-App Purchase only (no push, iCloud, Game Center or Sign in with Apple) |
+| App Services | None |
+| Capability requests | None |
+
+AdMob needs no capability, only the Info.plist entries in section 5.
+
 On a Mac with Xcode and the owner's Apple Developer account:
 
 1. `npm install`, then `npm run build:mobile`, then `npx cap add ios`, then `npx cap sync ios`.
